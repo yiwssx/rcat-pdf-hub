@@ -5,7 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import Base, engine
-from app.routers import admin, files, health, jobs, pdf
+from app.observability import install_observability
+from app.routers import admin, auth, files, health, integrations, jobs, pdf
 from app.storage import ensure_storage
 
 settings = get_settings()
@@ -14,14 +15,16 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     ensure_storage()
+    # Kept as an idempotent safety net for SQLite/unit-test bootstraps. Production
+    # deployments run Alembic before Uvicorn through app.entrypoint.
     Base.metadata.create_all(bind=engine)
     yield
 
 
 app = FastAPI(
     title="PDF Hub API",
-    version="0.2.0",
-    description="Centralized self-hosted PDF processing API",
+    version="0.3.0",
+    description="Centralized self-hosted PDF processing and enterprise integration API",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -33,7 +36,11 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(files.router)
 app.include_router(jobs.router)
 app.include_router(pdf.router)
+app.include_router(integrations.router)
 app.include_router(admin.router)
+
+install_observability(app)
