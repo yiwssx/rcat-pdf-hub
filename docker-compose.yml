@@ -2,13 +2,14 @@ name: pdf-hub
 
 services:
   postgres:
-    image: postgres:18-alpine
+    image: postgres:18.6-bookworm
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-pdfhub}
       POSTGRES_USER: ${POSTGRES_USER:-pdfhub}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pdfhub} -d ${POSTGRES_DB:-pdfhub}"]
       interval: 10s
@@ -36,7 +37,7 @@ services:
       - --libreoffice-restart-after=20
       - --chromium-restart-after=50
     tmpfs:
-      - /tmp:size=1g
+      - /tmp:size=2g
     restart: unless-stopped
 
   api:
@@ -98,7 +99,7 @@ services:
     volumes:
       - pdf_data:/data
     depends_on:
-      postgres:
+      api:
         condition: service_healthy
     restart: unless-stopped
 
