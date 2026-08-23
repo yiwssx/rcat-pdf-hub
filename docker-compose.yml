@@ -61,8 +61,54 @@ services:
       PDFHUB_API_KEY_PEPPER: ${PDFHUB_API_KEY_PEPPER:?set PDFHUB_API_KEY_PEPPER in .env}
       PDFHUB_ADMIN_API_KEY: ${PDFHUB_ADMIN_API_KEY:?set PDFHUB_ADMIN_API_KEY in .env}
       PDFHUB_ALLOWED_ORIGINS: ${PDFHUB_ALLOWED_ORIGINS:-http://localhost:8080}
+      PDFHUB_PUBLIC_BASE_URL: ${PDFHUB_PUBLIC_BASE_URL:-http://localhost:8080}
+      PDFHUB_AUTH_TOKEN_SECRET: ${PDFHUB_AUTH_TOKEN_SECRET:?set PDFHUB_AUTH_TOKEN_SECRET in .env}
+      PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-false}
+      PDFHUB_SESSION_TTL_MINUTES: ${PDFHUB_SESSION_TTL_MINUTES:-480}
+      PDFHUB_HUMAN_SCOPES: ${PDFHUB_HUMAN_SCOPES:-files:read,files:write,jobs:read,pdf:merge,pdf:split,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,pdf:watermark,pdf:page-number,pdf:stamp,archive:paperless}
+      PDFHUB_ADMIN_GROUPS: ${PDFHUB_ADMIN_GROUPS:-pdfhub-admins}
+      PDFHUB_OIDC_ENABLED: ${PDFHUB_OIDC_ENABLED:-false}
+      PDFHUB_OIDC_ISSUER: ${PDFHUB_OIDC_ISSUER:-}
+      PDFHUB_OIDC_CLIENT_ID: ${PDFHUB_OIDC_CLIENT_ID:-}
+      PDFHUB_OIDC_CLIENT_SECRET: ${PDFHUB_OIDC_CLIENT_SECRET:-}
+      PDFHUB_OIDC_AUDIENCE: ${PDFHUB_OIDC_AUDIENCE:-}
+      PDFHUB_OIDC_DISCOVERY_URL: ${PDFHUB_OIDC_DISCOVERY_URL:-}
+      PDFHUB_OIDC_GROUP_CLAIM: ${PDFHUB_OIDC_GROUP_CLAIM:-groups}
+      PDFHUB_LDAP_ENABLED: ${PDFHUB_LDAP_ENABLED:-false}
+      PDFHUB_LDAP_URL: ${PDFHUB_LDAP_URL:-ldap://ldap:389}
+      PDFHUB_LDAP_BASE_DN: ${PDFHUB_LDAP_BASE_DN:-}
+      PDFHUB_LDAP_BIND_DN: ${PDFHUB_LDAP_BIND_DN:-}
+      PDFHUB_LDAP_BIND_PASSWORD: ${PDFHUB_LDAP_BIND_PASSWORD:-}
+      PDFHUB_LDAP_USER_FILTER: ${PDFHUB_LDAP_USER_FILTER:-(uid={username})}
+      PDFHUB_LDAP_USER_DN_TEMPLATE: ${PDFHUB_LDAP_USER_DN_TEMPLATE:-}
+      PDFHUB_LDAP_GROUP_BASE_DN: ${PDFHUB_LDAP_GROUP_BASE_DN:-}
+      PDFHUB_LDAP_GROUP_FILTER: ${PDFHUB_LDAP_GROUP_FILTER:-(member={user_dn})}
+      PDFHUB_STORAGE_BACKEND: ${PDFHUB_STORAGE_BACKEND:-local}
+      PDFHUB_S3_ENDPOINT_URL: ${PDFHUB_S3_ENDPOINT_URL:-}
+      PDFHUB_S3_REGION: ${PDFHUB_S3_REGION:-us-east-1}
+      PDFHUB_S3_BUCKET: ${PDFHUB_S3_BUCKET:-pdfhub}
+      PDFHUB_S3_ACCESS_KEY: ${PDFHUB_S3_ACCESS_KEY:-}
+      PDFHUB_S3_SECRET_KEY: ${PDFHUB_S3_SECRET_KEY:-}
+      PDFHUB_S3_PREFIX: ${PDFHUB_S3_PREFIX:-pdfhub}
+      PDFHUB_S3_ADDRESSING_STYLE: ${PDFHUB_S3_ADDRESSING_STYLE:-path}
+      PDFHUB_S3_AUTO_CREATE_BUCKET: ${PDFHUB_S3_AUTO_CREATE_BUCKET:-false}
+      PDFHUB_S3_SERVER_SIDE_ENCRYPTION: ${PDFHUB_S3_SERVER_SIDE_ENCRYPTION:-}
+      PDFHUB_CLAMAV_ENABLED: ${PDFHUB_CLAMAV_ENABLED:-false}
+      PDFHUB_CLAMAV_HOST: ${PDFHUB_CLAMAV_HOST:-clamav}
+      PDFHUB_CLAMAV_PORT: ${PDFHUB_CLAMAV_PORT:-3310}
+      PDFHUB_CLAMAV_FAIL_CLOSED: ${PDFHUB_CLAMAV_FAIL_CLOSED:-true}
+      PDFHUB_RQ_QUEUE: ${PDFHUB_RQ_QUEUE:-pdf}
+      PDFHUB_RQ_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_JOB_TIMEOUT_SECONDS:-1800}
+      PDFHUB_PROMETHEUS_ENABLED: ${PDFHUB_PROMETHEUS_ENABLED:-true}
+      PDFHUB_OTEL_ENDPOINT: ${PDFHUB_OTEL_ENDPOINT:-}
+      PDFHUB_OTEL_SERVICE_NAME: ${PDFHUB_OTEL_SERVICE_NAME:-rcat-pdf-hub-api}
+      PDFHUB_PAPERLESS_ENABLED: ${PDFHUB_PAPERLESS_ENABLED:-false}
+      PDFHUB_PAPERLESS_URL: ${PDFHUB_PAPERLESS_URL:-http://paperless:8000}
+      PDFHUB_PAPERLESS_TOKEN: ${PDFHUB_PAPERLESS_TOKEN:-}
+      PDFHUB_PAPERLESS_AUTO_ARCHIVE: ${PDFHUB_PAPERLESS_AUTO_ARCHIVE:-false}
     volumes:
       - pdf_data:/data
+      - ${PDFHUB_NAS_PATH:-./data/nas-placeholder}:/mnt/pdfhub-nas
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,10 +125,11 @@ services:
 
   worker:
     build: ./apps/api
-    command: ["rq", "worker", "--url", "redis://valkey:6379/0", "pdf"]
+    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_QUEUE\""]
     environment: *api-env
     volumes:
       - pdf_data:/data
+      - ${PDFHUB_NAS_PATH:-./data/nas-placeholder}:/mnt/pdfhub-nas
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,6 +145,7 @@ services:
     environment: *api-env
     volumes:
       - pdf_data:/data
+      - ${PDFHUB_NAS_PATH:-./data/nas-placeholder}:/mnt/pdfhub-nas
     depends_on:
       api:
         condition: service_healthy
@@ -123,7 +171,92 @@ services:
       - api
     restart: unless-stopped
 
+  # Optional S3-compatible single-node target for development or small sites.
+  # Production can point PDFHUB_S3_ENDPOINT_URL at MinIO, SeaweedFS, AWS S3, etc.
+  seaweedfs:
+    profiles: ["s3"]
+    image: chrislusf/seaweedfs:4.44
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${PDFHUB_S3_ACCESS_KEY:-pdfhub}
+      AWS_SECRET_ACCESS_KEY: ${PDFHUB_S3_SECRET_KEY:-pdfhub-development-secret}
+    volumes:
+      - seaweedfs_data:/data
+    restart: unless-stopped
+
+  clamav:
+    profiles: ["security"]
+    image: clamav/clamav:stable
+    volumes:
+      - clamav_db:/var/lib/clamav
+    restart: unless-stopped
+
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v3.13.2
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PDFHUB_PROMETHEUS_PORT:-9090}:9090"
+    restart: unless-stopped
+
+  otel-collector:
+    profiles: ["observability"]
+    image: otel/opentelemetry-collector-contrib:0.159.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./ops/otel/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "${PDFHUB_OTEL_GRPC_PORT:-4317}:4317"
+      - "${PDFHUB_OTEL_HTTP_PORT:-4318}:4318"
+    restart: unless-stopped
+
+  paperless-db:
+    profiles: ["archive"]
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD:-paperless-development-password}
+      POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+    volumes:
+      - paperless_db_data:/var/lib/postgresql
+    restart: unless-stopped
+
+  paperless:
+    profiles: ["archive"]
+    image: ghcr.io/paperless-ngx/paperless-ngx:3.0.5
+    depends_on:
+      - paperless-db
+      - valkey
+    environment:
+      PAPERLESS_DBHOST: paperless-db
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD:-paperless-development-password}
+      PAPERLESS_REDIS: redis://valkey:6379/1
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:-replace-this-before-production}
+      PAPERLESS_URL: ${PAPERLESS_URL:-http://localhost:8001}
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+      - paperless_export:/usr/src/paperless/export
+      - paperless_consume:/usr/src/paperless/consume
+    ports:
+      - "${PAPERLESS_HTTP_PORT:-8001}:8000"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   valkey_data:
   pdf_data:
+  seaweedfs_data:
+  clamav_db:
+  prometheus_data:
+  paperless_db_data:
+  paperless_data:
+  paperless_media:
+  paperless_export:
+  paperless_consume:
