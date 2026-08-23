@@ -36,7 +36,7 @@ services:
       - --libreoffice-restart-after=20
       - --chromium-restart-after=50
     tmpfs:
-      - /tmp:size=1g
+      - /tmp:size=2g
     restart: unless-stopped
 
   api:
