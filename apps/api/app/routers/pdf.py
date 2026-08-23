@@ -5,8 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
+from app.config import get_settings
 from app.db import get_db
 from app.models import FileRecord, JobRecord
+from app.observability import record_job, set_queue_depth
 from app.policy import ensure_daily_job_quota
 from app.queue import pdf_queue
 from app.routers.jobs import serialize
@@ -24,6 +26,7 @@ from app.schemas import (
 from app.security import Principal, require_scope
 
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
+settings = get_settings()
 
 
 def _is_expired(record: FileRecord) -> bool:
@@ -56,13 +59,19 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
     db.commit()
     db.refresh(job)
     try:
-        rq_job = pdf_queue.enqueue("app.worker_tasks.process_job", job.id, job_timeout=1800, result_ttl=86400)
+        rq_job = pdf_queue.enqueue(
+            "app.worker_tasks.process_job",
+            job.id,
+            job_timeout=settings.rq_job_timeout_seconds,
+            result_ttl=86400,
+        )
     except Exception as exc:
         job.status = "failed"
         job.progress = 100
         job.error = "Queue backend unavailable"
         job.finished_at = datetime.now(timezone.utc)
         db.commit()
+        record_job(operation, "queue_failed")
         audit_event("job.queue_failed", principal.name, "job", job.id, {"operation": operation})
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -71,6 +80,8 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
         ) from exc
     job.rq_job_id = rq_job.id
     db.commit()
+    record_job(operation, "queued")
+    set_queue_depth(settings.rq_queue, len(pdf_queue))
     audit_event("job.queued", principal.name, "job", job.id, {"operation": operation, "input_count": len(file_ids)})
     return serialize(job)
 
