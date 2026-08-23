@@ -54,6 +54,11 @@ def _validated_webhook(url: str | None) -> str | None:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+def _require_bootstrap_admin(principal: Principal) -> None:
+    if not principal.is_bootstrap_admin:
+        raise HTTPException(status_code=403, detail="Bootstrap admin required")
+
+
 @router.get("/api-keys", response_model=list[ApiKeyOut])
 def list_api_keys(
     _: Principal = Depends(require_scope("admin:keys")),
@@ -71,6 +76,8 @@ def create_api_key(
     invalid = sorted(set(req.scopes) - ALLOWED_SCOPES)
     if invalid:
         raise HTTPException(status_code=422, detail={"invalid_scopes": invalid})
+    if "admin:keys" in req.scopes:
+        _require_bootstrap_admin(principal)
     if db.scalar(select(ApiKey).where(ApiKey.name == req.name)):
         raise HTTPException(status_code=409, detail="API key name already exists")
 
@@ -84,10 +91,14 @@ def create_api_key(
         max_storage_mb=req.max_storage_mb if req.max_storage_mb is not None else settings.default_max_storage_mb,
         webhook_url=webhook_url,
     )
-    db.add(record)
-    db.add(policy)
-    db.commit()
-    db.refresh(record)
+    try:
+        db.add(record)
+        db.add(policy)
+        db.commit()
+        db.refresh(record)
+    except Exception:
+        db.rollback()
+        raise
     audit_event("api_key.created", principal.name, "api_key", record.id, {"service": record.name, "scopes": sorted(set(req.scopes))})
     policy_out = _policy_out(db, record.name)
     return ApiKeyCreated(
@@ -159,9 +170,10 @@ def update_service_policy(
 @router.get("/service-policies/{service_name}/webhook-secret")
 def get_webhook_secret(
     service_name: str,
-    _: Principal = Depends(require_scope("admin:keys")),
+    principal: Principal = Depends(require_scope("admin:keys")),
     db: Session = Depends(get_db),
 ):
+    _require_bootstrap_admin(principal)
     if not db.scalar(select(ApiKey).where(ApiKey.name == service_name)):
         raise HTTPException(status_code=404, detail="Service API key not found")
     return {"service_name": service_name, "webhook_secret": derive_webhook_secret(service_name)}

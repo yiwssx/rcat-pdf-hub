@@ -1,6 +1,7 @@
 import json
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
@@ -25,10 +26,21 @@ from app.security import Principal, require_scope
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
 
 
+def _is_expired(record: FileRecord) -> bool:
+    if record.expires_at is None:
+        return False
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    return expires_at <= datetime.now(timezone.utc)
+
+
 def _create_job(db: Session, principal: Principal, operation: str, file_ids: list[str], params: dict) -> JobOut:
     files = [db.get(FileRecord, fid) for fid in file_ids]
     if any(item is None for item in files):
         raise HTTPException(status_code=404, detail="One or more files not found")
+    if any(_is_expired(item) for item in files if item):
+        raise HTTPException(status_code=410, detail="One or more files have expired")
     if "*" not in principal.scopes and any(item.source_system != principal.name for item in files if item):
         raise HTTPException(status_code=403, detail="One or more files belong to another service")
     if not principal.is_bootstrap_admin:
@@ -43,7 +55,20 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
     db.add(job)
     db.commit()
     db.refresh(job)
-    rq_job = pdf_queue.enqueue("app.worker_tasks.process_job", job.id, job_timeout=1800, result_ttl=86400)
+    try:
+        rq_job = pdf_queue.enqueue("app.worker_tasks.process_job", job.id, job_timeout=1800, result_ttl=86400)
+    except Exception as exc:
+        job.status = "failed"
+        job.progress = 100
+        job.error = "Queue backend unavailable"
+        job.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        audit_event("job.queue_failed", principal.name, "job", job.id, {"operation": operation})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Queue backend unavailable",
+            headers={"Retry-After": "5"},
+        ) from exc
     job.rq_job_id = rq_job.id
     db.commit()
     audit_event("job.queued", principal.name, "job", job.id, {"operation": operation, "input_count": len(file_ids)})

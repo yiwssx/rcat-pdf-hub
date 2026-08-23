@@ -35,9 +35,8 @@ async def save_upload(upload: UploadFile) -> tuple[Path, int, str, str]:
         while chunk := await upload.read(1024 * 1024):
             total += len(chunk)
             if total > settings.max_upload_bytes:
-                fh.close()
                 target.unlink(missing_ok=True)
-                raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large")
+                raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="File too large")
             digest.update(chunk)
             fh.write(chunk)
 
@@ -59,11 +58,8 @@ def delete_stored_name(stored_name: str) -> int:
     for folder in ("originals", "processed"):
         candidate = settings.data_dir / folder / safe
         if candidate.exists():
-            try:
-                removed += candidate.stat().st_size
-            except OSError:
-                pass
-            candidate.unlink(missing_ok=True)
+            removed += candidate.stat().st_size
+            candidate.unlink()
     return removed
 
 
@@ -81,11 +77,8 @@ def delete_previews(file_id: str) -> int:
     ensure_storage()
     removed = 0
     for item in (settings.data_dir / "previews").glob(f"{file_id}-*.png"):
-        try:
-            removed += item.stat().st_size
-        except OSError:
-            pass
-        item.unlink(missing_ok=True)
+        removed += item.stat().st_size
+        item.unlink()
     return removed
 
 

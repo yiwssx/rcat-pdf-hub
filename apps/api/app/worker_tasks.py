@@ -2,9 +2,12 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
+
 from app.audit import audit_event
 from app.db import SessionLocal
 from app.models import FileRecord, JobRecord
+from app.policy import effective_policy, ensure_storage_quota
 from app.services import pdf_tools
 from app.storage import default_expiry, new_output_path, path_for_stored_name
 from app.webhooks import dispatch_job_webhook
@@ -28,6 +31,13 @@ def _output_hash(path) -> str:
     return hasher.hexdigest()
 
 
+def _notify_job(db, job: JobRecord) -> None:
+    try:
+        dispatch_job_webhook(db, job)
+    except Exception as exc:
+        audit_event("webhook.failed", job.requested_by, "job", job.id, {"error": str(exc)[-1000:]})
+
+
 def process_job(job_id: str) -> str:
     db = SessionLocal()
     job = db.get(JobRecord, job_id)
@@ -35,6 +45,8 @@ def process_job(job_id: str) -> str:
         db.close()
         raise RuntimeError(f"Unknown job {job_id}")
 
+    output = new_output_path(job.id)
+    record_created = False
     try:
         _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
         audit_event("job.started", job.requested_by, "job", job.id, {"operation": job.operation})
@@ -44,7 +56,6 @@ def process_job(job_id: str) -> str:
         if any(item is None for item in files):
             raise RuntimeError("One or more input files no longer exist")
         inputs = [path_for_stored_name(item.stored_name) for item in files]
-        output = new_output_path(job.id)
 
         _set_job(db, job, progress=25)
         if job.operation == "merge":
@@ -98,6 +109,21 @@ def process_job(job_id: str) -> str:
         _set_job(db, job, progress=85)
         digest = _output_hash(output)
         output_size = output.stat().st_size
+        if job.requested_by != "bootstrap-admin":
+            policy = effective_policy(db, job.requested_by)
+            try:
+                ensure_storage_quota(db, job.requested_by, policy.max_storage_mb, output_size)
+            except HTTPException as exc:
+                output.unlink(missing_ok=True)
+                audit_event(
+                    "job.output_quota_rejected",
+                    job.requested_by,
+                    "job",
+                    job.id,
+                    {"operation": job.operation, "output_size": output_size, "detail": exc.detail},
+                )
+                raise RuntimeError(str(exc.detail)) from exc
+
         record = FileRecord(
             original_name=f"{job.operation}-{job.id}.pdf",
             stored_name=output.name,
@@ -110,17 +136,34 @@ def process_job(job_id: str) -> str:
         db.add(record)
         db.commit()
         db.refresh(record)
+        record_created = True
         _set_job(db, job, status="completed", progress=100, output_file_id=record.id, finished_at=_now())
+    except Exception as exc:
+        db.rollback()
+        if not record_created:
+            output.unlink(missing_ok=True)
+        try:
+            _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
+        except Exception:
+            db.rollback()
         audit_event(
-            "job.completed", job.requested_by, "job", job.id,
+            "job.failed",
+            job.requested_by,
+            "job",
+            job.id,
+            {"operation": job.operation, "error": str(exc)[-1000:]},
+        )
+        _notify_job(db, job)
+        raise
+    else:
+        audit_event(
+            "job.completed",
+            job.requested_by,
+            "job",
+            job.id,
             {"operation": job.operation, "output_file_id": record.id, "output_size": output_size},
         )
-        dispatch_job_webhook(db, job)
+        _notify_job(db, job)
         return record.id
-    except Exception as exc:
-        _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
-        audit_event("job.failed", job.requested_by, "job", job.id, {"operation": job.operation, "error": str(exc)[-1000:]})
-        dispatch_job_webhook(db, job)
-        raise
     finally:
         db.close()

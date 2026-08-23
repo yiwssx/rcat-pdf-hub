@@ -1,6 +1,7 @@
 import subprocess
 from io import BytesIO
 from pathlib import Path
+from string import Formatter
 
 import httpx
 from pypdf import PdfReader, PdfWriter, Transformation
@@ -12,6 +13,7 @@ from app.config import get_settings
 
 settings = get_settings()
 FONT_NAME = "Helvetica"
+ALLOWED_PAGE_FIELDS = {"page", "total"}
 
 
 def _register_font() -> str:
@@ -98,7 +100,6 @@ def _text_coordinates(width: float, height: float, position: str, margin: float)
         x, align = width - margin, "right"
     else:
         x, align = width / 2, "center"
-
     if position.startswith("top"):
         y = height - margin
     elif position.startswith("bottom"):
@@ -126,16 +127,7 @@ def _overlay_page(width: float, height: float, draw) -> object:
     return PdfReader(buffer).pages[0]
 
 
-def watermark_text(
-    input_file: Path,
-    output: Path,
-    text: str,
-    font_size: float = 48,
-    opacity: float = 0.18,
-    rotation: float = 45,
-    position: str = "center",
-    margin: float = 36,
-) -> None:
+def watermark_text(input_file: Path, output: Path, text: str, font_size: float = 48, opacity: float = 0.18, rotation: float = 45, position: str = "center", margin: float = 36) -> None:
     font = _register_font()
     reader = PdfReader(str(input_file))
     writer = PdfWriter()
@@ -143,73 +135,46 @@ def watermark_text(
         width = float(page.mediabox.width)
         height = float(page.mediabox.height)
         x, y, align = _text_coordinates(width, height, position, margin)
-
         def draw(c: canvas.Canvas, *, _x=x, _y=y, _align=align):
-            c.saveState()
-            c.setFont(font, font_size)
+            c.saveState(); c.setFont(font, font_size)
             try:
                 c.setFillAlpha(opacity)
             except AttributeError:
                 pass
-            c.translate(_x, _y)
-            c.rotate(rotation)
-            _draw_text(c, text, 0, 0, _align)
-            c.restoreState()
-
-        page.merge_page(_overlay_page(width, height, draw))
-        writer.add_page(page)
+            c.translate(_x, _y); c.rotate(rotation); _draw_text(c, text, 0, 0, _align); c.restoreState()
+        page.merge_page(_overlay_page(width, height, draw)); writer.add_page(page)
     with output.open("wb") as fh:
         writer.write(fh)
 
 
-def add_page_numbers(
-    input_file: Path,
-    output: Path,
-    format_text: str = "{page} / {total}",
-    start_number: int = 1,
-    font_size: float = 10,
-    position: str = "bottom-center",
-    margin: float = 24,
-) -> None:
-    font = _register_font()
-    reader = PdfReader(str(input_file))
-    writer = PdfWriter()
-    total = len(reader.pages)
+def _format_page_number(template: str, page: int, total: int) -> str:
+    for _, field_name, format_spec, conversion in Formatter().parse(template):
+        if field_name is None:
+            continue
+        if field_name not in ALLOWED_PAGE_FIELDS or format_spec or conversion:
+            raise ValueError("format may only use plain {page} and {total} placeholders")
+    return template.format(page=page, total=total)
+
+
+def add_page_numbers(input_file: Path, output: Path, format_text: str = "{page} / {total}", start_number: int = 1, font_size: float = 10, position: str = "bottom-center", margin: float = 24) -> None:
+    font = _register_font(); reader = PdfReader(str(input_file)); writer = PdfWriter(); total = len(reader.pages)
     for index, page in enumerate(reader.pages):
-        width = float(page.mediabox.width)
-        height = float(page.mediabox.height)
-        display_page = start_number + index
-        try:
-            text = format_text.format(page=display_page, total=total)
-        except (KeyError, ValueError) as exc:
-            raise ValueError("format may only use {page} and {total}") from exc
-        x, y, align = _text_coordinates(width, height, position, margin)
-
+        width = float(page.mediabox.width); height = float(page.mediabox.height); display_page = start_number + index
+        text = _format_page_number(format_text, display_page, total); x, y, align = _text_coordinates(width, height, position, margin)
         def draw(c: canvas.Canvas, *, _text=text, _x=x, _y=y, _align=align):
-            c.setFont(font, font_size)
-            _draw_text(c, _text, _x, _y, _align)
-
-        page.merge_page(_overlay_page(width, height, draw))
-        writer.add_page(page)
+            c.setFont(font, font_size); _draw_text(c, _text, _x, _y, _align)
+        page.merge_page(_overlay_page(width, height, draw)); writer.add_page(page)
     with output.open("wb") as fh:
         writer.write(fh)
 
 
-def _stamp_coordinates(
-    target_width: float,
-    target_height: float,
-    stamp_width: float,
-    stamp_height: float,
-    position: str,
-    margin: float,
-) -> tuple[float, float]:
+def _stamp_coordinates(target_width: float, target_height: float, stamp_width: float, stamp_height: float, position: str, margin: float) -> tuple[float, float]:
     if position.endswith("left"):
         x = margin
     elif position.endswith("right"):
         x = target_width - stamp_width - margin
     else:
         x = (target_width - stamp_width) / 2
-
     if position.startswith("top"):
         y = target_height - stamp_height - margin
     elif position.startswith("bottom"):
@@ -219,52 +184,26 @@ def _stamp_coordinates(
     return max(0, x), max(0, y)
 
 
-def stamp_pdf(
-    input_file: Path,
-    stamp_file: Path,
-    output: Path,
-    position: str = "bottom-right",
-    scale: float = 0.20,
-    margin: float = 24,
-) -> None:
-    reader = PdfReader(str(input_file))
-    stamp_reader = PdfReader(str(stamp_file))
+def stamp_pdf(input_file: Path, stamp_file: Path, output: Path, position: str = "bottom-right", scale: float = 0.20, margin: float = 24) -> None:
+    reader = PdfReader(str(input_file)); stamp_reader = PdfReader(str(stamp_file))
     if not stamp_reader.pages:
         raise ValueError("Stamp PDF has no pages")
-    source_stamp = stamp_reader.pages[0]
-    source_width = float(source_stamp.mediabox.width)
-    source_height = float(source_stamp.mediabox.height)
+    source_stamp = stamp_reader.pages[0]; source_width = float(source_stamp.mediabox.width); source_height = float(source_stamp.mediabox.height)
     if source_width <= 0 or source_height <= 0:
         raise ValueError("Stamp PDF has invalid dimensions")
-
     writer = PdfWriter()
     for page in reader.pages:
-        target_width = float(page.mediabox.width)
-        target_height = float(page.mediabox.height)
-        factor = (target_width * scale) / source_width
-        rendered_width = source_width * factor
-        rendered_height = source_height * factor
+        target_width = float(page.mediabox.width); target_height = float(page.mediabox.height); factor = (target_width * scale) / source_width
+        rendered_width = source_width * factor; rendered_height = source_height * factor
         x, y = _stamp_coordinates(target_width, target_height, rendered_width, rendered_height, position, margin)
-        transform = Transformation().scale(factor).translate(x, y)
-        page.merge_transformed_page(source_stamp, transform, over=True)
-        writer.add_page(page)
+        transform = Transformation().scale(factor).translate(x, y); page.merge_transformed_page(source_stamp, transform, over=True); writer.add_page(page)
     with output.open("wb") as fh:
         writer.write(fh)
 
 
 def render_preview(input_file: Path, output_png: Path, page: int = 1, width: int = 640) -> None:
-    output_png.parent.mkdir(parents=True, exist_ok=True)
-    prefix = output_png.with_suffix("")
-    _run([
-        "pdftoppm",
-        "-f", str(page),
-        "-singlefile",
-        "-png",
-        "-scale-to-x", str(width),
-        "-scale-to-y", "-1",
-        str(input_file),
-        str(prefix),
-    ], timeout=60)
+    output_png.parent.mkdir(parents=True, exist_ok=True); prefix = output_png.with_suffix("")
+    _run(["pdftoppm", "-f", str(page), "-singlefile", "-png", "-scale-to-x", str(width), "-scale-to-y", "-1", str(input_file), str(prefix)], timeout=60)
     generated = Path(f"{prefix}.png")
     if generated != output_png and generated.exists():
         generated.replace(output_png)

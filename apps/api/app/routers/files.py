@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import desc, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
@@ -19,6 +19,12 @@ router = APIRouter(prefix="/api/v1/files", tags=["files"])
 settings = get_settings()
 
 
+def _aware(value):
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 def _owned_file(db: Session, file_id: str, principal: Principal) -> FileRecord:
     record = db.get(FileRecord, file_id)
     if not record:
@@ -31,10 +37,14 @@ def _owned_file(db: Session, file_id: str, principal: Principal) -> FileRecord:
 @router.get("", response_model=list[FileOut])
 def list_files(
     limit: int = Query(default=50, ge=1, le=200),
+    include_expired: bool = Query(default=False),
     principal: Principal = Depends(require_scope("files:read")),
     db: Session = Depends(get_db),
 ):
     stmt = select(FileRecord).order_by(desc(FileRecord.created_at)).limit(limit)
+    if not include_expired:
+        now = datetime.now(timezone.utc)
+        stmt = stmt.where(or_(FileRecord.expires_at.is_(None), FileRecord.expires_at > now))
     if "*" not in principal.scopes:
         stmt = stmt.where(FileRecord.source_system == principal.name)
     return db.scalars(stmt).all()
@@ -51,6 +61,7 @@ async def upload_file(
         if not principal.is_bootstrap_admin:
             ensure_storage_quota(db, principal.name, principal.max_storage_mb, size)
     except HTTPException:
+        db.rollback()
         path.unlink(missing_ok=True)
         audit_event("file.quota_rejected", principal.name, "file", None, {"name": original, "size": size})
         raise
@@ -64,9 +75,14 @@ async def upload_file(
         source_system=principal.name,
         expires_at=default_expiry(),
     )
-    db.add(record)
-    db.commit()
-    db.refresh(record)
+    try:
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    except Exception:
+        db.rollback()
+        path.unlink(missing_ok=True)
+        raise
     audit_event("file.uploaded", principal.name, "file", record.id, {"name": original, "size": size, "sha256": digest})
     return record
 
@@ -87,6 +103,9 @@ def download_file(
     db: Session = Depends(get_db),
 ):
     record = _owned_file(db, file_id, principal)
+    expires_at = _aware(record.expires_at)
+    if expires_at and expires_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="File data has expired")
     try:
         path = path_for_stored_name(record.stored_name)
     except FileNotFoundError:
@@ -104,12 +123,9 @@ def preview_file(
     db: Session = Depends(get_db),
 ):
     record = _owned_file(db, file_id, principal)
-    if record.expires_at and record.expires_at <= datetime.now(timezone.utc):
-        # Metadata may remain for audit/job history after retention cleanup.
-        try:
-            path_for_stored_name(record.stored_name)
-        except FileNotFoundError:
-            raise HTTPException(status_code=410, detail="File data has expired")
+    expires_at = _aware(record.expires_at)
+    if expires_at and expires_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="File data has expired")
     if record.content_type != "application/pdf" and not record.original_name.lower().endswith(".pdf"):
         raise HTTPException(status_code=415, detail="Preview is available for PDF files only")
     width = min(width, settings.preview_max_width)

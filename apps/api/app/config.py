@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     default_max_storage_mb: int = 2048
 
     webhook_allowed_hosts: str = ""
+    webhook_allow_private_networks: bool = False
     webhook_master_secret: str = Field(default="change-me-webhook-master-secret", min_length=16)
     webhook_timeout_seconds: int = 10
 

@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -10,7 +9,6 @@ from app.config import get_settings
 from app.models import FileRecord, JobRecord, ServicePolicy
 
 settings = get_settings()
-logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -41,11 +39,18 @@ def effective_policy(db: Session, service_name: str) -> EffectivePolicy:
     )
 
 
+def _lock_service_policy(db: Session, service_name: str) -> None:
+    db.execute(
+        select(ServicePolicy.service_name)
+        .where(ServicePolicy.service_name == service_name)
+        .with_for_update()
+    )
+
+
 def ensure_rate_limit(service_name: str, per_minute: int) -> None:
     if per_minute <= 0:
         return
     try:
-        # Lazy import keeps utility/unit-test imports independent from Redis availability.
         from app.queue import redis_conn
 
         bucket = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
@@ -53,21 +58,25 @@ def ensure_rate_limit(service_name: str, per_minute: int) -> None:
         count = redis_conn.incr(key)
         if count == 1:
             redis_conn.expire(key, 120)
-        if count > per_minute:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Service rate limit exceeded",
-                headers={"Retry-After": "60"},
-            )
-    except HTTPException:
-        raise
-    except Exception as exc:  # Rate limiting is defense-in-depth; avoid taking read paths down if Valkey is unavailable.
-        logger.warning("rate-limit backend unavailable: %s", exc)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Rate-limit backend unavailable",
+            headers={"Retry-After": "5"},
+        ) from exc
+
+    if count > per_minute:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Service rate limit exceeded",
+            headers={"Retry-After": "60"},
+        )
 
 
 def ensure_daily_job_quota(db: Session, service_name: str, daily_limit: int) -> None:
     if daily_limit <= 0:
         return
+    _lock_service_policy(db, service_name)
     now = datetime.now(timezone.utc)
     start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     count = db.scalar(
@@ -96,9 +105,10 @@ def active_storage_bytes(db: Session, service_name: str) -> int:
 def ensure_storage_quota(db: Session, service_name: str, max_storage_mb: int, incoming_bytes: int) -> None:
     if max_storage_mb <= 0:
         return
+    _lock_service_policy(db, service_name)
     limit = max_storage_mb * 1024 * 1024
     if active_storage_bytes(db, service_name) + incoming_bytes > limit:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Service storage quota exceeded ({max_storage_mb} MB)",
         )
