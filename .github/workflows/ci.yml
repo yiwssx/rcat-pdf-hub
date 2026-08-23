@@ -19,6 +19,13 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    env:
+      PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
+      PDFHUB_ADMIN_API_KEY: pdfh_ci_admin_key_change_me
+      PDFHUB_WEBHOOK_MASTER_SECRET: ci-webhook-master-secret-change-me
+      PDFHUB_AUTH_TOKEN_SECRET: ci-auth-token-secret-change-me-0123456789abcdef
+      PDFHUB_DATABASE_URL: "sqlite+pysqlite:///:memory:"
+      PDFHUB_DATA_DIR: /tmp/pdfhub-ci-data
     steps:
       - name: Configure Git defaults
         working-directory: ${{ github.workspace }}
@@ -39,20 +46,11 @@ jobs:
           fi
       - run: python -m compileall -q app tests alembic
       - run: python -m pytest -q
-        env: &backend-env
-          PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
-          PDFHUB_ADMIN_API_KEY: pdfh_ci_admin_key_change_me
-          PDFHUB_WEBHOOK_MASTER_SECRET: ci-webhook-master-secret-change-me
-          PDFHUB_AUTH_TOKEN_SECRET: ci-auth-token-secret-change-me-0123456789abcdef
-          PDFHUB_DATABASE_URL: "sqlite+pysqlite:///:memory:"
-          PDFHUB_DATA_DIR: /tmp/pdfhub-ci-data
-      - name: Validate Alembic fresh database and Phase 2 adoption
-        env:
-          <<: *backend-env
+      - name: Validate Alembic fresh database
         run: |
-          rm -f /tmp/pdfhub-migrate-fresh.db /tmp/pdfhub-migrate-adopt.db
+          rm -f /tmp/pdfhub-migrate-fresh.db
           PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db python -c 'from app.migrate import run_migrations; run_migrations()'
-          PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db python - <<'PY'
+          python - <<'PY'
           from sqlalchemy import create_engine, inspect, text
           engine = create_engine("sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db")
           tables = set(inspect(engine).get_table_names())
@@ -60,15 +58,17 @@ jobs:
           with engine.connect() as conn:
               assert conn.execute(text("select version_num from alembic_version")).scalar() == "0002_phase3_archive_records"
           PY
+      - name: Validate Phase 2 database adoption
+        run: |
+          rm -f /tmp/pdfhub-migrate-adopt.db
           PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<'PY'
-          from app.db import Base, engine
-          from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy  # noqa: F401
-          # Simulate the Phase 2 pre-Alembic database without the Phase 3 table.
+          from app.db import engine
+          from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy
           for table in [ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__]:
               table.create(bind=engine, checkfirst=True)
           PY
           PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python -c 'from app.migrate import run_migrations; run_migrations()'
-          PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<'PY'
+          python - <<'PY'
           from sqlalchemy import create_engine, inspect, text
           engine = create_engine("sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db")
           tables = set(inspect(engine).get_table_names())
@@ -117,6 +117,13 @@ jobs:
 
   compose:
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-postgres-password
+      PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
+      PDFHUB_ADMIN_API_KEY: pdfh_ci_admin_key_change_me
+      PDFHUB_WEBHOOK_MASTER_SECRET: ci-webhook-master-secret-change-me
+      PDFHUB_AUTH_TOKEN_SECRET: ci-auth-token-secret-change-me-0123456789abcdef
+      PDFHUB_NAS_PATH: /tmp/pdfhub-nas
     steps:
       - name: Configure Git defaults
         run: |
@@ -126,24 +133,8 @@ jobs:
       - name: Validate Compose without warnings
         run: |
           docker compose config >/tmp/compose-config.out 2>/tmp/compose-config.err
-          if [ -s /tmp/compose-config.err ]; then
-            cat /tmp/compose-config.err >&2
-            exit 1
-          fi
+          test ! -s /tmp/compose-config.err || { cat /tmp/compose-config.err >&2; exit 1; }
           docker compose --profile s3 --profile security --profile observability --profile archive config >/tmp/compose-all.out 2>/tmp/compose-all.err
-          if [ -s /tmp/compose-all.err ]; then
-            cat /tmp/compose-all.err >&2
-            exit 1
-          fi
+          test ! -s /tmp/compose-all.err || { cat /tmp/compose-all.err >&2; exit 1; }
           docker compose -f docker-compose.yml -f docker-compose.nas.yml config >/tmp/compose-nas.out 2>/tmp/compose-nas.err
-          if [ -s /tmp/compose-nas.err ]; then
-            cat /tmp/compose-nas.err >&2
-            exit 1
-          fi
-        env:
-          POSTGRES_PASSWORD: ci-postgres-password
-          PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
-          PDFHUB_ADMIN_API_KEY: pdfh_ci_admin_key_change_me
-          PDFHUB_WEBHOOK_MASTER_SECRET: ci-webhook-master-secret-change-me
-          PDFHUB_AUTH_TOKEN_SECRET: ci-auth-token-secret-change-me-0123456789abcdef
-          PDFHUB_NAS_PATH: /tmp/pdfhub-nas
+          test ! -s /tmp/compose-nas.err || { cat /tmp/compose-nas.err >&2; exit 1; }
