@@ -8,12 +8,20 @@ from sqlalchemy.orm import Session
 from app.audit import audit_event
 from app.config import get_settings
 from app.db import get_db
+from app.malware import MalwareDetected, scan_file
 from app.models import FileRecord
 from app.policy import ensure_storage_quota
 from app.schemas import FileOut
 from app.security import Principal, require_scope
 from app.services import pdf_tools
-from app.storage import default_expiry, path_for_stored_name, preview_path, save_upload
+from app.storage import (
+    default_expiry,
+    delete_stored_name,
+    path_for_stored_name,
+    preview_path,
+    save_upload,
+    store_staged_file,
+)
 
 router = APIRouter(prefix="/api/v1/files", tags=["files"])
 settings = get_settings()
@@ -56,34 +64,58 @@ async def upload_file(
     principal: Principal = Depends(require_scope("files:write")),
     db: Session = Depends(get_db),
 ):
-    path, size, digest, original = await save_upload(file)
+    staged, size, digest, original = await save_upload(file)
+    stored_name: str | None = None
     try:
+        try:
+            scan_status = scan_file(staged)
+        except MalwareDetected as exc:
+            audit_event(
+                "file.malware_rejected",
+                principal.name,
+                "file",
+                None,
+                {"name": original, "size": size, "signature": str(exc)[:500]},
+            )
+            raise HTTPException(status_code=422, detail="Uploaded file was rejected by malware scanning") from exc
+        audit_event("file.malware_scanned", principal.name, "file", None, {"name": original, "status": scan_status})
+
         if not principal.is_bootstrap_admin:
             ensure_storage_quota(db, principal.name, principal.max_storage_mb, size)
-    except HTTPException:
-        db.rollback()
-        path.unlink(missing_ok=True)
-        audit_event("file.quota_rejected", principal.name, "file", None, {"name": original, "size": size})
-        raise
 
-    record = FileRecord(
-        original_name=original,
-        stored_name=path.name,
-        content_type=file.content_type or "application/octet-stream",
-        size=size,
-        sha256=digest,
-        source_system=principal.name,
-        expires_at=default_expiry(),
-    )
-    try:
+        stored_name = store_staged_file(staged, "originals")
+        record = FileRecord(
+            original_name=original,
+            stored_name=stored_name,
+            content_type=file.content_type or "application/octet-stream",
+            size=size,
+            sha256=digest,
+            source_system=principal.name,
+            expires_at=default_expiry(),
+        )
         db.add(record)
         db.commit()
         db.refresh(record)
+    except HTTPException:
+        db.rollback()
+        staged.unlink(missing_ok=True)
+        if stored_name:
+            delete_stored_name(stored_name)
+        raise
     except Exception:
         db.rollback()
-        path.unlink(missing_ok=True)
+        staged.unlink(missing_ok=True)
+        if stored_name:
+            delete_stored_name(stored_name)
         raise
-    audit_event("file.uploaded", principal.name, "file", record.id, {"name": original, "size": size, "sha256": digest})
+
+    audit_event(
+        "file.uploaded",
+        principal.name,
+        "file",
+        record.id,
+        {"name": original, "size": size, "sha256": digest, "storage_backend": settings.storage_backend},
+    )
     return record
 
 
