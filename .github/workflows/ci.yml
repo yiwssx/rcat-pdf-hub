@@ -19,10 +19,12 @@ jobs:
           cache: pip
           cache-dependency-path: apps/api/requirements.txt
       - run: pip install -r requirements.txt
+      - run: python -m compileall -q app
       - run: python -m pytest -q
         env:
           PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
           PDFHUB_ADMIN_API_KEY: pdfh_ci_admin_key_change_me
+          PDFHUB_WEBHOOK_MASTER_SECRET: ci-webhook-master-secret-change-me
           PDFHUB_DATABASE_URL: sqlite+pysqlite:///:memory:
 
   frontend:
@@ -37,3 +39,14 @@ jobs:
           node-version: "24"
       - run: npm install --no-audit --no-fund
       - run: npm run build
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config >/dev/null
+        env:
+          POSTGRES_PASSWORD: ci-postgres-password
+          PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
+          PDFHUB_ADMIN_API_KEY: pdfh_ci_admin_key_change_me
+          PDFHUB_WEBHOOK_MASTER_SECRET: ci-webhook-master-secret-change-me

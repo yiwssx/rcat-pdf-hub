@@ -3,12 +3,24 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.audit import audit_event
 from app.db import get_db
 from app.models import FileRecord, JobRecord
+from app.policy import ensure_daily_job_quota
 from app.queue import pdf_queue
-from app.schemas import JobOut, MergeRequest, OcrRequest, RotateRequest, SingleFileRequest, SplitRequest
-from app.security import Principal, require_scope
 from app.routers.jobs import serialize
+from app.schemas import (
+    JobOut,
+    MergeRequest,
+    OcrRequest,
+    PageNumberRequest,
+    RotateRequest,
+    SingleFileRequest,
+    SplitRequest,
+    StampRequest,
+    WatermarkRequest,
+)
+from app.security import Principal, require_scope
 
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
 
@@ -19,10 +31,13 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
         raise HTTPException(status_code=404, detail="One or more files not found")
     if "*" not in principal.scopes and any(item.source_system != principal.name for item in files if item):
         raise HTTPException(status_code=403, detail="One or more files belong to another service")
+    if not principal.is_bootstrap_admin:
+        ensure_daily_job_quota(db, principal.name, principal.daily_job_limit)
+
     job = JobRecord(
         operation=operation,
         input_file_ids_json=json.dumps(file_ids),
-        params_json=json.dumps(params),
+        params_json=json.dumps(params, ensure_ascii=False),
         requested_by=principal.name,
     )
     db.add(job)
@@ -31,6 +46,7 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
     rq_job = pdf_queue.enqueue("app.worker_tasks.process_job", job.id, job_timeout=1800, result_ttl=86400)
     job.rq_job_id = rq_job.id
     db.commit()
+    audit_event("job.queued", principal.name, "job", job.id, {"operation": operation, "input_count": len(file_ids)})
     return serialize(job)
 
 
@@ -69,3 +85,26 @@ def pdfa(req: OcrRequest, principal: Principal = Depends(require_scope("pdf:pdfa
 @router.post("/office-to-pdf", response_model=JobOut, status_code=202)
 def office_to_pdf(req: SingleFileRequest, principal: Principal = Depends(require_scope("pdf:convert")), db: Session = Depends(get_db)):
     return _create_job(db, principal, "office-to-pdf", [req.file_id], {})
+
+
+@router.post("/watermark", response_model=JobOut, status_code=202)
+def watermark(req: WatermarkRequest, principal: Principal = Depends(require_scope("pdf:watermark")), db: Session = Depends(get_db)):
+    return _create_job(db, principal, "watermark", [req.file_id], req.model_dump(exclude={"file_id"}))
+
+
+@router.post("/page-numbers", response_model=JobOut, status_code=202)
+def page_numbers(req: PageNumberRequest, principal: Principal = Depends(require_scope("pdf:page-number")), db: Session = Depends(get_db)):
+    return _create_job(db, principal, "page-numbers", [req.file_id], req.model_dump(exclude={"file_id"}))
+
+
+@router.post("/stamp", response_model=JobOut, status_code=202)
+def stamp(req: StampRequest, principal: Principal = Depends(require_scope("pdf:stamp")), db: Session = Depends(get_db)):
+    if req.file_id == req.stamp_file_id:
+        raise HTTPException(status_code=422, detail="Target and stamp files must be different")
+    return _create_job(
+        db,
+        principal,
+        "stamp",
+        [req.file_id, req.stamp_file_id],
+        req.model_dump(exclude={"file_id", "stamp_file_id"}),
+    )

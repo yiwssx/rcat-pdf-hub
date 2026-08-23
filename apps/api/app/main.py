@@ -20,7 +20,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PDF Hub API",
-    version="0.1.0",
+    version="0.2.0",
     description="Centralized self-hosted PDF processing API",
     lifespan=lifespan,
 )
@@ -28,7 +28,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
 

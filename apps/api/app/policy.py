@@ -1,0 +1,104 @@
+import logging
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+from fastapi import HTTPException, status
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session
+
+from app.config import get_settings
+from app.models import FileRecord, JobRecord, ServicePolicy
+
+settings = get_settings()
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class EffectivePolicy:
+    service_name: str
+    rate_limit_per_minute: int
+    daily_job_limit: int
+    max_storage_mb: int
+    webhook_url: str | None = None
+
+
+def effective_policy(db: Session, service_name: str) -> EffectivePolicy:
+    row = db.get(ServicePolicy, service_name)
+    if row:
+        return EffectivePolicy(
+            service_name=service_name,
+            rate_limit_per_minute=row.rate_limit_per_minute,
+            daily_job_limit=row.daily_job_limit,
+            max_storage_mb=row.max_storage_mb,
+            webhook_url=row.webhook_url,
+        )
+    return EffectivePolicy(
+        service_name=service_name,
+        rate_limit_per_minute=settings.default_rate_limit_per_minute,
+        daily_job_limit=settings.default_daily_job_limit,
+        max_storage_mb=settings.default_max_storage_mb,
+        webhook_url=None,
+    )
+
+
+def ensure_rate_limit(service_name: str, per_minute: int) -> None:
+    if per_minute <= 0:
+        return
+    try:
+        # Lazy import keeps utility/unit-test imports independent from Redis availability.
+        from app.queue import redis_conn
+
+        bucket = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+        key = f"pdfhub:rate:{service_name}:{bucket}"
+        count = redis_conn.incr(key)
+        if count == 1:
+            redis_conn.expire(key, 120)
+        if count > per_minute:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Service rate limit exceeded",
+                headers={"Retry-After": "60"},
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:  # Rate limiting is defense-in-depth; avoid taking read paths down if Valkey is unavailable.
+        logger.warning("rate-limit backend unavailable: %s", exc)
+
+
+def ensure_daily_job_quota(db: Session, service_name: str, daily_limit: int) -> None:
+    if daily_limit <= 0:
+        return
+    now = datetime.now(timezone.utc)
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    count = db.scalar(
+        select(func.count())
+        .select_from(JobRecord)
+        .where(JobRecord.requested_by == service_name, JobRecord.created_at >= start)
+    ) or 0
+    if count >= daily_limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Daily job quota exceeded ({daily_limit})",
+        )
+
+
+def active_storage_bytes(db: Session, service_name: str) -> int:
+    now = datetime.now(timezone.utc)
+    total = db.scalar(
+        select(func.coalesce(func.sum(FileRecord.size), 0)).where(
+            FileRecord.source_system == service_name,
+            or_(FileRecord.expires_at.is_(None), FileRecord.expires_at > now),
+        )
+    )
+    return int(total or 0)
+
+
+def ensure_storage_quota(db: Session, service_name: str, max_storage_mb: int, incoming_bytes: int) -> None:
+    if max_storage_mb <= 0:
+        return
+    limit = max_storage_mb * 1024 * 1024
+    if active_storage_bytes(db, service_name) + incoming_bytes > limit:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Service storage quota exceeded ({max_storage_mb} MB)",
+        )

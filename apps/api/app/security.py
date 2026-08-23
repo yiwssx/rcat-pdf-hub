@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app.models import ApiKey
+from app.policy import effective_policy, ensure_rate_limit
 
 settings = get_settings()
 
@@ -22,6 +23,9 @@ class Principal:
     name: str
     scopes: set[str]
     is_bootstrap_admin: bool = False
+    rate_limit_per_minute: int = 0
+    daily_job_limit: int = 0
+    max_storage_mb: int = 0
 
 
 def hash_api_key(value: str) -> str:
@@ -57,9 +61,17 @@ def get_principal(
     if not record:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
+    policy = effective_policy(db, record.name)
+    ensure_rate_limit(record.name, policy.rate_limit_per_minute)
     record.last_used_at = datetime.now(timezone.utc)
     db.commit()
-    return Principal(name=record.name, scopes=set(json.loads(record.scopes_json)))
+    return Principal(
+        name=record.name,
+        scopes=set(json.loads(record.scopes_json)),
+        rate_limit_per_minute=policy.rate_limit_per_minute,
+        daily_job_limit=policy.daily_job_limit,
+        max_storage_mb=policy.max_storage_mb,
+    )
 
 
 def require_scope(scope: str) -> Callable:

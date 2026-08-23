@@ -48,6 +48,14 @@ services:
       PDFHUB_DATA_DIR: /data
       PDFHUB_MAX_UPLOAD_MB: ${PDFHUB_MAX_UPLOAD_MB:-100}
       PDFHUB_RETENTION_HOURS: ${PDFHUB_RETENTION_HOURS:-24}
+      PDFHUB_CLEANUP_INTERVAL_SECONDS: ${PDFHUB_CLEANUP_INTERVAL_SECONDS:-900}
+      PDFHUB_CLEANUP_TEMPORARY_HOURS: ${PDFHUB_CLEANUP_TEMPORARY_HOURS:-6}
+      PDFHUB_PREVIEW_MAX_WIDTH: ${PDFHUB_PREVIEW_MAX_WIDTH:-1600}
+      PDFHUB_DEFAULT_RATE_LIMIT_PER_MINUTE: ${PDFHUB_DEFAULT_RATE_LIMIT_PER_MINUTE:-120}
+      PDFHUB_DEFAULT_DAILY_JOB_LIMIT: ${PDFHUB_DEFAULT_DAILY_JOB_LIMIT:-1000}
+      PDFHUB_DEFAULT_MAX_STORAGE_MB: ${PDFHUB_DEFAULT_MAX_STORAGE_MB:-2048}
+      PDFHUB_WEBHOOK_ALLOWED_HOSTS: ${PDFHUB_WEBHOOK_ALLOWED_HOSTS:-}
+      PDFHUB_WEBHOOK_MASTER_SECRET: ${PDFHUB_WEBHOOK_MASTER_SECRET:?set PDFHUB_WEBHOOK_MASTER_SECRET in .env}
       PDFHUB_API_KEY_PEPPER: ${PDFHUB_API_KEY_PEPPER:?set PDFHUB_API_KEY_PEPPER in .env}
       PDFHUB_ADMIN_API_KEY: ${PDFHUB_ADMIN_API_KEY:?set PDFHUB_ADMIN_API_KEY in .env}
       PDFHUB_ALLOWED_ORIGINS: ${PDFHUB_ALLOWED_ORIGINS:-http://localhost:8080}
@@ -80,6 +88,17 @@ services:
         condition: service_healthy
       gotenberg:
         condition: service_started
+    restart: unless-stopped
+
+  cleanup:
+    build: ./apps/api
+    command: ["python", "-m", "app.cleanup_runner"]
+    environment: *api-env
+    volumes:
+      - pdf_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   web:
