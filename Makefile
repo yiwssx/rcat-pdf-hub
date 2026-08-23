@@ -1,7 +1,10 @@
-.PHONY: up down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive
+.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive
 
 up:
 	docker compose up -d --build
+
+up-nas:
+	docker compose -f docker-compose.yml -f docker-compose.nas.yml up -d --build
 
 down:
 	docker compose --profile s3 --profile security --profile observability --profile archive down
@@ -25,7 +28,7 @@ cleanup:
 	docker compose run --rm cleanup python -m app.cleanup
 
 migrate:
-	docker compose run --rm api python -m app.migrate
+	docker compose run --rm api python -c 'from app.migrate import run_migrations; run_migrations()'
 
 scale-workers:
 	docker compose up -d --scale worker=$${WORKERS:-4} worker
