@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -65,3 +65,17 @@ class JobRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ArchiveRecord(Base):
+    __tablename__ = "archive_records"
+    __table_args__ = (UniqueConstraint("file_id", "integration_name", name="uq_archive_file_integration"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    file_id: Mapped[str] = mapped_column(String(36), index=True)
+    integration_name: Mapped[str] = mapped_column(String(40), index=True)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="queued", index=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
