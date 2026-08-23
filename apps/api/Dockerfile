@@ -5,7 +5,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      qpdf ghostscript tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng \
+      qpdf ghostscript poppler-utils \
+      tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng \
+      fonts-noto-core \
       unpaper pngquant jbig2dec curl \
     && rm -rf /var/lib/apt/lists/*
 
