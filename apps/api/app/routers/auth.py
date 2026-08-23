@@ -101,6 +101,7 @@ def ldap_login(req: LdapLoginRequest, response: Response):
 
 
 @router.post("/logout", status_code=204)
-def logout(response: Response):
+def logout():
+    response = Response(status_code=204)
     response.delete_cookie(settings.session_cookie_name, path="/")
-    return Response(status_code=204, headers=response.headers)
+    return response
