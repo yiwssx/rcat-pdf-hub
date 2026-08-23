@@ -29,7 +29,14 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
+      - name: Install backend dependencies without warnings
+        run: |
+          set -o pipefail
+          pip install -r requirements.txt 2>&1 | tee /tmp/pip-install.log
+          if grep -Eqi '(^|[[:space:]])warning:|deprecated|deprecationwarning' /tmp/pip-install.log; then
+            echo "Dependency installation emitted a warning" >&2
+            exit 1
+          fi
       - run: python -m compileall -q app tests
       - run: python -m pytest -q
         env:
@@ -57,9 +64,25 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - run: npm install --no-audit --no-fund
+      - name: Install frontend dependencies without warnings
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund 2>&1 | tee /tmp/npm-install.log
+          if grep -Eqi 'npm warn|warning:|deprecated|deprecationwarning' /tmp/npm-install.log; then
+            echo "Dependency installation emitted a warning" >&2
+            exit 1
+          fi
       - run: npm run typecheck
-      - run: npm run build
+      - name: Build frontend without warnings
+        run: |
+          mkdir -p .next/cache
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/next-build.log
+          if grep -Eqi '⚠|##\[warning\]|npm warn|warning:|deprecated|deprecationwarning' /tmp/next-build.log; then
+            echo "Frontend build emitted a warning" >&2
+            exit 1
+          fi
+          git diff --exit-code -- tsconfig.json
 
   compose:
     runs-on: ubuntu-latest
@@ -69,7 +92,13 @@ jobs:
           git config --global init.defaultBranch main
           git config --global advice.detachedHead false
       - uses: actions/checkout@v6
-      - run: docker compose config >/dev/null
+      - name: Validate Compose without warnings
+        run: |
+          docker compose config >/tmp/compose-config.out 2>/tmp/compose-config.err
+          if [ -s /tmp/compose-config.err ]; then
+            cat /tmp/compose-config.err >&2
+            exit 1
+          fi
         env:
           POSTGRES_PASSWORD: ci-postgres-password
           PDFHUB_API_KEY_PEPPER: ci-test-pepper-change-me
