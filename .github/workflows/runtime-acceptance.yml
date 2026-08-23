@@ -54,6 +54,11 @@ jobs:
             exit 1
           fi
 
+      - name: Configure runtime kernel requirements
+        run: |
+          sudo sysctl -q -w vm.overcommit_memory=1
+          test "$(sysctl -n vm.overcommit_memory)" = "1"
+
       - name: Start full stack without warnings
         run: |
           set -o pipefail
