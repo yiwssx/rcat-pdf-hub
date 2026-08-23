@@ -1,0 +1,108 @@
+name: pdf-hub
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pdfhub}
+      POSTGRES_USER: ${POSTGRES_USER:-pdfhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pdfhub} -d ${POSTGRES_DB:-pdfhub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  gotenberg:
+    image: gotenberg/gotenberg:8.34.0
+    command:
+      - gotenberg
+      - --api-timeout=300s
+      - --libreoffice-restart-after=20
+      - --chromium-restart-after=50
+    tmpfs:
+      - /tmp:size=1g
+    restart: unless-stopped
+
+  api:
+    build: ./apps/api
+    environment: &api-env
+      PDFHUB_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-pdfhub}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pdfhub}
+      PDFHUB_REDIS_URL: redis://valkey:6379/0
+      PDFHUB_GOTENBERG_URL: http://gotenberg:3000
+      PDFHUB_DATA_DIR: /data
+      PDFHUB_MAX_UPLOAD_MB: ${PDFHUB_MAX_UPLOAD_MB:-100}
+      PDFHUB_RETENTION_HOURS: ${PDFHUB_RETENTION_HOURS:-24}
+      PDFHUB_API_KEY_PEPPER: ${PDFHUB_API_KEY_PEPPER:?set PDFHUB_API_KEY_PEPPER in .env}
+      PDFHUB_ADMIN_API_KEY: ${PDFHUB_ADMIN_API_KEY:?set PDFHUB_ADMIN_API_KEY in .env}
+      PDFHUB_ALLOWED_ORIGINS: ${PDFHUB_ALLOWED_ORIGINS:-http://localhost:8080}
+    volumes:
+      - pdf_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    build: ./apps/api
+    command: ["rq", "worker", "--url", "redis://valkey:6379/0", "pdf"]
+    environment: *api-env
+    volumes:
+      - pdf_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    restart: unless-stopped
+
+  web:
+    build: ./apps/web
+    environment:
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "${PDFHUB_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  valkey_data:
+  pdf_data:
