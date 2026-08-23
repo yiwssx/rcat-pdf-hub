@@ -36,7 +36,7 @@ async def save_upload(upload: UploadFile) -> tuple[Path, int, str, str]:
             total += len(chunk)
             if total > settings.max_upload_bytes:
                 target.unlink(missing_ok=True)
-                raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="File too large")
+                raise HTTPException(status_code=413, detail="File too large")
             digest.update(chunk)
             fh.write(chunk)
 

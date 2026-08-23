@@ -109,6 +109,6 @@ def ensure_storage_quota(db: Session, service_name: str, max_storage_mb: int, in
     limit = max_storage_mb * 1024 * 1024
     if active_storage_bytes(db, service_name) + incoming_bytes > limit:
         raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            status_code=413,
             detail=f"Service storage quota exceeded ({max_storage_mb} MB)",
         )
