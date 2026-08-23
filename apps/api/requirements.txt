@@ -8,5 +8,5 @@ redis==6.4.0
 rq==2.5.0
 httpx==0.28.1
 ocrmypdf==17.8.1
-pypdf==6.0.0
+pypdf==6.15.0
 pytest==8.4.1
