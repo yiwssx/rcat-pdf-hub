@@ -127,3 +127,31 @@ class ApiKeyOut(BaseModel):
     scopes: list[str]
     active: bool
     policy: ServicePolicyOut
+
+
+class LdapLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=120, pattern=r"^[^\x00\r\n]+$")
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class AuthMeOut(BaseModel):
+    name: str
+    display_name: str | None
+    subject: str | None
+    scopes: list[str]
+    groups: list[str]
+    auth_source: str
+    is_admin: bool
+
+
+class ArchiveOut(BaseModel):
+    id: str
+    file_id: str
+    integration_name: str
+    external_id: str | None
+    status: str
+    error: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
