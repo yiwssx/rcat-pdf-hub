@@ -5,4 +5,4 @@ from app.config import get_settings
 
 settings = get_settings()
 redis_conn = Redis.from_url(settings.redis_url)
-pdf_queue = Queue("pdf", connection=redis_conn, default_timeout=1800)
+pdf_queue = Queue(settings.rq_queue, connection=redis_conn, default_timeout=settings.rq_job_timeout_seconds)
