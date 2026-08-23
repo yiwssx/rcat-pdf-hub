@@ -20,6 +20,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+COPY alembic.ini ./alembic.ini
+COPY alembic ./alembic
 COPY app ./app
 COPY tests ./tests
 
@@ -27,4 +29,4 @@ RUN useradd --create-home --uid 10001 pdfhub && mkdir -p /data && chown -R pdfhu
 USER pdfhub
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "app.entrypoint", "api"]
