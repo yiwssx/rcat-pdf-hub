@@ -2,7 +2,11 @@ FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN python -m venv "$VIRTUAL_ENV"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       qpdf ghostscript poppler-utils \
