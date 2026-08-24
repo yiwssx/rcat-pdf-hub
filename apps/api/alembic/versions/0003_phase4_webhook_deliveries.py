@@ -31,6 +31,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("job_id", "event", name="uq_webhook_job_event"),
     )
     op.create_index("ix_webhook_deliveries_job_id", "webhook_deliveries", ["job_id"], unique=False)
     op.create_index("ix_webhook_deliveries_service_name", "webhook_deliveries", ["service_name"], unique=False)
