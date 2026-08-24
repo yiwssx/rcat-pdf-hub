@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_HUMAN_SCOPES = (
     "files:read,files:write,jobs:read,"
     "pdf:merge,pdf:split,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,"
-    "pdf:watermark,pdf:page-number,pdf:stamp,archive:paperless"
+    "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,archive:paperless"
 )
 
 
@@ -34,11 +34,23 @@ class Settings(BaseSettings):
     webhook_allow_private_networks: bool = False
     webhook_master_secret: str = Field(default="change-me-webhook-master-secret", min_length=16)
     webhook_timeout_seconds: int = 10
+    webhook_max_attempts: int = Field(default=6, ge=1, le=20)
+    webhook_retry_initial_seconds: int = Field(default=5, ge=1, le=3600)
+    webhook_retry_max_seconds: int = Field(default=900, ge=1, le=86400)
+    webhook_dispatch_interval_seconds: int = Field(default=2, ge=1, le=300)
+    webhook_dispatch_batch_size: int = Field(default=50, ge=1, le=1000)
 
     api_key_pepper: str = Field(default="change-me", min_length=8)
     admin_api_key: str = Field(default="change-me-now", min_length=12)
     allowed_origins: str = "http://localhost:8080"
     public_base_url: str = "http://localhost:8080"
+
+    download_signing_secret: str = Field(
+        default="change-me-download-signing-secret-at-least-32-bytes",
+        min_length=32,
+    )
+    signed_download_default_ttl_seconds: int = Field(default=300, ge=30, le=86400)
+    signed_download_max_ttl_seconds: int = Field(default=3600, ge=30, le=86400)
 
     # Human authentication. API keys remain supported for service-to-service calls.
     auth_token_secret: str = Field(default="change-me-auth-token-secret-at-least-32-bytes", min_length=32)
@@ -132,6 +144,8 @@ class Settings(BaseSettings):
                 raise ValueError(f"S3 storage enabled but missing: {', '.join(missing)}")
         if self.paperless_enabled and not self.paperless_token:
             raise ValueError("Paperless integration enabled but PAPERLESS_TOKEN is empty")
+        if self.signed_download_default_ttl_seconds > self.signed_download_max_ttl_seconds:
+            raise ValueError("SIGNED_DOWNLOAD_DEFAULT_TTL_SECONDS cannot exceed SIGNED_DOWNLOAD_MAX_TTL_SECONDS")
         return self
 
     @property
