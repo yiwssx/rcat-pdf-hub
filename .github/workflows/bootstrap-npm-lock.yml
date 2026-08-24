@@ -1,9 +1,8 @@
 name: Bootstrap npm lockfile
 
 on:
-  push:
-    branches: [chore/dependency-hardening]
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -16,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: chore/dependency-hardening
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
@@ -35,4 +34,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(web): add npm lockfile"
-          git push origin HEAD:chore/dependency-hardening
+          git push origin HEAD:${{ github.head_ref }}
