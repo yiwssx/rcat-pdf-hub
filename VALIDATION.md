@@ -60,7 +60,7 @@ Prerequisites:
 - Docker Engine + Docker Compose plugin
 - `flock` (util-linux)
 - `curl`
-- GitHub CLI (`gh`) authenticated with permission to read and merge this repository if automatic Dependabot merge is desired
+- GitHub CLI (`gh`) authenticated with repository read/status/merge access for PR status reporting and Dependabot merge
 
 Install from the repository clone:
 
@@ -74,12 +74,18 @@ The systemd user timer runs approximately every five minutes. Each cycle:
 1. fetches `origin/main`
 2. if `main` has changed, creates a detached Git worktree and runs `make validate-free`
 3. records the last fully validated main SHA only after all gates pass
-4. checks open Dependabot PRs
-5. accepts only Dependabot-authored PRs based on the current `main` SHA that change exactly `apps/web/package.json`
-6. runs `validate-direct-dependency.sh`
-7. rechecks both main/head SHA after validation
-8. squash-merges only a valid forward patch update that passed the warning-free frontend gate
-9. merges at most one dependency PR per cycle so the next PR must be validated against the newly updated main
+4. checks open non-Dependabot PRs based on the current `main`
+5. runs full `make validate-free` for at most one new/changed normal PR per cycle
+6. posts `local-ci/validate-free` commit status (`pending`, `success`, `failure` or `error`) back to GitHub
+7. **never auto-merges normal PRs**; the status is an acceptance signal for human/developer merge decisions
+8. checks open Dependabot PRs
+9. accepts only Dependabot-authored PRs based on the current `main` SHA that change exactly `apps/web/package.json`
+10. runs `validate-direct-dependency.sh`
+11. rechecks both main/head SHA after validation
+12. squash-merges only a valid forward patch update that passed the warning-free frontend gate
+13. merges at most one dependency PR per cycle so the next PR must be validated against the newly updated main
+
+Successful normal-PR validations are cached by base/head SHA. Failed PRs are retried on a later cycle, allowing transient network/tooling failures to recover without accepting a bad change.
 
 Local state and logs are stored under `.local-ci/` and are ignored by Git.
 
@@ -113,7 +119,7 @@ Release consistency checks are part of `make validate-policy` / `make validate-f
 - Compose runtime images pinned to explicit release tags
 - no default/recommended paid cloud providers in user-facing configuration/docs
 - explicit self-hosted S3 endpoint guard present
-- local CI scripts present
+- local main/PR/Dependabot CI scripts present
 
 ## Production validation
 
