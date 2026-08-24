@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
@@ -104,22 +105,43 @@ def _job_payload(job: JobRecord, delivery: WebhookDelivery) -> bytes:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
 
 
+def _delivery_for_job_event(db: Session, job_id: str, event: str) -> WebhookDelivery | None:
+    return db.scalar(
+        select(WebhookDelivery).where(
+            WebhookDelivery.job_id == job_id,
+            WebhookDelivery.event == event,
+        )
+    )
+
+
 def queue_job_webhook(db: Session, job: JobRecord) -> WebhookDelivery | None:
     policy = db.get(ServicePolicy, job.requested_by)
     if not policy or not policy.webhook_url:
         return None
+    event = f"job.{job.status}"
+    existing = _delivery_for_job_event(db, job.id, event)
+    if existing:
+        return existing
+
     delivery = WebhookDelivery(
         job_id=job.id,
         service_name=job.requested_by,
         url=policy.webhook_url,
-        event=f"job.{job.status}",
+        event=event,
         status="queued",
         attempt_count=0,
         max_attempts=settings.webhook_max_attempts,
         next_attempt_at=_now(),
     )
     db.add(delivery)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # A duplicate worker execution may race this insert. The unique
+        # job/event constraint makes the webhook at-least-once worker path
+        # idempotent at the delivery-record boundary.
+        db.rollback()
+        return _delivery_for_job_event(db, job.id, event)
     db.refresh(delivery)
     audit_event(
         "webhook.queued",
