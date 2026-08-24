@@ -17,6 +17,7 @@
 - Phase 3 runtime acceptance for real self-hosted S3-compatible storage and ClamAV scanning
 - Zero-cost local validation for backend, frontend, Compose and runtime
 - Optional zero-cost local CI polling executor and direct-dependency validator
+- Release-policy validation for zero-cost configuration, dependency scope and frozen container baselines
 
 ### Changed
 - API and Web Console version aligned to 0.3.0
@@ -25,8 +26,9 @@
 - S3 mode now refuses startup/use without `PDFHUB_S3_ENDPOINT_URL`, preventing implicit commercial-cloud fallback
 - Worker output path is storage-backend agnostic
 - Documentation and examples use self-hosted/free infrastructure only
-- Dependabot is limited to direct npm dependencies in `apps/web/package.json`; transitive, lockfile, pip, Docker and GitHub Actions updates are excluded
+- Dependabot is limited to direct npm dependencies in `apps/web/package.json` and configured to generate patch updates only; transitive, lockfile, pip, Docker and GitHub Actions updates are excluded
 - GitHub-hosted Actions workflows were removed to guarantee zero paid CI exposure
+- Python, Node and runtime service container images are pinned to explicit release baselines so Docker pulls cannot silently upgrade infrastructure
 
 ## 0.2.0 — 2026-08-23
 
