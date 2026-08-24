@@ -1,13 +1,13 @@
 # Phase 3 — Production & Enterprise Integration
 
-Phase 3 turns RCAT PDF Hub 0.3.0 into a production-oriented platform while preserving API-key service integration from Phase 2.
+RCAT PDF Hub **0.3.0** is the completed Phase 3 baseline. It extends the Phase 2 API-key service model into a production-oriented, fully self-hosted platform while preserving zero-cost deployment and validation requirements.
 
 ## Delivered capabilities
 
 - OIDC Authorization Code + PKCE SSO and validated OIDC bearer tokens
 - LDAP / Active Directory credential login with short-lived HttpOnly PDF Hub sessions
 - Admin-group mapping to privileged `*` scope; normal human identities receive configured scopes
-- S3-compatible binary storage (AWS S3, MinIO, SeaweedFS, Ceph RGW) plus local/NAS storage
+- Local/NAS storage and S3-compatible binary storage with an explicit self-hosted endpoint
 - ClamAV streaming malware scanning for uploads and processed outputs
 - Configurable RQ queue and horizontally scalable stateless workers
 - Prometheus metrics and optional OTLP HTTP tracing export
@@ -15,6 +15,13 @@ Phase 3 turns RCAT PDF Hub 0.3.0 into a production-oriented platform while prese
 - Alembic schema migrations with safe adoption of Phase 2 databases
 - Production readiness endpoint at `/readyz`
 - Optional Docker Compose profiles for S3, malware scanning, observability and Paperless-ngx
+- Zero-cost local validation and optional always-on local CI executor
+
+## Zero-cost rule
+
+The project must not require paid runners, paid CI/CD, paid cloud storage, paid monitoring or paid build services. Bundled/default deployment paths use institution-owned hardware and free/open-source software.
+
+S3 mode requires an explicit `PDFHUB_S3_ENDPOINT_URL`. The application refuses S3 mode without that endpoint so it cannot silently fall back to a commercial cloud object-storage endpoint.
 
 ## Deployment modes
 
@@ -34,9 +41,15 @@ make up-nas
 
 The same NAS path must be mounted on every host when workers are distributed across hosts.
 
-### S3-compatible storage
+### Self-hosted S3-compatible storage
 
-Set:
+The bundled target is SeaweedFS:
+
+```bash
+make up-s3
+```
+
+Then set:
 
 ```env
 PDFHUB_STORAGE_BACKEND=s3
@@ -47,14 +60,7 @@ PDFHUB_S3_SECRET_KEY=<random>
 PDFHUB_S3_AUTO_CREATE_BUCKET=true
 ```
 
-For the bundled development S3 target:
-
-```bash
-make up-s3
-make up
-```
-
-For production, point the endpoint at an external MinIO, SeaweedFS, Ceph RGW or AWS S3 deployment instead.
+Other self-hosted S3-compatible endpoints such as Ceph RGW can be used. An endpoint URL is mandatory.
 
 ### Horizontal workers
 
@@ -64,11 +70,11 @@ On a single Compose host:
 WORKERS=4 make scale-workers
 ```
 
-For multiple worker hosts, all workers must share PostgreSQL and Valkey and use either S3-compatible storage or the same shared NAS.
+For multiple worker hosts, all workers must share PostgreSQL and Valkey and use either the same shared NAS or the same self-hosted S3-compatible storage.
 
 ## OIDC SSO
 
-Configure an OIDC application at your identity provider with callback:
+Use an existing institutional OIDC provider or a free self-hosted identity provider such as Keycloak/Authentik. Configure callback:
 
 ```text
 https://pdf.example.org/api/v1/auth/oidc/callback
@@ -135,7 +141,7 @@ Uploads are staged locally, streamed to `clamd`, and committed to storage only a
 
 ## Observability
 
-Prometheus metrics are served internally at `api:8000/metrics`. Start the bundled Prometheus target:
+Prometheus metrics are served internally at `api:8000/metrics`. Start the bundled stack:
 
 ```bash
 make up-observability
@@ -143,13 +149,13 @@ make up-observability
 
 The main metrics include HTTP request count/duration, job states, file lifecycle, malware outcomes, archive submissions and RQ queue depth.
 
-For traces, set the full OTLP HTTP traces endpoint:
+For traces, set a self-hosted OTLP HTTP traces endpoint:
 
 ```env
 PDFHUB_OTEL_ENDPOINT=http://otel-collector:4318/v1/traces
 ```
 
-The bundled collector is a safe starting point; replace its debug exporter with your production backend (Tempo, Jaeger-compatible OTLP receiver, Grafana Cloud, etc.).
+The bundled collector can feed a self-hosted Jaeger or Tempo-compatible backend. Paid observability services are not part of the supported default deployment path.
 
 ## Paperless-ngx
 
@@ -186,13 +192,15 @@ Manual migration:
 make migrate
 ```
 
-Back up PostgreSQL before any release upgrade.
+Back up PostgreSQL and file/object storage together before release upgrades.
 
 ## Readiness and operational checks
 
-- `/healthz` retains the Phase 2 database/Valkey contract.
+- `/healthz` verifies the database/Valkey health contract.
 - `/readyz` additionally verifies configured storage, Gotenberg and ClamAV; optional Paperless status is reported separately.
-- `/api/v1/integrations/status` shows enabled enterprise integrations to authenticated callers.
+- `/api/v1/integrations/status` shows enabled integrations to authenticated callers.
+- `make validate-free` performs warning-free backend, frontend, Compose and runtime validation on institution-owned hardware.
+- `make install-local-ci` installs the optional zero-cost local polling executor for continuous validation.
 
 ## Security checklist before Internet exposure
 
@@ -202,7 +210,11 @@ Back up PostgreSQL before any release upgrade.
 - Prefer OIDC SSO over LDAP password exchange when an IdP is available.
 - Prefer LDAPS when LDAP is enabled.
 - Keep bootstrap admin as a break-glass credential, not an application credential.
-- Use S3 server-side encryption when supported, or encrypted NAS volumes.
+- Use encrypted NAS volumes or self-hosted S3 encryption when supported.
 - Enable ClamAV fail-closed for untrusted uploads.
 - Restrict direct access to PostgreSQL, Valkey, Gotenberg, ClamAV and object storage.
 - Back up PostgreSQL and storage together according to the same recovery point objective.
+
+## Completion status
+
+Phase 3 functionality is delivered in `0.3.0`. Remaining items after this baseline are enhancements rather than Phase 3 blockers.
