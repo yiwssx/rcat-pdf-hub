@@ -2,13 +2,13 @@
 
 ศูนย์กลางประมวลผล PDF แบบ **self-hosted / API-first** สำหรับให้หลายระบบใช้ PDF infrastructure ชุดเดียว โดยไม่ต้องติดตั้ง engine PDF ซ้ำในทุกโปรเจกต์
 
-> Status: **0.3.0 — Phase 3 complete**
+> Status: **0.4.0 — Phase 4 complete**
 > Deployment target: Docker Compose บนเครื่องขององค์กร โดยรองรับ local volume, NAS และ self-hosted S3-compatible storage
 > Cost policy: **zero-cost software/CI/CD** — ไม่พึ่ง paid runner, paid CI/CD หรือ paid cloud service
 
 ## ความสามารถปัจจุบัน
 
-### PDF processing
+### PDF & media processing
 
 - รวม PDF — qpdf
 - แยก/เลือกหน้า — qpdf
@@ -21,10 +21,13 @@
 - เลขหน้าแบบกำหนด format/ตำแหน่งได้
 - PDF Stamp — ใช้หน้าแรกของ PDF อีกไฟล์เป็น overlay
 - Preview PDF → PNG — Poppler (`pdftoppm`) พร้อม cache
+- JPEG / PNG / WebP / TIFF / BMP หลายไฟล์ → PDF แบบ batch
+- PDF → PNG/JPEG หลายหน้า โดยรวมผลลัพธ์เป็น ZIP
 
 ### Platform
 
 - Upload / list / download file ผ่าน API
+- Signed short-lived download URL แบบ HMAC โดยไม่ต้องแนบ API key ใน URL
 - Async job queue ผ่าน Valkey + RQ
 - PostgreSQL metadata / job history
 - API Key แยกแต่ละระบบ + scopes + revoke
@@ -34,6 +37,8 @@
 - Tenant/service isolation
 - Per-service rate limit, daily job quota และ storage quota
 - Signed webhook callback พร้อม HMAC และ hostname allowlist
+- Durable webhook retry + exponential backoff + dead-letter queue
+- Admin API สำหรับดู/replay dead webhook delivery
 - JSONL append-only audit trail
 - Automatic retention cleanup worker
 - Local / NAS / self-hosted S3-compatible storage
@@ -47,7 +52,7 @@
 - Caddy reverse proxy
 - Zero-cost local validation + local CI polling executor โดยไม่ใช้ GitHub-hosted runners
 
-รายละเอียด Phase 3 ดูที่ `PHASE3.md`
+รายละเอียด release baseline ดูที่ `PHASE3.md` และ `PHASE4.md`
 
 ## Architecture
 
@@ -72,13 +77,14 @@ Browser / System A / System B / System C
             v          v           v
           qpdf     OCRmyPDF     Gotenberg
         pypdf/RL   Tesseract    LibreOffice
+        Pillow     Poppler
             |
             v
-       processed PDF
+   PDF / ZIP image output
 
-Cleanup Worker ---> retention / temp cleanup
-Worker ---------> signed webhooks
-Optional -------> ClamAV / Prometheus / OTel / Paperless-ngx / SeaweedFS
+Cleanup Worker ------> retention / temp cleanup
+Webhook Dispatcher --> durable retry / dead-letter delivery
+Optional ------------> ClamAV / Prometheus / OTel / Paperless-ngx / SeaweedFS
 ```
 
 Gotenberg, PostgreSQL, Valkey, ClamAV และ object storage ไม่ควร publish ตรงสู่ Internet ทุก request ภายนอกผ่าน PDF Hub API/Caddy ก่อน
@@ -129,7 +135,8 @@ curl -X POST http://localhost:8080/api/v1/admin/api-keys \
       "files:read", "files:write", "jobs:read",
       "pdf:merge", "pdf:split", "pdf:rotate", "pdf:compress",
       "pdf:ocr", "pdf:pdfa", "pdf:convert",
-      "pdf:watermark", "pdf:page-number", "pdf:stamp"
+      "pdf:watermark", "pdf:page-number", "pdf:stamp",
+      "pdf:image-to-pdf", "pdf:pdf-to-image"
     ],
     "rate_limit_per_minute": 120,
     "daily_job_limit": 1000,
@@ -147,10 +154,14 @@ plaintext API key (`pdfh_...`) ถูกคืนครั้งเดียว 
 | GET / POST | `/api/v1/files` | `files:read` / `files:write` |
 | GET | `/api/v1/files/{id}` | `files:read` |
 | GET | `/api/v1/files/{id}/download` | `files:read` |
+| POST | `/api/v1/files/{id}/signed-download` | `files:read` |
+| GET | `/api/v1/files/{id}/signed-download?expires=...&token=...` | signed token |
 | GET | `/api/v1/files/{id}/preview` | `files:read` |
 | GET | `/api/v1/jobs` | `jobs:read` |
 | GET | `/api/v1/jobs/{id}` | `jobs:read` |
 | POST | `/api/v1/pdf/merge` | `pdf:merge` |
+| POST | `/api/v1/pdf/images-to-pdf` | `pdf:image-to-pdf` |
+| POST | `/api/v1/pdf/pdf-to-images` | `pdf:pdf-to-image` |
 | POST | `/api/v1/pdf/split` | `pdf:split` |
 | POST | `/api/v1/pdf/rotate` | `pdf:rotate` |
 | POST | `/api/v1/pdf/compress` | `pdf:compress` |
@@ -163,9 +174,45 @@ plaintext API key (`pdfh_...`) ถูกคืนครั้งเดียว 
 | POST | `/api/v1/integrations/paperless/{file_id}` | `archive:paperless` |
 | GET / POST / DELETE | `/api/v1/admin/api-keys...` | `admin:keys` |
 | GET / PUT | `/api/v1/admin/service-policies...` | `admin:keys` |
+| GET | `/api/v1/admin/webhook-deliveries` | `admin:keys` |
+| POST | `/api/v1/admin/webhook-deliveries/{id}/retry` | `admin:keys` |
 | GET | `/api/v1/admin/audit` | `admin:keys` |
 
 รายละเอียด schema ที่แม่นที่สุดดูจาก Swagger `/docs`
+
+## Signed downloads
+
+สร้าง URL ที่ใช้งานได้ชั่วคราวโดยไม่ต้องส่ง API key ให้ปลายทาง:
+
+```bash
+curl -X POST 'http://localhost:8080/api/v1/files/FILE_ID/signed-download?ttl_seconds=300' \
+  -H 'X-API-Key: SERVICE_KEY'
+```
+
+URL ถูก bind กับ file ID, service owner และ expiry ด้วย HMAC-SHA256 เพดาน TTL กำหนดด้วย `PDFHUB_SIGNED_DOWNLOAD_MAX_TTL_SECONDS` และสามารถ invalidate URL ที่ยังไม่หมดอายุทั้งหมดได้ด้วยการ rotate `PDFHUB_DOWNLOAD_SIGNING_SECRET`
+
+## Durable webhooks
+
+เมื่อ job จบ ระบบสร้าง delivery record ใน PostgreSQL แล้ว service `webhook` จะส่งแยกจาก RQ worker ถ้าปลายทางล้มเหลวจะ retry แบบ exponential backoff จนครบจำนวนครั้ง แล้วเปลี่ยนสถานะเป็น `dead`
+
+```text
+queued -> retrying -> delivered
+                    -> dead
+
+dead --admin retry--> queued
+```
+
+ตรวจ dead-letter queue:
+
+```text
+GET /api/v1/admin/webhook-deliveries?status=dead
+```
+
+Replay:
+
+```text
+POST /api/v1/admin/webhook-deliveries/{delivery_id}/retry
+```
 
 ## Storage
 
@@ -200,10 +247,11 @@ PDFHUB_S3_AUTO_CREATE_BUCKET=true
 - Service scopes + tenant isolation
 - Upload size limit
 - Rate limit + daily job quota + storage quota
-- Webhook hostname allowlist + HMAC signature
-- ClamAV scan upload และ processed output
+- Webhook hostname allowlist + HMAC signature + persistent retry/DLQ
+- Signed download URL ใช้ dedicated HMAC secret และ hard maximum TTL
+- ClamAV scan upload และ processed output รวม ZIP จาก PDF-to-image
 - Worker resolve file path จาก database/storage abstraction เท่านั้น
-- Audit log ไม่บันทึก plaintext API key / webhook secret
+- Audit log ไม่บันทึก plaintext API key / webhook secret / download signing secret
 - Alembic migration ก่อน production API startup
 - `/readyz` ตรวจ storage, Gotenberg และ ClamAV ตาม config
 
@@ -230,7 +278,7 @@ make up-s3              # SeaweedFS
 - Gotenberg / LibreOffice
 - OCRmyPDF / Tesseract
 - qpdf / Ghostscript
-- pypdf / ReportLab
+- pypdf / ReportLab / Pillow
 - Poppler
 - SeaweedFS
 - ClamAV
@@ -253,6 +301,7 @@ PDFHUB_DATABASE_URL=sqlite+pysqlite:///:memory: \
 PDFHUB_API_KEY_PEPPER=ci-test-pepper-change-me \
 PDFHUB_ADMIN_API_KEY=pdfh_ci_admin_key_change_me \
 PDFHUB_WEBHOOK_MASTER_SECRET=ci-webhook-master-secret-change-me \
+PDFHUB_DOWNLOAD_SIGNING_SECRET=ci-download-signing-secret-change-me-at-least-32 \
 python -m pytest -q
 ```
 
@@ -319,11 +368,11 @@ make local-ci-status
 make uninstall-local-ci
 ```
 
-## Phase 3 completion
+## Phase completion
 
-Phase 3 เสร็จแล้วใน 0.3.0: OIDC/LDAP, local/NAS/S3-compatible storage, horizontal RQ workers, ClamAV, Prometheus/OpenTelemetry, Paperless-ngx, Alembic migrations, zero-cost release policy และ local CI executor ถูก implement แล้ว
+Phase 3 เสร็จใน 0.3.0 และยังเป็น production/enterprise foundation ของระบบ
 
-งานหลัง 0.3.0 เป็น enhancement ไม่ใช่ blocker ของ Phase 3 เช่น Image ↔ PDF batch tools, signed short-lived download URLs และ webhook delivery retry/dead-letter queue
+Phase 4 เสร็จใน 0.4.0: Image ↔ PDF batch tools, signed short-lived download URLs และ durable webhook retry/dead-letter queue พร้อม admin replay ถูก implement แล้ว รายละเอียดที่ `PHASE4.md`
 
 ## License
 
