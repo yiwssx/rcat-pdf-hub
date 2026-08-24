@@ -1,6 +1,16 @@
 # Phase 4 — Secure Delivery & Media Conversion
 
-RCAT PDF Hub **0.4.0** is the completed Phase 4 baseline. It builds on the completed Phase 3 platform and adds secure short-lived file delivery, batch Image ↔ PDF conversion, and durable webhook delivery with retry and dead-letter recovery while preserving the zero-cost/self-hosted operating model.
+RCAT PDF Hub **0.4.0** is the completed Phase 4 feature baseline. It builds on the completed Phase 3 platform and adds secure short-lived file delivery, batch Image ↔ PDF conversion, and durable webhook delivery with retry and dead-letter recovery while preserving the zero-cost/self-hosted operating model.
+
+## Maintenance release 0.4.1
+
+Phase 4 remains feature-complete. Version **0.4.1** is a security/validation maintenance release, not a new feature phase.
+
+- Pillow is upgraded from 11.3.0 to the reviewed secure 12.3.0 baseline.
+- Release validation requires an exact Pillow pin on the reviewed 12.x line at or above 12.3.0 and below 13.0.0; crossing major versions remains an explicit developer decision.
+- `validate-free.sh` delegates policy checks to `scripts/validate-release-policy.py` so release/dependency rules have one source of truth.
+- Dependabot version-update automation remains direct npm patch-only.
+- Security PRs opened outside that lane, including pip/security updates, receive full `make validate-free` validation on institution-owned hardware and are never auto-merged.
 
 ## Delivered capabilities
 
@@ -73,7 +83,7 @@ Example request:
 }
 ```
 
-The output is a managed `application/zip` file containing deterministic names such as `page-0001.png`. Retention, storage quota, malware scanning, tenant isolation, audit logging and signed downloads apply to the ZIP exactly as they do to PDF outputs.
+The output is a managed `application/zip` file containing deterministic names such as `page-0001.png`. Retention, storage quota, malware scanning, tenant isolation, audit logging and signed downloads apply to the ZIP exactly as they do to PDF outputs. PDF-to-image jobs are capped by `PDFHUB_PDF_TO_IMAGE_MAX_PAGES` (default 200 pages per job).
 
 ## Signed short-lived downloads
 
@@ -184,7 +194,7 @@ Production startup continues to run Alembic before the API becomes healthy. Back
 
 ## Deployment
 
-Generate all secrets, including the new download-signing secret:
+Generate all secrets, including the download-signing secret:
 
 ```bash
 make secrets
@@ -197,7 +207,7 @@ make config
 make up
 ```
 
-The default Compose stack now includes the dedicated `webhook` dispatcher service. No external queue, paid webhook provider or paid scheduler is required.
+The default Compose stack includes the dedicated `webhook` dispatcher service. No external queue, paid webhook provider or paid scheduler is required.
 
 ## Validation
 
@@ -211,7 +221,7 @@ make validate-runtime
 make validate-free
 ```
 
-Phase 4 regression coverage includes signed-token binding/TTL, multi-image PDF generation, PDF page rasterization/ZIP output, and webhook retry/dead-letter/requeue lifecycle.
+Phase 4 regression coverage includes signed-token binding/TTL, multi-image PDF generation, PDF page rasterization/ZIP output, and webhook retry/dead-letter/requeue lifecycle. The 0.4.1 maintenance gate also verifies the reviewed Pillow security floor and the security-PR full-validation lane.
 
 ## Zero-cost rule
 
@@ -219,4 +229,4 @@ Phase 4 preserves the project rule that normal operation and validation must not
 
 ## Completion status
 
-RCAT PDF Hub **0.4.0 is the completed Phase 4 baseline**. Further work after this release should be treated as Phase 5/enhancement work rather than a Phase 4 blocker.
+RCAT PDF Hub **0.4.0 is the completed Phase 4 feature baseline**. Version **0.4.1** is its security-maintenance release. New feature work after this baseline should be treated as Phase 5/enhancement work rather than a Phase 4 blocker.
