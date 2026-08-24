@@ -76,13 +76,11 @@ for row in "${rows[@]}"; do
     git -C "${ROOT}" worktree remove --force "${worktree}" >/dev/null 2>&1 || true
     rm -rf "${worktree}"
   }
-  trap cleanup_worktree RETURN
 
   echo "dependabot: validating PR #${pr} at ${head_sha}"
   if ! (cd "${worktree}" && bash scripts/validate-direct-dependency.sh "${main_sha}"); then
     echo "dependabot: PR #${pr} validation failed; not merged" >&2
     cleanup_worktree
-    trap - RETURN
     continue
   fi
 
@@ -91,7 +89,6 @@ for row in "${rows[@]}"; do
   if [ "${current_main}" != "${main_sha}" ] || [ "${current_head}" != "${head_sha}" ]; then
     echo "dependabot: PR #${pr} or main moved after validation; not merged"
     cleanup_worktree
-    trap - RETURN
     continue
   fi
 
@@ -103,12 +100,10 @@ for row in "${rows[@]}"; do
     echo "dependabot: GitHub refused merge for PR #${pr}" >&2
     echo "${merge_result}" >&2
     cleanup_worktree
-    trap - RETURN
     exit 1
   fi
 
   echo "dependabot: PR #${pr} validated and squash-merged"
   cleanup_worktree
-  trap - RETURN
   exit 0
- done
+done
