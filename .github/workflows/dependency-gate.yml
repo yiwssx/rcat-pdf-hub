@@ -1,0 +1,60 @@
+name: Dependency Gate
+
+on:
+  pull_request:
+    paths:
+      - apps/web/package.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-dependency:
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    steps:
+      - name: Configure Git defaults
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config --global init.defaultBranch main
+          git config --global advice.detachedHead false
+
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install direct dependency candidate without warnings
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund 2>&1 | tee /tmp/npm-install.log
+          if grep -Eqi 'npm warn|warning:|deprecated|deprecationwarning' /tmp/npm-install.log; then
+            echo "Dependency installation emitted a warning" >&2
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build frontend without warnings
+        run: |
+          mkdir -p .next/cache
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/next-build.log
+          if grep -Eqi '⚠|##\[warning\]|npm warn|warning:|deprecated|deprecationwarning' /tmp/next-build.log; then
+            echo "Frontend build emitted a warning" >&2
+            exit 1
+          fi
+          git diff --exit-code -- tsconfig.json

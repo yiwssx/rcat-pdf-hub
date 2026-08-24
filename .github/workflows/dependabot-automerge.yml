@@ -2,7 +2,7 @@ name: Dependabot Auto Merge
 
 on:
   workflow_run:
-    workflows: ["CI", "Runtime Acceptance"]
+    workflows: ["Dependency Gate"]
     types: [completed]
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
       - name: Merge validated direct package.json patch updates
@@ -119,12 +119,11 @@ jobs:
           PY
 
           runs="$(gh api "repos/${REPO}/actions/runs?head_sha=${HEAD_SHA}&event=pull_request&per_page=100")"
-          ci_result="$(jq -r '[.workflow_runs[] | select(.name == "CI")] | sort_by(.run_number) | last | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end' <<<"${runs}")"
-          runtime_result="$(jq -r '[.workflow_runs[] | select(.name == "Runtime Acceptance")] | sort_by(.run_number) | last | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end' <<<"${runs}")"
+          dependency_result="$(jq -r '[.workflow_runs[] | select(.name == "Dependency Gate")] | sort_by(.run_number) | last | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end' <<<"${runs}")"
 
-          echo "CI=${ci_result} Runtime=${runtime_result}"
-          if [ "${ci_result}" != "completed:success" ] || [ "${runtime_result}" != "completed:success" ]; then
-            echo "Both required workflows must be completed successfully before automatic merge."
+          echo "Dependency Gate=${dependency_result}"
+          if [ "${dependency_result}" != "completed:success" ]; then
+            echo "Dependency Gate must complete successfully before automatic merge."
             exit 0
           fi
 
