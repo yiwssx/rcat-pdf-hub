@@ -171,8 +171,8 @@ services:
       - api
     restart: unless-stopped
 
-  # Optional S3-compatible single-node target for development or small sites.
-  # Production can point PDFHUB_S3_ENDPOINT_URL at MinIO, SeaweedFS, AWS S3, etc.
+  # Optional self-hosted S3-compatible single-node target for development or small sites.
+  # Production may point PDFHUB_S3_ENDPOINT_URL at another self-hosted endpoint such as Ceph RGW.
   seaweedfs:
     profiles: ["s3"]
     image: chrislusf/seaweedfs:4.44
