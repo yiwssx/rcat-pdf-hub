@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.4.0 — 2026-08-24
+
+### Added
+- Batch JPEG / PNG / WebP / TIFF / BMP to PDF conversion
+- PDF page rasterization to PNG/JPEG with ZIP output and page-range selection
+- Dedicated scopes `pdf:image-to-pdf` and `pdf:pdf-to-image`
+- Stateless HMAC-signed short-lived download URLs bound to file, owner and expiry
+- Dedicated download-signing secret plus configurable default/max TTL
+- Persistent `webhook_deliveries` table and Phase 4 Alembic migration
+- Dedicated webhook dispatcher service independent from RQ processing workers
+- Exponential webhook retry with configurable attempt/backoff policy
+- Dead-letter webhook state after retry exhaustion
+- Admin delivery inspection and dead-letter replay endpoints
+- Webhook delivery ID and attempt-number headers
+- Regression tests for signed downloads, Image ↔ PDF conversion and webhook retry/DLQ lifecycle
+- `PHASE4.md` completed-release documentation
+
+### Changed
+- API and Web Console version aligned to 0.4.0
+- Processed job outputs now support both PDF and ZIP content types
+- Automatic Paperless archive is limited to PDF outputs
+- Job completion/failure webhooks are queued durably instead of being sent inline by the RQ worker
+- Default human scopes include the two Phase 4 media-conversion scopes
+- Release-policy validation now enforces Phase 4 metadata, migration, tests and dispatcher configuration
+
+### Security
+- Signed download URLs no longer require API credentials to be embedded or forwarded to download recipients
+- Download tokens have a hard configurable TTL ceiling and can be globally invalidated by rotating the signing secret
+- Webhook hostname validation and HMAC signing are re-evaluated on every delivery attempt
+- Failed webhook deliveries remain auditable and recoverable instead of disappearing after transient failure
+
 ## 0.3.0 — 2026-08-24
 
 ### Added
