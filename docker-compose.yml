@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8.1.9-alpine
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
       - valkey_data:/data
@@ -161,7 +161,7 @@ services:
     restart: unless-stopped
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.4-alpine
     ports:
       - "${PDFHUB_HTTP_PORT:-8080}:80"
     volumes:
@@ -186,7 +186,7 @@ services:
 
   clamav:
     profiles: ["security"]
-    image: clamav/clamav:stable
+    image: clamav/clamav:1.5.4-debian
     volumes:
       - clamav_db:/var/lib/clamav
     restart: unless-stopped
