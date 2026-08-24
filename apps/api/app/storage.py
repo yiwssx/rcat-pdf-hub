@@ -20,7 +20,7 @@ S3_PREFIX = "s3:"
 
 def _require_self_hosted_s3_endpoint() -> str:
     endpoint = (settings.s3_endpoint_url or "").strip()
-    if settings.storage_backend == "s3" and not endpoint:
+    if not endpoint:
         raise RuntimeError(
             "S3 storage requires an explicit self-hosted PDFHUB_S3_ENDPOINT_URL by zero-cost policy"
         )
@@ -32,7 +32,7 @@ def s3_client():
     endpoint = _require_self_hosted_s3_endpoint()
     return boto3.client(
         "s3",
-        endpoint_url=endpoint or None,
+        endpoint_url=endpoint,
         region_name=settings.s3_region,
         aws_access_key_id=settings.s3_access_key or None,
         aws_secret_access_key=settings.s3_secret_key or None,
