@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-backend validate-frontend validate-compose validate-runtime validate-dependency
+.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-backend validate-frontend validate-compose validate-runtime validate-dependency local-ci-cycle install-local-ci uninstall-local-ci local-ci-status
 
 up:
 	docker compose up -d --build
@@ -44,6 +44,19 @@ validate-runtime:
 
 validate-dependency:
 	bash scripts/validate-direct-dependency.sh "$${BASE_REF:-origin/main}"
+
+local-ci-cycle:
+	bash scripts/local-ci-cycle.sh
+
+install-local-ci:
+	bash scripts/install-local-ci-user.sh
+
+uninstall-local-ci:
+	bash scripts/uninstall-local-ci-user.sh
+
+local-ci-status:
+	@systemctl --user status rcat-pdf-hub-local-ci.timer --no-pager || true
+	@systemctl --user status rcat-pdf-hub-local-ci.service --no-pager || true
 
 cleanup:
 	docker compose run --rm cleanup python -m app.cleanup
