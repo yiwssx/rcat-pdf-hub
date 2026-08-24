@@ -10,7 +10,7 @@ for cmd in git gh; do
 done
 
 gh auth status >/dev/null 2>&1 || {
-  echo "GitHub CLI is not authenticated; normal PR validation skipped"
+  echo "GitHub CLI is not authenticated; PR validation skipped"
   exit 0
 }
 
@@ -19,18 +19,22 @@ git fetch --quiet --prune origin main
 main_sha="$(git rev-parse origin/main)"
 mkdir -p "${STATE_ROOT}/worktrees" "${STATE_ROOT}/logs" "${STATE_ROOT}/status"
 
+# Full-validation lane covers normal PRs plus any Dependabot PR that is not the
+# narrowly allowed apps/web/package.json direct-patch lane. This is important
+# because GitHub security updates may open pip/security PRs even though the
+# repository's version-update Dependabot config is npm-only.
 mapfile -t rows < <(
   gh api --paginate "repos/${repo}/pulls?state=open&base=main&per_page=100" \
-    --jq '.[] | select(.user.login != "dependabot[bot]") | [.number, .draft, .head.sha, .base.sha] | @tsv'
+    --jq '.[] | [.number, .draft, .head.sha, .base.sha, .user.login] | @tsv'
 )
 
 if [ "${#rows[@]}" -eq 0 ]; then
-  echo "local-ci: no open non-Dependabot PRs"
+  echo "local-ci: no open PRs"
   exit 0
 fi
 
 for row in "${rows[@]}"; do
-  IFS=$'\t' read -r pr draft head_sha base_sha <<<"${row}"
+  IFS=$'\t' read -r pr draft head_sha base_sha author <<<"${row}"
 
   if [ "${draft}" = "true" ]; then
     echo "local-ci: PR #${pr} is draft; skip"
@@ -39,6 +43,15 @@ for row in "${rows[@]}"; do
   if [ "${base_sha}" != "${main_sha}" ]; then
     echo "local-ci: PR #${pr} base is stale; skip until it is updated to current main"
     continue
+  fi
+
+  if [ "${author}" = "dependabot[bot]" ]; then
+    changed="$(gh api --paginate "repos/${repo}/pulls/${pr}/files?per_page=100" --jq '.[].filename')"
+    if [ "${changed}" = "apps/web/package.json" ]; then
+      echo "local-ci: Dependabot PR #${pr} belongs to the direct npm patch lane; full validation skipped"
+      continue
+    fi
+    echo "local-ci: Dependabot PR #${pr} is outside the auto-merge lane; running full validation with no auto-merge"
   fi
 
   success_file="${STATE_ROOT}/status/pr-${pr}-success"
