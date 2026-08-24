@@ -25,9 +25,11 @@ test:
 	docker compose run --rm api python -m pytest -q
 
 validate-free:
+	python3 scripts/validate-release-policy.py
 	bash scripts/validate-free.sh all
 
 validate-policy:
+	python3 scripts/validate-release-policy.py
 	bash scripts/validate-free.sh policy
 
 validate-backend:
