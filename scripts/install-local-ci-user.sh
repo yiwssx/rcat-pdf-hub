@@ -38,9 +38,6 @@ Type=oneshot
 WorkingDirectory=${ROOT}
 ExecStart=/usr/bin/env bash ${ROOT}/scripts/local-ci-cycle.sh
 Nice=10
-
-[Install]
-WantedBy=default.target
 EOF
 
 cat >"${UNIT_DIR}/${TIMER}" <<EOF
@@ -51,7 +48,6 @@ Description=Run RCAT PDF Hub zero-cost local validation periodically
 OnBootSec=2min
 OnUnitActiveSec=5min
 RandomizedDelaySec=30
-Persistent=true
 Unit=${SERVICE}
 
 [Install]
