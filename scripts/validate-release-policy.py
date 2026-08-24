@@ -80,6 +80,7 @@ for required in (
     "scripts/validate-free.sh",
     "scripts/validate-direct-dependency.sh",
     "scripts/local-ci-cycle.sh",
+    "scripts/local-ci-prs.sh",
     "scripts/local-ci-dependabot.sh",
     "scripts/install-local-ci-user.sh",
     "scripts/uninstall-local-ci-user.sh",
