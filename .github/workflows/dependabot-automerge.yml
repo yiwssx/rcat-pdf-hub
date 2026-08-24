@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Merge validated Dependabot patch and minor updates
+      - name: Merge validated direct package.json patch updates
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -36,45 +36,87 @@ jobs:
             exit 0
           fi
 
-          pr_json="$(gh pr view "${pr_number}" --repo "${REPO}" --json state,isDraft,headRefOid,title)"
+          pr_json="$(gh pr view "${pr_number}" --repo "${REPO}" --json state,isDraft,headRefOid)"
           test "$(jq -r '.state' <<<"${pr_json}")" = "OPEN"
           test "$(jq -r '.isDraft' <<<"${pr_json}")" = "false"
           test "$(jq -r '.headRefOid' <<<"${pr_json}")" = "${HEAD_SHA}"
 
-          title="$(jq -r '.title' <<<"${pr_json}")"
-          if ! TITLE="${title}" python3 - <<'PY'
-          import os
-          import re
-          import sys
-
-          title = os.environ["TITLE"]
-          match = re.search(r"\bfrom\s+v?(\d+)(?:\.[0-9A-Za-z.-]+)?\s+to\s+v?(\d+)", title, re.IGNORECASE)
-          if not match:
-              print(f"Cannot prove update is non-major from title: {title}")
-              sys.exit(1)
-          old_major, new_major = map(int, match.groups())
-          if new_major > old_major:
-              print(f"Major update requires manual review: {old_major} -> {new_major}")
-              sys.exit(1)
-          print(f"Validated non-major update: {old_major} -> {new_major}")
-          PY
-          then
-            echo "Dependabot PR ${pr_number} is not eligible for automatic merge."
+          tested_base_sha="$(gh api "repos/${REPO}/pulls/${pr_number}" --jq '.base.sha')"
+          current_main_sha="$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')"
+          echo "PR base=${tested_base_sha} current main=${current_main_sha}"
+          if [ "${tested_base_sha}" != "${current_main_sha}" ]; then
+            echo "Dependabot PR was not tested against the current main branch; refusing automatic merge."
             exit 0
           fi
 
-          bad_files="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/files?per_page=100" --jq '.[].filename' | grep -Ev '^(apps/api/requirements\.txt|apps/web/package(-lock)?\.json|apps/api/Dockerfile|apps/web/Dockerfile|\.github/workflows/[^/]+\.ya?ml)$' || true)"
-          if [ -n "${bad_files}" ]; then
-            echo "Dependabot PR changes files outside the dependency allowlist:" >&2
-            printf '%s\n' "${bad_files}" >&2
-            exit 1
+          changed_files="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/files?per_page=100" --jq '.[].filename')"
+          if [ "${changed_files}" != "apps/web/package.json" ]; then
+            echo "Only apps/web/package.json may be changed by automatic dependency updates." >&2
+            printf '%s\n' "${changed_files}" >&2
+            exit 0
           fi
 
           non_bot_commits="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/commits?per_page=100" --jq '.[] | select((.author.login // "") != "dependabot[bot]") | .sha' || true)"
           if [ -n "${non_bot_commits}" ]; then
             echo "Dependabot PR contains commits not authored by Dependabot; refusing automatic merge." >&2
-            exit 1
+            exit 0
           fi
+
+          base_pkg="$(gh api "repos/${REPO}/contents/apps/web/package.json?ref=${tested_base_sha}" --jq '.content' | tr -d '\n' | base64 -d)"
+          head_pkg="$(gh api "repos/${REPO}/contents/apps/web/package.json?ref=${HEAD_SHA}" --jq '.content' | tr -d '\n' | base64 -d)"
+
+          BASE_PKG="${base_pkg}" HEAD_PKG="${head_pkg}" python3 - <<'PY'
+          import copy
+          import json
+          import os
+          import re
+          import sys
+
+          before = json.loads(os.environ["BASE_PKG"])
+          after = json.loads(os.environ["HEAD_PKG"])
+
+          dependency_sections = ("dependencies", "devDependencies")
+
+          before_static = copy.deepcopy(before)
+          after_static = copy.deepcopy(after)
+          for section in dependency_sections:
+              before_static.pop(section, None)
+              after_static.pop(section, None)
+          if before_static != after_static:
+              print("package.json changed outside dependency version declarations")
+              sys.exit(1)
+
+          changes = []
+          for section in dependency_sections:
+              old = before.get(section, {})
+              new = after.get(section, {})
+              if set(old) != set(new):
+                  print(f"Dependency names changed in {section}; only version changes are allowed")
+                  sys.exit(1)
+              for name in sorted(old):
+                  if old[name] != new[name]:
+                      changes.append((section, name, old[name], new[name]))
+
+          if len(changes) != 1:
+              print(f"Expected exactly one direct dependency version change, found {len(changes)}")
+              sys.exit(1)
+
+          section, name, old_version, new_version = changes[0]
+          semver = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+          old_match = semver.fullmatch(old_version)
+          new_match = semver.fullmatch(new_version)
+          if not old_match or not new_match:
+              print(f"Only exact semantic versions are eligible: {name} {old_version} -> {new_version}")
+              sys.exit(1)
+
+          old_major, old_minor, old_patch = map(int, old_match.groups())
+          new_major, new_minor, new_patch = map(int, new_match.groups())
+          if (new_major, new_minor) != (old_major, old_minor) or new_patch <= old_patch:
+              print(f"Only forward patch updates auto-merge: {name} {old_version} -> {new_version}")
+              sys.exit(1)
+
+          print(f"Validated direct dependency patch: {section}.{name} {old_version} -> {new_version}")
+          PY
 
           runs="$(gh api "repos/${REPO}/actions/runs?head_sha=${HEAD_SHA}&event=pull_request&per_page=100")"
           ci_result="$(jq -r '[.workflow_runs[] | select(.name == "CI")] | sort_by(.run_number) | last | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end' <<<"${runs}")"
