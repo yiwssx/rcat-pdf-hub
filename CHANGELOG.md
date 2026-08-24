@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1 — 2026-08-25
+
+### Security
+- Upgrade Pillow from 11.3.0 to 12.3.0 so the image-processing path includes the upstream 12.3.0 security fixes.
+- Keep Pillow exact-pinned and enforce a reviewed secure 12.x floor (`>=12.3.0,<13.0.0`) in release-policy validation.
+
+### Changed
+- Separate version-update automation policy from security-maintenance policy: normal Dependabot configuration remains direct npm patch-only.
+- Full local `make validate-free` now covers Dependabot PRs outside the npm auto-merge lane, including pip/security PRs, and never auto-merges them.
+- Remove duplicated release-policy logic from `validate-free.sh`; `scripts/validate-release-policy.py` is now the single policy source of truth.
+- API, Web Console and release metadata advance to 0.4.1 while the completed Phase 4 feature baseline remains 0.4.0.
+
 ## 0.4.0 — 2026-08-24
 
 ### Added
