@@ -124,7 +124,16 @@ def pdf_to_images(
 ):
     if req.last_page is not None and req.last_page < req.first_page:
         raise HTTPException(status_code=422, detail="last_page must be greater than or equal to first_page")
-    return _create_job(db, principal, "pdf-to-images", [req.file_id], req.model_dump(exclude={"file_id"}))
+    requested_last = req.last_page or (req.first_page + settings.pdf_to_image_max_pages - 1)
+    page_count = requested_last - req.first_page + 1
+    if page_count > settings.pdf_to_image_max_pages:
+        raise HTTPException(
+            status_code=422,
+            detail=f"pdf-to-images is limited to {settings.pdf_to_image_max_pages} pages per job",
+        )
+    params = req.model_dump(exclude={"file_id"})
+    params["last_page"] = requested_last
+    return _create_job(db, principal, "pdf-to-images", [req.file_id], params)
 
 
 @router.post("/split", response_model=JobOut, status_code=202)
