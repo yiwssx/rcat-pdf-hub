@@ -87,6 +87,16 @@ def derive_webhook_secret(service_name: str) -> str:
     ).hexdigest()
 
 
+def _safe_delivery_error(exc: Exception) -> str:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"Webhook receiver returned HTTP {exc.response.status_code}"
+    if isinstance(exc, httpx.TimeoutException):
+        return "Webhook request timed out"
+    if isinstance(exc, httpx.RequestError):
+        return f"Webhook request failed: {type(exc).__name__}"
+    return str(exc)[-4000:]
+
+
 def _job_payload(job: JobRecord, delivery: WebhookDelivery) -> bytes:
     payload = {
         "event": delivery.event,
@@ -137,9 +147,6 @@ def queue_job_webhook(db: Session, job: JobRecord) -> WebhookDelivery | None:
     try:
         db.commit()
     except IntegrityError:
-        # A duplicate worker execution may race this insert. The unique
-        # job/event constraint makes the webhook at-least-once worker path
-        # idempotent at the delivery-record boundary.
         db.rollback()
         return _delivery_for_job_event(db, job.id, event)
     db.refresh(delivery)
@@ -207,7 +214,7 @@ def deliver_webhook(db: Session, delivery: WebhookDelivery) -> bool:
         delivery.last_status_code = response.status_code
         response.raise_for_status()
     except Exception as exc:
-        delivery.last_error = str(exc)[-4000:]
+        delivery.last_error = _safe_delivery_error(exc)
         status_code = getattr(getattr(exc, "response", None), "status_code", None)
         if status_code is not None:
             delivery.last_status_code = int(status_code)
