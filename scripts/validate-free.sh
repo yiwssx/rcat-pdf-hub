@@ -20,6 +20,32 @@ check_clean_log() {
   fi
 }
 
+require_tool_versions() {
+  need python3
+  need node
+  need npm
+  python3 - <<'PY'
+import sys
+if sys.version_info[:2] != (3, 12):
+    raise SystemExit(f"Python 3.12 is required to match the production image; found {sys.version.split()[0]}")
+PY
+  node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
+}
+
+validation_compose_env() {
+  export POSTGRES_DB=pdfhub
+  export POSTGRES_USER=pdfhub
+  export POSTGRES_PASSWORD=free-ci-postgres-password
+  export PDFHUB_API_KEY_PEPPER=free-ci-api-key-pepper-change-me
+  export PDFHUB_ADMIN_API_KEY=pdfh_free_ci_admin_key_change_me_1234567890
+  export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
+  export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
+  export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
+  export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
+  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
+  export NEXT_TELEMETRY_DISABLED=1
+}
+
 policy() {
   need python3
   python3 - <<'PY'
@@ -83,7 +109,7 @@ PY
 }
 
 backend() {
-  need python3
+  require_tool_versions
   local venv log
   venv="$(mktemp -d)/venv"
   log="$(mktemp)"
@@ -113,7 +139,7 @@ PY
 }
 
 frontend() {
-  need npm
+  require_tool_versions
   local install_log build_log pkg_before
   install_log="$(mktemp)"
   build_log="$(mktemp)"
@@ -137,13 +163,16 @@ frontend() {
 
 compose_config() {
   need docker
+  validation_compose_env
   local err project
   err="$(mktemp)"
   project="pdfhub-validation-$$"
   docker compose -p "${project}" config >/tmp/pdfhub-compose.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  : >"${err}"
   docker compose -p "${project}" --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-all.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
   echo 'compose: PASS'
@@ -152,22 +181,15 @@ compose_config() {
 runtime() {
   need docker
   need curl
+  validation_compose_env
   local build_log up_log service_log project
   build_log="$(mktemp)"
   up_log="$(mktemp)"
   service_log="$(mktemp)"
   project="pdfhub-validation-$$"
-  export POSTGRES_DB=pdfhub
-  export POSTGRES_USER=pdfhub
-  export POSTGRES_PASSWORD=free-ci-postgres-password
-  export PDFHUB_API_KEY_PEPPER=free-ci-api-key-pepper-change-me
-  export PDFHUB_ADMIN_API_KEY=pdfh_free_ci_admin_key_change_me_1234567890
-  export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
-  export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
   export PDFHUB_HTTP_PORT=18080
-  export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
-  export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
-  export NEXT_TELEMETRY_DISABLED=1
+  export PDFHUB_ALLOWED_ORIGINS=http://localhost:${PDFHUB_HTTP_PORT}
+  export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
 
   dc() {
     docker compose -p "${project}" "$@"
@@ -175,6 +197,7 @@ runtime() {
 
   cleanup_runtime() {
     dc --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans >/dev/null 2>&1 || true
+    rm -rf "${PDFHUB_NAS_PATH}" >/dev/null 2>&1 || true
   }
   trap cleanup_runtime EXIT
 
