@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     cleanup_interval_seconds: int = 900
     cleanup_temporary_hours: int = 6
     preview_max_width: int = 1600
+    pdf_to_image_max_pages: int = Field(default=200, ge=1, le=5000)
 
     default_rate_limit_per_minute: int = 120
     default_daily_job_limit: int = 1000
