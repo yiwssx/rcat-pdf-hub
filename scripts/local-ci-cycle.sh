@@ -9,7 +9,7 @@ for cmd in git flock; do
   command -v "${cmd}" >/dev/null 2>&1 || { echo "Missing required command: ${cmd}" >&2; exit 1; }
 done
 
-mkdir -p "${STATE_ROOT}/logs" "${STATE_ROOT}/worktrees"
+mkdir -p "${STATE_ROOT}/logs" "${STATE_ROOT}/worktrees" "${STATE_ROOT}/status"
 exec 9>"${STATE_ROOT}/validator.lock"
 if ! flock -n 9; then
   echo "local-ci: another validation cycle is running"
@@ -49,10 +49,11 @@ fi
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   (
     cd "${worktree}"
+    LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-prs.sh
     LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-dependabot.sh
   )
 else
-  echo "local-ci: gh is unavailable or unauthenticated; main validation is active, Dependabot auto-validation is skipped"
+  echo "local-ci: gh is unavailable or unauthenticated; main validation remains active, PR/Dependabot validation is skipped"
 fi
 
 cleanup_main_worktree
