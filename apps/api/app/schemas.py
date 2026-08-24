@@ -8,6 +8,9 @@ Position = Literal[
     "top-left", "top-center", "top-right",
     "bottom-left", "bottom-center", "bottom-right",
 ]
+ImagePageSize = Literal["auto", "a4", "letter"]
+ImageFit = Literal["contain", "cover"]
+RasterFormat = Literal["png", "jpeg"]
 
 
 class FileOut(BaseModel):
@@ -37,6 +40,22 @@ class JobOut(BaseModel):
 
 class MergeRequest(BaseModel):
     file_ids: list[str] = Field(min_length=2, max_length=50)
+
+
+class ImageToPdfRequest(BaseModel):
+    file_ids: list[str] = Field(min_length=1, max_length=100)
+    page_size: ImagePageSize = "auto"
+    fit: ImageFit = "contain"
+    margin: float = Field(default=18, ge=0, le=240)
+    dpi: int = Field(default=150, ge=72, le=600)
+
+
+class PdfToImagesRequest(BaseModel):
+    file_id: str
+    format: RasterFormat = "png"
+    dpi: int = Field(default=150, ge=72, le=600)
+    first_page: int = Field(default=1, ge=1, le=100000)
+    last_page: int | None = Field(default=None, ge=1, le=100000)
 
 
 class SingleFileRequest(BaseModel):
@@ -86,6 +105,12 @@ class StampRequest(BaseModel):
     position: Position = "bottom-right"
     scale: float = Field(default=0.20, ge=0.03, le=0.80)
     margin: float = Field(default=24, ge=0, le=240)
+
+
+class SignedDownloadOut(BaseModel):
+    file_id: str
+    url: str
+    expires_at: datetime
 
 
 class ServicePolicyUpdate(BaseModel):
@@ -153,5 +178,24 @@ class ArchiveOut(BaseModel):
     error: str | None
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class WebhookDeliveryOut(BaseModel):
+    id: str
+    job_id: str
+    service_name: str
+    url: str
+    event: str
+    status: str
+    attempt_count: int
+    max_attempts: int
+    next_attempt_at: datetime
+    last_error: str | None
+    last_status_code: int | None
+    created_at: datetime
+    updated_at: datetime
+    delivered_at: datetime | None
 
     model_config = {"from_attributes": True}

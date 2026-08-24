@@ -40,6 +40,7 @@ validation_compose_env() {
   export PDFHUB_ADMIN_API_KEY=pdfh_free_ci_admin_key_change_me_1234567890
   export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
   export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
+  export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
   export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
@@ -69,18 +70,21 @@ for forbidden in ('package-ecosystem: pip', 'package-ecosystem: docker', 'packag
     assert forbidden not in dep, forbidden
 
 pkg = json.loads((root / 'apps' / 'web' / 'package.json').read_text(encoding='utf-8'))
-assert pkg['version'] == '0.3.0', f"Web version must be 0.3.0, got {pkg['version']}"
+assert pkg['version'] == '0.4.0', f"Web version must be 0.4.0, got {pkg['version']}"
 for section in ('dependencies', 'devDependencies'):
     for name, version in pkg.get(section, {}).items():
         parts = version.split('.')
         assert len(parts) == 3 and all(part.isdigit() for part in parts), f"{name} must use exact x.y.z: {version}"
 
 api_main = (root / 'apps' / 'api' / 'app' / 'main.py').read_text(encoding='utf-8')
-assert 'version="0.3.0"' in api_main, 'API version must be 0.3.0'
+assert 'version="0.4.0"' in api_main, 'API version must be 0.4.0'
 readme = (root / 'README.md').read_text(encoding='utf-8')
-assert '0.3.0 — Phase 3 complete' in readme, 'README release status is not Phase 3 / 0.3.0'
+assert '0.4.0 — Phase 4 complete' in readme, 'README release status is not Phase 4 / 0.4.0'
+phase4 = (root / 'PHASE4.md').read_text(encoding='utf-8')
+assert 'completed Phase 4 baseline' in phase4, 'PHASE4 completion marker is missing'
 
 assert not (root / 'apps' / 'web' / 'package-lock.json').exists(), 'package-lock.json is intentionally not tracked: transitive updates must not be committed automatically'
+assert 'Pillow==11.3.0' in (root / 'apps' / 'api' / 'requirements.txt').read_text(encoding='utf-8')
 
 for required in (
     root / 'scripts' / 'validate-free.sh',
@@ -89,11 +93,14 @@ for required in (
     root / 'scripts' / 'local-ci-dependabot.sh',
     root / 'scripts' / 'install-local-ci-user.sh',
     root / 'scripts' / 'uninstall-local-ci-user.sh',
+    root / 'apps' / 'api' / 'app' / 'downloads.py',
+    root / 'apps' / 'api' / 'app' / 'webhook_runner.py',
+    root / 'apps' / 'api' / 'alembic' / 'versions' / '0003_phase4_webhook_deliveries.py',
 ):
-    assert required.exists(), f"Missing zero-cost validation component: {required}"
+    assert required.exists(), f"Missing zero-cost/Phase 4 validation component: {required}"
 
 scan_files = [
-    root / 'README.md', root / 'PHASE3.md', root / 'CHANGELOG.md',
+    root / 'README.md', root / 'PHASE3.md', root / 'PHASE4.md', root / 'CHANGELOG.md',
     root / '.env.example', root / 'docker-compose.yml',
 ]
 forbidden_terms = ('AWS S3', 'Grafana Cloud', 'Entra ID', 'Google Workspace OIDC')
@@ -104,6 +111,9 @@ for path in scan_files:
 
 storage = (root / 'apps' / 'api' / 'app' / 'storage.py').read_text(encoding='utf-8')
 assert '_require_self_hosted_s3_endpoint' in storage, 'S3 zero-cost endpoint guard is missing'
+compose = (root / 'docker-compose.yml').read_text(encoding='utf-8')
+assert 'python", "-m", "app.webhook_runner' in compose, 'Durable webhook dispatcher service is missing'
+assert 'PDFHUB_DOWNLOAD_SIGNING_SECRET' in compose, 'Signed-download secret is not wired into Compose'
 print('policy: PASS')
 PY
 }
@@ -119,7 +129,7 @@ backend() {
   python -m pip install --disable-pip-version-check -r apps/api/requirements.txt 2>&1 | tee "${log}"
   check_clean_log "${log}"
   python -m pip check
-  python -W error -c 'import ldap3, pyasn1'
+  python -W error -c 'import ldap3, pyasn1, PIL'
   (
     cd apps/api
     python -m compileall -q app tests alembic
@@ -201,13 +211,14 @@ runtime() {
   }
   trap cleanup_runtime EXIT
 
-  dc build --pull api worker cleanup web 2>&1 | tee "${build_log}"
+  dc build --pull api worker cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
   dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee "${up_log}"
   check_clean_log "${up_log}"
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
   dc exec -T api python -m pytest -q
+  test "$(dc ps --status running webhook --format json | wc -l)" -ge 1
   dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
   cleanup_runtime

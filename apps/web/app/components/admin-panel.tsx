@@ -8,21 +8,25 @@ import {
   createApiKey,
   listApiKeys,
   listAudit,
+  listWebhookDeliveries,
+  retryWebhookDelivery,
   revokeApiKey,
   ServicePolicy,
   updateServicePolicy,
+  WebhookDelivery,
 } from "../../lib/api";
 
 const scopeOptions = [
   "files:read", "files:write", "jobs:read",
   "pdf:merge", "pdf:split", "pdf:rotate", "pdf:compress",
   "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
-  "pdf:page-number", "pdf:stamp",
+  "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image",
 ];
 
 export function AdminPanel({ apiKey }: { apiKey: string }) {
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
   const [name, setName] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [scopes, setScopes] = useState<string[]>(scopeOptions);
@@ -35,10 +39,15 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
     if (!apiKey) return;
     setBusy(true);
     try {
-      const [keyRows, auditRows] = await Promise.all([listApiKeys(apiKey), listAudit(apiKey)]);
+      const [keyRows, auditRows, deliveryRows] = await Promise.all([
+        listApiKeys(apiKey),
+        listAudit(apiKey),
+        listWebhookDeliveries(apiKey),
+      ]);
       setKeys(keyRows);
       setAudit(auditRows);
-      setMessage("โหลดข้อมูลผู้ดูแลแล้ว");
+      setDeliveries(deliveryRows);
+      setMessage("โหลดข้อมูลผู้ดูแลและ webhook delivery แล้ว");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "โหลดข้อมูล Admin ไม่สำเร็จ");
     } finally {
@@ -103,12 +112,25 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
     }
   }
 
+  async function replayDelivery(delivery: WebhookDelivery) {
+    setBusy(true);
+    try {
+      await retryWebhookDelivery(delivery.id, apiKey);
+      setDeliveries(await listWebhookDeliveries(apiKey));
+      setMessage(`นำ delivery ${delivery.id.slice(0, 8)} กลับเข้าคิวแล้ว`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Replay webhook ไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="adminStack">
       <div className="panel panelHeader">
         <div>
           <span className="eyebrow">ADMINISTRATION</span>
-          <h2>Service Keys, Quotas & Audit</h2>
+          <h2>Service Keys, Quotas, Webhook DLQ & Audit</h2>
           <p className="muted">{message}</p>
         </div>
         <button className="secondary" onClick={loadAdmin} disabled={!apiKey || busy}>โหลดข้อมูล Admin</button>
@@ -166,6 +188,24 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
           <button className="primary" onClick={savePolicy} disabled={busy}>บันทึก Policy</button>
         </div>
       )}
+
+      <div className="panel">
+        <div className="panelTitle"><h2>Webhook Delivery / DLQ</h2><span>{deliveries.filter((item) => item.status === "dead").length} dead</span></div>
+        <div className="list compact">
+          {deliveries.length === 0 && <p className="muted">ยังไม่มี webhook delivery ที่โหลดมา</p>}
+          {deliveries.slice(0, 40).map((delivery) => (
+            <div className="keyCard" key={delivery.id}>
+              <div className="keyHead">
+                <div><strong>{delivery.service_name}</strong><small>{delivery.event} • job {delivery.job_id.slice(0, 8)}</small></div>
+                <span className={delivery.status === "delivered" ? "pill ok" : delivery.status === "dead" ? "pill danger" : "pill"}>{delivery.status.toUpperCase()}</span>
+              </div>
+              <div className="quotaLine"><span>{delivery.attempt_count}/{delivery.max_attempts} attempts</span><span>HTTP {delivery.last_status_code ?? "—"}</span><span>{new Date(delivery.updated_at).toLocaleString("th-TH")}</span></div>
+              {delivery.last_error && <small className="muted">{delivery.last_error.slice(0, 220)}</small>}
+              {delivery.status === "dead" && <div className="rowActions"><button className="secondary" onClick={() => replayDelivery(delivery)} disabled={busy}>Replay</button></div>}
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="panel">
         <div className="panelTitle"><h2>Audit Trail</h2><span>{audit.length}</span></div>

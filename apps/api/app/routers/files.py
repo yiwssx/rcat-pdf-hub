@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 from app.audit import audit_event
 from app.config import get_settings
 from app.db import get_db
+from app.downloads import issue_signed_download, verify_signed_download
 from app.malware import MalwareDetected, scan_file
 from app.models import FileRecord
 from app.policy import ensure_storage_quota
-from app.schemas import FileOut
+from app.schemas import FileOut, SignedDownloadOut
 from app.security import Principal, require_scope
 from app.services import pdf_tools
 from app.storage import (
@@ -40,6 +41,16 @@ def _owned_file(db: Session, file_id: str, principal: Principal) -> FileRecord:
     if "*" not in principal.scopes and record.source_system != principal.name:
         raise HTTPException(status_code=403, detail="File belongs to another service")
     return record
+
+
+def _active_file_path(record: FileRecord):
+    expires_at = _aware(record.expires_at)
+    if expires_at and expires_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="File data has expired")
+    try:
+        return path_for_stored_name(record.stored_name)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=410, detail="File data has expired") from exc
 
 
 @router.get("", response_model=list[FileOut])
@@ -135,14 +146,59 @@ def download_file(
     db: Session = Depends(get_db),
 ):
     record = _owned_file(db, file_id, principal)
-    expires_at = _aware(record.expires_at)
-    if expires_at and expires_at <= datetime.now(timezone.utc):
-        raise HTTPException(status_code=410, detail="File data has expired")
-    try:
-        path = path_for_stored_name(record.stored_name)
-    except FileNotFoundError:
-        raise HTTPException(status_code=410, detail="File data has expired")
+    path = _active_file_path(record)
     audit_event("file.downloaded", principal.name, "file", record.id, {"name": record.original_name})
+    return FileResponse(path, media_type=record.content_type, filename=record.original_name)
+
+
+@router.post("/{file_id}/signed-download", response_model=SignedDownloadOut)
+def create_signed_download(
+    file_id: str,
+    ttl_seconds: int | None = Query(default=None, ge=30),
+    principal: Principal = Depends(require_scope("files:read")),
+    db: Session = Depends(get_db),
+):
+    record = _owned_file(db, file_id, principal)
+    _active_file_path(record)
+    try:
+        signed = issue_signed_download(record.id, record.source_system, ttl_seconds)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    url = (
+        settings.public_base_url.rstrip("/")
+        + f"/api/v1/files/{record.id}/signed-download?expires={signed.expires}&token={signed.token}"
+    )
+    expires_at = datetime.fromtimestamp(signed.expires, tz=timezone.utc)
+    audit_event(
+        "file.signed_download_issued",
+        principal.name,
+        "file",
+        record.id,
+        {"expires_at": expires_at.isoformat()},
+    )
+    return SignedDownloadOut(file_id=record.id, url=url, expires_at=expires_at)
+
+
+@router.get("/{file_id}/signed-download")
+def signed_download_file(
+    file_id: str,
+    expires: int = Query(..., ge=1),
+    token: str = Query(..., min_length=64, max_length=64),
+    db: Session = Depends(get_db),
+):
+    record = db.get(FileRecord, file_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+    if not verify_signed_download(record.id, record.source_system, expires, token):
+        raise HTTPException(status_code=403, detail="Signed download URL is invalid or expired")
+    path = _active_file_path(record)
+    audit_event(
+        "file.signed_downloaded",
+        record.source_system,
+        "file",
+        record.id,
+        {"expires": expires},
+    )
     return FileResponse(path, media_type=record.content_type, filename=record.original_name)
 
 
@@ -155,16 +211,10 @@ def preview_file(
     db: Session = Depends(get_db),
 ):
     record = _owned_file(db, file_id, principal)
-    expires_at = _aware(record.expires_at)
-    if expires_at and expires_at <= datetime.now(timezone.utc):
-        raise HTTPException(status_code=410, detail="File data has expired")
     if record.content_type != "application/pdf" and not record.original_name.lower().endswith(".pdf"):
         raise HTTPException(status_code=415, detail="Preview is available for PDF files only")
     width = min(width, settings.preview_max_width)
-    try:
-        source = path_for_stored_name(record.stored_name)
-    except FileNotFoundError:
-        raise HTTPException(status_code=410, detail="File data has expired")
+    source = _active_file_path(record)
     target = preview_path(record.id, page, width)
     if not target.exists():
         try:
