@@ -49,73 +49,7 @@ validation_compose_env() {
 
 policy() {
   need python3
-  python3 - <<'PY'
-from pathlib import Path
-import json
-import re
-
-root = Path('.')
-workflow_dir = root / '.github' / 'workflows'
-workflow_files = []
-if workflow_dir.exists():
-    workflow_files = [p for p in workflow_dir.rglob('*') if p.suffix in {'.yml', '.yaml'}]
-assert not workflow_files, f"Hosted GitHub Actions workflows are forbidden by zero-cost policy: {workflow_files}"
-
-dep = (root / '.github' / 'dependabot.yml').read_text(encoding='utf-8')
-assert len(re.findall(r'^\s*-\s+package-ecosystem:', dep, flags=re.M)) == 1, dep
-assert re.search(r'^\s*-\s+package-ecosystem:\s*npm\s*$', dep, flags=re.M), dep
-assert re.search(r'^\s+directory:\s*/apps/web\s*$', dep, flags=re.M), dep
-assert re.search(r'^\s+-\s+dependency-type:\s*direct\s*$', dep, flags=re.M), dep
-for forbidden in ('package-ecosystem: pip', 'package-ecosystem: docker', 'package-ecosystem: github-actions'):
-    assert forbidden not in dep, forbidden
-
-pkg = json.loads((root / 'apps' / 'web' / 'package.json').read_text(encoding='utf-8'))
-assert pkg['version'] == '0.4.0', f"Web version must be 0.4.0, got {pkg['version']}"
-for section in ('dependencies', 'devDependencies'):
-    for name, version in pkg.get(section, {}).items():
-        parts = version.split('.')
-        assert len(parts) == 3 and all(part.isdigit() for part in parts), f"{name} must use exact x.y.z: {version}"
-
-api_main = (root / 'apps' / 'api' / 'app' / 'main.py').read_text(encoding='utf-8')
-assert 'version="0.4.0"' in api_main, 'API version must be 0.4.0'
-readme = (root / 'README.md').read_text(encoding='utf-8')
-assert '0.4.0 — Phase 4 complete' in readme, 'README release status is not Phase 4 / 0.4.0'
-phase4 = (root / 'PHASE4.md').read_text(encoding='utf-8')
-assert 'completed Phase 4 baseline' in phase4, 'PHASE4 completion marker is missing'
-
-assert not (root / 'apps' / 'web' / 'package-lock.json').exists(), 'package-lock.json is intentionally not tracked: transitive updates must not be committed automatically'
-assert 'Pillow==11.3.0' in (root / 'apps' / 'api' / 'requirements.txt').read_text(encoding='utf-8')
-
-for required in (
-    root / 'scripts' / 'validate-free.sh',
-    root / 'scripts' / 'validate-direct-dependency.sh',
-    root / 'scripts' / 'local-ci-cycle.sh',
-    root / 'scripts' / 'local-ci-dependabot.sh',
-    root / 'scripts' / 'install-local-ci-user.sh',
-    root / 'scripts' / 'uninstall-local-ci-user.sh',
-    root / 'apps' / 'api' / 'app' / 'downloads.py',
-    root / 'apps' / 'api' / 'app' / 'webhook_runner.py',
-    root / 'apps' / 'api' / 'alembic' / 'versions' / '0003_phase4_webhook_deliveries.py',
-):
-    assert required.exists(), f"Missing zero-cost/Phase 4 validation component: {required}"
-
-scan_files = [
-    root / 'README.md', root / 'PHASE3.md', root / 'PHASE4.md', root / 'CHANGELOG.md',
-    root / '.env.example', root / 'docker-compose.yml',
-]
-forbidden_terms = ('AWS S3', 'Grafana Cloud', 'Entra ID', 'Google Workspace OIDC')
-for path in scan_files:
-    text = path.read_text(encoding='utf-8')
-    for term in forbidden_terms:
-        assert term not in text, f"Paid-cloud reference {term!r} remains in {path}"
-
-storage = (root / 'apps' / 'api' / 'app' / 'storage.py').read_text(encoding='utf-8')
-assert '_require_self_hosted_s3_endpoint' in storage, 'S3 zero-cost endpoint guard is missing'
-compose = (root / 'docker-compose.yml').read_text(encoding='utf-8')
-assert 'python", "-m", "app.webhook_runner' in compose, 'Durable webhook dispatcher service is missing'
-assert 'PDFHUB_DOWNLOAD_SIGNING_SECRET' in compose, 'Signed-download secret is not wired into Compose'
-print('policy: PASS')
-PY
+  python3 scripts/validate-release-policy.py
 }
 
 backend() {
