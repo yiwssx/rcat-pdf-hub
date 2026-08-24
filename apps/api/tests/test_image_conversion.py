@@ -32,6 +32,22 @@ def test_images_to_pdf_creates_one_page_per_image(tmp_path: Path):
     assert output.stat().st_size > 0
 
 
+def test_images_to_pdf_flattens_transparent_input(tmp_path: Path):
+    source = tmp_path / "transparent.png"
+    output = tmp_path / "transparent.pdf"
+    image = Image.new("RGBA", (160, 120), (20, 100, 180, 96))
+    try:
+        image.save(source, format="PNG")
+    finally:
+        image.close()
+
+    pdf_tools.images_to_pdf([source], output, page_size="auto", fit="contain", dpi=150)
+
+    reader = PdfReader(str(output))
+    assert len(reader.pages) == 1
+    assert output.stat().st_size > 0
+
+
 @pytest.mark.skipif(shutil.which("pdftoppm") is None, reason="pdftoppm is not installed")
 def test_pdf_to_images_creates_zip_with_selected_pages(tmp_path: Path):
     source = tmp_path / "source.pdf"

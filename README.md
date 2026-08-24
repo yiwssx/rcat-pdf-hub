@@ -2,7 +2,7 @@
 
 ศูนย์กลางประมวลผล PDF แบบ **self-hosted / API-first** สำหรับให้หลายระบบใช้ PDF infrastructure ชุดเดียว โดยไม่ต้องติดตั้ง engine PDF ซ้ำในทุกโปรเจกต์
 
-> Status: **0.4.0 — Phase 4 complete**
+> Status: **0.4.1 — Phase 4 security maintenance**
 > Deployment target: Docker Compose บนเครื่องขององค์กร โดยรองรับ local volume, NAS และ self-hosted S3-compatible storage
 > Cost policy: **zero-cost software/CI/CD** — ไม่พึ่ง paid runner, paid CI/CD หรือ paid cloud service
 
@@ -329,13 +329,15 @@ Warnings และ deprecations ถือเป็น failure
 
 Dependency/runtime policy:
 
-- Dependabot ตรวจเฉพาะ direct npm dependencies ที่ประกาศใน `apps/web/package.json`
-- Dependabot สร้างเฉพาะ patch update; minor/major ถูก ignore ตั้งแต่ต้นทาง
-- ไม่อัปเดต transitive dependencies, `package-lock.json`, pip, Docker หรือ GitHub Actions อัตโนมัติ
+- Dependabot version-update config ตรวจเฉพาะ direct npm dependencies ที่ประกาศใน `apps/web/package.json`
+- Version-update automation สร้างเฉพาะ patch update; minor/major ถูก ignore ตั้งแต่ต้นทาง
+- GitHub security update PR ที่เกิดนอก lane นี้ต้องผ่าน full `make validate-free` และ **ไม่มีสิทธิ์ auto-merge**
+- ไม่อัปเดต transitive dependencies, `package-lock.json`, pip, Docker หรือ GitHub Actions อัตโนมัติผ่าน version-update config
+- Pillow ถูก exact-pin และ policy บังคับ secure reviewed 12.x baseline ตั้งแต่ 12.3.0 ขึ้นไป; การข้าม major ต้องเป็น developer change โดยตั้งใจ
 - Python/Node base image และ Compose service images ถูก pin เป็น explicit release baseline; การอัปเดต infrastructure ต้องเป็น developer change โดยตั้งใจ
 - `make validate-policy` ตรวจ policy เหล่านี้เพื่อป้องกัน regression
 
-ตรวจ direct patch ก่อน merge:
+ตรวจ direct npm patch ก่อน merge:
 
 ```bash
 BASE_REF=origin/main make validate-dependency
@@ -355,10 +357,11 @@ make local-ci-status
 1. fetch `origin/main`
 2. รัน `make validate-free` เมื่อ `main` เปลี่ยน
 3. ตรวจ PR ปกติที่อ้างอิง current `main` และรัน full `make validate-free` แบบ serialized
-4. โพสต์ status `local-ci/validate-free` กลับ GitHub โดย **ไม่ auto-merge PR ปกติ**
-5. ตรวจ Dependabot PR เฉพาะ direct `package.json` patch
-6. รัน typecheck + production build แบบ warning-free
-7. merge แบบ squash เฉพาะ Dependabot PR ที่ผ่าน policy และ validation จริง
+4. ตรวจ Dependabot/security PR ที่อยู่นอก direct npm patch lane ด้วย full `make validate-free` เช่นกัน และไม่ auto-merge
+5. โพสต์ status `local-ci/validate-free` กลับ GitHub โดย **ไม่ auto-merge PR ปกติหรือ security-maintenance PR**
+6. ตรวจ Dependabot auto-merge lane เฉพาะ direct `apps/web/package.json` patch
+7. รัน typecheck + production build แบบ warning-free สำหรับ lane ดังกล่าว
+8. merge แบบ squash เฉพาะ Dependabot npm patch ที่ผ่าน policy และ validation จริง
 
 ต้องติดตั้งและ login `gh` CLI บนเครื่อง executor ก่อน (`gh auth login`) เพื่อให้โพสต์ PR status และ merge Dependabot ได้ รายละเอียดดู `VALIDATION.md`
 
@@ -372,7 +375,9 @@ make uninstall-local-ci
 
 Phase 3 เสร็จใน 0.3.0 และยังเป็น production/enterprise foundation ของระบบ
 
-Phase 4 เสร็จใน 0.4.0: Image ↔ PDF batch tools, signed short-lived download URLs และ durable webhook retry/dead-letter queue พร้อม admin replay ถูก implement แล้ว รายละเอียดที่ `PHASE4.md`
+Phase 4 feature baseline เสร็จใน 0.4.0: Image ↔ PDF batch tools, signed short-lived download URLs และ durable webhook retry/dead-letter queue พร้อม admin replay ถูก implement แล้ว รายละเอียดที่ `PHASE4.md`
+
+0.4.1 เป็น Phase 4 security-maintenance release: อัป Pillow เป็น secure 12.3.0 baseline, แก้ release-policy drift และเพิ่ม full-validation lane สำหรับ security PR โดยไม่เปิด auto-merge เพิ่ม
 
 ## License
 

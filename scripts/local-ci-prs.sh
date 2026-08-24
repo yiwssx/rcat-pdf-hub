@@ -5,12 +5,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATE_ROOT="${LOCAL_CI_STATE_ROOT:-${ROOT}/.local-ci}"
 cd "${ROOT}"
 
-for cmd in git gh; do
+for cmd in git gh python3; do
   command -v "${cmd}" >/dev/null 2>&1 || { echo "Missing required command: ${cmd}" >&2; exit 1; }
 done
 
 gh auth status >/dev/null 2>&1 || {
-  echo "GitHub CLI is not authenticated; normal PR validation skipped"
+  echo "GitHub CLI is not authenticated; PR validation skipped"
   exit 0
 }
 
@@ -19,18 +19,20 @@ git fetch --quiet --prune origin main
 main_sha="$(git rev-parse origin/main)"
 mkdir -p "${STATE_ROOT}/worktrees" "${STATE_ROOT}/logs" "${STATE_ROOT}/status"
 
+# Full-validation lane covers normal PRs plus any Dependabot PR that is not
+# actually eligible for the narrowly allowed direct npm forward-patch lane.
 mapfile -t rows < <(
   gh api --paginate "repos/${repo}/pulls?state=open&base=main&per_page=100" \
-    --jq '.[] | select(.user.login != "dependabot[bot]") | [.number, .draft, .head.sha, .base.sha] | @tsv'
+    --jq '.[] | [.number, .draft, .head.sha, .base.sha, .user.login] | @tsv'
 )
 
 if [ "${#rows[@]}" -eq 0 ]; then
-  echo "local-ci: no open non-Dependabot PRs"
+  echo "local-ci: no open PRs"
   exit 0
 fi
 
 for row in "${rows[@]}"; do
-  IFS=$'\t' read -r pr draft head_sha base_sha <<<"${row}"
+  IFS=$'\t' read -r pr draft head_sha base_sha author <<<"${row}"
 
   if [ "${draft}" = "true" ]; then
     echo "local-ci: PR #${pr} is draft; skip"
@@ -52,6 +54,16 @@ for row in "${rows[@]}"; do
   if [ "${fetched_sha}" != "${head_sha}" ]; then
     echo "local-ci: PR #${pr} head moved while fetching; retry next cycle"
     continue
+  fi
+
+  if [ "${author}" = "dependabot[bot]" ]; then
+    changed="$(gh api --paginate "repos/${repo}/pulls/${pr}/files?per_page=100" --jq '.[].filename')"
+    if [ "${changed}" = "apps/web/package.json" ] && \
+       python3 scripts/check-direct-dependency.py "${main_sha}" "${head_sha}" >/dev/null 2>&1; then
+      echo "local-ci: Dependabot PR #${pr} is an eligible direct npm patch; full validation delegated to auto-merge lane"
+      continue
+    fi
+    echo "local-ci: Dependabot PR #${pr} is outside the auto-merge lane; running full validation with no auto-merge"
   fi
 
   worktree="${STATE_ROOT}/worktrees/pr-full-${pr}"
