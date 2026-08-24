@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Merge validated Dependabot patch and minor updates
+      - name: Merge validated Dependabot patch updates
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -41,6 +41,14 @@ jobs:
           test "$(jq -r '.isDraft' <<<"${pr_json}")" = "false"
           test "$(jq -r '.headRefOid' <<<"${pr_json}")" = "${HEAD_SHA}"
 
+          tested_base_sha="$(gh api "repos/${REPO}/pulls/${pr_number}" --jq '.base.sha')"
+          current_main_sha="$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')"
+          echo "PR base=${tested_base_sha} current main=${current_main_sha}"
+          if [ "${tested_base_sha}" != "${current_main_sha}" ]; then
+            echo "Dependabot PR was not tested against the current main branch; refusing automatic merge."
+            exit 0
+          fi
+
           title="$(jq -r '.title' <<<"${pr_json}")"
           if ! TITLE="${title}" python3 - <<'PY'
           import os
@@ -48,22 +56,34 @@ jobs:
           import sys
 
           title = os.environ["TITLE"]
-          match = re.search(r"\bfrom\s+v?(\d+)(?:\.[0-9A-Za-z.-]+)?\s+to\s+v?(\d+)", title, re.IGNORECASE)
+          match = re.search(
+              r"\bfrom\s+v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?\s+to\s+v?(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?",
+              title,
+              re.IGNORECASE,
+          )
           if not match:
-              print(f"Cannot prove update is non-major from title: {title}")
+              print(f"Cannot prove update is patch-only from title: {title}")
               sys.exit(1)
-          old_major, new_major = map(int, match.groups())
-          if new_major > old_major:
-              print(f"Major update requires manual review: {old_major} -> {new_major}")
+
+          old_major, old_minor, old_patch, new_major, new_minor, new_patch = map(int, match.groups())
+          if (new_major, new_minor) != (old_major, old_minor) or new_patch <= old_patch:
+              print(
+                  "Only forward patch updates are eligible for automatic merge: "
+                  f"{old_major}.{old_minor}.{old_patch} -> {new_major}.{new_minor}.{new_patch}"
+              )
               sys.exit(1)
-          print(f"Validated non-major update: {old_major} -> {new_major}")
+
+          print(
+              "Validated patch-only update: "
+              f"{old_major}.{old_minor}.{old_patch} -> {new_major}.{new_minor}.{new_patch}"
+          )
           PY
           then
             echo "Dependabot PR ${pr_number} is not eligible for automatic merge."
             exit 0
           fi
 
-          bad_files="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/files?per_page=100" --jq '.[].filename' | grep -Ev '^(apps/api/requirements\.txt|apps/web/package(-lock)?\.json|apps/api/Dockerfile|apps/web/Dockerfile|\.github/workflows/[^/]+\.ya?ml)$' || true)"
+          bad_files="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/files?per_page=100" --jq '.[].filename' | grep -Ev '^(apps/api/requirements\.txt|apps/web/package(-lock)?\.json|apps/api/Dockerfile|apps/web/Dockerfile|docker-compose\.ya?ml|\.github/workflows/[^/]+\.ya?ml)$' || true)"
           if [ -n "${bad_files}" ]; then
             echo "Dependabot PR changes files outside the dependency allowlist:" >&2
             printf '%s\n' "${bad_files}" >&2
