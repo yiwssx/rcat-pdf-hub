@@ -10,3 +10,8 @@ updates:
       timezone: Asia/Bangkok
     allow:
       - dependency-type: direct
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
