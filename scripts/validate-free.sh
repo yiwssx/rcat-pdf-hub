@@ -66,7 +66,6 @@ for required in (
 ):
     assert required.exists(), f"Missing zero-cost validation component: {required}"
 
-# User-facing/default configuration must not recommend known paid cloud endpoints.
 scan_files = [
     root / 'README.md', root / 'PHASE3.md', root / 'CHANGELOG.md',
     root / '.env.example', root / 'docker-compose.yml',
@@ -140,7 +139,7 @@ compose_config() {
   need docker
   local err project
   err="$(mktemp)"
-  project="pdfhub-validation-$${}"
+  project="pdfhub-validation-$$"
   docker compose -p "${project}" config >/tmp/pdfhub-compose.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
   docker compose -p "${project}" --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-all.out 2>"${err}"
@@ -157,7 +156,7 @@ runtime() {
   build_log="$(mktemp)"
   up_log="$(mktemp)"
   service_log="$(mktemp)"
-  project="pdfhub-validation-$${}"
+  project="pdfhub-validation-$$"
   export POSTGRES_DB=pdfhub
   export POSTGRES_USER=pdfhub
   export POSTGRES_PASSWORD=free-ci-postgres-password
