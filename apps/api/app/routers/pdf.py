@@ -13,10 +13,12 @@ from app.policy import ensure_daily_job_quota
 from app.queue import pdf_queue
 from app.routers.jobs import serialize
 from app.schemas import (
+    ImageToPdfRequest,
     JobOut,
     MergeRequest,
     OcrRequest,
     PageNumberRequest,
+    PdfToImagesRequest,
     RotateRequest,
     SingleFileRequest,
     SplitRequest,
@@ -27,6 +29,7 @@ from app.security import Principal, require_scope
 
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
 settings = get_settings()
+IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"}
 
 
 def _is_expired(record: FileRecord) -> bool:
@@ -38,14 +41,27 @@ def _is_expired(record: FileRecord) -> bool:
     return expires_at <= datetime.now(timezone.utc)
 
 
+def _is_pdf(record: FileRecord) -> bool:
+    return record.content_type == "application/pdf" or record.original_name.lower().endswith(".pdf")
+
+
+def _is_image(record: FileRecord) -> bool:
+    return record.content_type.lower() in IMAGE_TYPES
+
+
 def _create_job(db: Session, principal: Principal, operation: str, file_ids: list[str], params: dict) -> JobOut:
     files = [db.get(FileRecord, fid) for fid in file_ids]
     if any(item is None for item in files):
         raise HTTPException(status_code=404, detail="One or more files not found")
-    if any(_is_expired(item) for item in files if item):
+    records = [item for item in files if item is not None]
+    if any(_is_expired(item) for item in records):
         raise HTTPException(status_code=410, detail="One or more files have expired")
-    if "*" not in principal.scopes and any(item.source_system != principal.name for item in files if item):
+    if "*" not in principal.scopes and any(item.source_system != principal.name for item in records):
         raise HTTPException(status_code=403, detail="One or more files belong to another service")
+    if operation == "images-to-pdf" and any(not _is_image(item) for item in records):
+        raise HTTPException(status_code=415, detail="images-to-pdf accepts JPEG, PNG, WebP, TIFF, or BMP files only")
+    if operation == "pdf-to-images" and any(not _is_pdf(item) for item in records):
+        raise HTTPException(status_code=415, detail="pdf-to-images accepts PDF files only")
     if not principal.is_bootstrap_admin:
         ensure_daily_job_quota(db, principal.name, principal.daily_job_limit)
 
@@ -89,6 +105,26 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
 @router.post("/merge", response_model=JobOut, status_code=202)
 def merge(req: MergeRequest, principal: Principal = Depends(require_scope("pdf:merge")), db: Session = Depends(get_db)):
     return _create_job(db, principal, "merge", req.file_ids, {})
+
+
+@router.post("/images-to-pdf", response_model=JobOut, status_code=202)
+def images_to_pdf(
+    req: ImageToPdfRequest,
+    principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
+    db: Session = Depends(get_db),
+):
+    return _create_job(db, principal, "images-to-pdf", req.file_ids, req.model_dump(exclude={"file_ids"}))
+
+
+@router.post("/pdf-to-images", response_model=JobOut, status_code=202)
+def pdf_to_images(
+    req: PdfToImagesRequest,
+    principal: Principal = Depends(require_scope("pdf:pdf-to-image")),
+    db: Session = Depends(get_db),
+):
+    if req.last_page is not None and req.last_page < req.first_page:
+        raise HTTPException(status_code=422, detail="last_page must be greater than or equal to first_page")
+    return _create_job(db, principal, "pdf-to-images", [req.file_id], req.model_dump(exclude={"file_id"}))
 
 
 @router.post("/split", response_model=JobOut, status_code=202)
