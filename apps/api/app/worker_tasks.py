@@ -21,7 +21,7 @@ from app.storage import (
     path_for_stored_name,
     store_staged_file,
 )
-from app.webhooks import dispatch_job_webhook
+from app.webhooks import queue_job_webhook
 
 settings = get_settings()
 
@@ -44,14 +44,29 @@ def _output_hash(path) -> str:
     return hasher.hexdigest()
 
 
+def _output_spec(operation: str) -> tuple[str, str]:
+    if operation == "pdf-to-images":
+        return ".zip", "application/zip"
+    return ".pdf", "application/pdf"
+
+
 def _notify_job(db, job: JobRecord) -> None:
     try:
-        dispatch_job_webhook(db, job)
+        queue_job_webhook(db, job)
     except Exception as exc:
-        audit_event("webhook.failed", job.requested_by, "job", job.id, {"error": str(exc)[-1000:]})
+        db.rollback()
+        audit_event(
+            "webhook.queue_failed",
+            job.requested_by,
+            "job",
+            job.id,
+            {"error": str(exc)[-1000:]},
+        )
 
 
 def _auto_archive(db, record: FileRecord, actor: str) -> None:
+    if record.content_type != "application/pdf":
+        return
     if not settings.paperless_enabled or not settings.paperless_auto_archive:
         return
     archive = db.scalar(
@@ -90,7 +105,8 @@ def process_job(job_id: str) -> str:
         db.close()
         raise RuntimeError(f"Unknown job {job_id}")
 
-    output = new_output_path(job.id)
+    suffix, content_type = _output_spec(job.operation)
+    output = new_output_path(job.id, suffix=suffix)
     record_created = False
     stored_name: str | None = None
     try:
@@ -102,11 +118,29 @@ def process_job(job_id: str) -> str:
         files = [db.get(FileRecord, fid) for fid in file_ids]
         if any(item is None for item in files):
             raise RuntimeError("One or more input files no longer exist")
-        inputs = [path_for_stored_name(item.stored_name) for item in files]
+        inputs = [path_for_stored_name(item.stored_name) for item in files if item is not None]
 
         _set_job(db, job, progress=25)
         if job.operation == "merge":
             pdf_tools.merge(inputs, output)
+        elif job.operation == "images-to-pdf":
+            pdf_tools.images_to_pdf(
+                inputs,
+                output,
+                page_size=params.get("page_size", "auto"),
+                fit=params.get("fit", "contain"),
+                margin=float(params.get("margin", 18)),
+                dpi=int(params.get("dpi", 150)),
+            )
+        elif job.operation == "pdf-to-images":
+            pdf_tools.pdf_to_images(
+                inputs[0],
+                output,
+                image_format=params.get("format", "png"),
+                dpi=int(params.get("dpi", 150)),
+                first_page=int(params.get("first_page", 1)),
+                last_page=params.get("last_page"),
+            )
         elif job.operation == "split":
             pdf_tools.split(inputs[0], params["pages"], output)
         elif job.operation == "rotate":
@@ -179,11 +213,11 @@ def process_job(job_id: str) -> str:
                 )
                 raise RuntimeError(str(exc.detail)) from exc
 
-        stored_name = store_staged_file(output, "processed", filename=f"{job.id}.pdf")
+        stored_name = store_staged_file(output, "processed", filename=f"{job.id}{suffix}")
         record = FileRecord(
-            original_name=f"{job.operation}-{job.id}.pdf",
+            original_name=f"{job.operation}-{job.id}{suffix}",
             stored_name=stored_name,
-            content_type="application/pdf",
+            content_type=content_type,
             size=output_size,
             sha256=digest,
             source_system=job.requested_by,
@@ -227,6 +261,7 @@ def process_job(job_id: str) -> str:
                 "operation": job.operation,
                 "output_file_id": record.id,
                 "output_size": output_size,
+                "content_type": record.content_type,
                 "storage_backend": settings.storage_backend,
             },
         )
