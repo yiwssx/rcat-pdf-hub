@@ -131,10 +131,10 @@ assert "Pillow==" not in validate_free, "Dependency policy must not be duplicate
 local_ci_prs = read("scripts/local-ci-prs.sh")
 assert "[.number, .draft, .head.sha, .base.sha, .user.login]" in local_ci_prs
 assert "outside the auto-merge lane; running full validation with no auto-merge" in local_ci_prs
-assert 'changed" = "apps/web/package.json"' in local_ci_prs
+assert 'if [ "${changed}" = "apps/web/package.json" ]; then' in local_ci_prs
 
 local_ci_dependabot = read("scripts/local-ci-dependabot.sh")
-assert 'changed" != "apps/web/package.json"' in local_ci_dependabot
+assert 'if [ "${changed}" != "apps/web/package.json" ]; then' in local_ci_dependabot
 assert "validate-direct-dependency.sh" in local_ci_dependabot
 
 print("release policy: PASS")
