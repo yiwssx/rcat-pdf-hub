@@ -448,7 +448,7 @@ export function PdfHubConsole() {
                 <label>DPI<input type="number" min="72" max="600" value={rasterDpi} onChange={(e) => setRasterDpi(Number(e.target.value))} /></label>
                 <label>หน้าแรก<input type="number" min="1" value={rasterFirstPage} onChange={(e) => setRasterFirstPage(Math.max(1, Number(e.target.value)))} /></label>
               </div>
-              <label>หน้าสุดท้าย (เว้นว่าง = ถึงหน้าสุดท้าย)<input type="number" min={rasterFirstPage} value={rasterLastPage} onChange={(e) => setRasterLastPage(e.target.value)} /></label>
+              <label>หน้าสุดท้าย (เว้นว่าง = ต่อจากหน้าแรกได้สูงสุด 200 หน้า/งาน)<input type="number" min={rasterFirstPage} value={rasterLastPage} onChange={(e) => setRasterLastPage(e.target.value)} /></label>
               <button className="primary" onClick={() => void run("pdf-to-images")} disabled={busy || !targetIsPdf}>แปลง PDF เป็น ZIP รูปภาพ</button>
             </div>
 
