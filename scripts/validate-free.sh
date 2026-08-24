@@ -25,7 +25,7 @@ policy() {
   python3 - <<'PY'
 from pathlib import Path
 import json
-import yaml
+import re
 
 root = Path('.')
 workflow_dir = root / '.github' / 'workflows'
@@ -34,14 +34,13 @@ if workflow_dir.exists():
     workflow_files = [p for p in workflow_dir.rglob('*') if p.suffix in {'.yml', '.yaml'}]
 assert not workflow_files, f"Hosted GitHub Actions workflows are forbidden by zero-cost policy: {workflow_files}"
 
-cfg = yaml.safe_load((root / '.github' / 'dependabot.yml').read_text(encoding='utf-8'))
-updates = cfg.get('updates', [])
-assert len(updates) == 1, updates
-item = updates[0]
-assert item.get('package-ecosystem') == 'npm', item
-assert item.get('directory') == '/apps/web', item
-allow = item.get('allow', [])
-assert allow == [{'dependency-type': 'direct'}], allow
+dep = (root / '.github' / 'dependabot.yml').read_text(encoding='utf-8')
+assert len(re.findall(r'^\s*-\s+package-ecosystem:', dep, flags=re.M)) == 1, dep
+assert re.search(r'^\s*-\s+package-ecosystem:\s*npm\s*$', dep, flags=re.M), dep
+assert re.search(r'^\s+directory:\s*/apps/web\s*$', dep, flags=re.M), dep
+assert re.search(r'^\s+-\s+dependency-type:\s*direct\s*$', dep, flags=re.M), dep
+for forbidden in ('package-ecosystem: pip', 'package-ecosystem: docker', 'package-ecosystem: github-actions'):
+    assert forbidden not in dep, forbidden
 
 pkg = json.loads((root / 'apps' / 'web' / 'package.json').read_text(encoding='utf-8'))
 for section in ('dependencies', 'devDependencies'):
