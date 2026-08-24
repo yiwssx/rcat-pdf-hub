@@ -1,0 +1,89 @@
+name: Dependabot Auto Merge
+
+on:
+  workflow_run:
+    workflows: ["Runtime Acceptance"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Merge validated Dependabot patch and minor updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          pr_number="$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" --jq '[.[] | select(.state == "open" and .user.login == "dependabot[bot]")] | first | .number // empty')"
+          if [ -z "${pr_number}" ]; then
+            echo "No open Dependabot PR is associated with ${HEAD_SHA}; nothing to merge."
+            exit 0
+          fi
+
+          pr_json="$(gh pr view "${pr_number}" --repo "${REPO}" --json state,isDraft,headRefOid,title)"
+          test "$(jq -r '.state' <<<"${pr_json}")" = "OPEN"
+          test "$(jq -r '.isDraft' <<<"${pr_json}")" = "false"
+          test "$(jq -r '.headRefOid' <<<"${pr_json}")" = "${HEAD_SHA}"
+
+          title="$(jq -r '.title' <<<"${pr_json}")"
+          if ! TITLE="${title}" python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          title = os.environ["TITLE"]
+          match = re.search(r"\bfrom\s+v?(\d+)(?:\.[0-9A-Za-z.-]+)?\s+to\s+v?(\d+)", title, re.IGNORECASE)
+          if not match:
+              print(f"Cannot prove update is non-major from title: {title}")
+              sys.exit(1)
+          old_major, new_major = map(int, match.groups())
+          if new_major > old_major:
+              print(f"Major update requires manual review: {old_major} -> {new_major}")
+              sys.exit(1)
+          print(f"Validated non-major update: {old_major} -> {new_major}")
+          PY
+          then
+            echo "Dependabot PR ${pr_number} is not eligible for automatic merge."
+            exit 0
+          fi
+
+          bad_files="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/files?per_page=100" --jq '.[].filename' | grep -Ev '^(apps/api/requirements\.txt|apps/web/package(-lock)?\.json|apps/api/Dockerfile|apps/web/Dockerfile|\.github/workflows/[^/]+\.ya?ml)$' || true)"
+          if [ -n "${bad_files}" ]; then
+            echo "Dependabot PR changes files outside the dependency allowlist:" >&2
+            printf '%s\n' "${bad_files}" >&2
+            exit 1
+          fi
+
+          non_bot_commits="$(gh api --paginate "repos/${REPO}/pulls/${pr_number}/commits?per_page=100" --jq '.[] | select((.author.login // "") != "dependabot[bot]") | .sha' || true)"
+          if [ -n "${non_bot_commits}" ]; then
+            echo "Dependabot PR contains commits not authored by Dependabot; refusing automatic merge." >&2
+            exit 1
+          fi
+
+          runs="$(gh api "repos/${REPO}/actions/runs?head_sha=${HEAD_SHA}&event=pull_request&per_page=100")"
+          ci_result="$(jq -r '[.workflow_runs[] | select(.name == "CI")] | sort_by(.run_number) | last | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end' <<<"${runs}")"
+          runtime_result="$(jq -r '[.workflow_runs[] | select(.name == "Runtime Acceptance")] | sort_by(.run_number) | last | if . == null then "missing" else (.status + ":" + (.conclusion // "")) end' <<<"${runs}")"
+
+          echo "CI=${ci_result} Runtime=${runtime_result}"
+          if [ "${ci_result}" != "completed:success" ] || [ "${runtime_result}" != "completed:success" ]; then
+            echo "Both required workflows must be completed successfully before automatic merge."
+            exit 0
+          fi
+
+          gh pr merge "${pr_number}" --repo "${REPO}" --squash --delete-branch
