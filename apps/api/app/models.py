@@ -83,6 +83,7 @@ class ArchiveRecord(Base):
 
 class WebhookDelivery(Base):
     __tablename__ = "webhook_deliveries"
+    __table_args__ = (UniqueConstraint("job_id", "event", name="uq_webhook_job_event"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     job_id: Mapped[str] = mapped_column(String(36), index=True)
