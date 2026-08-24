@@ -2,7 +2,7 @@ name: Dependabot Auto Merge
 
 on:
   workflow_run:
-    workflows: ["Runtime Acceptance"]
+    workflows: ["CI", "Runtime Acceptance"]
     types: [completed]
 
 permissions:
