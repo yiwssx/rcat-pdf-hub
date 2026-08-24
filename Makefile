@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive
+.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-backend validate-frontend validate-compose validate-runtime validate-dependency
 
 up:
 	docker compose up -d --build
@@ -23,6 +23,27 @@ config:
 
 test:
 	docker compose run --rm api python -m pytest -q
+
+validate-free:
+	bash scripts/validate-free.sh all
+
+validate-policy:
+	bash scripts/validate-free.sh policy
+
+validate-backend:
+	bash scripts/validate-free.sh backend
+
+validate-frontend:
+	bash scripts/validate-free.sh frontend
+
+validate-compose:
+	bash scripts/validate-free.sh compose
+
+validate-runtime:
+	bash scripts/validate-free.sh runtime
+
+validate-dependency:
+	bash scripts/validate-direct-dependency.sh "$${BASE_REF:-origin/main}"
 
 cleanup:
 	docker compose run --rm cleanup python -m app.cleanup

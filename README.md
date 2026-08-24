@@ -35,7 +35,7 @@
 - Next.js Web Console สำหรับ tools + Admin
 - Swagger/OpenAPI ที่ `/docs`
 - Caddy reverse proxy
-- GitHub Actions: backend tests + frontend build + compose validation
+- Zero-cost local validation: backend tests + frontend build + Compose/runtime checks โดยไม่ใช้ GitHub-hosted runners
 
 ## Architecture
 
@@ -56,10 +56,10 @@ Browser / System A / System B / System C
                        v             +--> previews/audit
                    RQ Worker
             +----------+-----------+
-            |          |           |
-            v          v           v
-          qpdf     OCRmyPDF     Gotenberg
-        pypdf/RL   Tesseract    LibreOffice
+            |          |           v
+            v          v        Gotenberg
+          qpdf     OCRmyPDF     LibreOffice
+        pypdf/RL   Tesseract
             |
             v
        processed PDF
@@ -372,6 +372,8 @@ source code ของ RCAT PDF Hub ใช้ MIT License ส่วน dependency
 - FastAPI — MIT
 - Next.js / React — MIT
 
+CI/validation ใช้เครื่องที่องค์กรมีอยู่แล้วและเครื่องมือ open-source เท่านั้น ไม่มี paid runner หรือ paid CI fallback
+
 ## Development
 
 Backend:
@@ -392,8 +394,21 @@ Frontend:
 
 ```bash
 cd apps/web
-npm install
+npm install --package-lock=false
 npm run dev
+```
+
+Zero-cost validation:
+
+```bash
+make validate-policy
+make validate-free
+```
+
+ตรวจ direct dependency patch ก่อน merge:
+
+```bash
+BASE_REF=origin/main make validate-dependency
 ```
 
 ## Roadmap
