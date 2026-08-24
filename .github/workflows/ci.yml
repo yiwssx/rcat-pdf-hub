@@ -44,6 +44,10 @@ jobs:
             echo "Dependency installation emitted a warning" >&2
             exit 1
           fi
+      - name: Validate backend dependency graph
+        run: |
+          pip check
+          python -W error -c 'import ldap3, pyasn1'
       - run: python -m compileall -q app tests alembic
       - run: python -m pytest -q
       - name: Validate Alembic fresh database
