@@ -1,17 +1,24 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event, read_audit_events
 from app.config import get_settings
 from app.db import get_db
-from app.models import ApiKey, ServicePolicy
+from app.models import ApiKey, ServicePolicy, WebhookDelivery
 from app.policy import effective_policy
-from app.schemas import ApiKeyCreate, ApiKeyCreated, ApiKeyOut, ServicePolicyOut, ServicePolicyUpdate
+from app.schemas import (
+    ApiKeyCreate,
+    ApiKeyCreated,
+    ApiKeyOut,
+    ServicePolicyOut,
+    ServicePolicyUpdate,
+    WebhookDeliveryOut,
+)
 from app.security import Principal, hash_api_key, new_api_key, require_scope
-from app.webhooks import derive_webhook_secret, validate_webhook_url
+from app.webhooks import derive_webhook_secret, retry_dead_webhook, validate_webhook_url
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 settings = get_settings()
@@ -20,7 +27,8 @@ ALLOWED_SCOPES = {
     "files:read", "files:write", "jobs:read",
     "pdf:merge", "pdf:split", "pdf:rotate", "pdf:compress",
     "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
-    "pdf:page-number", "pdf:stamp", "archive:paperless", "admin:keys",
+    "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image",
+    "archive:paperless", "admin:keys",
 }
 
 
@@ -177,6 +185,37 @@ def get_webhook_secret(
     if not db.scalar(select(ApiKey).where(ApiKey.name == service_name)):
         raise HTTPException(status_code=404, detail="Service API key not found")
     return {"service_name": service_name, "webhook_secret": derive_webhook_secret(service_name)}
+
+
+@router.get("/webhook-deliveries", response_model=list[WebhookDeliveryOut])
+def list_webhook_deliveries(
+    status: str | None = Query(default=None, pattern=r"^(queued|retrying|delivered|dead)$"),
+    service_name: str | None = Query(default=None, max_length=120),
+    limit: int = Query(default=200, ge=1, le=2000),
+    _: Principal = Depends(require_scope("admin:keys")),
+    db: Session = Depends(get_db),
+):
+    stmt = select(WebhookDelivery).order_by(desc(WebhookDelivery.created_at)).limit(limit)
+    if status:
+        stmt = stmt.where(WebhookDelivery.status == status)
+    if service_name:
+        stmt = stmt.where(WebhookDelivery.service_name == service_name)
+    return db.scalars(stmt).all()
+
+
+@router.post("/webhook-deliveries/{delivery_id}/retry", response_model=WebhookDeliveryOut)
+def retry_webhook_delivery(
+    delivery_id: str,
+    principal: Principal = Depends(require_scope("admin:keys")),
+    db: Session = Depends(get_db),
+):
+    delivery = db.get(WebhookDelivery, delivery_id)
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    try:
+        return retry_dead_webhook(db, delivery, principal.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/audit")
