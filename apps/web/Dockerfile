@@ -1,11 +1,11 @@
-FROM node:24-alpine AS deps
+FROM node:24.19.0-alpine3.24 AS deps
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NPM_CONFIG_UPDATE_NOTIFIER=false
 COPY package.json ./
 RUN npm install --no-audit --no-fund
 
-FROM node:24-alpine AS build
+FROM node:24.19.0-alpine3.24 AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NPM_CONFIG_UPDATE_NOTIFIER=false
@@ -13,7 +13,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p .next/cache && npm run build
 
-FROM node:24-alpine AS runner
+FROM node:24.19.0-alpine3.24 AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \

@@ -7,7 +7,10 @@ BASE_REF="${1:-origin/main}"
 
 command -v git >/dev/null 2>&1 || { echo 'git is required' >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo 'python3 is required' >&2; exit 1; }
+command -v node >/dev/null 2>&1 || { echo 'node is required' >&2; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo 'npm is required' >&2; exit 1; }
+
+node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
 
 changed="$(git diff --name-only "${BASE_REF}...HEAD")"
 if [ "${changed}" != "apps/web/package.json" ]; then

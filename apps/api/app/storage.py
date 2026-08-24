@@ -18,11 +18,21 @@ SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 S3_PREFIX = "s3:"
 
 
+def _require_self_hosted_s3_endpoint() -> str:
+    endpoint = (settings.s3_endpoint_url or "").strip()
+    if not endpoint:
+        raise RuntimeError(
+            "S3 storage requires an explicit self-hosted PDFHUB_S3_ENDPOINT_URL by zero-cost policy"
+        )
+    return endpoint
+
+
 @lru_cache(maxsize=1)
 def s3_client():
+    endpoint = _require_self_hosted_s3_endpoint()
     return boto3.client(
         "s3",
-        endpoint_url=settings.s3_endpoint_url or None,
+        endpoint_url=endpoint,
         region_name=settings.s3_region,
         aws_access_key_id=settings.s3_access_key or None,
         aws_secret_access_key=settings.s3_secret_key or None,
@@ -45,14 +55,12 @@ def _bucket_exists() -> bool:
 def _ensure_bucket() -> None:
     if settings.storage_backend != "s3":
         return
+    _require_self_hosted_s3_endpoint()
     if _bucket_exists():
         return
     if not settings.s3_auto_create_bucket:
         raise RuntimeError(f"S3 bucket does not exist: {settings.s3_bucket}")
-    kwargs = {"Bucket": settings.s3_bucket}
-    if not settings.s3_endpoint_url and settings.s3_region != "us-east-1":
-        kwargs["CreateBucketConfiguration"] = {"LocationConstraint": settings.s3_region}
-    s3_client().create_bucket(**kwargs)
+    s3_client().create_bucket(Bucket=settings.s3_bucket)
 
 
 def ensure_storage() -> None:
@@ -96,7 +104,7 @@ def _s3_key(area: str, filename: str) -> str:
 
 
 def store_staged_file(path: Path, area: str, filename: str | None = None) -> str:
-    """Commit a staged local file to local/NAS storage or an S3-compatible object store."""
+    """Commit a staged local file to local/NAS storage or a self-hosted S3-compatible object store."""
     ensure_storage()
     name = Path(filename or path.name).name
     if settings.storage_backend == "s3":

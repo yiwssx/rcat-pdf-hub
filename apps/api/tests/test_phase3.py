@@ -56,6 +56,15 @@ def test_local_storage_commit(monkeypatch, tmp_path: Path):
     assert storage.delete_stored_name(stored_name) == 5
 
 
+def test_s3_requires_explicit_self_hosted_endpoint(monkeypatch):
+    storage.s3_client.cache_clear()
+    monkeypatch.setattr(storage.settings, "storage_backend", "s3")
+    monkeypatch.setattr(storage.settings, "s3_endpoint_url", "")
+    with pytest.raises(RuntimeError, match="explicit self-hosted"):
+        storage.s3_client()
+    storage.s3_client.cache_clear()
+
+
 class FakeS3:
     def __init__(self):
         self.objects: dict[str, bytes] = {}
@@ -80,6 +89,7 @@ class FakeS3:
 def test_s3_storage_round_trip(monkeypatch, tmp_path: Path):
     fake = FakeS3()
     monkeypatch.setattr(storage.settings, "storage_backend", "s3")
+    monkeypatch.setattr(storage.settings, "s3_endpoint_url", "http://seaweedfs:8333")
     monkeypatch.setattr(storage.settings, "data_dir", tmp_path)
     monkeypatch.setattr(storage.settings, "s3_bucket", "pdfhub-test")
     monkeypatch.setattr(storage.settings, "s3_prefix", "tenant")

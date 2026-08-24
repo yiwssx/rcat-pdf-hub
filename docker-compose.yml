@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8.1.9-alpine3.24
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
       - valkey_data:/data
@@ -161,7 +161,7 @@ services:
     restart: unless-stopped
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.4-alpine
     ports:
       - "${PDFHUB_HTTP_PORT:-8080}:80"
     volumes:
@@ -171,8 +171,8 @@ services:
       - api
     restart: unless-stopped
 
-  # Optional S3-compatible single-node target for development or small sites.
-  # Production can point PDFHUB_S3_ENDPOINT_URL at MinIO, SeaweedFS, AWS S3, etc.
+  # Optional self-hosted S3-compatible single-node target for development or small sites.
+  # Production may point PDFHUB_S3_ENDPOINT_URL at another self-hosted endpoint such as Ceph RGW.
   seaweedfs:
     profiles: ["s3"]
     image: chrislusf/seaweedfs:4.44
@@ -186,7 +186,7 @@ services:
 
   clamav:
     profiles: ["security"]
-    image: clamav/clamav:stable
+    image: clamav/clamav:1.5.4
     volumes:
       - clamav_db:/var/lib/clamav
     restart: unless-stopped

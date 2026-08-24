@@ -20,6 +20,32 @@ check_clean_log() {
   fi
 }
 
+require_tool_versions() {
+  need python3
+  need node
+  need npm
+  python3 - <<'PY'
+import sys
+if sys.version_info[:2] != (3, 12):
+    raise SystemExit(f"Python 3.12 is required to match the production image; found {sys.version.split()[0]}")
+PY
+  node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
+}
+
+validation_compose_env() {
+  export POSTGRES_DB=pdfhub
+  export POSTGRES_USER=pdfhub
+  export POSTGRES_PASSWORD=free-ci-postgres-password
+  export PDFHUB_API_KEY_PEPPER=free-ci-api-key-pepper-change-me
+  export PDFHUB_ADMIN_API_KEY=pdfh_free_ci_admin_key_change_me_1234567890
+  export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
+  export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
+  export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
+  export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
+  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
+  export NEXT_TELEMETRY_DISABLED=1
+}
+
 policy() {
   need python3
   python3 - <<'PY'
@@ -43,18 +69,47 @@ for forbidden in ('package-ecosystem: pip', 'package-ecosystem: docker', 'packag
     assert forbidden not in dep, forbidden
 
 pkg = json.loads((root / 'apps' / 'web' / 'package.json').read_text(encoding='utf-8'))
+assert pkg['version'] == '0.3.0', f"Web version must be 0.3.0, got {pkg['version']}"
 for section in ('dependencies', 'devDependencies'):
     for name, version in pkg.get(section, {}).items():
         parts = version.split('.')
         assert len(parts) == 3 and all(part.isdigit() for part in parts), f"{name} must use exact x.y.z: {version}"
 
+api_main = (root / 'apps' / 'api' / 'app' / 'main.py').read_text(encoding='utf-8')
+assert 'version="0.3.0"' in api_main, 'API version must be 0.3.0'
+readme = (root / 'README.md').read_text(encoding='utf-8')
+assert '0.3.0 — Phase 3 complete' in readme, 'README release status is not Phase 3 / 0.3.0'
+
 assert not (root / 'apps' / 'web' / 'package-lock.json').exists(), 'package-lock.json is intentionally not tracked: transitive updates must not be committed automatically'
+
+for required in (
+    root / 'scripts' / 'validate-free.sh',
+    root / 'scripts' / 'validate-direct-dependency.sh',
+    root / 'scripts' / 'local-ci-cycle.sh',
+    root / 'scripts' / 'local-ci-dependabot.sh',
+    root / 'scripts' / 'install-local-ci-user.sh',
+    root / 'scripts' / 'uninstall-local-ci-user.sh',
+):
+    assert required.exists(), f"Missing zero-cost validation component: {required}"
+
+scan_files = [
+    root / 'README.md', root / 'PHASE3.md', root / 'CHANGELOG.md',
+    root / '.env.example', root / 'docker-compose.yml',
+]
+forbidden_terms = ('AWS S3', 'Grafana Cloud', 'Entra ID', 'Google Workspace OIDC')
+for path in scan_files:
+    text = path.read_text(encoding='utf-8')
+    for term in forbidden_terms:
+        assert term not in text, f"Paid-cloud reference {term!r} remains in {path}"
+
+storage = (root / 'apps' / 'api' / 'app' / 'storage.py').read_text(encoding='utf-8')
+assert '_require_self_hosted_s3_endpoint' in storage, 'S3 zero-cost endpoint guard is missing'
 print('policy: PASS')
 PY
 }
 
 backend() {
-  need python3
+  require_tool_versions
   local venv log
   venv="$(mktemp -d)/venv"
   log="$(mktemp)"
@@ -84,7 +139,7 @@ PY
 }
 
 frontend() {
-  need npm
+  require_tool_versions
   local install_log build_log pkg_before
   install_log="$(mktemp)"
   build_log="$(mktemp)"
@@ -108,13 +163,17 @@ frontend() {
 
 compose_config() {
   need docker
-  local err
+  validation_compose_env
+  local err project
   err="$(mktemp)"
-  docker compose config >/tmp/pdfhub-compose.out 2>"${err}"
+  project="pdfhub-validation-$$"
+  docker compose -p "${project}" config >/tmp/pdfhub-compose.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
-  docker compose --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-all.out 2>"${err}"
+  : >"${err}"
+  docker compose -p "${project}" --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-all.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
-  docker compose -f docker-compose.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-nas.out 2>"${err}"
+  : >"${err}"
+  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
   echo 'compose: PASS'
 }
@@ -122,35 +181,34 @@ compose_config() {
 runtime() {
   need docker
   need curl
-  local build_log up_log service_log
+  validation_compose_env
+  local build_log up_log service_log project
   build_log="$(mktemp)"
   up_log="$(mktemp)"
   service_log="$(mktemp)"
-  export POSTGRES_DB=pdfhub
-  export POSTGRES_USER=pdfhub
-  export POSTGRES_PASSWORD=free-ci-postgres-password
-  export PDFHUB_API_KEY_PEPPER=free-ci-api-key-pepper-change-me
-  export PDFHUB_ADMIN_API_KEY=pdfh_free_ci_admin_key_change_me_1234567890
-  export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
-  export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
+  project="pdfhub-validation-$$"
   export PDFHUB_HTTP_PORT=18080
-  export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
-  export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
-  export NEXT_TELEMETRY_DISABLED=1
+  export PDFHUB_ALLOWED_ORIGINS=http://localhost:${PDFHUB_HTTP_PORT}
+  export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
+
+  dc() {
+    docker compose -p "${project}" "$@"
+  }
 
   cleanup_runtime() {
-    docker compose --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans >/dev/null 2>&1 || true
+    dc --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans >/dev/null 2>&1 || true
+    rm -rf "${PDFHUB_NAS_PATH}" >/dev/null 2>&1 || true
   }
   trap cleanup_runtime EXIT
 
-  docker compose build --pull api worker cleanup web 2>&1 | tee "${build_log}"
+  dc build --pull api worker cleanup web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
-  docker compose up -d --no-build --wait --wait-timeout 240 2>&1 | tee "${up_log}"
+  dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee "${up_log}"
   check_clean_log "${up_log}"
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
-  docker compose exec -T api python -m pytest -q
-  docker compose logs --no-color >"${service_log}" 2>&1
+  dc exec -T api python -m pytest -q
+  dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
   cleanup_runtime
   trap - EXIT

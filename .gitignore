@@ -8,5 +8,6 @@ __pycache__/
 node_modules/
 .next/
 coverage/
+.local-ci/
 .DS_Store
 *.log
