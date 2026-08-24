@@ -242,7 +242,7 @@ source code ของ RCAT PDF Hub ใช้ MIT License ส่วน dependency
 
 ## Development
 
-Backend:
+Backend ใช้ Python **3.12**:
 
 ```bash
 cd apps/api
@@ -256,7 +256,7 @@ PDFHUB_WEBHOOK_MASTER_SECRET=ci-webhook-master-secret-change-me \
 python -m pytest -q
 ```
 
-Frontend:
+Frontend ใช้ Node **24**:
 
 ```bash
 cd apps/web
@@ -278,7 +278,13 @@ make validate-free
 
 Warnings และ deprecations ถือเป็น failure
 
-Dependabot ตรวจเฉพาะ direct npm dependencies ที่ประกาศใน `apps/web/package.json` และไม่อัปเดต transitive dependencies/lockfile/pip/Docker/GitHub Actions
+Dependency/runtime policy:
+
+- Dependabot ตรวจเฉพาะ direct npm dependencies ที่ประกาศใน `apps/web/package.json`
+- Dependabot สร้างเฉพาะ patch update; minor/major ถูก ignore ตั้งแต่ต้นทาง
+- ไม่อัปเดต transitive dependencies, `package-lock.json`, pip, Docker หรือ GitHub Actions อัตโนมัติ
+- Python/Node base image และ Compose service images ถูก pin เป็น explicit release baseline; การอัปเดต infrastructure ต้องเป็น developer change โดยตั้งใจ
+- `make validate-policy` ตรวจ policy เหล่านี้เพื่อป้องกัน regression
 
 ตรวจ direct patch ก่อน merge:
 
@@ -299,11 +305,13 @@ make local-ci-status
 
 1. fetch `origin/main`
 2. รัน `make validate-free` เมื่อ `main` เปลี่ยน
-3. ตรวจ Dependabot PR เฉพาะ direct `package.json` patch
-4. รัน typecheck + production build แบบ warning-free
-5. merge แบบ squash เฉพาะ PR ที่ผ่าน policy และ validation จริง
+3. ตรวจ PR ปกติที่อ้างอิง current `main` และรัน full `make validate-free` แบบ serialized
+4. โพสต์ status `local-ci/validate-free` กลับ GitHub โดย **ไม่ auto-merge PR ปกติ**
+5. ตรวจ Dependabot PR เฉพาะ direct `package.json` patch
+6. รัน typecheck + production build แบบ warning-free
+7. merge แบบ squash เฉพาะ Dependabot PR ที่ผ่าน policy และ validation จริง
 
-ต้องติดตั้งและ login `gh` CLI บนเครื่อง executor ก่อน (`gh auth login`) รายละเอียดดู `VALIDATION.md`
+ต้องติดตั้งและ login `gh` CLI บนเครื่อง executor ก่อน (`gh auth login`) เพื่อให้โพสต์ PR status และ merge Dependabot ได้ รายละเอียดดู `VALIDATION.md`
 
 ถ้าต้องการหยุด:
 
@@ -313,7 +321,7 @@ make uninstall-local-ci
 
 ## Phase 3 completion
 
-Phase 3 เสร็จแล้วใน 0.3.0: OIDC/LDAP, local/NAS/S3-compatible storage, horizontal RQ workers, ClamAV, Prometheus/OpenTelemetry, Paperless-ngx และ Alembic migrations ถูก implement แล้ว
+Phase 3 เสร็จแล้วใน 0.3.0: OIDC/LDAP, local/NAS/S3-compatible storage, horizontal RQ workers, ClamAV, Prometheus/OpenTelemetry, Paperless-ngx, Alembic migrations, zero-cost release policy และ local CI executor ถูก implement แล้ว
 
 งานหลัง 0.3.0 เป็น enhancement ไม่ใช่ blocker ของ Phase 3 เช่น Image ↔ PDF batch tools, signed short-lived download URLs และ webhook delivery retry/dead-letter queue
 
