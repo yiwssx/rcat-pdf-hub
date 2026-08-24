@@ -1,5 +1,7 @@
+from sqlalchemy import func, select
+
 from app.db import SessionLocal
-from app.models import JobRecord, ServicePolicy
+from app.models import JobRecord, ServicePolicy, WebhookDelivery
 from app.webhooks import deliver_webhook, queue_job_webhook, retry_dead_webhook
 
 
@@ -27,6 +29,11 @@ def test_webhook_delivery_retries_then_moves_to_dead_letter_queue():
 
         delivery = queue_job_webhook(db, job)
         assert delivery is not None
+        duplicate = queue_job_webhook(db, job)
+        assert duplicate is not None
+        assert duplicate.id == delivery.id
+        assert db.scalar(select(func.count()).select_from(WebhookDelivery)) == 1
+
         delivery.max_attempts = 2
         db.commit()
 
