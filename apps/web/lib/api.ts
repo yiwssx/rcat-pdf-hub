@@ -95,6 +95,29 @@ export type ArchiveRecord = {
   updated_at: string;
 };
 
+export type SignedDownload = {
+  file_id: string;
+  url: string;
+  expires_at: string;
+};
+
+export type WebhookDelivery = {
+  id: string;
+  job_id: string;
+  service_name: string;
+  url: string;
+  event: string;
+  status: "queued" | "retrying" | "delivered" | "dead";
+  attempt_count: number;
+  max_attempts: number;
+  next_attempt_at: string;
+  last_error: string | null;
+  last_status_code: number | null;
+  created_at: string;
+  updated_at: string;
+  delivered_at: string | null;
+};
+
 function headers(auth: string): Record<string, string> {
   return auth === SESSION_AUTH ? {} : { "X-API-Key": auth };
 }
@@ -171,6 +194,12 @@ export async function fetchDownload(fileId: string, auth: string): Promise<Blob>
   return res.blob();
 }
 
+export async function createSignedDownload(fileId: string, auth: string, ttlSeconds = 300): Promise<SignedDownload> {
+  return expectJson<SignedDownload>(await request(`/api/v1/files/${fileId}/signed-download?ttl_seconds=${ttlSeconds}`, {
+    method: "POST", headers: headers(auth),
+  }));
+}
+
 export async function archiveToPaperless(fileId: string, auth: string): Promise<ArchiveRecord> {
   return expectJson<ArchiveRecord>(await request(`/api/v1/integrations/paperless/${fileId}`, {
     method: "POST", headers: headers(auth),
@@ -205,6 +234,19 @@ export async function updateServicePolicy(policy: ServicePolicy, auth: string): 
       max_storage_mb: policy.max_storage_mb,
       webhook_url: policy.webhook_url || null,
     }),
+  }));
+}
+
+export async function listWebhookDeliveries(auth: string, status = ""): Promise<WebhookDelivery[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}&limit=100` : "?limit=100";
+  return expectJson<WebhookDelivery[]>(await request(`/api/v1/admin/webhook-deliveries${query}`, {
+    headers: headers(auth), cache: "no-store",
+  }));
+}
+
+export async function retryWebhookDelivery(deliveryId: string, auth: string): Promise<WebhookDelivery> {
+  return expectJson<WebhookDelivery>(await request(`/api/v1/admin/webhook-deliveries/${deliveryId}/retry`, {
+    method: "POST", headers: headers(auth),
   }));
 }
 
