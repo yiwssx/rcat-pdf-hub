@@ -125,7 +125,9 @@ jobs:
           assert Path('/tmp/preview.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
           PY
           docker compose exec -T api curl -fsS http://localhost:8000/metrics | grep -q '^pdfhub_http_requests_total'
-          docker compose exec -T postgres psql -U pdfhub -d pdfhub -Atc 'select version_num from alembic_version' | grep -q '^0002_phase3_archive_records$'
+          docker compose exec -T -e PGPASSWORD="${POSTGRES_PASSWORD}" postgres \
+            psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc 'select version_num from alembic_version' \
+            | grep -q '^0002_phase3_archive_records$'
 
       - name: Assert core runtime logs are clean
         run: |
