@@ -3,7 +3,11 @@ name: CI
 on:
   push:
     branches: [main, master]
+    paths-ignore:
+      - apps/web/package.json
   pull_request:
+    paths-ignore:
+      - apps/web/package.json
   workflow_dispatch:
 
 permissions:
