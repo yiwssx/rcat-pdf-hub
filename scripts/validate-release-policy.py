@@ -87,7 +87,7 @@ assert "PDFHUB_DOWNLOAD_SIGNING_SECRET" in compose
 # Release metadata must agree. Phase 4 feature baseline remains 0.4.0; 0.4.1 is a security maintenance release.
 assert f'version="{CURRENT_RELEASE}"' in read("apps/api/app/main.py")
 assert f"{CURRENT_RELEASE} — Phase 4 security maintenance" in read("README.md")
-assert "completed Phase 4 baseline" in read("PHASE4.md")
+assert "completed Phase 4 feature baseline" in read("PHASE4.md")
 assert f"## {CURRENT_RELEASE}" in read("CHANGELOG.md")
 
 # Phase 4 must include durable delivery, signed downloads, and batch image conversion.
