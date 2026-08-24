@@ -10,7 +10,7 @@ httpx==0.28.1
 ocrmypdf==17.8.1
 pypdf==6.16.1
 reportlab==5.0.0
-pytest==9.0.3
+pytest==9.1.1
 PyJWT[crypto]==2.13.0
 boto3==1.43.74
 ldap3==2.10.2rc4
