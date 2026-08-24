@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PDF Hub API",
-    version="0.4.0",
+    version="0.4.1",
     description="Centralized self-hosted PDF processing, secure delivery and enterprise integration API",
     lifespan=lifespan,
 )
