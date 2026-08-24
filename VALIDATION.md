@@ -8,16 +8,18 @@ RCAT PDF Hub 0.3.0 must remain **100% free of paid CI/CD, paid runners, paid hos
 - No paid runner, paid CI provider, paid build credit, billing increase or paid fallback is allowed.
 - Validation runs on an institution-owned/local Linux machine using open-source tooling.
 - Dependabot may monitor only direct npm dependencies declared in `apps/web/package.json`.
+- Dependabot is configured to generate patch updates only; minor and major version-update PRs are ignored at source.
 - Dependabot must not update pip, Docker images, GitHub Actions, lockfiles or transitive dependencies.
 - A dependency change is eligible only when exactly one existing direct dependency changes from exact `x.y.z` to a higher patch in the same major/minor.
 - `package-lock.json` is intentionally not committed by dependency automation; validation uses `npm install --package-lock=false` and must leave `package.json` unchanged.
+- Python, Node and Compose service images are pinned to explicit release baselines. Infrastructure image upgrades are manual developer changes, never automatic dependency updates.
 - S3 mode requires an explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`; the application refuses implicit commercial-cloud fallback.
 - Warnings, deprecations and errors are failures.
 - API, Web Console and documentation release metadata must all report 0.3.0 / Phase 3.
 
 ## Local validation commands
 
-Run on an Internet-connected Linux host with Python, Node/npm and Docker Engine + Compose plugin:
+Run on an Internet-connected Linux host with **Python 3.12**, **Node 24/npm**, Docker Engine and Docker Compose plugin:
 
 ```bash
 make validate-policy
@@ -32,6 +34,8 @@ Or run everything:
 ```bash
 make validate-free
 ```
+
+`make validate-free` first runs `scripts/validate-release-policy.py`, which verifies zero-cost/dependency rules and frozen runtime image baselines, then runs backend, frontend, Compose and runtime acceptance.
 
 Runtime validation uses an isolated Compose project name (`pdfhub-validation-<pid>`) so it does not tear down or reuse volumes from the production `pdf-hub` project.
 
@@ -51,10 +55,11 @@ Prerequisites:
 
 - Linux with systemd user services
 - Git
-- Python 3
-- Node/npm
+- Python **3.12**
+- Node **24** + npm
 - Docker Engine + Docker Compose plugin
 - `flock` (util-linux)
+- `curl`
 - GitHub CLI (`gh`) authenticated with permission to read and merge this repository if automatic Dependabot merge is desired
 
 Install from the repository clone:
@@ -96,14 +101,16 @@ A normal user service runs while that user has a systemd user manager. On a dedi
 
 The Phase 3 application baseline previously passed backend tests, fresh/adopted Alembic migration checks, frontend production build, Compose validation and full runtime acceptance including SeaweedFS and ClamAV. The zero-cost CI architecture does not depend on hosted runner minutes.
 
-Release consistency checks are now part of `make validate-policy`:
+Release consistency checks are part of `make validate-policy` / `make validate-free`:
 
 - Web Console version = `0.3.0`
 - FastAPI version = `0.3.0`
 - README status = Phase 3 complete
 - no GitHub-hosted workflow files
-- direct npm Dependabot only
+- Dependabot = npm direct only + patch PR generation only
 - no tracked `package-lock.json`
+- Python/Node base images pinned to exact release baselines
+- Compose runtime images pinned to explicit release tags
 - no default/recommended paid cloud providers in user-facing configuration/docs
 - explicit self-hosted S3 endpoint guard present
 - local CI scripts present
