@@ -62,7 +62,7 @@ for image in expected_images:
     assert f"image: {image}" in compose, f"Missing frozen image baseline: {image}"
 for floating in ("image: valkey/valkey:8-alpine", "image: caddy:2-alpine", "image: clamav/clamav:stable", ":latest"):
     assert floating not in compose, f"Floating image tag is forbidden: {floating}"
-assert "python -m app.webhook_runner" in compose
+assert 'command: ["python", "-m", "app.webhook_runner"]' in compose
 assert "PDFHUB_DOWNLOAD_SIGNING_SECRET" in compose
 
 # Release metadata must agree.
