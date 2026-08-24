@@ -9,6 +9,11 @@ TIMER="rcat-pdf-hub-local-ci.timer"
 command -v systemctl >/dev/null 2>&1 || { echo "systemd/systemctl is required" >&2; exit 1; }
 command -v bash >/dev/null 2>&1 || { echo "bash is required" >&2; exit 1; }
 
+if [[ "${ROOT}" =~ [[:space:]] ]]; then
+  echo "Repository path must not contain whitespace for the systemd user service: ${ROOT}" >&2
+  exit 1
+fi
+
 mkdir -p "${UNIT_DIR}"
 
 cat >"${UNIT_DIR}/${SERVICE}" <<EOF
@@ -19,8 +24,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory="${ROOT}"
-ExecStart=/usr/bin/env bash "${ROOT}/scripts/local-ci-cycle.sh"
+WorkingDirectory=${ROOT}
+ExecStart=/usr/bin/env bash ${ROOT}/scripts/local-ci-cycle.sh
 Nice=10
 
 [Install]
