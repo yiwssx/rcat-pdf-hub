@@ -11,3 +11,13 @@ ocrmypdf==17.8.1
 pypdf==6.16.1
 reportlab==5.0.0
 pytest==8.4.1
+PyJWT[crypto]==2.13.0
+boto3==1.43.74
+ldap3==2.9.1
+pyasn1==0.6.0
+prometheus-client==0.26.0
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.44.0
+opentelemetry-instrumentation-fastapi==0.65b0
+alembic==1.19.0

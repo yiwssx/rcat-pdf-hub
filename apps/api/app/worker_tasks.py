@@ -3,14 +3,27 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import select
 
 from app.audit import audit_event
+from app.config import get_settings
 from app.db import SessionLocal
-from app.models import FileRecord, JobRecord
+from app.integrations.paperless import archive_to_paperless
+from app.malware import MalwareDetected, scan_file
+from app.models import ArchiveRecord, FileRecord, JobRecord
+from app.observability import record_archive, record_job, record_malware
 from app.policy import effective_policy, ensure_storage_quota
 from app.services import pdf_tools
-from app.storage import default_expiry, new_output_path, path_for_stored_name
+from app.storage import (
+    default_expiry,
+    delete_stored_name,
+    new_output_path,
+    path_for_stored_name,
+    store_staged_file,
+)
 from app.webhooks import dispatch_job_webhook
+
+settings = get_settings()
 
 
 def _now():
@@ -38,6 +51,38 @@ def _notify_job(db, job: JobRecord) -> None:
         audit_event("webhook.failed", job.requested_by, "job", job.id, {"error": str(exc)[-1000:]})
 
 
+def _auto_archive(db, record: FileRecord, actor: str) -> None:
+    if not settings.paperless_enabled or not settings.paperless_auto_archive:
+        return
+    archive = db.scalar(
+        select(ArchiveRecord).where(
+            ArchiveRecord.file_id == record.id,
+            ArchiveRecord.integration_name == "paperless",
+        )
+    )
+    if not archive:
+        archive = ArchiveRecord(file_id=record.id, integration_name="paperless", status="submitting")
+        db.add(archive)
+        db.commit()
+        db.refresh(archive)
+    try:
+        archive.external_id = archive_to_paperless(record, path_for_stored_name(record.stored_name))
+        archive.status = "submitted"
+        archive.error = None
+        db.commit()
+        record_archive("paperless", "submitted")
+        audit_event("archive.paperless_submitted", actor, "file", record.id, {"task_id": archive.external_id, "automatic": True})
+    except Exception as exc:
+        db.rollback()
+        archive = db.get(ArchiveRecord, archive.id)
+        if archive:
+            archive.status = "failed"
+            archive.error = str(exc)[-4000:]
+            db.commit()
+        record_archive("paperless", "failed")
+        audit_event("archive.paperless_failed", actor, "file", record.id, {"error": str(exc)[-1000:], "automatic": True})
+
+
 def process_job(job_id: str) -> str:
     db = SessionLocal()
     job = db.get(JobRecord, job_id)
@@ -47,8 +92,10 @@ def process_job(job_id: str) -> str:
 
     output = new_output_path(job.id)
     record_created = False
+    stored_name: str | None = None
     try:
         _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
+        record_job(job.operation, "running")
         audit_event("job.started", job.requested_by, "job", job.id, {"operation": job.operation})
         file_ids = json.loads(job.input_file_ids_json)
         params = json.loads(job.params_json)
@@ -106,7 +153,15 @@ def process_job(job_id: str) -> str:
         else:
             raise RuntimeError(f"Unsupported operation: {job.operation}")
 
-        _set_job(db, job, progress=85)
+        _set_job(db, job, progress=80)
+        try:
+            scan_status = scan_file(output)
+        except MalwareDetected as exc:
+            record_malware("infected")
+            audit_event("job.output_malware_rejected", job.requested_by, "job", job.id, {"signature": str(exc)[:500]})
+            raise RuntimeError("Processed output was rejected by malware scanning") from exc
+        record_malware(scan_status)
+
         digest = _output_hash(output)
         output_size = output.stat().st_size
         if job.requested_by != "bootstrap-admin":
@@ -124,9 +179,10 @@ def process_job(job_id: str) -> str:
                 )
                 raise RuntimeError(str(exc.detail)) from exc
 
+        stored_name = store_staged_file(output, "processed", filename=f"{job.id}.pdf")
         record = FileRecord(
             original_name=f"{job.operation}-{job.id}.pdf",
-            stored_name=output.name,
+            stored_name=stored_name,
             content_type="application/pdf",
             size=output_size,
             sha256=digest,
@@ -140,12 +196,17 @@ def process_job(job_id: str) -> str:
         _set_job(db, job, status="completed", progress=100, output_file_id=record.id, finished_at=_now())
     except Exception as exc:
         db.rollback()
-        if not record_created:
-            output.unlink(missing_ok=True)
+        output.unlink(missing_ok=True)
+        if stored_name and not record_created:
+            try:
+                delete_stored_name(stored_name)
+            except Exception:
+                pass
         try:
             _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
         except Exception:
             db.rollback()
+        record_job(job.operation, "failed")
         audit_event(
             "job.failed",
             job.requested_by,
@@ -156,13 +217,20 @@ def process_job(job_id: str) -> str:
         _notify_job(db, job)
         raise
     else:
+        record_job(job.operation, "completed")
         audit_event(
             "job.completed",
             job.requested_by,
             "job",
             job.id,
-            {"operation": job.operation, "output_file_id": record.id, "output_size": output_size},
+            {
+                "operation": job.operation,
+                "output_file_id": record.id,
+                "output_size": output_size,
+                "storage_backend": settings.storage_backend,
+            },
         )
+        _auto_archive(db, record, job.requested_by)
         _notify_job(db, job)
         return record.id
     finally:

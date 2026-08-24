@@ -20,7 +20,7 @@ ALLOWED_SCOPES = {
     "files:read", "files:write", "jobs:read",
     "pdf:merge", "pdf:split", "pdf:rotate", "pdf:compress",
     "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
-    "pdf:page-number", "pdf:stamp", "admin:keys",
+    "pdf:page-number", "pdf:stamp", "archive:paperless", "admin:keys",
 }
 
 

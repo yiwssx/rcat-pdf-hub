@@ -8,7 +8,7 @@
 :80 {
 	encode zstd gzip
 
-	@api path /api/* /healthz /docs* /openapi.json
+	@api path /api/* /healthz /readyz /docs* /openapi.json
 	handle @api {
 		reverse_proxy api:8000
 	}

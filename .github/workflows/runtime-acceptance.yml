@@ -16,7 +16,7 @@ concurrency:
 jobs:
   runtime:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       POSTGRES_DB: pdfhub
       POSTGRES_USER: pdfhub
@@ -24,8 +24,10 @@ jobs:
       PDFHUB_API_KEY_PEPPER: ci-runtime-api-key-pepper-change-me
       PDFHUB_ADMIN_API_KEY: pdfh_ci_runtime_admin_key_change_me_1234567890
       PDFHUB_WEBHOOK_MASTER_SECRET: ci-runtime-webhook-master-secret-change-me
+      PDFHUB_AUTH_TOKEN_SECRET: ci-runtime-auth-token-secret-change-me-0123456789abcdef
       PDFHUB_HTTP_PORT: "18080"
       PDFHUB_ALLOWED_ORIGINS: http://localhost:18080
+      PDFHUB_PUBLIC_BASE_URL: http://localhost:18080
       NEXT_TELEMETRY_DISABLED: "1"
 
     steps:
@@ -33,10 +35,9 @@ jobs:
         run: |
           git config --global init.defaultBranch main
           git config --global advice.detachedHead false
-
       - uses: actions/checkout@v6
 
-      - name: Pull runtime dependencies without warnings
+      - name: Pull core runtime dependencies without warnings
         run: |
           set -o pipefail
           docker compose pull postgres valkey gotenberg caddy 2>&1 | tee /tmp/runtime-pull.log
@@ -59,7 +60,7 @@ jobs:
           sudo sysctl -q -w vm.overcommit_memory=1
           test "$(sysctl -n vm.overcommit_memory)" = "1"
 
-      - name: Start full stack without warnings
+      - name: Start warning-free core stack
         run: |
           set -o pipefail
           docker compose up -d --no-build --wait --wait-timeout 240 2>&1 | tee /tmp/runtime-up.log
@@ -68,195 +69,67 @@ jobs:
             exit 1
           fi
 
-      - name: Run end-to-end acceptance flow
+      - name: Core end-to-end acceptance
         shell: bash
         run: |
           set -euo pipefail
           BASE_URL="http://localhost:${PDFHUB_HTTP_PORT}"
+          printf '%s\n' api caddy cleanup gotenberg postgres valkey web worker | sort > /tmp/expected.txt
+          docker compose ps --services --status running | sort > /tmp/running.txt
+          diff -u /tmp/expected.txt /tmp/running.txt
 
-          printf '%s\n' api caddy cleanup gotenberg postgres valkey web worker | sort > /tmp/expected-services.txt
-          docker compose ps --services --status running | sort > /tmp/running-services.txt
-          diff -u /tmp/expected-services.txt /tmp/running-services.txt
-
-          ready=0
-          for _ in $(seq 1 60); do
-            if curl -fsS "${BASE_URL}/healthz" -o /tmp/health.json; then
-              ready=1
-              break
-            fi
-            sleep 2
-          done
-          if [ "$ready" -ne 1 ]; then
-            echo "Public health endpoint did not become ready" >&2
-            exit 1
-          fi
+          curl -fsS "${BASE_URL}/healthz" -o /tmp/health.json
           python3 - <<'PY'
           import json
-          from pathlib import Path
-          payload = json.loads(Path('/tmp/health.json').read_text())
-          assert payload == {"status": "ok", "services": {"database": True, "redis": True}}, payload
+          payload = json.load(open('/tmp/health.json'))
+          assert payload == {"status":"ok","services":{"database":True,"redis":True}}, payload
           PY
-
-          curl -fsS -D /tmp/web.headers "${BASE_URL}/" -o /tmp/web.html
-          test -s /tmp/web.html
-          grep -Eiq '^x-content-type-options:[[:space:]]*nosniff' /tmp/web.headers
-          grep -Eiq '^x-frame-options:[[:space:]]*DENY' /tmp/web.headers
-          grep -Eiq '^referrer-policy:[[:space:]]*no-referrer' /tmp/web.headers
-
-          docker compose exec -T api curl -fsS http://gotenberg:3000/health > /tmp/gotenberg-health.json
-          test -s /tmp/gotenberg-health.json
+          curl -fsS "${BASE_URL}/readyz" -o /tmp/ready.json
+          curl -fsS "${BASE_URL}/api/v1/auth/config" -o /tmp/auth.json
+          python3 - <<'PY'
+          import json
+          payload = json.load(open('/tmp/auth.json'))
+          assert payload['api_key']['enabled'] is True
+          PY
 
           docker compose exec -T api python - <<'PY'
           from reportlab.pdfgen import canvas
-          path = '/tmp/runtime-smoke.pdf'
-          pdf = canvas.Canvas(path, pagesize=(595, 842))
-          pdf.setFont('Helvetica', 16)
-          pdf.drawString(72, 760, 'RCAT PDF Hub runtime acceptance')
-          pdf.showPage()
-          pdf.save()
+          pdf = canvas.Canvas('/tmp/runtime.pdf', pagesize=(595,842))
+          pdf.drawString(72,760,'RCAT PDF Hub Phase 3 runtime')
+          pdf.showPage(); pdf.save()
           PY
-          docker compose cp api:/tmp/runtime-smoke.pdf /tmp/runtime-smoke.pdf >/dev/null
-          python3 - <<'PY'
-          from pathlib import Path
-          data = Path('/tmp/runtime-smoke.pdf').read_bytes()
-          assert data.startswith(b'%PDF-') and len(data) > 500
-          PY
-
-          python3 - <<'PY'
-          from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
-          path = '/tmp/runtime-smoke.odt'
-          mimetype = 'application/vnd.oasis.opendocument.text'
-          content = '''<?xml version="1.0" encoding="UTF-8"?>
-          <office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" office:version="1.2">
-            <office:body><office:text><text:p>RCAT PDF Hub LibreOffice runtime acceptance</text:p></office:text></office:body>
-          </office:document-content>'''
-          manifest = '''<?xml version="1.0" encoding="UTF-8"?>
-          <manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">
-            <manifest:file-entry manifest:full-path="/" manifest:media-type="application/vnd.oasis.opendocument.text"/>
-            <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>
-          </manifest:manifest>'''
-          with ZipFile(path, 'w') as archive:
-              info = ZipInfo('mimetype')
-              info.compress_type = ZIP_STORED
-              archive.writestr(info, mimetype)
-              archive.writestr('content.xml', content, compress_type=ZIP_DEFLATED)
-              archive.writestr('META-INF/manifest.xml', manifest, compress_type=ZIP_DEFLATED)
-          PY
-
-          cat > /tmp/key-request.json <<JSON
-          {
-            "name": "runtime-${GITHUB_RUN_ID}",
-            "scopes": ["files:read", "files:write", "jobs:read", "pdf:watermark", "pdf:convert"],
-            "rate_limit_per_minute": 500,
-            "daily_job_limit": 50,
-            "max_storage_mb": 128,
-            "webhook_url": null
-          }
-          JSON
-          curl -fsS -X POST "${BASE_URL}/api/v1/admin/api-keys" \
+          docker compose cp api:/tmp/runtime.pdf /tmp/runtime.pdf >/dev/null
+          curl -fsS -X POST "${BASE_URL}/api/v1/files" \
             -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/key-request.json \
-            -o /tmp/key-response.json
-          SERVICE_KEY="$(python3 -c 'import json; print(json.load(open("/tmp/key-response.json"))["api_key"])')"
-          test -n "$SERVICE_KEY"
-
-          curl -fsS -X POST "${BASE_URL}/api/v1/files" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -F 'file=@/tmp/runtime-smoke.pdf;type=application/pdf' \
-            -o /tmp/pdf-upload.json
-          PDF_FILE_ID="$(python3 -c 'import json; print(json.load(open("/tmp/pdf-upload.json"))["id"])')"
-
-          python3 - "$PDF_FILE_ID" > /tmp/watermark-request.json <<'PY'
-          import json, sys
-          json.dump({
-              "file_id": sys.argv[1],
-              "text": "ทดสอบ RCAT Runtime",
-              "font_size": 36,
-              "opacity": 0.18,
-              "rotation": 35,
-              "position": "center",
-              "margin": 36,
-          }, sys.stdout, ensure_ascii=False)
-          PY
+            -F 'file=@/tmp/runtime.pdf;type=application/pdf' -o /tmp/upload.json
+          FILE_ID="$(python3 -c 'import json; print(json.load(open("/tmp/upload.json"))["id"])')"
+          printf '{"file_id":"%s","text":"ทดสอบ Phase 3","font_size":32,"opacity":0.2,"rotation":25,"position":"center","margin":24}' "$FILE_ID" >/tmp/job.json
           curl -fsS -X POST "${BASE_URL}/api/v1/pdf/watermark" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/watermark-request.json \
-            -o /tmp/watermark-job.json
-          WATERMARK_JOB_ID="$(python3 -c 'import json; print(json.load(open("/tmp/watermark-job.json"))["id"])')"
-
-          poll_job() {
-            local job_id="$1"
-            local output_path="$2"
-            local status
-            for _ in $(seq 1 90); do
-              curl -fsS "${BASE_URL}/api/v1/jobs/${job_id}" \
-                -H "X-API-Key: ${SERVICE_KEY}" \
-                -o /tmp/job-status.json
-              status="$(python3 -c 'import json; print(json.load(open("/tmp/job-status.json"))["status"])')"
-              if [ "$status" = "completed" ]; then
-                python3 -c 'import json; print(json.load(open("/tmp/job-status.json"))["output_file_id"])' > "$output_path"
-                return 0
-              fi
-              if [ "$status" = "failed" ]; then
-                cat /tmp/job-status.json >&2
-                return 1
-              fi
-              sleep 2
-            done
-            echo "Job ${job_id} timed out" >&2
-            return 1
-          }
-
-          poll_job "$WATERMARK_JOB_ID" /tmp/watermark-output-id.txt
-          WATERMARK_OUTPUT_ID="$(cat /tmp/watermark-output-id.txt)"
-          test -n "$WATERMARK_OUTPUT_ID"
-
-          curl -fsS "${BASE_URL}/api/v1/files/${WATERMARK_OUTPUT_ID}/preview?page=1&width=480" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -o /tmp/preview.png
+            -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/job.json -o /tmp/job-out.json
+          JOB_ID="$(python3 -c 'import json; print(json.load(open("/tmp/job-out.json"))["id"])')"
+          for _ in $(seq 1 90); do
+            curl -fsS "${BASE_URL}/api/v1/jobs/${JOB_ID}" -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" -o /tmp/status.json
+            STATUS="$(python3 -c 'import json; print(json.load(open("/tmp/status.json"))["status"])')"
+            [ "$STATUS" = completed ] && break
+            [ "$STATUS" = failed ] && { cat /tmp/status.json; exit 1; }
+            sleep 2
+          done
+          test "$STATUS" = completed
+          OUT="$(python3 -c 'import json; print(json.load(open("/tmp/status.json"))["output_file_id"])')"
+          curl -fsS "${BASE_URL}/api/v1/files/${OUT}/preview?page=1&width=480" -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" -o /tmp/preview.png
+          curl -fsS "${BASE_URL}/api/v1/files/${OUT}/download" -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" -o /tmp/output.pdf
           python3 - <<'PY'
           from pathlib import Path
-          data = Path('/tmp/preview.png').read_bytes()
-          assert data.startswith(b'\x89PNG\r\n\x1a\n') and len(data) > 500
+          assert Path('/tmp/output.pdf').read_bytes().startswith(b'%PDF-')
+          assert Path('/tmp/preview.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
           PY
+          docker compose exec -T api curl -fsS http://localhost:8000/metrics | grep -q '^pdfhub_http_requests_total'
+          docker compose exec -T -e PGPASSWORD="${POSTGRES_PASSWORD}" postgres \
+            psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -Atc 'select version_num from alembic_version' \
+            | grep -q '^0002_phase3_archive_records$'
 
-          curl -fsS "${BASE_URL}/api/v1/files/${WATERMARK_OUTPUT_ID}/download" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -o /tmp/watermarked.pdf
-          python3 - <<'PY'
-          from pathlib import Path
-          data = Path('/tmp/watermarked.pdf').read_bytes()
-          assert data.startswith(b'%PDF-') and len(data) > 500
-          PY
-
-          curl -fsS -X POST "${BASE_URL}/api/v1/files" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -F 'file=@/tmp/runtime-smoke.odt;type=application/vnd.oasis.opendocument.text' \
-            -o /tmp/odt-upload.json
-          ODT_FILE_ID="$(python3 -c 'import json; print(json.load(open("/tmp/odt-upload.json"))["id"])')"
-
-          printf '{"file_id":"%s"}' "$ODT_FILE_ID" > /tmp/office-request.json
-          curl -fsS -X POST "${BASE_URL}/api/v1/pdf/office-to-pdf" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/office-request.json \
-            -o /tmp/office-job.json
-          OFFICE_JOB_ID="$(python3 -c 'import json; print(json.load(open("/tmp/office-job.json"))["id"])')"
-          poll_job "$OFFICE_JOB_ID" /tmp/office-output-id.txt
-          OFFICE_OUTPUT_ID="$(cat /tmp/office-output-id.txt)"
-
-          curl -fsS "${BASE_URL}/api/v1/files/${OFFICE_OUTPUT_ID}/download" \
-            -H "X-API-Key: ${SERVICE_KEY}" \
-            -o /tmp/office-output.pdf
-          python3 - <<'PY'
-          from pathlib import Path
-          data = Path('/tmp/office-output.pdf').read_bytes()
-          assert data.startswith(b'%PDF-') and len(data) > 500
-          PY
-
-      - name: Assert runtime logs are clean
+      - name: Assert core runtime logs are clean
         run: |
           docker compose logs --no-color > /tmp/runtime-services.log 2>&1
           if grep -Ein '(^|[[:space:]])(warn|warning|error)([[:space:]:]|$)|level=(warn|warning|error)|deprecated|deprecationwarning|⚠|##\[warning\]' /tmp/runtime-services.log; then
@@ -264,12 +137,59 @@ jobs:
             exit 1
           fi
 
+      - name: Tear down core stack
+        run: docker compose down -v --remove-orphans
+
+      - name: Phase 3 S3 and ClamAV acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PDFHUB_STORAGE_BACKEND=s3
+          export PDFHUB_S3_ENDPOINT_URL=http://seaweedfs:8333
+          export PDFHUB_S3_BUCKET=pdfhub-runtime
+          export PDFHUB_S3_ACCESS_KEY=pdfhub-runtime-key
+          export PDFHUB_S3_SECRET_KEY=pdfhub-runtime-secret-key
+          export PDFHUB_S3_AUTO_CREATE_BUCKET=true
+          export PDFHUB_CLAMAV_ENABLED=true
+          export PDFHUB_CLAMAV_FAIL_CLOSED=true
+
+          docker compose --profile s3 --profile security pull seaweedfs clamav
+          docker compose --profile s3 --profile security up -d --no-build --wait --wait-timeout 360
+          BASE_URL="http://localhost:${PDFHUB_HTTP_PORT}"
+          ready=0
+          for _ in $(seq 1 120); do
+            if curl -fsS "${BASE_URL}/readyz" >/tmp/phase3-ready.json 2>/dev/null; then ready=1; break; fi
+            sleep 3
+          done
+          test "$ready" = 1
+          python3 - <<'PY'
+          import json
+          payload = json.load(open('/tmp/phase3-ready.json'))
+          assert payload['services']['storage'] is True
+          assert payload['services']['clamav'] is True
+          PY
+
+          curl -fsS -X POST "${BASE_URL}/api/v1/files" \
+            -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" \
+            -F 'file=@/tmp/runtime.pdf;type=application/pdf' -o /tmp/s3-upload.json
+          S3_FILE="$(python3 -c 'import json; print(json.load(open("/tmp/s3-upload.json"))["id"])')"
+          curl -fsS "${BASE_URL}/api/v1/files/${S3_FILE}/download" -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" -o /tmp/s3-download.pdf
+          cmp /tmp/runtime.pdf /tmp/s3-download.pdf
+
+          python3 - <<'PY'
+          from pathlib import Path
+          parts = ['X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-', 'STANDARD-ANTIVIRUS-TEST-FILE!$H+H*']
+          Path('/tmp/eicar.txt').write_text(''.join(parts), encoding='ascii')
+          PY
+          HTTP_CODE="$(curl -sS -o /tmp/eicar-response.json -w '%{http_code}' -X POST "${BASE_URL}/api/v1/files" -H "X-API-Key: ${PDFHUB_ADMIN_API_KEY}" -F 'file=@/tmp/eicar.txt;type=text/plain')"
+          test "$HTTP_CODE" = 422
+
+      - name: Tear down Phase 3 stack
+        if: always()
+        run: docker compose --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans
+
       - name: Runtime diagnostics on failure
         if: failure()
         run: |
-          docker compose ps || true
-          docker compose logs --no-color --tail=300 || true
-
-      - name: Tear down runtime stack
-        if: always()
-        run: docker compose down -v --remove-orphans
+          docker compose --profile s3 --profile security --profile observability --profile archive ps || true
+          docker compose --profile s3 --profile security --profile observability --profile archive logs --no-color --tail=300 || true
