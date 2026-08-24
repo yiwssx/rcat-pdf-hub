@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+STATE_ROOT="${LOCAL_CI_STATE_ROOT:-${ROOT}/.local-ci}"
 cd "${ROOT}"
 
 need() {
@@ -32,7 +33,7 @@ if [ "${#rows[@]}" -eq 0 ]; then
   exit 0
 fi
 
-mkdir -p .local-ci/worktrees
+mkdir -p "${STATE_ROOT}/worktrees"
 
 for row in "${rows[@]}"; do
   IFS=$'\t' read -r pr draft head_sha base_sha <<<"${row}"
@@ -67,7 +68,7 @@ for row in "${rows[@]}"; do
     continue
   fi
 
-  worktree="${ROOT}/.local-ci/worktrees/pr-${pr}"
+  worktree="${STATE_ROOT}/worktrees/pr-${pr}"
   git worktree remove --force "${worktree}" >/dev/null 2>&1 || true
   rm -rf "${worktree}"
   git worktree add --quiet --detach "${worktree}" "${head_sha}"
