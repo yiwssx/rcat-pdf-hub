@@ -1,5 +1,5 @@
-import { PdfHubConsole } from "./components/pdf-hub-console";
+import { PdfHubApp } from "./components/pdf-hub-app";
 
 export default function Home() {
-  return <PdfHubConsole />;
+  return <PdfHubApp />;
 }
