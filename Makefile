@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-backend validate-frontend validate-compose validate-runtime validate-dependency local-ci-cycle install-local-ci uninstall-local-ci local-ci-status
+.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-backend validate-frontend validate-e2e validate-compose validate-runtime validate-dependency install-e2e-browser local-ci-cycle install-local-ci uninstall-local-ci local-ci-status
 
 up:
 	docker compose up -d --build
@@ -38,6 +38,9 @@ validate-backend:
 validate-frontend:
 	bash scripts/validate-free.sh frontend
 
+validate-e2e:
+	bash scripts/validate-free.sh e2e
+
 validate-compose:
 	bash scripts/validate-free.sh compose
 
@@ -46,6 +49,9 @@ validate-runtime:
 
 validate-dependency:
 	bash scripts/validate-direct-dependency.sh "$${BASE_REF:-origin/main}"
+
+install-e2e-browser:
+	cd apps/web && npx playwright install --only-shell chromium
 
 local-ci-cycle:
 	bash scripts/local-ci-cycle.sh
