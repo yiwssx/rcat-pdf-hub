@@ -22,7 +22,6 @@ def pinned_requirement_version(requirements: str, package: str) -> tuple[int, in
     return tuple(int(part) for part in match.groups())
 
 
-# Zero-cost CI policy.
 workflow_dir = ROOT / ".github" / "workflows"
 workflow_files = [] if not workflow_dir.exists() else [p for p in workflow_dir.rglob("*") if p.suffix in {".yml", ".yaml"}]
 assert not workflow_files, f"GitHub-hosted workflows are forbidden by zero-cost policy: {workflow_files}"
@@ -33,7 +32,7 @@ assert re.search(r"^\s*-\s+package-ecosystem:\s*npm\s*$", dependabot, flags=re.M
 assert re.search(r"^\s+directory:\s*/apps/web\s*$", dependabot, flags=re.M)
 assert "version-update:semver-minor" in dependabot and "version-update:semver-major" in dependabot
 
-# Frontend dependency graph must be reproducible.
+# Deterministic frontend dependency graph.
 package = json.loads(read("apps/web/package.json"))
 assert package["version"] == CURRENT_RELEASE
 for section in ("dependencies", "devDependencies"):
@@ -46,7 +45,7 @@ assert (ROOT / "apps/web/package-lock.json").exists(), "apps/web/package-lock.js
 web_dockerfile = read("apps/web/Dockerfile")
 assert "npm ci" in web_dockerfile and "package-lock.json" in web_dockerfile
 
-# Backend resolved graph must also be locked for image builds.
+# Deterministic backend dependency graph.
 requirements = read("apps/api/requirements.txt")
 pillow_version = pinned_requirement_version(requirements, "Pillow")
 assert PILLOW_MIN <= pillow_version < PILLOW_MAX_EXCLUSIVE
@@ -55,7 +54,7 @@ api_dockerfile = read("apps/api/Dockerfile")
 assert api_dockerfile.startswith("FROM python:3.12.14-slim-bookworm\n")
 assert "requirements.lock" in api_dockerfile
 
-# Human authentication: Local Admin is development-only, Service API keys are machine credentials.
+# Human authentication: Local Admin is development-only; Service API keys are machine credentials.
 config = read("apps/api/app/config.py")
 identity = read("apps/api/app/identity.py")
 auth_router = read("apps/api/app/routers/auth.py")
@@ -63,6 +62,7 @@ web_api = read("apps/web/lib/api.ts")
 web_app = read("apps/web/app/components/pdf-hub-app.tsx")
 prod_check = read("scripts/check-production-env.py")
 first_local = read("scripts/first-local.sh")
+compose = read("docker-compose.yml")
 assert "local_auth_enabled: bool = False" in config
 assert "local_admin_username" in config and "local_admin_password" in config
 assert "def authenticate_local" in identity and "hmac.compare_digest" in identity
@@ -71,18 +71,24 @@ assert '@router.post("/local/login"' in auth_router
 assert "localLogin" in web_api and "/api/v1/auth/local/login" in web_api
 assert "localLogin" in web_app and "ชื่อผู้ใช้ Local" in web_app and "รหัสผ่าน Local" in web_app
 assert "Service API Key" not in web_app, "Service API Key must not be exposed as the primary human login"
+for key in ("PDFHUB_LOCAL_AUTH_ENABLED", "PDFHUB_LOCAL_ADMIN_USERNAME", "PDFHUB_LOCAL_ADMIN_PASSWORD"):
+    assert f"{key}:" in compose, f"{key} must be passed into API services by Compose"
 assert "PDFHUB_LOCAL_AUTH_ENABLED must be false in production" in prod_check
 assert "PDFHUB_LOCAL_ADMIN_PASSWORD" in first_local and "secrets.token_urlsafe(24)" in first_local
 assert (ROOT / "apps/api/tests/test_local_auth.py").exists()
-assert "Local authentication failed" in read("apps/web/tests/e2e/pdf-hub.smoke.spec.ts")
+smoke = read("apps/web/tests/e2e/pdf-hub.smoke.spec.ts")
+stack_smoke = read("apps/web/tests/e2e/pdf-hub.stack.spec.ts")
+assert "Local authentication failed" in smoke
+assert "PDFHUB_E2E_LOCAL_USER" in stack_smoke and "PDFHUB_E2E_LOCAL_PASSWORD" in stack_smoke
+assert "Service API Key" in stack_smoke and "toHaveCount(0)" in stack_smoke
 
-# Stable human ownership remains based on identity subject, not display/email.
+# Stable human ownership is based on identity subject, never mutable display/email.
 principal_id = read("apps/api/app/principal_id.py")
 assert "issuer + subject" in principal_id
 assert "hashlib.sha256" in principal_id
 assert "preferred_username" not in principal_id and "email" not in principal_id
 
-# UI refresh must keep the complete toolset while making categories explicit.
+# UI refresh keeps the complete toolset while making categories explicit.
 assert (ROOT / "apps/web/app/ui-refresh.css").exists()
 assert 'import "./ui-refresh.css"' in read("apps/web/app/layout.tsx")
 for label in ("จัดการหน้าและเอกสาร", "แปลงไฟล์", "ปรับแต่งเอกสาร", "แชร์และจัดเก็บ"):
@@ -92,7 +98,6 @@ for title in ("สแกน / OCR", "รวมไฟล์ PDF", "จัดห�
 
 # Runtime/container baselines stay frozen unless explicitly reviewed.
 assert web_dockerfile.count("FROM node:24.19.0-alpine3.24") == 3
-compose = read("docker-compose.yml")
 expected_images = {
     "postgres:18.6-bookworm",
     "valkey/valkey:8.1.9-alpine3.24",
@@ -110,33 +115,37 @@ for floating in ("image: valkey/valkey:8-alpine", "image: caddy:2-alpine", "imag
     assert floating not in compose, f"Floating image tag is forbidden: {floating}"
 assert 'command: ["python", "-m", "app.webhook_runner"]' in compose
 
-# Management surfaces remain loopback-bound by default.
+# Management surfaces remain loopback-bound by default; Alertmanager lives in the observability override.
 management_bind = "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}"
 for mapping in (
     f'{management_bind}:${{PDFHUB_PROMETHEUS_PORT:-9090}}:9090',
-    f'{management_bind}:${{PDFHUB_ALERTMANAGER_PORT:-9093}}:9093',
     f'{management_bind}:${{PDFHUB_OTEL_GRPC_PORT:-4317}}:4317',
     f'{management_bind}:${{PDFHUB_OTEL_HTTP_PORT:-4318}}:4318',
     f'{management_bind}:${{PAPERLESS_HTTP_PORT:-8001}}:8000',
 ):
     assert mapping in compose, f"Management port is not loopback-bound by default: {mapping}"
+observability_compose = read("docker-compose.observability.yml")
+alertmanager_mapping = f'{management_bind}:${{PDFHUB_ALERTMANAGER_PORT:-9093}}:9093'
+assert alertmanager_mapping in observability_compose, "Alertmanager port must be loopback-bound by default"
+assert "image: prom/alertmanager:v0.34.0" in observability_compose
 assert "PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1" in read(".env.example")
 
-# Observability must include rules plus Alertmanager routing.
+# Observability includes rules, Alertmanager routing, and a local durable sink.
 prometheus = read("ops/prometheus/prometheus.yml")
 alerts = read("ops/prometheus/alerts.yml")
 assert "/etc/prometheus/alerts.yml" in prometheus
 assert "alertmanagers" in prometheus
 assert (ROOT / "ops/alertmanager/alertmanager.yml").exists()
+assert (ROOT / "ops/alert-sink/server.py").exists()
 for alert in ("PdfHubApiDown", "PdfHubHighServerErrorRate", "PdfHubP95LatencyHigh", "PdfHubQueueBacklog", "PdfHubRepeatedJobFailures"):
     assert f"alert: {alert}" in alerts
 
-# Production operations and release gates are executable components.
+# Production operations and merge gates are executable repository components.
 for required in (
     "scripts/backup.sh", "scripts/verify-backup.sh", "scripts/restore.sh", "scripts/dr-drill.sh",
     "scripts/load-smoke.py", "scripts/pdf-workload-smoke.py", "scripts/release-readiness.sh",
     "scripts/check-production-env.py", "scripts/first-local.sh", "scripts/local-ci-doctor.sh",
-    "scripts/validate-prometheus.sh", "scripts/validate-free.sh", "scripts/merge-validated-pr.sh",
+    "scripts/validate-prometheus.sh", "scripts/validate-free.sh", "scripts/merge-pr.sh",
 ):
     assert (ROOT / required).exists(), f"Missing operational component: {required}"
 
@@ -146,7 +155,7 @@ verify_backup = read("scripts/verify-backup.sh")
 assert "PDFHUB_BACKUP_QUIESCE" in backup and "pg_dump" in backup and "SHA256SUMS" in backup
 assert "PDFHUB_RESTORE_CONFIRM" in restore and "pg_restore" in restore and "FLUSHDB" in restore
 assert "sha256sum -c SHA256SUMS" in verify_backup and "PGDMP" in verify_backup
-assert "local-ci/validate-free" in read("scripts/merge-validated-pr.sh")
+assert "local-ci/validate-free" in read("scripts/merge-pr.sh")
 
 # Release metadata agrees on 0.5.1.
 assert f'version="{CURRENT_RELEASE}"' in read("apps/api/app/main.py")
