@@ -1,5 +1,6 @@
 import "./globals.css";
 import "./app-v2.css";
+import "./ui-refresh.css";
 
 export const metadata = {
   title: "RCAT PDF Hub",
