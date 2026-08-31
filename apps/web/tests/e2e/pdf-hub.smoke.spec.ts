@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, Page, Route, test } from "@playwright/test";
 
 const VALID_KEY = "pdfh_test_valid";
 const pngPixel = Buffer.from(
@@ -17,6 +17,12 @@ const initialFile = {
   expires_at: null,
 };
 
+async function requireApiKey(route: Route) {
+  if (route.request().headers()["x-api-key"] === VALID_KEY) return true;
+  await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Missing or invalid API key" }) });
+  return false;
+}
+
 async function installApiMocks(page: Page) {
   await page.route("**/api/v1/auth/config", async (route) => {
     await route.fulfill({
@@ -30,10 +36,7 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/auth/me", async (route) => {
-    if (route.request().headers()["x-api-key"] !== VALID_KEY) {
-      await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Invalid API key" }) });
-      return;
-    }
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({
       json: {
         name: "service:smoke-test",
@@ -48,6 +51,7 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/integrations/status", async (route) => {
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({
       json: {
         storage_backend: "local",
@@ -62,18 +66,22 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/files?limit=100", async (route) => {
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({ json: [initialFile] });
   });
 
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({ json: [] });
   });
 
   await page.route("**/api/v1/files/file-pdf-1/preview**", async (route) => {
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({ status: 200, contentType: "image/png", body: pngPixel });
   });
 
   await page.route("**/api/v1/pdf/compress", async (route) => {
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({
       json: {
         id: "job-compress-1",
@@ -90,6 +98,7 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/files/file-output-1/download", async (route) => {
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
   });
 
@@ -98,6 +107,7 @@ async function installApiMocks(page: Page) {
       await route.fallback();
       return;
     }
+    if (!(await requireApiKey(route))) return;
     await route.fulfill({
       json: {
         id: "file-image-1",
@@ -125,10 +135,10 @@ test("rejects an invalid API key without entering authenticated UI", async ({ pa
 
   await expect(page.getByRole("heading", { name: "พร้อมเริ่มจัดการ PDF" })).toBeVisible();
   await expect(page.locator("#workspace")).toHaveCount(0);
-  await expect(page.locator(".status")).toContainText("Invalid API key");
+  await expect(page.locator(".status")).toContainText("Missing or invalid API key");
 });
 
-test("connects with a valid key and exercises preview, job, download and upload flows", async ({ page }) => {
+test("connects with a valid key and propagates auth through preview, job, download and upload", async ({ page }) => {
   await page.goto("/");
 
   await page.getByLabel("Service API Key").fill(VALID_KEY);
