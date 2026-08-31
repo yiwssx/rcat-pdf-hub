@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     retention_hours: int = 24
     cleanup_interval_seconds: int = 900
     cleanup_temporary_hours: int = 6
+    job_history_days: int = Field(default=30, ge=1, le=3650)
+    webhook_history_days: int = Field(default=30, ge=1, le=3650)
+    archive_history_days: int = Field(default=90, ge=1, le=3650)
+    audit_retention_days: int = Field(default=90, ge=1, le=3650)
     preview_max_width: int = 1600
     pdf_to_image_max_pages: int = Field(default=200, ge=1, le=5000)
 
