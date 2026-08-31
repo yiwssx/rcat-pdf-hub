@@ -1,19 +1,26 @@
 import { expect, test } from "@playwright/test";
 
-const apiKey = process.env.PDFHUB_E2E_API_KEY || "";
+const localUser = process.env.PDFHUB_E2E_LOCAL_USER || "";
+const localPassword = process.env.PDFHUB_E2E_LOCAL_PASSWORD || "";
 const stackEnabled = process.env.PDFHUB_E2E_STACK === "1";
 const pngPixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
 );
 
-test("production stack: login, upload, process, preview and download", async ({ page }) => {
-  test.skip(!stackEnabled || !apiKey, "Set PDFHUB_E2E_STACK=1 and PDFHUB_E2E_API_KEY for real-stack smoke");
+test("production stack: local human login, upload, process, preview and download", async ({ page }) => {
+  test.skip(
+    !stackEnabled || !localUser || !localPassword,
+    "Set PDFHUB_E2E_STACK=1 plus PDFHUB_E2E_LOCAL_USER/PDFHUB_E2E_LOCAL_PASSWORD for real-stack smoke",
+  );
   test.setTimeout(180_000);
 
   await page.goto("/");
-  await page.getByLabel("Service API Key").fill(apiKey);
-  await page.getByRole("button", { name: "เชื่อมต่อ" }).click();
+  await expect(page.getByLabel("Service API Key")).toHaveCount(0);
+  await page.getByLabel("ชื่อผู้ใช้ Local").fill(localUser);
+  await page.getByLabel("รหัสผ่าน Local").fill(localPassword);
+  await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
+  await expect(page.getByText("Local Admin", { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("#workspace")).toBeVisible({ timeout: 30_000 });
 
   const filename = `stack-smoke-${Date.now()}.png`;
