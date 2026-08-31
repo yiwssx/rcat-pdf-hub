@@ -161,7 +161,28 @@ export function PdfHubApp() {
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
-  async function connectApiKey() { const value = apiKeyDraft.trim(); if (!value) return; setAuth(value); setIdentity(null); await loadWorkspace(value); }
+  async function connectApiKey() {
+    const value = apiKeyDraft.trim();
+    if (!value) return;
+    setBusy(true);
+    try {
+      const me = await getMe(value);
+      setIdentity(me);
+      setAuth(value);
+      setApiKeyDraft("");
+      await loadWorkspace(value);
+    } catch (error) {
+      setAuth("");
+      setIdentity(null);
+      setFiles([]);
+      setJobs([]);
+      setIntegrations(null);
+      setTargetId("");
+      setMessage(error instanceof Error ? error.message : "API Key ไม่ถูกต้อง");
+    } finally {
+      setBusy(false);
+    }
+  }
   async function loginLdap() { if (!ldapUser || !ldapPassword) return; setBusy(true); try { const me = await ldapLogin(ldapUser, ldapPassword); setIdentity(me); setAuth(SESSION_AUTH); setLdapPassword(""); await loadWorkspace(SESSION_AUTH); } catch (error) { setMessage(error instanceof Error ? error.message : "LDAP login ไม่สำเร็จ"); } finally { setBusy(false); } }
   async function logout() { try { if (auth === SESSION_AUTH) await logoutSession(); } finally { setAuth(""); setIdentity(null); setFiles([]); setJobs([]); setIntegrations(null); setTargetId(""); setSignedUrl(null); setMessage("ออกจากระบบแล้ว"); } }
 
@@ -233,7 +254,7 @@ export function PdfHubApp() {
       {tab === "tools" && <section className="welcomeHero"><div className="welcomeCopy"><span className="eyebrow">PDF WORKSPACE • SELF-HOSTED</span><h1>จัดการเอกสารให้<br/><span>ง่ายกว่าเดิม</span></h1><p>รวม แยก OCR แปลงไฟล์ ใส่ลายน้ำ และจัดการ PDF จากพื้นที่ทำงานเดียว โดยข้อมูลยังอยู่ในระบบขององค์กร</p><div className="heroChips"><span>OCR ไทย + อังกฤษ</span><span>PDF/A</span><span>Secure download</span></div></div><div className="heroArt" aria-hidden="true"><span className="artOrb one"/><span className="artOrb two"/><div className="folderBack"/><div className="folderFront"/><div className="pdfSheet"><b>PDF</b><i/><i/><i/></div><div className="sparkle s1">✦</div><div className="sparkle s2">✦</div></div></section>}
 
       <section className={`authCard ${authenticated ? "connected" : ""}`}>
-        {auth === SESSION_AUTH && identity ? <><div className="userIdentity"><span className="avatar">{(identity.display_name || identity.name || "U").slice(0, 1).toUpperCase()}</span><div><strong>{identity.display_name || identity.name}</strong><small>{identity.auth_source} • {identity.groups.join(", ") || "authenticated"}</small></div></div><div className="authActions"><button className="secondary" onClick={() => void loadWorkspace()} disabled={busy}>รีเฟรชข้อมูล</button><button className="ghost" onClick={logout}>ออกจากระบบ</button></div></> : <><div className="loginIntro"><span className="loginIcon">↗</span><div><strong>เชื่อมต่อ PDF Hub</strong><small>เข้าสู่ระบบเพื่อเปิด Workspace และเครื่องมือทั้งหมด</small></div></div><div className="apiLogin"><input aria-label="Service API Key" type="password" value={apiKeyDraft} onChange={(e) => setApiKeyDraft(e.target.value)} placeholder="Service API Key • pdfh_..." autoComplete="off"/><button className="primary" onClick={connectApiKey} disabled={!apiKeyDraft || busy}>เชื่อมต่อ</button></div>{authConfig?.oidc.enabled && authConfig.oidc.login_url && <button className="secondary" onClick={() => { window.location.href = `${authConfig.oidc.login_url}?return_to=/`; }}>SSO Login</button>}</>}
+        {authenticated && identity ? <><div className="userIdentity"><span className="avatar">{(identity.display_name || identity.name || "U").slice(0, 1).toUpperCase()}</span><div><strong>{identity.display_name || identity.name}</strong><small>{identity.auth_source} • {identity.groups.join(", ") || "authenticated"}</small></div></div><div className="authActions"><button className="secondary" onClick={() => void loadWorkspace()} disabled={busy}>รีเฟรชข้อมูล</button><button className="ghost" onClick={logout}>ออกจากระบบ</button></div></> : <><div className="loginIntro"><span className="loginIcon">↗</span><div><strong>เชื่อมต่อ PDF Hub</strong><small>เข้าสู่ระบบเพื่อเปิด Workspace และเครื่องมือทั้งหมด</small></div></div><div className="apiLogin"><input aria-label="Service API Key" type="password" value={apiKeyDraft} onChange={(e) => setApiKeyDraft(e.target.value)} placeholder="Service API Key • pdfh_..." autoComplete="off"/><button className="primary" onClick={connectApiKey} disabled={!apiKeyDraft || busy}>เชื่อมต่อ</button></div>{authConfig?.oidc.enabled && authConfig.oidc.login_url && <button className="secondary" onClick={() => { window.location.href = `${authConfig.oidc.login_url}?return_to=/`; }}>SSO Login</button>}</>}
         {authConfig?.ldap.enabled && auth !== SESSION_AUTH && <div className="ldapLogin"><label>LDAP user<input value={ldapUser} onChange={(e) => setLdapUser(e.target.value)} autoComplete="username"/></label><label>LDAP password<input type="password" value={ldapPassword} onChange={(e) => setLdapPassword(e.target.value)} autoComplete="current-password"/></label><button className="secondary" onClick={loginLdap} disabled={!ldapUser || !ldapPassword || busy}>LDAP Login</button></div>}
       </section>
 
