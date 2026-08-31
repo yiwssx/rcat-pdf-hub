@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -26,6 +26,7 @@ test:
 
 validate-free:
 	python3 scripts/validate-release-policy.py
+	bash scripts/validate-prometheus.sh
 	bash scripts/validate-free.sh all
 
 validate-policy:
@@ -46,6 +47,9 @@ validate-e2e:
 
 validate-compose:
 	bash scripts/validate-free.sh compose
+
+validate-observability:
+	bash scripts/validate-prometheus.sh
 
 validate-runtime:
 	bash scripts/validate-free.sh runtime
