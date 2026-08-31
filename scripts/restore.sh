@@ -110,11 +110,14 @@ dc run --rm --no-deps -T api python -c 'from app.migrate import run_migrations; 
 
 dc up -d --no-build --wait --wait-timeout 180 api worker cleanup webhook web caddy >/dev/null
 
+printf 'restore: verifying DB/storage referential and checksum consistency\n'
+dc exec -T api python -m app.verify_storage
+
 if [ "${PDFHUB_RESTORE_SKIP_HEALTHCHECK:-false}" != "true" ]; then
   port="${PDFHUB_HTTP_PORT:-8080}"
   for _ in $(seq 1 60); do
     if curl -fsS "http://127.0.0.1:${port}/healthz" >/dev/null 2>&1 && curl -fsS "http://127.0.0.1:${port}/readyz" >/dev/null 2>&1; then
-      printf 'restore: PASS and service ready\n'
+      printf 'restore: PASS, data consistent and service ready\n'
       exit 0
     fi
     sleep 2
@@ -123,4 +126,4 @@ if [ "${PDFHUB_RESTORE_SKIP_HEALTHCHECK:-false}" != "true" ]; then
   exit 1
 fi
 
-printf 'restore: PASS (health check skipped by operator)\n'
+printf 'restore: PASS, data consistent (health check skipped by operator)\n'
