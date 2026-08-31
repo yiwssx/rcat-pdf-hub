@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.1 — 2026-08-31
+
+### Security / correctness
+- Add a single-account Local Admin session mode for development and first-run testing only.
+- Remove Service API Key from the human login surface; service keys remain machine-to-machine credentials managed by Admin.
+- Production readiness rejects `PDFHUB_LOCAL_AUTH_ENABLED=true` so local credentials cannot be promoted accidentally.
+- Human tenant ownership remains based on stable identity subject material rather than mutable display names/email.
+- Add quiesced DB+storage backup consistency, restore integrity checks, stale-job reconciliation and quota concurrency hardening.
+- Add worker-aware readiness, live queue/worker metrics, Alertmanager routing and production resource-isolation controls.
+- Require deterministic dependency locks and `npm ci` / resolved Python requirements for image builds.
+
+### Added
+- `scripts/first-local.sh` creates random Local Admin credentials, validates the complete stack, runs real PDF workload, backup and DR gates, then installs Local CI.
+- Local-auth regression tests and browser smoke coverage.
+- Colorful app-style PDF tool icon treatment and explicit tool categories: document management, conversion, document decoration, and delivery/archive.
+- Production environment guard that forbids local human authentication.
+
+### Changed
+- API and Web Console version advance to 0.5.1.
+- User login copy now distinguishes Local Development from organization SSO.
+- Admin copy explicitly identifies Service API Keys as integration credentials.
+- Tool grid is grouped for faster scanning on Desktop and Mobile without removing any of the 14 PDF capabilities.
+
 ## 0.5.0 — 2026-08-31
 
 ### Security
@@ -10,7 +33,7 @@
 - Require authenticated GitHub CLI access for local-CI PR enforcement instead of silently skipping PR validation.
 
 ### Added
-- Playwright mocked browser smoke coverage with API-key propagation checks across workspace, preview, jobs, download and upload.
+- Playwright mocked browser smoke coverage.
 - Production-stack browser smoke through Caddy → production Next.js → real FastAPI → RQ worker/storage.
 - `local-ci/validate-free` and `local-ci/dependency` visible commit-status lanes plus `make local-ci-doctor`.
 - PostgreSQL + local/NAS or self-hosted S3 backup tooling with manifest and SHA-256 integrity verification.
@@ -24,9 +47,9 @@
 
 ### Changed
 - Remove the superseded `pdf-hub-console.tsx` implementation and prune legacy Console CSS while retaining current/shared Admin primitives.
-- Direct npm patch validation now includes browser smoke before the narrow Dependabot auto-merge lane may merge.
+- Direct npm patch validation includes browser smoke before the narrow Dependabot auto-merge lane may merge.
 - Stale PR bases receive explicit local-CI error status rather than being silently skipped.
-- `make validate-free` now covers release policy, operator scripts, backend, frontend, mocked browser tests, Compose and real production-stack browser runtime acceptance.
+- `make validate-free` covers release policy, operator scripts, backend, frontend, mocked browser tests, Compose and real production-stack browser runtime acceptance.
 - API and Web Console version advance to 0.5.0.
 
 ## 0.4.1 — 2026-08-25
