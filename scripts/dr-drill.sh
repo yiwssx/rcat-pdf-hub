@@ -15,7 +15,11 @@ storage_backend="$(sed -n 's/^PDFHUB_STORAGE_BACKEND=//p' "${BACKUP_DIR}/manifes
 project="pdfhub-drill-$(date -u +%Y%m%d%H%M%S)-$$"
 port="${PDFHUB_DRILL_HTTP_PORT:-18081}"
 
+# A DR drill deliberately restores into isolated named volumes, regardless of whether
+# the production backup came from default-volume or NAS compose mode.
 export PDFHUB_COMPOSE_PROJECT="${project}"
+export PDFHUB_COMPOSE_MODE=default
+export PDFHUB_RESTORE_ALLOW_COMPOSE_MODE_CHANGE=true
 export PDFHUB_HTTP_PORT="${port}"
 export PDFHUB_ALLOWED_ORIGINS="http://localhost:${port}"
 export PDFHUB_PUBLIC_BASE_URL="http://localhost:${port}"
@@ -50,9 +54,9 @@ trap cleanup EXIT
 
 printf 'dr-drill: starting isolated dependencies %s\n' "${project}"
 if [ "${storage_backend}" = "s3" ]; then
-  dc up -d seaweedfs postgres valkey gotenberg >/dev/null
+  dc up -d --wait --wait-timeout 120 seaweedfs postgres valkey gotenberg >/dev/null
 else
-  dc up -d postgres valkey gotenberg >/dev/null
+  dc up -d --wait --wait-timeout 120 postgres valkey gotenberg >/dev/null
 fi
 
 PDFHUB_RESTORE_CONFIRM=YES bash scripts/restore.sh "${BACKUP_DIR}"
