@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import security
 from app.main import app
+from app.principal_id import principal_name_for_identity
 
 
 def test_auth_config_is_public():
@@ -10,19 +11,21 @@ def test_auth_config_is_public():
     assert response.status_code == 200
     payload = response.json()
     assert payload["api_key"]["enabled"] is True
+    assert "local" in payload
     assert "oidc" in payload
     assert "ldap" in payload
 
 
-def test_cookie_session_authentication(monkeypatch):
+def test_cookie_session_authentication_uses_stable_oidc_principal(monkeypatch):
     monkeypatch.setattr(security, "ensure_rate_limit", lambda *args, **kwargs: None)
     identity = {
-        "name": "user:teacher",
+        "name": "identity:oidc",
         "subject": "teacher-1",
         "display_name": "Teacher",
         "groups": ["teachers"],
         "scopes": ["files:read"],
         "source": "oidc",
+        "issuer": "https://accounts.example.test",
         "is_identity_admin": False,
     }
     from app.identity import create_session_token
@@ -32,7 +35,9 @@ def test_cookie_session_authentication(monkeypatch):
     response = client.get("/api/v1/auth/me")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["name"] == "user:teacher"
+    assert payload["name"] == principal_name_for_identity(identity)
+    assert payload["name"].startswith("oidc:")
+    assert payload["display_name"] == "Teacher"
     assert payload["auth_source"] == "oidc"
     assert payload["scopes"] == ["files:read"]
 
