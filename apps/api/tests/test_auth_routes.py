@@ -22,6 +22,7 @@ def test_local_login_route_sets_human_session(monkeypatch):
         monkeypatch.setattr(module.settings, "local_auth_enabled", True)
         monkeypatch.setattr(module.settings, "local_admin_username", "admin")
         monkeypatch.setattr(module.settings, "local_admin_password", "local-route-password-123")
+    monkeypatch.setattr(security, "ensure_rate_limit", lambda *args, **kwargs: None)
 
     client = TestClient(app)
     response = client.post(
