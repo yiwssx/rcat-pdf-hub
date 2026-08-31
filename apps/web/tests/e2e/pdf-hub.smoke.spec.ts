@@ -147,6 +147,14 @@ async function installApiMocks(page: Page) {
   });
 }
 
+async function loginLocally(page: Page) {
+  await page.goto("/");
+  await page.getByLabel("ชื่อผู้ใช้ Local").fill(LOCAL_USER);
+  await page.getByLabel("รหัสผ่าน Local").fill(LOCAL_PASSWORD);
+  await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
+  await expect(page.getByText("Local Admin", { exact: true })).toBeVisible();
+}
+
 test.beforeEach(async ({ page }) => {
   await installApiMocks(page);
 });
@@ -166,13 +174,8 @@ test("shows human local login and rejects invalid credentials", async ({ page })
 });
 
 test("logs in locally and propagates the session through preview, job, download and upload", async ({ page }) => {
-  await page.goto("/");
+  await loginLocally(page);
 
-  await page.getByLabel("ชื่อผู้ใช้ Local").fill(LOCAL_USER);
-  await page.getByLabel("รหัสผ่าน Local").fill(LOCAL_PASSWORD);
-  await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
-
-  await expect(page.getByText("Local Admin", { exact: true })).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
   await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "จัดการหน้าและเอกสาร" })).toBeVisible();
@@ -195,4 +198,36 @@ test("logs in locally and propagates the session through preview, job, download 
   await page.locator("#files").setInputFiles({ name: "scan.png", mimeType: "image/png", buffer: Buffer.from([1, 2, 3]) });
   await expect(page.getByText("2 ไฟล์", { exact: true })).toBeVisible();
   await expect(page.getByText("scan.png", { exact: true })).toBeVisible();
+});
+
+test("preserves the Colorful Workspace mobile UX contract", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginLocally(page);
+
+  await expect(page.locator(".mobileNav")).toBeVisible();
+  await expect(page.locator(".toolGroup")).toHaveCount(4);
+  await expect(page.locator(".toolCard")).toHaveCount(14);
+
+  const designToken = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ds-brand-a").trim());
+  expect(designToken).toBe("#6d4aff");
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  expect(hasHorizontalOverflow).toBe(false);
+
+  const navHeights = await page.locator(".mobileNav button").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
+  expect(Math.min(...navHeights)).toBeGreaterThanOrEqual(44);
+
+  const cardBackgrounds = await page.locator(".toolCard").evaluateAll((cards) => cards.map((card) => getComputedStyle(card).backgroundImage));
+  expect(new Set(cardBackgrounds).size).toBeGreaterThanOrEqual(10);
+
+  const iconBackgrounds = await page.locator(".toolIcon").evaluateAll((icons) => icons.map((icon) => getComputedStyle(icon).backgroundImage));
+  expect(new Set(iconBackgrounds).size).toBeGreaterThanOrEqual(10);
+
+  const groupBackgrounds = await page.locator(".toolGroup").evaluateAll((groups) => groups.map((group) => getComputedStyle(group).backgroundImage));
+  expect(new Set(groupBackgrounds).size).toBe(4);
+
+  const firstTool = page.locator(".toolCard").first();
+  await firstTool.focus();
+  const focusShadow = await firstTool.evaluate((element) => getComputedStyle(element).boxShadow);
+  expect(focusShadow).not.toBe("none");
 });
