@@ -1,0 +1,132 @@
+.loginShell {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(240px, .8fr) minmax(420px, 1.2fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.localLogin {
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(180px, 1fr) auto;
+  gap: 9px;
+  align-items: end;
+}
+
+.organizationLogin {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid #dfe5ff;
+  border-radius: 17px;
+  color: #253050;
+  background: linear-gradient(135deg, #fff, #f5f7ff);
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(71, 84, 127, .08);
+}
+.organizationLogin:hover { transform: translateY(-1px); border-color: #bdc8ff; }
+.organizationLogin strong, .organizationLogin small { display: block; }
+.organizationLogin strong { font-size: 13px; }
+.organizationLogin small { margin-top: 2px; color: #7b849c; font-size: 10px; }
+.organizationLogin > b { color: #5268ff; font-size: 18px; }
+.organizationMark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #fff;
+  font-weight: 950;
+  background: conic-gradient(from 210deg, #34a853, #4285f4, #7c3aed, #ea4335, #fbbc05, #34a853);
+  box-shadow: 0 8px 18px rgba(66, 133, 244, .20);
+}
+
+.toolGroups { display: grid; gap: 18px; }
+.toolGroup {
+  padding: 18px;
+  border: 1px solid rgba(78, 92, 132, .10);
+  border-radius: 27px;
+  background: rgba(255, 255, 255, .62);
+}
+.toolGroupHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+.toolGroupHead > span {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+.toolGroupHead h3 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.toolGroupHead p { margin: 2px 0 0; color: #7a839b; font-size: 10px; }
+.group-manage .toolGroupHead > span { color: #5b45d8; background: #eeeaff; }
+.group-convert .toolGroupHead > span { color: #087fa8; background: #e5f8ff; }
+.group-decorate .toolGroupHead > span { color: #c52b87; background: #ffeaf6; }
+.group-deliver .toolGroupHead > span { color: #087d70; background: #e6faf6; }
+
+.toolGroup .toolCardGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.toolGroup .toolCard {
+  min-height: 168px;
+  border-radius: 22px;
+  grid-template-columns: 62px 1fr;
+}
+.toolGroup .toolIcon {
+  color: var(--tone);
+  background:
+    radial-gradient(circle at 24% 20%, #fff 0 16%, transparent 17%),
+    linear-gradient(145deg, color-mix(in srgb, var(--tone) 12%, white), color-mix(in srgb, var(--tone) 25%, white));
+  border: 1px solid color-mix(in srgb, var(--tone) 24%, white);
+  box-shadow: 0 12px 25px color-mix(in srgb, var(--tone) 16%, transparent), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.toolGroup .toolIcon::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 11%, white);
+}
+.toolGroup .toolIcon svg { width: 34px; height: 34px; }
+.toolGroup .toolCard:hover:not(:disabled) .toolIcon { transform: translateY(-2px) rotate(-2deg) scale(1.04); }
+.toolGroup .toolIcon { transition: transform .15s ease; }
+
+@media (max-width: 1040px) {
+  .loginShell { grid-template-columns: 1fr; }
+  .organizationLogin { grid-column: 1; }
+  .toolGroup .toolCardGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .loginShell { grid-template-columns: 1fr; }
+  .localLogin { grid-template-columns: 1fr 1fr; }
+  .localLogin button { grid-column: 1 / -1; width: 100%; }
+  .toolGroup { padding: 12px; border-radius: 22px; }
+  .toolGroup .toolCardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toolGroup .toolCard { min-height: 156px; grid-template-columns: 50px 1fr; }
+  .toolGroup .toolIcon { width: 50px; height: 50px; border-radius: 16px; }
+  .toolGroup .toolIcon svg { width: 28px; height: 28px; }
+}
+
+@media (max-width: 430px) {
+  .localLogin { grid-template-columns: 1fr; }
+  .localLogin button { grid-column: auto; }
+  .toolGroupHead h3 { font-size: 15px; }
+  .toolGroup .toolCard { padding: 11px; min-height: 150px; grid-template-columns: 46px 1fr; }
+  .toolGroup .toolIcon { width: 46px; height: 46px; }
+}
