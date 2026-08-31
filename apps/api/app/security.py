@@ -17,6 +17,7 @@ from app.db import get_db
 from app.identity import decode_session_token, identity_from_claims, validate_oidc_token
 from app.models import ApiKey
 from app.policy import effective_policy, ensure_rate_limit
+from app.principal_id import principal_name_for_identity
 
 settings = get_settings()
 
@@ -75,7 +76,7 @@ def _service_principal(supplied: str, db: Session) -> Principal:
 
 def _identity_principal(identity: dict) -> Principal:
     scopes = set(identity.get("scopes") or [])
-    name = str(identity["name"])
+    name = principal_name_for_identity(identity)
     ensure_rate_limit(name, settings.default_rate_limit_per_minute)
     return Principal(
         name=name,
@@ -85,7 +86,7 @@ def _identity_principal(identity: dict) -> Principal:
         daily_job_limit=settings.default_daily_job_limit,
         max_storage_mb=settings.default_max_storage_mb,
         subject=str(identity.get("subject") or ""),
-        display_name=str(identity.get("display_name") or name),
+        display_name=str(identity.get("display_name") or identity.get("name") or name),
         groups=set(identity.get("groups") or []),
         auth_source=str(identity.get("source") or "identity"),
     )
@@ -99,7 +100,7 @@ def _bearer_identity(token: str) -> Principal:
     if settings.oidc_enabled:
         try:
             return _identity_principal(identity_from_claims(validate_oidc_token(token), "oidc-bearer"))
-        except (jwt.PyJWTError, RuntimeError, httpx.HTTPError) as exc:
+        except (jwt.PyJWTError, RuntimeError, ValueError, httpx.HTTPError) as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token") from exc
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token")
 
@@ -122,7 +123,7 @@ def get_principal(
     if pdfhub_session:
         try:
             return _identity_principal(decode_session_token(pdfhub_session))
-        except jwt.PyJWTError as exc:
+        except (jwt.PyJWTError, ValueError) as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired or invalid") from exc
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
