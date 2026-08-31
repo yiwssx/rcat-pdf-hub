@@ -2,8 +2,8 @@ FROM node:24.19.0-alpine3.24 AS deps
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NPM_CONFIG_UPDATE_NOTIFIER=false
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
 
 FROM node:24.19.0-alpine3.24 AS build
 WORKDIR /app
