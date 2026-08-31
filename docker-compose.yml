@@ -219,6 +219,7 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
     volumes:
       - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}:${PDFHUB_PROMETHEUS_PORT:-9090}:9090"
