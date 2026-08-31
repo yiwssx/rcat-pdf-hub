@@ -20,7 +20,7 @@ from app.storage import (
     delete_stored_name,
     path_for_stored_name,
     preview_path,
-    save_upload,
+    save_upload_sync,
     store_staged_file,
 )
 
@@ -70,12 +70,15 @@ def list_files(
 
 
 @router.post("", response_model=FileOut)
-async def upload_file(
+def upload_file(
     file: UploadFile = File(...),
     principal: Principal = Depends(require_scope("files:write")),
     db: Session = Depends(get_db),
 ):
-    staged, size, digest, original = await save_upload(file)
+    # This is intentionally a synchronous FastAPI route. Starlette executes it in
+    # its threadpool so disk streaming, ClamAV sockets, storage and sync SQLAlchemy
+    # calls cannot block the application's asyncio event loop.
+    staged, size, digest, original = save_upload_sync(file)
     stored_name: str | None = None
     try:
         try:
