@@ -24,6 +24,7 @@ require_tool_versions() {
   need python3
   need node
   need npm
+  need npx
   python3 - <<'PY'
 import sys
 if sys.version_info[:2] != (3, 12):
@@ -50,6 +51,20 @@ validation_compose_env() {
 policy() {
   need python3
   python3 scripts/validate-release-policy.py
+}
+
+operations() {
+  need bash
+  need python3
+  for script in \
+    scripts/backup.sh scripts/verify-backup.sh scripts/restore.sh scripts/dr-drill.sh \
+    scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
+    scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
+    scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh; do
+    bash -n "${script}"
+  done
+  python3 -m py_compile scripts/load-smoke.py scripts/validate-release-policy.py scripts/check-direct-dependency.py
+  echo 'operations: PASS'
 }
 
 backend() {
@@ -105,6 +120,25 @@ frontend() {
   echo 'frontend: PASS'
 }
 
+e2e() {
+  require_tool_versions
+  local browser_log e2e_log pkg_before browsers_path
+  browser_log="$(mktemp)"
+  e2e_log="$(mktemp)"
+  pkg_before="$(sha256sum apps/web/package.json | awk '{print $1}')"
+  browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
+  (
+    cd apps/web
+    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" npx playwright install --only-shell chromium 2>&1 | tee "${browser_log}"
+    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" NEXT_TELEMETRY_DISABLED=1 npm run test:e2e 2>&1 | tee "${e2e_log}"
+  )
+  check_clean_log "${browser_log}"
+  check_clean_log "${e2e_log}"
+  test ! -e apps/web/package-lock.json
+  test "${pkg_before}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
+  echo 'e2e: PASS'
+}
+
 compose_config() {
   need docker
   validation_compose_env
@@ -125,12 +159,15 @@ compose_config() {
 runtime() {
   need docker
   need curl
+  require_tool_versions
   validation_compose_env
-  local build_log up_log service_log project
+  local build_log up_log service_log stack_e2e_log project browsers_path
   build_log="$(mktemp)"
   up_log="$(mktemp)"
   service_log="$(mktemp)"
+  stack_e2e_log="$(mktemp)"
   project="pdfhub-validation-$$"
+  browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
   export PDFHUB_HTTP_PORT=18080
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:${PDFHUB_HTTP_PORT}
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
@@ -153,6 +190,18 @@ runtime() {
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
   dc exec -T api python -m pytest -q
   test "$(dc ps --status running webhook --format json | wc -l)" -ge 1
+
+  (
+    cd apps/web
+    PDFHUB_E2E_BASE_URL="http://127.0.0.1:${PDFHUB_HTTP_PORT}" \
+    PDFHUB_E2E_STACK=1 \
+    PDFHUB_E2E_API_KEY="${PDFHUB_ADMIN_API_KEY}" \
+    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" \
+    NEXT_TELEMETRY_DISABLED=1 \
+      npm run test:e2e:stack 2>&1 | tee "${stack_e2e_log}"
+  )
+  check_clean_log "${stack_e2e_log}"
+
   dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
   cleanup_runtime
@@ -162,12 +211,14 @@ runtime() {
 
 case "${MODE}" in
   policy) policy ;;
+  operations) policy; operations ;;
   backend) policy; backend ;;
   frontend) policy; frontend ;;
+  e2e) policy; frontend; e2e ;;
   compose) policy; compose_config ;;
-  runtime) policy; compose_config; runtime ;;
-  all) policy; backend; frontend; compose_config; runtime ;;
-  *) echo "Usage: $0 [policy|backend|frontend|compose|runtime|all]" >&2; exit 2 ;;
+  runtime) policy; operations; frontend; e2e; compose_config; runtime ;;
+  all) policy; operations; backend; frontend; e2e; compose_config; runtime ;;
+  *) echo "Usage: $0 [policy|operations|backend|frontend|e2e|compose|runtime|all]" >&2; exit 2 ;;
 esac
 
 echo "zero-cost validation (${MODE}): PASS"

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.5.0 — 2026-08-31
+
+### Security
+- Validate Service API keys through `/api/v1/auth/me` before the Web Console enters authenticated state.
+- Clear authentication/workspace state after failed API-key validation.
+- Move the frontend baseline to Next.js 16.3.3, the reviewed August 2026 security patch baseline.
+- Bind Prometheus, OpenTelemetry collector and bundled Paperless host ports to loopback by default through `PDFHUB_MANAGEMENT_BIND_HOST`.
+- Require authenticated GitHub CLI access for local-CI PR enforcement instead of silently skipping PR validation.
+
+### Added
+- Playwright mocked browser smoke coverage with API-key propagation checks across workspace, preview, jobs, download and upload.
+- Production-stack browser smoke through Caddy → production Next.js → real FastAPI → RQ worker/storage.
+- `local-ci/validate-free` and `local-ci/dependency` visible commit-status lanes plus `make local-ci-doctor`.
+- PostgreSQL + local/NAS or self-hosted S3 backup tooling with manifest and SHA-256 integrity verification.
+- Guarded restore with migration/readiness checks and stale RQ-state cleanup.
+- Isolated disaster-recovery drill using a disposable Compose project.
+- Daily systemd user backup timer tooling.
+- Prometheus alert rules for API availability, 5xx ratio, p95 latency, queue backlog and repeated job failures.
+- Dependency-free load/latency smoke reporting throughput, error rate and p50/p95/p99 latency.
+- Unified `make release-readiness` production gate.
+- `PHASE5.md` completion baseline.
+
+### Changed
+- Remove the superseded `pdf-hub-console.tsx` implementation and prune legacy Console CSS while retaining current/shared Admin primitives.
+- Direct npm patch validation now includes browser smoke before the narrow Dependabot auto-merge lane may merge.
+- Stale PR bases receive explicit local-CI error status rather than being silently skipped.
+- `make validate-free` now covers release policy, operator scripts, backend, frontend, mocked browser tests, Compose and real production-stack browser runtime acceptance.
+- API and Web Console version advance to 0.5.0.
+
 ## 0.4.1 — 2026-08-25
 
 ### Security
@@ -8,8 +37,8 @@
 
 ### Changed
 - Separate version-update automation policy from security-maintenance policy: normal Dependabot configuration remains direct npm patch-only.
-- Full local `make validate-free` now covers Dependabot PRs outside the npm auto-merge lane, including pip/security PRs, and never auto-merges them.
-- Remove duplicated release-policy logic from `validate-free.sh`; `scripts/validate-release-policy.py` is now the single policy source of truth.
+- Full local `make validate-free` covers Dependabot PRs outside the npm auto-merge lane and never auto-merges them.
+- `scripts/validate-release-policy.py` is the single policy source of truth.
 - API, Web Console and release metadata advance to 0.4.1 while the completed Phase 4 feature baseline remains 0.4.0.
 
 ## 0.4.0 — 2026-08-24
@@ -31,17 +60,16 @@
 
 ### Changed
 - API and Web Console version aligned to 0.4.0
-- Processed job outputs now support both PDF and ZIP content types
+- Processed job outputs support both PDF and ZIP content types
 - Automatic Paperless archive is limited to PDF outputs
 - Job completion/failure webhooks are queued durably instead of being sent inline by the RQ worker
 - Default human scopes include the two Phase 4 media-conversion scopes
-- Release-policy validation now enforces Phase 4 metadata, migration, tests and dispatcher configuration
 
 ### Security
-- Signed download URLs no longer require API credentials to be embedded or forwarded to download recipients
+- Signed download URLs no longer require API credentials to be embedded or forwarded to recipients
 - Download tokens have a hard configurable TTL ceiling and can be globally invalidated by rotating the signing secret
 - Webhook hostname validation and HMAC signing are re-evaluated on every delivery attempt
-- Failed webhook deliveries remain auditable and recoverable instead of disappearing after transient failure
+- Failed webhook deliveries remain auditable and recoverable
 
 ## 0.3.0 — 2026-08-24
 
@@ -57,21 +85,13 @@
 - Alembic migrations with safe adoption of Phase 2 databases
 - Production readiness endpoint at `/readyz`
 - Optional Compose profiles for S3, security, observability and archive services
-- Phase 3 runtime acceptance for real self-hosted S3-compatible storage and ClamAV scanning
-- Zero-cost local validation for backend, frontend, Compose and runtime
-- Optional zero-cost local CI polling executor and direct-dependency validator
-- Release-policy validation for zero-cost configuration, dependency scope and frozen container baselines
+- Zero-cost local validation and local polling CI
 
 ### Changed
 - API and Web Console version aligned to 0.3.0
 - Web Console supports API Key, OIDC SSO and LDAP sessions
-- File storage abstraction now stages, scans and commits to local/NAS or explicit self-hosted S3 endpoints
-- S3 mode now refuses startup/use without `PDFHUB_S3_ENDPOINT_URL`, preventing implicit commercial-cloud fallback
-- Worker output path is storage-backend agnostic
-- Documentation and examples use self-hosted/free infrastructure only
-- Dependabot is limited to direct npm dependencies in `apps/web/package.json` and configured to generate patch updates only; transitive, lockfile, pip, Docker and GitHub Actions updates are excluded
-- GitHub-hosted Actions workflows were removed to guarantee zero paid CI exposure
-- Python, Node and runtime service container images are pinned to explicit release baselines so Docker pulls cannot silently upgrade infrastructure
+- Storage abstraction supports local/NAS and explicit self-hosted S3 endpoints
+- Runtime service container images use explicit release baselines
 
 ## 0.2.0 — 2026-08-23
 
@@ -93,7 +113,6 @@
 - Upgrade pypdf to 6.16.1
 - Add ReportLab 5.0.0 and Noto Thai fonts
 - API/Web version to 0.2.0
-- Docker Compose now runs 8 core services including cleanup worker
 
 ## 0.1.0 — 2026-08-23
 - Initial PDF Hub MVP

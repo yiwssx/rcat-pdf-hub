@@ -5,9 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATE_ROOT="${ROOT}/.local-ci"
 cd "${ROOT}"
 
-for cmd in git flock; do
+for cmd in git flock gh; do
   command -v "${cmd}" >/dev/null 2>&1 || { echo "Missing required command: ${cmd}" >&2; exit 1; }
 done
+gh auth status >/dev/null 2>&1 || { echo "local-ci: GitHub CLI authentication is required for PR enforcement" >&2; exit 1; }
 
 mkdir -p "${STATE_ROOT}/logs" "${STATE_ROOT}/worktrees" "${STATE_ROOT}/status"
 exec 9>"${STATE_ROOT}/validator.lock"
@@ -46,15 +47,13 @@ if [ "${main_sha}" != "${last_pass}" ]; then
   fi
 fi
 
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-  (
-    cd "${worktree}"
-    LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-prs.sh
-    LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-dependabot.sh
-  )
-else
-  echo "local-ci: gh is unavailable or unauthenticated; main validation remains active, PR/Dependabot validation is skipped"
-fi
+(
+  cd "${worktree}"
+  LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-prs.sh
+  LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-dependabot.sh
+)
 
+printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"${STATE_ROOT}/last-cycle-at"
+printf '%s\n' "${main_sha}" >"${STATE_ROOT}/last-cycle-main"
 cleanup_main_worktree
 trap - EXIT

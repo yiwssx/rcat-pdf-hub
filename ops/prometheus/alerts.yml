@@ -1,0 +1,55 @@
+groups:
+  - name: pdf-hub-core
+    rules:
+      - alert: PdfHubApiDown
+        expr: up{job="pdf-hub-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PDF Hub API is unavailable
+          description: Prometheus has been unable to scrape the PDF Hub API for at least two minutes.
+
+      - alert: PdfHubHighServerErrorRate
+        expr: |
+          sum(rate(pdfhub_http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(pdfhub_http_requests_total[5m])), 0.001)
+          > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub 5xx rate is above 5%
+          description: More than 5% of HTTP requests have returned 5xx responses for ten minutes.
+
+      - alert: PdfHubP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(pdfhub_http_request_duration_seconds_bucket[5m]))
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub p95 latency is above 2 seconds
+          description: The API p95 request latency has remained above two seconds for ten minutes.
+
+      - alert: PdfHubQueueBacklog
+        expr: max(pdfhub_queue_depth) > 25
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub processing queue is backing up
+          description: More than 25 jobs have remained queued for ten minutes.
+
+      - alert: PdfHubRepeatedJobFailures
+        expr: sum(increase(pdfhub_jobs_total{state="failed"}[15m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub jobs are repeatedly failing
+          description: More than five PDF jobs failed during the last fifteen minutes.

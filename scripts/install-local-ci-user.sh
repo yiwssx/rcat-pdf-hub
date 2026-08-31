@@ -6,12 +6,18 @@ UNIT_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
 SERVICE="rcat-pdf-hub-local-ci.service"
 TIMER="rcat-pdf-hub-local-ci.timer"
 
-for cmd in systemctl bash git make python3 node npm docker flock curl; do
+for cmd in systemctl bash git make python3 node npm npx docker flock curl gh; do
   command -v "${cmd}" >/dev/null 2>&1 || { echo "Missing required command: ${cmd}" >&2; exit 1; }
 done
 
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose plugin is required" >&2; exit 1; }
+docker info >/dev/null 2>&1 || { echo "Docker daemon must be reachable by this user" >&2; exit 1; }
 git -C "${ROOT}" remote get-url origin >/dev/null 2>&1 || { echo "Repository must have an origin remote" >&2; exit 1; }
+gh auth status >/dev/null 2>&1 || { echo "GitHub CLI must be authenticated before installing local CI: gh auth login" >&2; exit 1; }
+(
+  cd "${ROOT}"
+  gh repo view --json nameWithOwner --jq '.nameWithOwner' >/dev/null
+) || { echo "Authenticated GitHub CLI cannot access this repository" >&2; exit 1; }
 
 python3 - <<'PY'
 import sys
@@ -61,9 +67,6 @@ echo "Installed ${TIMER}"
 echo "Repository: ${ROOT}"
 echo "Status: systemctl --user status ${TIMER}"
 echo "Logs:   journalctl --user -u ${SERVICE}"
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-  echo "GitHub CLI authentication detected: Dependabot local validation/merge is enabled."
-else
-  echo "Main validation is enabled. To enable Dependabot local validation/merge, install GitHub CLI and run: gh auth login"
-fi
+echo "Doctor: make local-ci-doctor"
+echo "GitHub CLI authentication detected: PR status reporting and the narrow Dependabot patch lane are enabled."
 echo "For execution after logout/reboot, an administrator may enable user lingering once; this does not require any paid service."
