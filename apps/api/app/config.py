@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     human_scopes: str = DEFAULT_HUMAN_SCOPES
     admin_groups: str = "pdfhub-admins"
 
+    # Local development login. This is a single local admin account for first-run
+    # and development only. Production readiness rejects this mode when enabled.
+    local_auth_enabled: bool = False
+    local_admin_username: str = "admin"
+    local_admin_password: str = ""
+
     # OIDC Authorization Code + PKCE SSO.
     oidc_enabled: bool = False
     oidc_issuer: str = ""
@@ -126,6 +132,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_enabled_integrations(self):
+        if self.local_auth_enabled:
+            if not self.local_admin_username.strip():
+                raise ValueError("LOCAL_AUTH enabled but LOCAL_ADMIN_USERNAME is empty")
+            if len(self.local_admin_password) < 12:
+                raise ValueError("LOCAL_AUTH enabled but LOCAL_ADMIN_PASSWORD is shorter than 12 characters")
         if self.oidc_enabled:
             missing = [
                 name for name, value in (
