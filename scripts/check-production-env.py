@@ -36,6 +36,10 @@ def parse_env(path: Path) -> dict[str, str]:
     return result
 
 
+def enabled(values: dict[str, str], key: str) -> bool:
+    return values.get(key, "false").lower() == "true"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate production RCAT PDF Hub environment safety")
     parser.add_argument("--env-file", default=".env")
@@ -54,6 +58,11 @@ def main() -> int:
         if any(fragment in value.lower() for fragment in PLACEHOLDER_FRAGMENTS):
             failures.append(f"{key} still contains a placeholder value")
 
+    # The single-account Local Admin mode exists only for development/first-run.
+    # Production must authenticate human users through the institutional identity provider.
+    if enabled(values, "PDFHUB_LOCAL_AUTH_ENABLED"):
+        failures.append("PDFHUB_LOCAL_AUTH_ENABLED must be false in production")
+
     public_url = args.url or values.get("PDFHUB_PUBLIC_BASE_URL", "")
     parsed = urlparse(public_url)
     if not args.allow_insecure:
@@ -68,7 +77,7 @@ def main() -> int:
     if management_bind in {"0.0.0.0", "::", "*"}:
         failures.append("management services must not bind all interfaces")
 
-    if values.get("PDFHUB_LDAP_ENABLED", "false").lower() == "true":
+    if enabled(values, "PDFHUB_LDAP_ENABLED"):
         ldap_url = values.get("PDFHUB_LDAP_URL", "")
         if not args.allow_insecure and not ldap_url.lower().startswith("ldaps://"):
             failures.append("production LDAP must use ldaps://")
