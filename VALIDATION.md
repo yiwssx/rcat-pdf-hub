@@ -10,6 +10,7 @@ RCAT PDF Hub 0.5.1 ต้องคงนโยบาย **zero-cost software/CI/
 - Local Admin ใช้เฉพาะ first-run/development และ production gate ต้องปฏิเสธหากยังเปิดอยู่
 - Production human login ใช้ OIDC/LDAP ตาม configuration ขององค์กร
 - Service API Key ใช้สำหรับ machine-to-machine integration ไม่ใช่หน้า login ของผู้ใช้
+- UI ใช้ `apps/web/app/design-system.css` เป็น visual authority และ `UI_UX.md` เป็น review contract
 - Frontend ต้อง commit `package-lock.json` และใช้ `npm ci`
 - Backend ต้อง commit resolved `requirements.lock`
 - Direct Dependabot patch lane ต้องเปลี่ยน **`package.json` + `package-lock.json` เท่านั้น** และ lockfile ต้อง resolve version ที่ขอจริง
@@ -18,7 +19,7 @@ RCAT PDF Hub 0.5.1 ต้องคงนโยบาย **zero-cost software/CI/
 - Pillow baseline = `>=12.3.0,<13.0.0`
 - S3 mode ต้องมี explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`
 - Management ports bind loopback โดย default
-- Browser regression, backup/restore/DR, observability และ production Compose flow เป็น mandatory gates
+- Browser regression, UI/UX contract, backup/restore/DR, observability และ production Compose flow เป็น mandatory gates
 - Warning/deprecation ใน validation ถือเป็น failure
 
 ## Required host
@@ -60,6 +61,7 @@ apps/api/requirements.lock
 ## Validation commands
 
 ```bash
+make validate-ui
 make validate-policy
 make validate-ops
 make validate-backend
@@ -77,6 +79,16 @@ make validate-free
 ```
 
 ### สิ่งที่แต่ละ gate พิสูจน์
+
+`validate-ui`
+- `design-system.css` ถูก import เป็น final visual authority
+- semantic brand/tool/status tokens ครบ
+- Header, Login, Workspace, tool groups, Advanced, Jobs, Admin และ Mobile nav อยู่ภายใต้ design-system layer
+- มี `:focus-visible`, touch target ขั้นต่ำ 44 px และ `prefers-reduced-motion`
+- ToolIcon มี vector silhouette แยกครบ 14 แบบ
+- Human login ไม่มี Service API Key field
+- compatibility layer normalize legacy symbol carrier เป็น vector masks
+- `UI_UX.md` มี policy/review contract ที่จำเป็น
 
 `validate-policy`
 - release metadata 0.5.1
@@ -100,6 +112,7 @@ make validate-free
 - Alembic fresh/adoption migration paths
 
 `validate-frontend`
+- เรียก UI design-system gate ก่อน
 - `npm ci`
 - TypeScript typecheck
 - production Next.js build
@@ -114,7 +127,11 @@ make validate-free
 - PDF job
 - download
 - upload
-- 4 tool categories
+- 4 tool categories / 14 tool cards
+- Colorful Workspace semantic CSS token โหลดจริง
+- Mobile 390 px ไม่มี horizontal overflow
+- Mobile navigation touch targets ≥44 px
+- tool cards/icons มี accent variation หลายชุด ไม่ย้อนกลับเป็น visual เดียวทั้งหมด
 
 `validate-compose`
 - default Compose
@@ -274,7 +291,7 @@ make release-readiness
 
 Production mode ต้องผ่าน:
 
-- full repository validation
+- full repository validation รวม UI/UX gate
 - Local CI doctor
 - HTTPS public URL
 - Secure session cookie
@@ -298,6 +315,8 @@ Production mode ต้องผ่าน:
 - real DR PDF transaction
 - Alertmanager notification path
 - production resource isolation
-- Desktop/Mobile tool UI แบ่ง 14 เครื่องมือเป็น 4 กลุ่มและใช้ colorful distinguishable icon system
+- Colorful Workspace design system เป็น visual authority ของทั้ง Desktop/Mobile/Admin
+- 14 เครื่องมือมี accent/icon แตกต่างชัดเจนและแบ่ง 4 semantic groups
+- UI/UX accessibility + mobile contract อยู่ใน static gate และ Playwright
 - Local CI required status ก่อน merge
 - ไม่มี paid CI/cloud requirement
