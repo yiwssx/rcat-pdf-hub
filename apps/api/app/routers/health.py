@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.integrations.paperless import paperless_health
 from app.malware import ping_clamav
+from app.observability import refresh_queue_metrics
 from app.storage import ensure_storage, s3_client
 
 router = APIRouter(tags=["health"])
@@ -25,7 +26,7 @@ def _core_checks() -> dict[str, bool]:
 
 @router.get("/healthz")
 def healthz():
-    # Backward-compatible core health contract used by existing deployments.
+    # Liveness/core dependency contract. Worker readiness is handled by /readyz.
     return {"status": "ok", "services": _core_checks()}
 
 
@@ -51,6 +52,12 @@ def readyz():
         required["gotenberg"] = response.is_success
     except httpx.HTTPError:
         required["gotenberg"] = False
+
+    try:
+        _depth, workers = refresh_queue_metrics()
+        required["worker"] = workers > 0
+    except Exception:
+        required["worker"] = False
 
     if settings.clamav_enabled:
         try:
