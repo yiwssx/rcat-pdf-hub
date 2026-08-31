@@ -15,14 +15,23 @@ export PDFHUB_WEBHOOK_MASTER_SECRET="${PDFHUB_WEBHOOK_MASTER_SECRET:-promtool-we
 export PDFHUB_AUTH_TOKEN_SECRET="${PDFHUB_AUTH_TOKEN_SECRET:-promtool-auth-secret-placeholder-0123456789abcdef}"
 export PDFHUB_DOWNLOAD_SIGNING_SECRET="${PDFHUB_DOWNLOAD_SIGNING_SECRET:-promtool-download-secret-placeholder-0123456789abcdef}"
 
-project="pdfhub-promtool-$$"
-cleanup() { docker compose -p "${project}" --profile observability down --remove-orphans >/dev/null 2>&1 || true; }
+project="pdfhub-observability-config-$$"
+dc() { docker compose -p "${project}" -f docker-compose.yml -f docker-compose.observability.yml "$@"; }
+cleanup() { dc --profile observability down --remove-orphans >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
-docker compose -p "${project}" --profile observability run --rm --no-deps \
+dc --profile observability config >/dev/null
+
+dc --profile observability run --rm --no-deps \
   --entrypoint /bin/promtool prometheus \
   check config /etc/prometheus/prometheus.yml
 
+dc --profile observability run --rm --no-deps \
+  --entrypoint /bin/amtool alertmanager \
+  check-config /etc/alertmanager/alertmanager.yml
+
+python3 -m py_compile ops/alert-sink/server.py
+
 cleanup
 trap - EXIT
-echo "prometheus validation: PASS"
+echo "observability validation: PASS"
