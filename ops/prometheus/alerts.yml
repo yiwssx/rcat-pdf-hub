@@ -10,6 +10,15 @@ groups:
           summary: PDF Hub API is unavailable
           description: Prometheus has been unable to scrape the PDF Hub API for at least two minutes.
 
+      - alert: PdfHubNoWorkers
+        expr: pdfhub_queue_workers{queue="pdf"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PDF Hub has no active RQ workers
+          description: The PDF queue has reported zero registered workers for at least two minutes.
+
       - alert: PdfHubHighServerErrorRate
         expr: |
           sum(rate(pdfhub_http_requests_total{status=~"5.."}[5m]))
@@ -53,3 +62,21 @@ groups:
         annotations:
           summary: PDF Hub jobs are repeatedly failing
           description: More than five PDF jobs failed during the last fifteen minutes.
+
+      - alert: PdfHubAlertmanagerDown
+        expr: up{job="pdf-hub-alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PDF Hub Alertmanager is unavailable
+          description: Prometheus cannot reach the self-hosted Alertmanager delivery service.
+
+      - alert: PdfHubAlertDeliveryFailures
+        expr: sum(increase(alertmanager_notifications_failed_total[15m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub alert delivery is failing
+          description: Alertmanager has recorded one or more failed notification deliveries in the last fifteen minutes.
