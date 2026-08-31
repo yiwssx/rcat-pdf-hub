@@ -76,15 +76,34 @@ def safe_filename(name: str) -> str:
     return cleaned[:180] or "upload.bin"
 
 
-async def save_upload(upload: UploadFile) -> tuple[Path, int, str, str]:
-    """Stream an upload into a local staging file before AV/quota/storage commit."""
+def _new_upload_target(upload: UploadFile) -> tuple[str, Path]:
     ensure_storage()
     original = safe_filename(upload.filename or "upload.bin")
     staged = f"{uuid.uuid4()}-{original}"
-    target = settings.data_dir / "temporary" / staged
+    return original, settings.data_dir / "temporary" / staged
+
+
+def save_upload_sync(upload: UploadFile) -> tuple[Path, int, str, str]:
+    """Stream an upload synchronously; intended for FastAPI sync/threadpool routes."""
+    original, target = _new_upload_target(upload)
     digest = hashlib.sha256()
     total = 0
+    with target.open("wb") as fh:
+        while chunk := upload.file.read(1024 * 1024):
+            total += len(chunk)
+            if total > settings.max_upload_bytes:
+                target.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="File too large")
+            digest.update(chunk)
+            fh.write(chunk)
+    return target, total, digest.hexdigest(), original
 
+
+async def save_upload(upload: UploadFile) -> tuple[Path, int, str, str]:
+    """Async-compatible uploader retained for callers that already run outside the API event loop."""
+    original, target = _new_upload_target(upload)
+    digest = hashlib.sha256()
+    total = 0
     with target.open("wb") as fh:
         while chunk := await upload.read(1024 * 1024):
             total += len(chunk)
@@ -93,7 +112,6 @@ async def save_upload(upload: UploadFile) -> tuple[Path, int, str, str]:
                 raise HTTPException(status_code=413, detail="File too large")
             digest.update(chunk)
             fh.write(chunk)
-
     return target, total, digest.hexdigest(), original
 
 
