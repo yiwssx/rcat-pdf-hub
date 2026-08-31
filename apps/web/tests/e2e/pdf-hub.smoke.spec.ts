@@ -1,6 +1,7 @@
 import { expect, Page, Route, test } from "@playwright/test";
 
-const VALID_KEY = "pdfh_test_valid";
+const LOCAL_USER = "admin";
+const LOCAL_PASSWORD = "local-test-password-123";
 const pngPixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
@@ -12,22 +13,25 @@ const initialFile = {
   content_type: "application/pdf",
   size: 4096,
   sha256: "a".repeat(64),
-  source_system: "smoke-test",
+  source_system: "identity:test-local",
   created_at: "2026-08-31T08:00:00Z",
   expires_at: null,
 };
 
-async function requireApiKey(route: Route) {
-  if (route.request().headers()["x-api-key"] === VALID_KEY) return true;
-  await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Missing or invalid API key" }) });
-  return false;
-}
-
 async function installApiMocks(page: Page) {
+  let sessionActive = false;
+
+  async function requireSession(route: Route) {
+    if (sessionActive) return true;
+    await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Authentication required" }) });
+    return false;
+  }
+
   await page.route("**/api/v1/auth/config", async (route) => {
     await route.fulfill({
       json: {
         session_cookie: "pdfhub_session",
+        local: { enabled: true },
         oidc: { enabled: false, issuer: null, login_url: null },
         ldap: { enabled: false },
         api_key: { enabled: true },
@@ -35,23 +39,43 @@ async function installApiMocks(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/auth/me", async (route) => {
-    if (!(await requireApiKey(route))) return;
+  await page.route("**/api/v1/auth/local/login", async (route) => {
+    const body = route.request().postDataJSON() as { username?: string; password?: string };
+    if (body.username !== LOCAL_USER || body.password !== LOCAL_PASSWORD) {
+      await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Local authentication failed" }) });
+      return;
+    }
+    sessionActive = true;
     await route.fulfill({
       json: {
-        name: "service:smoke-test",
-        display_name: "Smoke Service",
-        subject: null,
-        scopes: ["files:read", "files:write", "jobs:read", "pdf:compress"],
-        groups: [],
-        auth_source: "api_key",
-        is_admin: false,
+        name: "identity:local-test",
+        display_name: "Local Admin",
+        subject: "admin",
+        scopes: ["*"],
+        groups: ["local-admin"],
+        auth_source: "local",
+        is_admin: true,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/auth/me", async (route) => {
+    if (!(await requireSession(route))) return;
+    await route.fulfill({
+      json: {
+        name: "identity:local-test",
+        display_name: "Local Admin",
+        subject: "admin",
+        scopes: ["*"],
+        groups: ["local-admin"],
+        auth_source: "local",
+        is_admin: true,
       },
     });
   });
 
   await page.route("**/api/v1/integrations/status", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
         storage_backend: "local",
@@ -66,22 +90,22 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/files?limit=100", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ json: [initialFile] });
   });
 
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ json: [] });
   });
 
   await page.route("**/api/v1/files/file-pdf-1/preview**", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ status: 200, contentType: "image/png", body: pngPixel });
   });
 
   await page.route("**/api/v1/pdf/compress", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
         id: "job-compress-1",
@@ -92,13 +116,13 @@ async function installApiMocks(page: Page) {
         output_file_id: "file-output-1",
         params: {},
         error: null,
-        requested_by: "service:smoke-test",
+        requested_by: "identity:test-local",
       },
     });
   });
 
   await page.route("**/api/v1/files/file-output-1/download", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
   });
 
@@ -107,7 +131,7 @@ async function installApiMocks(page: Page) {
       await route.fallback();
       return;
     }
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
         id: "file-image-1",
@@ -115,7 +139,7 @@ async function installApiMocks(page: Page) {
         content_type: "image/png",
         size: 3,
         sha256: "b".repeat(64),
-        source_system: "smoke-test",
+        source_system: "identity:test-local",
         created_at: "2026-08-31T08:05:00Z",
         expires_at: null,
       },
@@ -127,31 +151,39 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page);
 });
 
-test("rejects an invalid API key without entering authenticated UI", async ({ page }) => {
+test("shows human local login and rejects invalid credentials", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByLabel("Service API Key").fill("pdfh_wrong_key");
-  await page.getByRole("button", { name: "เชื่อมต่อ" }).click();
+  await expect(page.getByLabel("Service API Key")).toHaveCount(0);
+  await expect(page.getByText("โหมด Local Development")).toBeVisible();
+  await page.getByLabel("ชื่อผู้ใช้ Local").fill(LOCAL_USER);
+  await page.getByLabel("รหัสผ่าน Local").fill("wrong-password");
+  await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "พร้อมเริ่มจัดการ PDF" })).toBeVisible();
   await expect(page.locator("#workspace")).toHaveCount(0);
-  await expect(page.locator(".status")).toContainText("Missing or invalid API key");
+  await expect(page.locator(".status")).toContainText("Local authentication failed");
 });
 
-test("connects with a valid key and propagates auth through preview, job, download and upload", async ({ page }) => {
+test("logs in locally and propagates the session through preview, job, download and upload", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByLabel("Service API Key").fill(VALID_KEY);
-  await page.getByRole("button", { name: "เชื่อมต่อ" }).click();
+  await page.getByLabel("ชื่อผู้ใช้ Local").fill(LOCAL_USER);
+  await page.getByLabel("รหัสผ่าน Local").fill(LOCAL_PASSWORD);
+  await page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true }).click();
 
-  await expect(page.getByText("Smoke Service")).toBeVisible();
+  await expect(page.getByText("Local Admin", { exact: true })).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
   await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "จัดการหน้าและเอกสาร" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "แปลงไฟล์" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ปรับแต่งเอกสาร" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "แชร์และจัดเก็บ" })).toBeVisible();
 
   await page.getByRole("button", { name: "ดูตัวอย่าง PDF" }).click();
   await expect(page.getByRole("img", { name: "Preview page 1" })).toBeVisible();
 
-  await page.getByRole("button", { name: "ลดขนาด PDF" }).click();
+  await page.getByRole("button", { name: /ลดขนาด PDF/ }).click();
   await expect(page.locator(".jobInfo").getByText("compress", { exact: true })).toBeVisible();
   await expect(page.locator(".badge.completed")).toContainText("100%");
 
