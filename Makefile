@@ -2,7 +2,7 @@ BASE_COMPOSE = docker compose -f docker-compose.yml
 PROD_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.production.yml
 OBS_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.observability.yml
 
-.PHONY: up up-production up-nas down down-observability logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke pdf-workload-smoke install-backup uninstall-backup backup-status release-readiness production-env generate-locks first-local merge-pr
+.PHONY: up up-production up-nas down down-observability logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ui validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke pdf-workload-smoke install-backup uninstall-backup backup-status release-readiness production-env generate-locks first-local merge-pr
 
 up:
 	$(BASE_COMPOSE) up -d --build
@@ -35,13 +35,18 @@ test:
 	$(BASE_COMPOSE) run --rm api python -m pytest -q
 
 validate-free:
+	python3 scripts/validate-ui-system.py
 	python3 scripts/validate-release-policy.py
 	bash scripts/validate-prometheus.sh
 	bash scripts/validate-free.sh all
 
 validate-policy:
+	python3 scripts/validate-ui-system.py
 	python3 scripts/validate-release-policy.py
 	bash scripts/validate-free.sh policy
+
+validate-ui:
+	python3 scripts/validate-ui-system.py
 
 validate-ops:
 	bash scripts/validate-free.sh operations
@@ -50,6 +55,7 @@ validate-backend:
 	bash scripts/validate-free.sh backend
 
 validate-frontend:
+	python3 scripts/validate-ui-system.py
 	bash scripts/validate-free.sh frontend
 
 validate-e2e:
