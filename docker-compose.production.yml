@@ -1,0 +1,31 @@
+services:
+  api:
+    cpus: ${PDFHUB_API_CPUS:-2.0}
+    mem_limit: ${PDFHUB_API_MEMORY_LIMIT:-2g}
+    pids_limit: ${PDFHUB_API_PIDS_LIMIT:-256}
+
+  worker:
+    cpus: ${PDFHUB_WORKER_CPUS:-2.0}
+    mem_limit: ${PDFHUB_WORKER_MEMORY_LIMIT:-3g}
+    pids_limit: ${PDFHUB_WORKER_PIDS_LIMIT:-256}
+    stop_grace_period: ${PDFHUB_WORKER_STOP_GRACE_PERIOD:-31m}
+
+  gotenberg:
+    cpus: ${PDFHUB_GOTENBERG_CPUS:-2.0}
+    mem_limit: ${PDFHUB_GOTENBERG_MEMORY_LIMIT:-2g}
+    pids_limit: ${PDFHUB_GOTENBERG_PIDS_LIMIT:-256}
+
+  postgres:
+    cpus: ${PDFHUB_POSTGRES_CPUS:-2.0}
+    mem_limit: ${PDFHUB_POSTGRES_MEMORY_LIMIT:-2g}
+    pids_limit: ${PDFHUB_POSTGRES_PIDS_LIMIT:-256}
+
+  valkey:
+    cpus: ${PDFHUB_VALKEY_CPUS:-1.0}
+    mem_limit: ${PDFHUB_VALKEY_MEMORY_LIMIT:-1g}
+    pids_limit: ${PDFHUB_VALKEY_PIDS_LIMIT:-128}
+
+  clamav:
+    cpus: ${PDFHUB_CLAMAV_CPUS:-2.0}
+    mem_limit: ${PDFHUB_CLAMAV_MEMORY_LIMIT:-2g}
+    pids_limit: ${PDFHUB_CLAMAV_PIDS_LIMIT:-256}
