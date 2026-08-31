@@ -59,6 +59,7 @@ export type AuditEvent = {
 
 export type AuthConfig = {
   session_cookie: string;
+  local: { enabled: boolean };
   oidc: { enabled: boolean; issuer: string | null; login_url: string | null };
   ldap: { enabled: boolean };
   api_key: { enabled: boolean };
@@ -137,6 +138,14 @@ export async function getAuthConfig(): Promise<AuthConfig> {
 
 export async function getMe(auth = SESSION_AUTH): Promise<AuthMe> {
   return expectJson<AuthMe>(await request("/api/v1/auth/me", { headers: headers(auth), cache: "no-store" }));
+}
+
+export async function localLogin(username: string, password: string): Promise<AuthMe> {
+  return expectJson<AuthMe>(await request("/api/v1/auth/local/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  }));
 }
 
 export async function ldapLogin(username: string, password: string): Promise<AuthMe> {
