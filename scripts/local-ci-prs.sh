@@ -27,8 +27,6 @@ post_status() {
     -f description="${description}" >/dev/null || true
 }
 
-# Full-validation lane covers normal PRs plus any Dependabot PR that is not
-# actually eligible for the narrowly allowed bot-only direct npm forward-patch lane.
 mapfile -t rows < <(
   gh api --paginate "repos/${repo}/pulls?state=open&base=main&per_page=100" \
     --jq '.[] | [.number, .draft, .head.sha, .base.sha, .user.login] | @tsv'
@@ -68,12 +66,13 @@ for row in "${rows[@]}"; do
   fi
 
   if [ "${author}" = "dependabot[bot]" ]; then
-    changed="$(gh api --paginate "repos/${repo}/pulls/${pr}/files?per_page=100" --jq '.[].filename')"
+    changed="$(gh api --paginate "repos/${repo}/pulls/${pr}/files?per_page=100" --jq '.[].filename' | LC_ALL=C sort)"
+    expected=$'apps/web/package-lock.json\napps/web/package.json'
     non_bot="$(gh api --paginate "repos/${repo}/pulls/${pr}/commits?per_page=100" \
       --jq '.[] | select((.author.login // "") != "dependabot[bot]") | .sha' || true)"
-    if [ "${changed}" = "apps/web/package.json" ] && [ -z "${non_bot}" ] && \
+    if [ "${changed}" = "${expected}" ] && [ -z "${non_bot}" ] && \
        python3 scripts/check-direct-dependency.py "${main_sha}" "${head_sha}" >/dev/null 2>&1; then
-      echo "local-ci: Dependabot PR #${pr} is an eligible direct npm patch; dependency lane owns validation/status"
+      echo "local-ci: Dependabot PR #${pr} is an eligible package.json + package-lock patch; dependency lane owns validation/status"
       continue
     fi
     echo "local-ci: Dependabot PR #${pr} is outside the auto-merge lane; running full validation with no auto-merge"
@@ -111,6 +110,5 @@ for row in "${rows[@]}"; do
   fi
 
   cleanup_worktree
-  # Full validation is intentionally serialized to avoid exhausting institution hardware.
   exit 0
 done
