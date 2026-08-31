@@ -1,3 +1,10 @@
+/*
+ * 0.5.1 structural compatibility layer.
+ * No product color/elevation decisions belong here; design-system.css is the
+ * final visual authority. This file keeps layout additions introduced during
+ * stabilization and normalizes legacy symbol carriers to vector masks.
+ */
+
 .loginShell {
   grid-column: 1 / -1;
   display: grid;
@@ -22,37 +29,24 @@
   width: 100%;
   min-height: 62px;
   padding: 10px 12px;
-  border: 1px solid #dfe5ff;
   border-radius: 17px;
-  color: #253050;
-  background: linear-gradient(135deg, #fff, #f5f7ff);
   text-align: left;
-  box-shadow: 0 8px 22px rgba(71, 84, 127, .08);
 }
-.organizationLogin:hover { transform: translateY(-1px); border-color: #bdc8ff; }
 .organizationLogin strong, .organizationLogin small { display: block; }
 .organizationLogin strong { font-size: 13px; }
-.organizationLogin small { margin-top: 2px; color: #7b849c; font-size: 10px; }
-.organizationLogin > b { color: #5268ff; font-size: 18px; }
+.organizationLogin small { margin-top: 2px; font-size: 10px; }
+.organizationLogin > b { font-size: 18px; }
 .organizationMark {
   width: 40px;
   height: 40px;
   display: grid;
   place-items: center;
   border-radius: 13px;
-  color: #fff;
   font-weight: 950;
-  background: conic-gradient(from 210deg, #34a853, #4285f4, #7c3aed, #ea4335, #fbbc05, #34a853);
-  box-shadow: 0 8px 18px rgba(66, 133, 244, .20);
 }
 
 .toolGroups { display: grid; gap: 18px; }
-.toolGroup {
-  padding: 18px;
-  border: 1px solid rgba(78, 92, 132, .10);
-  border-radius: 27px;
-  background: rgba(255, 255, 255, .62);
-}
+.toolGroup { padding: 18px; border-radius: 27px; }
 .toolGroupHead {
   display: flex;
   align-items: center;
@@ -71,26 +65,14 @@
   letter-spacing: .08em;
 }
 .toolGroupHead h3 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
-.toolGroupHead p { margin: 2px 0 0; color: #7a839b; font-size: 10px; }
-.group-manage .toolGroupHead > span { color: #5b45d8; background: #eeeaff; }
-.group-convert .toolGroupHead > span { color: #087fa8; background: #e5f8ff; }
-.group-decorate .toolGroupHead > span { color: #c52b87; background: #ffeaf6; }
-.group-deliver .toolGroupHead > span { color: #087d70; background: #e6faf6; }
-
+.toolGroupHead p { margin: 2px 0 0; font-size: 10px; }
 .toolGroup .toolCardGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .toolGroup .toolCard {
   min-height: 168px;
   border-radius: 22px;
   grid-template-columns: 62px 1fr;
 }
-.toolGroup .toolIcon {
-  color: var(--tone);
-  background:
-    radial-gradient(circle at 24% 20%, #fff 0 16%, transparent 17%),
-    linear-gradient(145deg, color-mix(in srgb, var(--tone) 12%, white), color-mix(in srgb, var(--tone) 25%, white));
-  border: 1px solid color-mix(in srgb, var(--tone) 24%, white);
-  box-shadow: 0 12px 25px color-mix(in srgb, var(--tone) 16%, transparent), inset 0 1px 0 rgba(255,255,255,.8);
-}
+.toolGroup .toolIcon { transition: transform .15s ease; }
 .toolGroup .toolIcon::after {
   content: "";
   position: absolute;
@@ -99,15 +81,11 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--tone);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tone) 11%, white);
 }
 .toolGroup .toolIcon svg { width: 34px; height: 34px; }
 .toolGroup .toolCard:hover:not(:disabled) .toolIcon { transform: translateY(-2px) rotate(-2deg) scale(1.04); }
-.toolGroup .toolIcon { transition: transform .15s ease; }
 
-/* 0.5.1 icon cleanup: all user-facing navigation/status symbols use vector masks,
-   so the refreshed app no longer mixes Unicode/emoji glyphs with the tool icon system. */
+/* Normalize legacy JSX symbol carriers to vector masks. */
 .loginIcon,
 .platformIcon,
 .emptyState > span,
@@ -133,10 +111,6 @@
 }
 
 .loginIcon {
-  color: #5b5fe8;
-  background: linear-gradient(145deg, #f0efff, #e8ecff);
-  border: 1px solid #dfe3ff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
   --app-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2a7 7 0 0 1 7 7v2h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h1V9a7 7 0 0 1 7-7Zm0 2a5 5 0 0 0-5 5v2h10V9a5 5 0 0 0-5-5Zm0 10a2 2 0 0 0-1 3.73V20h2v-2.27A2 2 0 0 0 12 14Z'/%3E%3C/svg%3E");
 }
 
@@ -152,10 +126,6 @@
   display: grid;
   place-items: center;
   border-radius: 20px;
-  color: #5964ef;
-  background: linear-gradient(145deg, #f0efff, #eaf3ff);
-  border: 1px solid #e0e4ff;
-  box-shadow: 0 12px 28px rgba(82,96,220,.12);
   --app-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6 2h8l5 5v15H6a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Zm7 2H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h11V8h-4V4Zm2 .8V6h1.2L15 4.8ZM8 11h6v2H8v-2Zm0 4h6v2H8v-2Z'/%3E%3C/svg%3E");
 }
 .emptyState > span::before { width: 31px; height: 31px; }
@@ -166,8 +136,6 @@
   display: grid;
   place-items: center;
   border-radius: 14px;
-  color: #7b84a2;
-  background: #f1f3f9;
   --app-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2a10 10 0 1 1-7.07 2.93L6.34 6.34A8 8 0 1 0 12 4V2Zm-1 5h2v5.17l3.24 1.87-1 1.73L11 13.32V7Z'/%3E%3C/svg%3E");
 }
 
@@ -183,9 +151,7 @@
 .mobileNav button:nth-child(4) > span { --app-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2a10 10 0 1 1-7.07 2.93L6.34 6.34A8 8 0 1 0 12 4V2Zm-1 5h2v5.17l3.24 1.87-1 1.73L11 13.32V7Z'/%3E%3C/svg%3E"); }
 .mobileNav button:nth-child(5) > span { --app-symbol: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='m19.14 12.94.04-.94-.04-.94 2.03-1.58-1.92-3.32-2.39.96a7.7 7.7 0 0 0-1.63-.94L14.86 3h-3.72l-.37 3.18c-.58.24-1.12.55-1.63.94l-2.39-.96-1.92 3.32 2.03 1.58-.04.94.04.94-2.03 1.58 1.92 3.32 2.39-.96c.51.39 1.05.7 1.63.94l.37 3.18h3.72l.37-3.18c.58-.24 1.12-.55 1.63-.94l2.39.96 1.92-3.32-2.03-1.58ZM13 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z'/%3E%3C/svg%3E"); }
 
-.uploadIcon {
-  font-size: 0;
-}
+.uploadIcon { font-size: 0; }
 .uploadIcon::before {
   content: "";
   width: 30px;
