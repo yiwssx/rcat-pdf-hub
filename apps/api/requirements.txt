@@ -14,7 +14,7 @@ Pillow==12.3.0
 pytest==9.0.3
 PyJWT[crypto]==2.13.0
 boto3==1.43.74
-ldap3==2.10.2rc4
+ldap3==2.9.1
 pyasn1==0.6.4
 prometheus-client==0.26.0
 opentelemetry-api==1.44.0
