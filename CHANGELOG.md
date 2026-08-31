@@ -14,7 +14,10 @@
 ### Added
 - `scripts/first-local.sh` creates random Local Admin credentials, validates the complete stack, runs real PDF workload, backup and DR gates, then installs Local CI.
 - Local-auth regression tests and browser smoke coverage.
-- Colorful app-style PDF tool icon treatment and explicit tool categories: document management, conversion, document decoration, and delivery/archive.
+- Colorful Workspace design system covering Header, Login, Workspace, platform status, all 14 tool cards, advanced controls, jobs, Admin and Mobile navigation.
+- `apps/web/app/design-system.css` as the final semantic color/elevation/component-state authority.
+- `UI_UX.md` with product UI principles, color architecture, component rules, accessibility requirements and review checklist.
+- `scripts/validate-ui-system.py` plus `make validate-ui`; the UI gate is included in `validate-free` and `validate-frontend`.
 - Production environment guard that forbids local human authentication.
 
 ### Changed
@@ -22,6 +25,9 @@
 - User login copy now distinguishes Local Development from organization SSO.
 - Admin copy explicitly identifies Service API Keys as integration credentials.
 - Tool grid is grouped for faster scanning on Desktop and Mobile without removing any of the 14 PDF capabilities.
+- Tool families now have distinct semantic palettes: manage violet/pink, convert cyan/blue, decorate orange/pink, and deliver green/teal.
+- `ui-refresh.css` is reduced to structural/auth/icon compatibility so visual decisions do not compete with the final design-system layer.
+- Tool, status, empty-state and mobile-navigation icon treatment is normalized to the vector icon language instead of mixed visual styles.
 
 ## 0.5.0 — 2026-08-31
 
