@@ -6,6 +6,7 @@ cd "${ROOT}"
 
 BACKUP_DIR="${1:-${BACKUP:-}}"
 PROJECT="${PDFHUB_COMPOSE_PROJECT:-}"
+COMPOSE_MODE="${PDFHUB_COMPOSE_MODE:-default}"
 if [ -z "${BACKUP_DIR}" ]; then
   echo "Usage: PDFHUB_RESTORE_CONFIRM=YES $0 <backup-directory>" >&2
   exit 2
@@ -14,6 +15,7 @@ if [ "${PDFHUB_RESTORE_CONFIRM:-}" != "YES" ]; then
   echo "Restore is destructive. Set PDFHUB_RESTORE_CONFIRM=YES to continue." >&2
   exit 2
 fi
+case "${COMPOSE_MODE}" in default|nas) ;; *) echo "PDFHUB_COMPOSE_MODE must be default or nas" >&2; exit 2 ;; esac
 
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
@@ -22,21 +24,27 @@ need docker
 need curl
 
 dc() {
-  if [ -n "${PROJECT}" ]; then
-    docker compose -p "${PROJECT}" "$@"
-  else
-    docker compose "$@"
-  fi
+  local args=()
+  if [ "${COMPOSE_MODE}" = "nas" ]; then args+=(-f docker-compose.yml -f docker-compose.nas.yml); fi
+  if [ -n "${PROJECT}" ]; then args+=(-p "${PROJECT}"); fi
+  docker compose "${args[@]}" "$@"
 }
 
 bash scripts/verify-backup.sh "${BACKUP_DIR}"
 storage_backend="$(sed -n 's/^PDFHUB_STORAGE_BACKEND=//p' "${BACKUP_DIR}/manifest.env")"
+backup_compose_mode="$(sed -n 's/^PDFHUB_COMPOSE_MODE=//p' "${BACKUP_DIR}/manifest.env")"
 export PDFHUB_STORAGE_BACKEND="${storage_backend}"
 
-# Stop request/worker surfaces while keeping PostgreSQL and Valkey available for replacement.
+if [ -n "${backup_compose_mode}" ] && [ "${backup_compose_mode}" != "${COMPOSE_MODE}" ]; then
+  echo "Restore compose mode (${COMPOSE_MODE}) differs from backup source (${backup_compose_mode})." >&2
+  echo "Set PDFHUB_COMPOSE_MODE explicitly if this storage migration is intentional." >&2
+  [ "${PDFHUB_RESTORE_ALLOW_COMPOSE_MODE_CHANGE:-false}" = "true" ] || exit 2
+fi
+
+# Stop request/worker surfaces while keeping database/queue infrastructure available for replacement.
 dc stop caddy web worker cleanup webhook api >/dev/null 2>&1 || true
 
-dc up -d postgres valkey gotenberg >/dev/null
+dc up -d --wait --wait-timeout 120 postgres valkey gotenberg >/dev/null
 printf 'restore: replacing PostgreSQL database\n'
 dc exec -T postgres sh -lc 'exec pg_restore --clean --if-exists --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <"${BACKUP_DIR}/postgres.dump"
 
@@ -45,7 +53,7 @@ dc exec -T valkey valkey-cli -n 0 FLUSHDB >/dev/null
 
 case "${storage_backend}" in
   local)
-    printf 'restore: replacing /data contents\n'
+    printf 'restore: replacing /data contents (%s compose mode)\n' "${COMPOSE_MODE}"
     dc run --rm --no-deps -T api python -c '
 import shutil, sys, tarfile
 from pathlib import Path, PurePosixPath
@@ -100,7 +108,7 @@ esac
 # Adopt/upgrade the restored schema to the current release before accepting traffic.
 dc run --rm --no-deps -T api python -c 'from app.migrate import run_migrations; run_migrations()'
 
-dc up -d --no-build api worker cleanup webhook web caddy >/dev/null
+dc up -d --no-build --wait --wait-timeout 180 api worker cleanup webhook web caddy >/dev/null
 
 if [ "${PDFHUB_RESTORE_SKIP_HEALTHCHECK:-false}" != "true" ]; then
   port="${PDFHUB_HTTP_PORT:-8080}"
