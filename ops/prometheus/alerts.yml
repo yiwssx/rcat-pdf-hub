@@ -11,13 +11,13 @@ groups:
           description: Prometheus has been unable to scrape the PDF Hub API for at least two minutes.
 
       - alert: PdfHubNoWorkers
-        expr: pdfhub_queue_workers{queue="pdf"} < 1
+        expr: max(pdfhub_queue_workers) < 1
         for: 2m
         labels:
           severity: critical
         annotations:
           summary: PDF Hub has no active RQ workers
-          description: The PDF queue has reported zero registered workers for at least two minutes.
+          description: The configured PDF queue has reported zero registered workers for at least two minutes.
 
       - alert: PdfHubHighServerErrorRate
         expr: |
