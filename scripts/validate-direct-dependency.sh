@@ -12,7 +12,8 @@ done
 node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
 python3 scripts/check-direct-dependency.py "${BASE_REF}" HEAD
 
-before_hash="$(sha256sum apps/web/package.json | awk '{print $1}')"
+before_package_hash="$(sha256sum apps/web/package.json | awk '{print $1}')"
+before_lock_hash="$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
 install_log="$(mktemp)"
 build_log="$(mktemp)"
 browser_log="$(mktemp)"
@@ -20,9 +21,8 @@ e2e_log="$(mktemp)"
 browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
 (
   cd apps/web
-  rm -f package-lock.json
   NEXT_TELEMETRY_DISABLED=1 NPM_CONFIG_UPDATE_NOTIFIER=false \
-    npm install --package-lock=false --no-audit --no-fund 2>&1 | tee "${install_log}"
+    npm ci --ignore-scripts --no-audit --no-fund 2>&1 | tee "${install_log}"
   npm run typecheck
   mkdir -p .next/cache
   NEXT_TELEMETRY_DISABLED=1 npm run build 2>&1 | tee "${build_log}"
@@ -37,8 +37,8 @@ if grep -Eqi "${WARN_RE}" "${install_log}" "${build_log}" "${browser_log}" "${e2
   exit 1
 fi
 
-test ! -e apps/web/package-lock.json
-test "${before_hash}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
-git diff --exit-code -- apps/web/package.json apps/web/tsconfig.json
+test "${before_package_hash}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
+test "${before_lock_hash}" = "$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
+git diff --exit-code -- apps/web/package.json apps/web/package-lock.json apps/web/tsconfig.json
 
 echo 'direct dependency validation: PASS'
