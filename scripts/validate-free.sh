@@ -24,6 +24,7 @@ require_tool_versions() {
   need python3
   need node
   need npm
+  need npx
   python3 - <<'PY'
 import sys
 if sys.version_info[:2] != (3, 12):
@@ -105,6 +106,25 @@ frontend() {
   echo 'frontend: PASS'
 }
 
+e2e() {
+  require_tool_versions
+  local browser_log e2e_log pkg_before browsers_path
+  browser_log="$(mktemp)"
+  e2e_log="$(mktemp)"
+  pkg_before="$(sha256sum apps/web/package.json | awk '{print $1}')"
+  browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
+  (
+    cd apps/web
+    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" npx playwright install --only-shell chromium 2>&1 | tee "${browser_log}"
+    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" NEXT_TELEMETRY_DISABLED=1 npm run test:e2e 2>&1 | tee "${e2e_log}"
+  )
+  check_clean_log "${browser_log}"
+  check_clean_log "${e2e_log}"
+  test ! -e apps/web/package-lock.json
+  test "${pkg_before}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
+  echo 'e2e: PASS'
+}
+
 compose_config() {
   need docker
   validation_compose_env
@@ -164,10 +184,11 @@ case "${MODE}" in
   policy) policy ;;
   backend) policy; backend ;;
   frontend) policy; frontend ;;
+  e2e) policy; frontend; e2e ;;
   compose) policy; compose_config ;;
   runtime) policy; compose_config; runtime ;;
-  all) policy; backend; frontend; compose_config; runtime ;;
-  *) echo "Usage: $0 [policy|backend|frontend|compose|runtime|all]" >&2; exit 2 ;;
+  all) policy; backend; frontend; e2e; compose_config; runtime ;;
+  *) echo "Usage: $0 [policy|backend|frontend|e2e|compose|runtime|all]" >&2; exit 2 ;;
 esac
 
 echo "zero-cost validation (${MODE}): PASS"
