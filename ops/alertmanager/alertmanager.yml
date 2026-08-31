@@ -1,0 +1,15 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: pdfhub-local-sink
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: pdfhub-local-sink
+    webhook_configs:
+      - url: http://alert-sink:8090/alerts
+        send_resolved: true
