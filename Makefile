@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-backend validate-frontend validate-e2e validate-compose validate-runtime validate-dependency install-e2e-browser local-ci-cycle install-local-ci uninstall-local-ci local-ci-status
+.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -32,6 +32,9 @@ validate-policy:
 	python3 scripts/validate-release-policy.py
 	bash scripts/validate-free.sh policy
 
+validate-ops:
+	bash scripts/validate-free.sh operations
+
 validate-backend:
 	bash scripts/validate-free.sh backend
 
@@ -56,6 +59,9 @@ install-e2e-browser:
 local-ci-cycle:
 	bash scripts/local-ci-cycle.sh
 
+local-ci-doctor:
+	bash scripts/local-ci-doctor.sh
+
 install-local-ci:
 	bash scripts/install-local-ci-user.sh
 
@@ -65,6 +71,34 @@ uninstall-local-ci:
 local-ci-status:
 	@systemctl --user status rcat-pdf-hub-local-ci.timer --no-pager || true
 	@systemctl --user status rcat-pdf-hub-local-ci.service --no-pager || true
+
+backup:
+	bash scripts/backup.sh "$${BACKUP:-}"
+
+backup-verify:
+	bash scripts/verify-backup.sh "$${BACKUP:?set BACKUP=/path/to/backup}"
+
+restore:
+	bash scripts/restore.sh "$${BACKUP:?set BACKUP=/path/to/backup}"
+
+dr-drill:
+	bash scripts/dr-drill.sh "$${BACKUP:?set BACKUP=/path/to/backup}"
+
+load-smoke:
+	python3 scripts/load-smoke.py --url "$${URL:?set URL=http://host:port}" --path "$${LOAD_PATH:-/healthz}" --requests "$${REQUESTS:-100}" --concurrency "$${CONCURRENCY:-10}" --max-error-rate "$${MAX_ERROR_RATE:-0.01}" --max-p95-ms "$${MAX_P95_MS:-1500}"
+
+install-backup:
+	bash scripts/install-backup-user.sh
+
+uninstall-backup:
+	bash scripts/uninstall-backup-user.sh
+
+backup-status:
+	@systemctl --user status rcat-pdf-hub-backup.timer --no-pager || true
+	@systemctl --user status rcat-pdf-hub-backup.service --no-pager || true
+
+release-readiness:
+	bash scripts/release-readiness.sh
 
 cleanup:
 	docker compose run --rm cleanup python -m app.cleanup
