@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ApiKeyCreated,
   ApiKeyRecord,
   AuditEvent,
   createApiKey,
+  getMe,
   listApiKeys,
   listAudit,
   listWebhookDeliveries,
@@ -24,6 +25,7 @@ const scopeOptions = [
 ];
 
 export function AdminPanel({ apiKey }: { apiKey: string }) {
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
@@ -32,11 +34,20 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
   const [scopes, setScopes] = useState<string[]>(scopeOptions);
   const [created, setCreated] = useState<ApiKeyCreated | null>(null);
   const [editing, setEditing] = useState<ServicePolicy | null>(null);
-  const [message, setMessage] = useState("ใช้ Bootstrap Admin Key หรือ key ที่มี scope admin:keys");
+  const [message, setMessage] = useState("ใช้ Bootstrap Admin Key หรือ identity ที่ระบบรับรองว่าเป็นผู้ดูแล");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    let live = true;
+    setAuthorized(null);
+    void getMe(apiKey)
+      .then((me) => { if (live) setAuthorized(me.is_admin); })
+      .catch(() => { if (live) setAuthorized(false); });
+    return () => { live = false; };
+  }, [apiKey]);
+
   async function loadAdmin() {
-    if (!apiKey) return;
+    if (!apiKey || authorized !== true) return;
     setBusy(true);
     try {
       const [keyRows, auditRows, deliveryRows] = await Promise.all([
@@ -60,7 +71,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
   }
 
   async function createServiceKey() {
-    if (!name.trim()) return;
+    if (authorized !== true || !name.trim()) return;
     setBusy(true);
     setCreated(null);
     try {
@@ -85,6 +96,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
   }
 
   async function revoke(record: ApiKeyRecord) {
+    if (authorized !== true) return;
     setBusy(true);
     try {
       await revokeApiKey(record.id, apiKey);
@@ -98,7 +110,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
   }
 
   async function savePolicy() {
-    if (!editing) return;
+    if (authorized !== true || !editing) return;
     setBusy(true);
     try {
       const result = await updateServicePolicy(editing, apiKey);
@@ -113,6 +125,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
   }
 
   async function replayDelivery(delivery: WebhookDelivery) {
+    if (authorized !== true) return;
     setBusy(true);
     try {
       await retryWebhookDelivery(delivery.id, apiKey);
@@ -125,6 +138,14 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
     }
   }
 
+  if (authorized === null) {
+    return <section className="adminStack"><div className="panel"><span className="eyebrow">ADMINISTRATION</span><h2>กำลังตรวจสิทธิ์ผู้ดูแล</h2><p className="muted">ยืนยัน identity กับ PDF Hub ก่อนเปิดเครื่องมือจัดการระบบ</p></div></section>;
+  }
+
+  if (!authorized) {
+    return <section className="adminStack"><div className="panel"><span className="eyebrow">ACCESS CONTROL</span><h2>ไม่มีสิทธิ์ผู้ดูแล</h2><p className="muted">บัญชีหรือ Service API Key นี้ใช้งาน Workspace ได้ แต่ไม่มีสิทธิ์เปิด API keys, quota, webhook DLQ หรือ audit trail</p></div></section>;
+  }
+
   return (
     <section className="adminStack">
       <div className="panel panelHeader">
@@ -133,7 +154,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
           <h2>Service Keys, Quotas, Webhook DLQ & Audit</h2>
           <p className="muted">{message}</p>
         </div>
-        <button className="secondary" onClick={loadAdmin} disabled={!apiKey || busy}>โหลดข้อมูล Admin</button>
+        <button className="secondary" onClick={loadAdmin} disabled={busy}>โหลดข้อมูล Admin</button>
       </div>
 
       <div className="grid two">
@@ -148,7 +169,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
               <label key={scope} className="check"><input type="checkbox" checked={scopes.includes(scope)} onChange={() => toggleScope(scope)} />{scope}</label>
             ))}
           </div>
-          <button className="primary full" onClick={createServiceKey} disabled={!apiKey || !name.trim() || busy}>สร้าง API Key</button>
+          <button className="primary full" onClick={createServiceKey} disabled={!name.trim() || busy}>สร้าง API Key</button>
           {created && (
             <div className="secretBox">
               <strong>เก็บค่านี้ตอนนี้</strong>
