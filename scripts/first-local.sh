@@ -32,7 +32,7 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-printf '\n[1/9] Preparing local secrets\n'
+printf '\n[1/9] Preparing local secrets and Local Admin login\n'
 if [ ! -f .env ]; then
   cp .env.example .env
   python3 - <<'PY'
@@ -46,23 +46,42 @@ values = {
     'PDFHUB_WEBHOOK_MASTER_SECRET': secrets.token_hex(32),
     'PDFHUB_AUTH_TOKEN_SECRET': secrets.token_hex(48),
     'PDFHUB_DOWNLOAD_SIGNING_SECRET': secrets.token_hex(48),
+    'PDFHUB_LOCAL_AUTH_ENABLED': 'true',
+    'PDFHUB_LOCAL_ADMIN_USERNAME': 'admin',
+    'PDFHUB_LOCAL_ADMIN_PASSWORD': secrets.token_urlsafe(24),
     'PAPERLESS_DB_PASSWORD': secrets.token_hex(24),
     'PAPERLESS_SECRET_KEY': secrets.token_hex(48),
 }
 lines = path.read_text(encoding='utf-8').splitlines()
 out = []
+seen = set()
 for line in lines:
     if '=' in line and not line.lstrip().startswith('#'):
         key = line.split('=', 1)[0]
         if key in values:
             line = f'{key}={values[key]}'
+            seen.add(key)
     out.append(line)
+for key, value in values.items():
+    if key not in seen:
+        out.append(f'{key}={value}')
 path.write_text('\n'.join(out) + '\n', encoding='utf-8')
 PY
   chmod 600 .env
-  echo "Created .env with random local secrets"
+  echo "Created .env with random local secrets and Local Admin credentials"
 else
   echo "Using existing .env (not overwritten)"
+fi
+
+local_user="$(sed -n 's/^PDFHUB_LOCAL_ADMIN_USERNAME=//p' .env | tail -n1)"
+local_enabled="$(sed -n 's/^PDFHUB_LOCAL_AUTH_ENABLED=//p' .env | tail -n1)"
+if [ "${local_enabled}" != "true" ]; then
+  echo "FIRST-LOCAL FAIL: PDFHUB_LOCAL_AUTH_ENABLED=true is required for first local browser testing" >&2
+  exit 1
+fi
+if [ -z "$(sed -n 's/^PDFHUB_LOCAL_ADMIN_PASSWORD=//p' .env | tail -n1)" ]; then
+  echo "FIRST-LOCAL FAIL: PDFHUB_LOCAL_ADMIN_PASSWORD is empty" >&2
+  exit 1
 fi
 
 printf '\n[2/9] Resolving deterministic dependency locks\n'
@@ -117,5 +136,7 @@ make local-ci-doctor
 
 printf '\nFIRST-LOCAL: PASS\n'
 printf 'Local URL: %s\n' "${base}"
+printf 'Local login username: %s\n' "${local_user:-admin}"
+printf 'Local login password: read PDFHUB_LOCAL_ADMIN_PASSWORD from .env (chmod 600)\n'
 printf 'Verified backup: %s\n' "${backup_dir}"
 printf 'The stack is intentionally left running for manual browser inspection.\n'
