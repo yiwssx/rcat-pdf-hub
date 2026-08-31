@@ -17,6 +17,8 @@ RCAT PDF Hub 0.4.1 must remain **100% free of paid CI/CD, paid runners, paid hos
 - Python, Node and Compose service images are pinned to explicit release baselines. Infrastructure image upgrades are manual developer changes, never automatic dependency updates.
 - S3 mode requires an explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`; the application refuses implicit commercial-cloud fallback.
 - Phase 4 requires a dedicated signed-download secret and the durable webhook dispatcher service.
+- Browser smoke coverage is mandatory for the current Web Console and protects API-key authentication plus core workspace interactions.
+- Optional management services bind to loopback by default; widening `PDFHUB_MANAGEMENT_BIND_HOST` must be an explicit trusted-network decision.
 - Warnings, deprecations and errors are failures.
 - API, Web Console and README release metadata must report 0.4.1 / Phase 4 security maintenance; `PHASE4.md` retains 0.4.0 as the completed feature baseline.
 
@@ -28,6 +30,7 @@ Run on an Internet-connected Linux host with **Python 3.12**, **Node 24/npm**, D
 make validate-policy
 make validate-backend
 make validate-frontend
+make validate-e2e
 make validate-compose
 make validate-runtime
 ```
@@ -38,7 +41,21 @@ Or run everything:
 make validate-free
 ```
 
-`make validate-free` calls `scripts/validate-release-policy.py` as the single policy source of truth, then runs backend, frontend, Compose and runtime acceptance. Policy rules are intentionally not duplicated inside the shell script.
+`make validate-free` calls `scripts/validate-release-policy.py` as the single policy source of truth, then runs backend, frontend, Playwright browser smoke tests, Compose and runtime acceptance. Policy rules are intentionally not duplicated inside the shell script.
+
+The E2E lane uses Playwright with Chromium headless shell and mocks the PDF Hub HTTP API so browser regressions can be caught without changing production data. It validates invalid/valid API-key behavior and exercises Workspace load, preview, PDF job submission/download and file upload. The browser binary is installed automatically by the validation lane. On a fresh Linux host, Playwright system libraries may need a one-time installation after the frontend dependencies are installed, for example on supported Debian/Ubuntu hosts:
+
+```bash
+cd apps/web
+npm install --package-lock=false --no-audit --no-fund
+npx playwright install-deps chromium
+```
+
+The dependency installation above is only host bootstrap; `package-lock.json` must remain untracked. To pre-install just the Chromium headless shell used by the project:
+
+```bash
+make install-e2e-browser
+```
 
 Runtime validation uses an isolated Compose project name (`pdfhub-validation-<pid>`) so it does not tear down or reuse volumes from the production `pdf-hub` project. It also verifies that the dedicated `webhook` dispatcher is running.
 
@@ -59,7 +76,8 @@ Prerequisites:
 - Linux with systemd user services
 - Git
 - Python **3.12**
-- Node **24** + npm
+- Node **24** + npm/npx
+- Playwright-compatible Chromium runtime libraries on the validation host
 - Docker Engine + Docker Compose plugin
 - `flock` (util-linux)
 - `curl`
@@ -128,6 +146,10 @@ Release consistency checks are part of `make validate-policy` / `make validate-f
 - Compose runtime images pinned to explicit release tags
 - no default/recommended paid cloud providers in user-facing configuration/docs
 - explicit self-hosted S3 endpoint guard present
+- Playwright dependency/config/smoke tests present
+- API-key UI validates credentials before setting authenticated state
+- superseded `pdf-hub-console.tsx` remains removed
+- Prometheus, OTLP and bundled Paperless host ports default to `127.0.0.1`
 - local main/PR/Dependabot CI scripts present
 
 ## Production validation
@@ -144,7 +166,8 @@ Before production deployment:
 8. If using webhooks, configure a narrow `PDFHUB_WEBHOOK_ALLOWED_HOSTS`, verify HMAC signatures, simulate an unavailable receiver, confirm retry → `dead`, then replay from Admin.
 9. If using S3 mode, verify the configured self-hosted endpoint and bucket.
 10. If using ClamAV, confirm fail-closed behavior with a safe EICAR acceptance test in a controlled environment.
-11. Use TLS before public Internet exposure and set `PDFHUB_SESSION_COOKIE_SECURE=true`.
-12. Back up PostgreSQL and storage together.
+11. Keep `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` unless Prometheus/OTLP/Paperless must be reachable from a specifically trusted management network.
+12. Use TLS before public Internet exposure and set `PDFHUB_SESSION_COOKIE_SECURE=true`.
+13. Back up PostgreSQL and storage together.
 
 No paid cloud service is required for any validation or deployment step.
