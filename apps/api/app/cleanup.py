@@ -1,12 +1,12 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
-from app.audit import audit_event
+from app.audit import audit_event, prune_audit_files
 from app.config import get_settings
 from app.db import SessionLocal
-from app.models import FileRecord, JobRecord
+from app.models import ArchiveRecord, FileRecord, JobRecord, WebhookDelivery
 from app.storage import delete_previews, delete_stored_name, ensure_storage
 
 settings = get_settings()
@@ -32,6 +32,9 @@ def cleanup_once() -> dict[str, int]:
     removed_bytes = 0
     removed_records = 0
     temporary_files = 0
+    history_jobs = 0
+    history_webhooks = 0
+    history_archives = 0
     now = datetime.now(timezone.utc)
     try:
         protected = _active_input_ids(db)
@@ -47,6 +50,33 @@ def cleanup_once() -> dict[str, int]:
                 removed_bytes += removed
             db.delete(record)
             removed_records += 1
+
+        job_cutoff = now - timedelta(days=settings.job_history_days)
+        result = db.execute(
+            delete(JobRecord).where(
+                JobRecord.status.in_(("completed", "failed")),
+                JobRecord.created_at < job_cutoff,
+            )
+        )
+        history_jobs = int(result.rowcount or 0)
+
+        webhook_cutoff = now - timedelta(days=settings.webhook_history_days)
+        result = db.execute(
+            delete(WebhookDelivery).where(
+                WebhookDelivery.status.in_(("delivered", "dead")),
+                WebhookDelivery.updated_at < webhook_cutoff,
+            )
+        )
+        history_webhooks = int(result.rowcount or 0)
+
+        archive_cutoff = now - timedelta(days=settings.archive_history_days)
+        result = db.execute(
+            delete(ArchiveRecord).where(
+                ArchiveRecord.status.in_(("submitted", "failed")),
+                ArchiveRecord.updated_at < archive_cutoff,
+            )
+        )
+        history_archives = int(result.rowcount or 0)
         db.commit()
 
         temp_cutoff = now - timedelta(hours=settings.cleanup_temporary_hours)
@@ -61,12 +91,17 @@ def cleanup_once() -> dict[str, int]:
             except OSError:
                 continue
 
+        audit_files_removed = prune_audit_files(settings.audit_retention_days)
         result = {
             "expired_records_scanned": len(expired),
             "expired_records_purged": removed_records,
             "files_removed": removed_files,
             "temporary_files_removed": temporary_files,
             "bytes_removed": removed_bytes,
+            "history_jobs_removed": history_jobs,
+            "history_webhooks_removed": history_webhooks,
+            "history_archives_removed": history_archives,
+            "audit_files_removed": audit_files_removed,
         }
         audit_event("retention.cleanup", "cleanup-worker", "storage", None, result)
         return result
