@@ -7,9 +7,7 @@ cd "${ROOT}"
 WARN_RE='(^|[[:space:]])warn(ing)?([[:space:]:]|$)|npm warn|deprecated|deprecationwarning|⚠|##\[warning\]'
 MODE="${1:-all}"
 
-need() {
-  command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
-}
+need() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }; }
 
 check_clean_log() {
   local file="$1"
@@ -21,16 +19,43 @@ check_clean_log() {
 }
 
 require_tool_versions() {
-  need python3
-  need node
-  need npm
-  need npx
+  need python3; need node; need npm; need npx
   python3 - <<'PY'
 import sys
 if sys.version_info[:2] != (3, 12):
-    raise SystemExit(f"Python 3.12 is required to match the production image; found {sys.version.split()[0]}")
+    raise SystemExit(f"Python 3.12 is required to match production; found {sys.version.split()[0]}")
 PY
-  node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
+  node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match production; found ${process.versions.node}`); process.exit(1); }'
+}
+
+require_locks() {
+  [ -s apps/web/package-lock.json ] || { echo "Missing apps/web/package-lock.json; run make generate-locks on Python 3.12/Node 24" >&2; exit 1; }
+  [ -s apps/api/requirements.lock ] || { echo "Missing apps/api/requirements.lock; run make generate-locks on Python 3.12/Node 24" >&2; exit 1; }
+  python3 - <<'PY'
+import json, re
+from pathlib import Path
+package = json.loads(Path('apps/web/package.json').read_text())
+lock = json.loads(Path('apps/web/package-lock.json').read_text())
+assert lock.get('lockfileVersion') == 3, 'npm package-lock v3 is required'
+root = lock.get('packages', {}).get('', {})
+assert root.get('version') == package.get('version'), 'package.json/package-lock root version mismatch'
+for section in ('dependencies', 'devDependencies'):
+    assert root.get(section, {}) == package.get(section, {}), f'{section} differ between package.json and package-lock.json'
+reqs = {}
+for raw in Path('apps/api/requirements.txt').read_text().splitlines():
+    line = raw.strip()
+    if not line or line.startswith('#'): continue
+    m = re.match(r'^([^=<>!~\[]+)(?:\[[^]]+\])?==([^\s]+)$', line)
+    assert m, f'top-level requirement is not exact: {line}'
+    reqs[m.group(1).lower().replace('_','-')] = m.group(2)
+locked = {}
+for raw in Path('apps/api/requirements.lock').read_text().splitlines():
+    if '==' not in raw: continue
+    name, version = raw.split('==', 1)
+    locked[name.lower().replace('_','-')] = version
+for name, version in reqs.items():
+    assert locked.get(name) == version, f'{name} top-level {version} not preserved in requirements.lock ({locked.get(name)})'
+PY
 }
 
 validation_compose_env() {
@@ -48,34 +73,32 @@ validation_compose_env() {
   export NEXT_TELEMETRY_DISABLED=1
 }
 
-policy() {
-  need python3
-  python3 scripts/validate-release-policy.py
-}
+policy() { need python3; require_locks; python3 scripts/validate-release-policy.py; }
 
 operations() {
-  need bash
-  need python3
+  need bash; need python3
   for script in \
     scripts/backup.sh scripts/verify-backup.sh scripts/restore.sh scripts/dr-drill.sh \
     scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
     scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
-    scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh; do
+    scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh \
+    scripts/generate-locks.sh scripts/first-local.sh scripts/merge-pr.sh; do
     bash -n "${script}"
   done
-  python3 -m py_compile scripts/load-smoke.py scripts/validate-release-policy.py scripts/check-direct-dependency.py
+  python3 -m py_compile \
+    scripts/load-smoke.py scripts/pdf-workload-smoke.py scripts/check-production-env.py \
+    scripts/validate-release-policy.py scripts/check-direct-dependency.py ops/alert-sink/server.py
   echo 'operations: PASS'
 }
 
 backend() {
-  require_tool_versions
+  require_tool_versions; require_locks
   local venv log
-  venv="$(mktemp -d)/venv"
-  log="$(mktemp)"
+  venv="$(mktemp -d)/venv"; log="$(mktemp)"
   python3 -m venv "${venv}"
   # shellcheck disable=SC1090
   source "${venv}/bin/activate"
-  python -m pip install --disable-pip-version-check -r apps/api/requirements.txt 2>&1 | tee "${log}"
+  python -m pip install --disable-pip-version-check -r apps/api/requirements.lock 2>&1 | tee "${log}"
   check_clean_log "${log}"
   python -m pip check
   python -W error -c 'import ldap3, pyasn1, PIL'
@@ -98,84 +121,68 @@ PY
 }
 
 frontend() {
-  require_tool_versions
-  local install_log build_log pkg_before
-  install_log="$(mktemp)"
-  build_log="$(mktemp)"
+  require_tool_versions; require_locks
+  local install_log build_log pkg_before lock_before
+  install_log="$(mktemp)"; build_log="$(mktemp)"
   pkg_before="$(sha256sum apps/web/package.json | awk '{print $1}')"
+  lock_before="$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
   (
     cd apps/web
-    rm -f package-lock.json
     NEXT_TELEMETRY_DISABLED=1 NPM_CONFIG_UPDATE_NOTIFIER=false \
-      npm install --package-lock=false --no-audit --no-fund 2>&1 | tee "${install_log}"
+      npm ci --ignore-scripts --no-audit --no-fund 2>&1 | tee "${install_log}"
     npm run typecheck
     mkdir -p .next/cache
     NEXT_TELEMETRY_DISABLED=1 npm run build 2>&1 | tee "${build_log}"
   )
-  check_clean_log "${install_log}"
-  check_clean_log "${build_log}"
-  test ! -e apps/web/package-lock.json
+  check_clean_log "${install_log}"; check_clean_log "${build_log}"
   test "${pkg_before}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
-  git diff --exit-code -- apps/web/package.json apps/web/tsconfig.json
+  test "${lock_before}" = "$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
+  git diff --exit-code -- apps/web/package.json apps/web/package-lock.json apps/web/tsconfig.json
   echo 'frontend: PASS'
 }
 
 e2e() {
-  require_tool_versions
-  local browser_log e2e_log pkg_before browsers_path
-  browser_log="$(mktemp)"
-  e2e_log="$(mktemp)"
-  pkg_before="$(sha256sum apps/web/package.json | awk '{print $1}')"
+  require_tool_versions; require_locks
+  local browser_log e2e_log lock_before browsers_path
+  browser_log="$(mktemp)"; e2e_log="$(mktemp)"
+  lock_before="$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
   browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
   (
     cd apps/web
     PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" npx playwright install --only-shell chromium 2>&1 | tee "${browser_log}"
     PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" NEXT_TELEMETRY_DISABLED=1 npm run test:e2e 2>&1 | tee "${e2e_log}"
   )
-  check_clean_log "${browser_log}"
-  check_clean_log "${e2e_log}"
-  test ! -e apps/web/package-lock.json
-  test "${pkg_before}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
+  check_clean_log "${browser_log}"; check_clean_log "${e2e_log}"
+  test "${lock_before}" = "$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
   echo 'e2e: PASS'
 }
 
 compose_config() {
-  need docker
-  validation_compose_env
+  need docker; validation_compose_env
   local err project
-  err="$(mktemp)"
-  project="pdfhub-validation-$$"
-  docker compose -p "${project}" config >/tmp/pdfhub-compose.out 2>"${err}"
-  test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
-  : >"${err}"
-  docker compose -p "${project}" --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-all.out 2>"${err}"
-  test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
-  : >"${err}"
-  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-nas.out 2>"${err}"
-  test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  err="$(mktemp)"; project="pdfhub-validation-$$"
+  check_compose() {
+    : >"${err}"
+    docker compose -p "${project}" "$@" config >/tmp/pdfhub-compose.out 2>"${err}"
+    test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  }
+  check_compose -f docker-compose.yml
+  check_compose -f docker-compose.yml --profile s3 --profile security --profile observability --profile archive
+  check_compose -f docker-compose.yml -f docker-compose.nas.yml
+  check_compose -f docker-compose.yml -f docker-compose.production.yml
+  check_compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability
   echo 'compose: PASS'
 }
 
 runtime() {
-  need docker
-  need curl
-  require_tool_versions
-  validation_compose_env
+  need docker; need curl; require_tool_versions; require_locks; validation_compose_env
   local build_log up_log service_log stack_e2e_log project browsers_path
-  build_log="$(mktemp)"
-  up_log="$(mktemp)"
-  service_log="$(mktemp)"
-  stack_e2e_log="$(mktemp)"
-  project="pdfhub-validation-$$"
-  browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
+  build_log="$(mktemp)"; up_log="$(mktemp)"; service_log="$(mktemp)"; stack_e2e_log="$(mktemp)"
+  project="pdfhub-validation-$$"; browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
   export PDFHUB_HTTP_PORT=18080
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:${PDFHUB_HTTP_PORT}
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
-
-  dc() {
-    docker compose -p "${project}" "$@"
-  }
-
+  dc() { docker compose -p "${project}" "$@"; }
   cleanup_runtime() {
     dc --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans >/dev/null 2>&1 || true
     rm -rf "${PDFHUB_NAS_PATH}" >/dev/null 2>&1 || true
@@ -187,25 +194,28 @@ runtime() {
   dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee "${up_log}"
   check_clean_log "${up_log}"
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
-  curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
+  ready=0
+  for _ in $(seq 1 60); do
+    if curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null 2>&1; then ready=1; break; fi
+    sleep 1
+  done
+  [ "${ready}" = "1" ] || { echo "runtime readiness failed (including worker readiness)" >&2; exit 1; }
   dc exec -T api python -m pytest -q
   test "$(dc ps --status running webhook --format json | wc -l)" -ge 1
 
   (
     cd apps/web
     PDFHUB_E2E_BASE_URL="http://127.0.0.1:${PDFHUB_HTTP_PORT}" \
-    PDFHUB_E2E_STACK=1 \
-    PDFHUB_E2E_API_KEY="${PDFHUB_ADMIN_API_KEY}" \
-    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" \
-    NEXT_TELEMETRY_DISABLED=1 \
+    PDFHUB_E2E_STACK=1 PDFHUB_E2E_API_KEY="${PDFHUB_ADMIN_API_KEY}" \
+    PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" NEXT_TELEMETRY_DISABLED=1 \
       npm run test:e2e:stack 2>&1 | tee "${stack_e2e_log}"
   )
   check_clean_log "${stack_e2e_log}"
+  python3 scripts/pdf-workload-smoke.py --url "http://127.0.0.1:${PDFHUB_HTTP_PORT}" --api-key "${PDFHUB_ADMIN_API_KEY}" --requests 3 --concurrency 1 --max-error-rate 0 --max-p95-ms 30000
 
   dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
-  cleanup_runtime
-  trap - EXIT
+  cleanup_runtime; trap - EXIT
   echo 'runtime: PASS'
 }
 
