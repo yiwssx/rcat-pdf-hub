@@ -57,9 +57,10 @@ for row in "${rows[@]}"; do
     continue
   fi
 
-  changed="$(gh api --paginate "repos/${repo}/pulls/${pr}/files?per_page=100" --jq '.[].filename')"
-  if [ "${changed}" != "apps/web/package.json" ]; then
-    echo "dependabot: PR #${pr} changes files outside apps/web/package.json; full-validation lane owns it"
+  changed="$(gh api --paginate "repos/${repo}/pulls/${pr}/files?per_page=100" --jq '.[].filename' | LC_ALL=C sort)"
+  expected=$'apps/web/package-lock.json\napps/web/package.json'
+  if [ "${changed}" != "${expected}" ]; then
+    echo "dependabot: PR #${pr} must change package.json + package-lock.json only; full-validation lane owns it"
     continue
   fi
 
@@ -119,7 +120,7 @@ for row in "${rows[@]}"; do
     fi
 
     printf '%s\n' "${base_sha}:${head_sha}" >"${success_file}"
-    post_status "${head_sha}" success "Direct dependency patch passed build and browser smoke"
+    post_status "${head_sha}" success "Direct dependency patch passed locked build and browser smoke"
     cleanup_worktree
   fi
 
