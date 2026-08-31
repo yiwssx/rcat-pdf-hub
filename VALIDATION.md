@@ -1,20 +1,25 @@
-# Validation — Phase 5 zero-cost production gate
+# Validation — 0.5.1 stabilization / correctness gate
 
-RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hosted build minutes and paid cloud-service requirements**.
+RCAT PDF Hub 0.5.1 ต้องคงนโยบาย **zero-cost software/CI/CD** และต้องผ่าน validation บนเครื่อง Linux ขององค์กรก่อน merge เข้า `main`
 
 ## Policy
 
-- No GitHub-hosted Actions workflow is used.
-- Validation runs on institution-owned/local Linux hardware.
-- Normal PRs and nonstandard/security dependency PRs use full `make validate-free` and are never auto-merged by the full-validation lane.
-- The narrow Dependabot auto-merge lane accepts only bot-only direct npm forward patch updates that change exactly `apps/web/package.json`.
-- Direct dependency patches must pass typecheck, production build and Playwright browser smoke before merge.
-- `package-lock.json` remains untracked; validation uses `npm install --package-lock=false` and confirms package metadata is not mutated.
-- Python/Node/container images and security baselines are explicit. Phase 5 uses Next.js `16.3.3` and the reviewed Pillow 12.x floor `>=12.3.0,<13.0.0`.
-- S3 mode requires an explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`.
-- Optional management services bind to loopback by default.
-- Browser regression, operations scripts and production Compose flow are mandatory gates.
-- Warnings and deprecations are treated as validation failures.
+- ไม่มี GitHub-hosted Actions workflow
+- Validation รันบน institution-owned/local Linux hardware
+- Human login กับ machine credential แยกจากกันชัดเจน
+- Local Admin ใช้เฉพาะ first-run/development และ production gate ต้องปฏิเสธหากยังเปิดอยู่
+- Production human login ใช้ OIDC/LDAP ตาม configuration ขององค์กร
+- Service API Key ใช้สำหรับ machine-to-machine integration ไม่ใช่หน้า login ของผู้ใช้
+- Frontend ต้อง commit `package-lock.json` และใช้ `npm ci`
+- Backend ต้อง commit resolved `requirements.lock`
+- Direct Dependabot patch lane ต้องเปลี่ยน **`package.json` + `package-lock.json` เท่านั้น** และ lockfile ต้อง resolve version ที่ขอจริง
+- Python/Node/container images และ security baselines เป็น explicit versions
+- Next.js baseline = `16.3.3`
+- Pillow baseline = `>=12.3.0,<13.0.0`
+- S3 mode ต้องมี explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`
+- Management ports bind loopback โดย default
+- Browser regression, backup/restore/DR, observability และ production Compose flow เป็น mandatory gates
+- Warning/deprecation ใน validation ถือเป็น failure
 
 ## Required host
 
@@ -22,23 +27,35 @@ RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hos
 - Python **3.12**
 - Node **24** + npm/npx
 - Docker Engine + Docker Compose plugin
-- Playwright-compatible Chromium runtime libraries
-- Git, curl, flock
-- GitHub CLI (`gh`) authenticated to the repository for local CI status reporting
+- Playwright-compatible Chromium runtime
+- Git, curl, flock, openssl, make
+- GitHub CLI (`gh`) authenticated to repository
 
-Fresh Debian/Ubuntu Playwright bootstrap, after installing frontend dependencies:
-
-```bash
-cd apps/web
-npm install --package-lock=false --no-audit --no-fund
-npx playwright install-deps chromium
-```
-
-The project installs Chromium headless shell automatically during browser validation. It can also be preinstalled with:
+สำหรับเครื่องที่ยังไม่เคยรันโปรเจกต์ ให้ใช้:
 
 ```bash
-make install-e2e-browser
+git checkout stabilization/0.5.1-correctness
+bash scripts/first-local.sh
 ```
+
+Script นี้สร้าง random Local Admin password, resolve lockfiles, validation, real runtime smoke, backup, DR และ Local CI ตามลำดับ
+
+## Deterministic dependency locks
+
+สร้าง lockfiles ด้วย runtime version ที่ตรง production:
+
+```bash
+make generate-locks
+```
+
+ต้องได้:
+
+```text
+apps/web/package-lock.json
+apps/api/requirements.lock
+```
+
+หลังจากสร้างแล้ว `make validate-free` จะไม่ยอมให้ dependency install แก้ package/lock metadata ระหว่าง validation
 
 ## Validation commands
 
@@ -49,30 +66,80 @@ make validate-backend
 make validate-frontend
 make validate-e2e
 make validate-compose
+make validate-observability
 make validate-runtime
 ```
 
-All gates:
+ทั้งหมด:
 
 ```bash
 make validate-free
 ```
 
-### What each gate proves
+### สิ่งที่แต่ละ gate พิสูจน์
 
-`validate-policy` checks release metadata, frozen/security dependency baselines, zero-cost policy, Phase 5 components, management binding, monitoring rules and CI architecture.
+`validate-policy`
+- release metadata 0.5.1
+- lockfile policy
+- local-auth/production separation
+- stable human principal ownership
+- runtime image baselines
+- management bindings
+- observability/Alertmanager
+- release/merge tooling
 
-`validate-ops` syntax-checks backup/restore/DR/local-CI scripts and compiles Python operator tooling.
+`validate-ops`
+- syntax shell scripts
+- compile Python operator tooling
 
-`validate-backend` creates a clean Python 3.12 environment, installs exact requirements, treats warnings as errors, runs pytest and validates fresh/adopted Alembic migration paths.
+`validate-backend`
+- Python 3.12 environment
+- install จาก `requirements.lock`
+- `pip check`
+- pytest
+- Alembic fresh/adoption migration paths
 
-`validate-frontend` performs warning-free npm install, TypeScript typecheck and production Next.js build while ensuring no lockfile/package mutation.
+`validate-frontend`
+- `npm ci`
+- TypeScript typecheck
+- production Next.js build
+- package.json/package-lock.json ต้องไม่ mutate
 
-`validate-e2e` runs Playwright Chromium against the UI with mocked API responses. Protected mocks require the correct `X-API-Key`, so authentication propagation regressions cannot produce a false green result.
+`validate-e2e`
+- Playwright mocked browser flow
+- หน้า Human Login ไม่มี Service API Key
+- Local username/password reject/accept behavior
+- session workspace
+- preview
+- PDF job
+- download
+- upload
+- 4 tool categories
 
-`validate-compose` validates default, all-profile and NAS Compose configurations.
+`validate-compose`
+- default Compose
+- optional profiles
+- NAS
+- production resource override
+- observability override
 
-`validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview.
+`validate-observability`
+- Prometheus config/rules
+- Alertmanager config
+
+`validate-runtime`
+- isolated `pdfhub-validation-<pid>` Compose project
+- production container builds
+- `/healthz`
+- `/readyz` รวม worker readiness
+- API tests ใน container
+- webhook dispatcher
+- **real Local Human Login ผ่าน browser**
+- upload PNG
+- image-to-PDF ผ่าน RQ worker
+- download PDF
+- preview PDF
+- API-key PDF workload smoke แยกต่างหากเพื่อยืนยัน machine-to-machine path
 
 ## Direct dependency validation
 
@@ -80,20 +147,20 @@ make validate-free
 BASE_REF=origin/main make validate-dependency
 ```
 
-The gate rejects:
+Automatic dependency lane ยอมรับเฉพาะ:
 
-- minor/major version changes
-- added/removed dependency names
-- multiple dependency changes
-- non-`apps/web/package.json` changes
-- package script/metadata drift
-- non-forward patches
+```text
+apps/web/package.json
+apps/web/package-lock.json
+```
 
-An eligible patch must still pass install, typecheck, production build and browser smoke.
+โดยต้องเป็น direct dependency เพียงตัวเดียว, forward patch ใน major/minor เดิม และ `package-lock.json` ต้อง resolve version ใหม่ตรงกับ `package.json`
+
+จากนั้น validation ใช้ `npm ci`, typecheck, production build และ Playwright smoke โดยห้าม package/lock mutate
 
 ## Local CI
 
-Install the systemd user executor:
+ติดตั้ง executor:
 
 ```bash
 make install-local-ci
@@ -101,48 +168,41 @@ make local-ci-status
 make local-ci-doctor
 ```
 
-The installer now requires a reachable Docker daemon plus authenticated `gh` access. This is intentional: if GitHub status reporting is unavailable, PR enforcement must fail visibly instead of silently validating only `main`.
+แต่ละ cycle:
 
-Each cycle:
+1. fetch `origin/main`
+2. validate main ที่เปลี่ยน
+3. บันทึก exact validated main SHA
+4. ตรวจ open non-draft PR
+5. ปฏิเสธ stale PR base
+6. normal PR → full `make validate-free`
+7. eligible Dependabot package+lock patch → dependency lane
+8. post `local-ci/validate-free` หรือ `local-ci/dependency`
+9. recheck main/head SHA ก่อนรับผล
+10. auto-merge เฉพาะ eligible Dependabot patch
 
-1. fetches `origin/main`
-2. runs `make validate-free` when main changes
-3. records the exact fully validated main SHA
-4. checks open non-draft PRs against current main
-5. marks stale PR heads with `local-ci/validate-free = error`
-6. routes normal/nonstandard PRs through full validation
-7. posts `local-ci/validate-free` pending/success/failure/error
-8. routes an eligible Dependabot direct npm patch to the dedicated dependency lane
-9. posts `local-ci/dependency` pending/success/failure/error
-10. rechecks main/head SHA before accepting a result
-11. auto-merges only a validated eligible Dependabot forward patch
-12. writes the most recent cycle timestamp/SHA locally
+Normal PR **ไม่ auto-merge**
 
-Normal PRs are **not auto-merged**.
-
-Diagnostics:
+0.5.1 release PR ต้อง merge ผ่าน:
 
 ```bash
-make local-ci-doctor
-journalctl --user -u rcat-pdf-hub-local-ci.service
+PR=<number> make merge-pr
 ```
 
-`local-ci-doctor` checks tool versions, Docker/Compose, GitHub authentication/repository access, timer state, latest validated main and local-CI commit-status presence on current PR heads.
+`merge-pr` จะยอมทำงานเมื่อ `local-ci/validate-free=success` อยู่บน PR head SHA ปัจจุบันและ base ยังเป็น current `main` เท่านั้น
 
-## Phase 5 operational validation
+## Backup / restore correctness
 
-### Backup integrity
+### Backup
 
 ```bash
 make backup
 BACKUP=./backups/<timestamp> make backup-verify
 ```
 
-A backup includes PostgreSQL custom-format dump plus local/NAS data archive or self-hosted S3 object archive, `manifest.env` and `SHA256SUMS`.
+Production backup ใช้ quiesced mutation-free window เพื่อให้ PostgreSQL metadata และ storage snapshot อยู่ใน consistency boundary เดียวกัน
 
 ### Restore
-
-Restore is destructive and requires explicit acknowledgement:
 
 ```bash
 PDFHUB_RESTORE_CONFIRM=YES \
@@ -150,7 +210,7 @@ BACKUP=./backups/<timestamp> \
 make restore
 ```
 
-The restore gate verifies checksums before replacement, clears only Valkey DB 0 ephemeral RQ state, runs migrations and waits for health/readiness.
+Restore จะตรวจ checksum, restore DB/storage, migration/readiness และตรวจ DB ↔ storage file SHA/size consistency
 
 ### Disaster recovery drill
 
@@ -158,49 +218,53 @@ The restore gate verifies checksums before replacement, clears only Valkey DB 0 
 BACKUP=./backups/<timestamp> make dr-drill
 ```
 
-The drill restores into a disposable isolated Compose project, validates health/readiness, executes a small load smoke and tears the environment down.
+DR drill ใช้ disposable Compose project และต้องทำ real transaction หลัง restore: upload → process PDF → download → preview
 
-### Scheduled backup
+## Monitoring
 
 ```bash
-make install-backup
-make backup-status
+make up-observability
+make validate-observability
 ```
 
-Default schedule is daily at 02:30 with 14-day retention. Operators can set `PDFHUB_BACKUP_ON_CALENDAR`, `PDFHUB_BACKUP_ROOT` and `PDFHUB_BACKUP_RETENTION_DAYS` before installation.
+ประกอบด้วย:
 
-### Monitoring
+- Prometheus
+- alert rules
+- self-hosted Alertmanager
+- local durable alert sink
+- OpenTelemetry Collector
 
-Prometheus loads `ops/prometheus/alerts.yml`. Rules cover:
+Rules ครอบคลุม API availability, 5xx, p95 latency, worker/queue state และ repeated job failures
 
-- API scrape unavailable
-- elevated 5xx ratio
-- high p95 latency
-- queue backlog
-- repeated job failures
+## Load validation
 
-Prometheus rule routing/notification delivery is intentionally infrastructure-controlled; connect it to the institution's chosen internal alert receiver without introducing a commercial-service requirement.
-
-### Load smoke
+Readiness load:
 
 ```bash
 URL=http://localhost:8080 \
+LOAD_PATH=/readyz \
 REQUESTS=100 CONCURRENCY=10 \
-MAX_ERROR_RATE=0.01 MAX_P95_MS=1500 \
 make load-smoke
 ```
 
-The standard-library test reports throughput, error rate and mean/p50/p95/p99 latency and fails when configured thresholds are exceeded.
+PDF transaction load:
+
+```bash
+URL=http://localhost:8080 \
+API_KEY=<service-or-bootstrap-key> \
+make pdf-workload-smoke
+```
 
 ## Release readiness
 
-Code-only gate:
+Code-only:
 
 ```bash
 PDFHUB_RELEASE_MODE=code make release-readiness
 ```
 
-Production gate:
+Production:
 
 ```bash
 BACKUP=./backups/<timestamp> \
@@ -208,17 +272,32 @@ URL=https://pdf.example.org \
 make release-readiness
 ```
 
-Production mode runs full repository validation, local-CI doctor, backup verification, isolated DR drill and target load smoke. `PDFHUB_RELEASE_SKIP_DR=true` exists only for an explicit operator exception; a normal production release should not skip the DR drill.
+Production mode ต้องผ่าน:
 
-## Release 0.5.0 acceptance baseline
+- full repository validation
+- Local CI doctor
+- HTTPS public URL
+- Secure session cookie
+- Local Human Login = **off**
+- non-placeholder secrets
+- backup verification
+- DR drill
+- readiness load smoke
+- real PDF workload smoke
 
-- Phase 5A frontend/auth/management hardening implemented
-- Phase 5B local-CI/status/dependency security hardening implemented
-- Phase 5C backup/restore/DR/alerts/load/release tooling implemented
-- Web Console and FastAPI report `0.5.0`
-- Next.js security baseline = `16.3.3`
-- prior Phase 3/4 feature baselines retained
-- no GitHub-hosted workflow
-- no paid infrastructure requirement
+## 0.5.1 acceptance baseline
 
-No paid cloud service is required for any validation, recovery or deployment step.
+- Local Development login ใช้ username/password จาก `.env`
+- Service API Key ไม่แสดงเป็น human login
+- Production gate ปิด local auth
+- stable OIDC/LDAP tenant ownership
+- deterministic frontend/backend locks
+- worker-aware readiness + stale-job reconciliation
+- atomic quota protection
+- quiesced backup + restore consistency verification
+- real DR PDF transaction
+- Alertmanager notification path
+- production resource isolation
+- Desktop/Mobile tool UI แบ่ง 14 เครื่องมือเป็น 4 กลุ่มและใช้ colorful distinguishable icon system
+- Local CI required status ก่อน merge
+- ไม่มี paid CI/cloud requirement
