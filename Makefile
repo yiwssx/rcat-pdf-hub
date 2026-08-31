@@ -1,28 +1,38 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+BASE_COMPOSE = docker compose -f docker-compose.yml
+PROD_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.production.yml
+OBS_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.observability.yml
+
+.PHONY: up up-production up-nas down down-observability logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke pdf-workload-smoke install-backup uninstall-backup backup-status release-readiness production-env generate-locks first-local merge-pr
 
 up:
-	docker compose up -d --build
+	$(BASE_COMPOSE) up -d --build
+
+up-production:
+	$(PROD_COMPOSE) up -d --build
 
 up-nas:
 	docker compose -f docker-compose.yml -f docker-compose.nas.yml up -d --build
 
 down:
-	docker compose --profile s3 --profile security --profile observability --profile archive down
+	$(BASE_COMPOSE) --profile s3 --profile security --profile observability --profile archive down
+
+down-observability:
+	$(OBS_COMPOSE) --profile observability down
 
 logs:
-	docker compose logs -f --tail=200
+	$(BASE_COMPOSE) logs -f --tail=200
 
 ps:
-	docker compose ps
+	$(BASE_COMPOSE) ps
 
 build:
-	docker compose build
+	$(BASE_COMPOSE) build
 
 config:
-	docker compose config
+	$(BASE_COMPOSE) config
 
 test:
-	docker compose run --rm api python -m pytest -q
+	$(BASE_COMPOSE) run --rm api python -m pytest -q
 
 validate-free:
 	python3 scripts/validate-release-policy.py
@@ -60,6 +70,12 @@ validate-dependency:
 install-e2e-browser:
 	cd apps/web && npx playwright install --only-shell chromium
 
+generate-locks:
+	bash scripts/generate-locks.sh
+
+first-local:
+	bash scripts/first-local.sh
+
 local-ci-cycle:
 	bash scripts/local-ci-cycle.sh
 
@@ -76,6 +92,9 @@ local-ci-status:
 	@systemctl --user status rcat-pdf-hub-local-ci.timer --no-pager || true
 	@systemctl --user status rcat-pdf-hub-local-ci.service --no-pager || true
 
+merge-pr:
+	bash scripts/merge-pr.sh "$${PR:?set PR=<number>}"
+
 backup:
 	bash scripts/backup.sh "$${BACKUP:-}"
 
@@ -89,7 +108,13 @@ dr-drill:
 	bash scripts/dr-drill.sh "$${BACKUP:?set BACKUP=/path/to/backup}"
 
 load-smoke:
-	python3 scripts/load-smoke.py --url "$${URL:?set URL=http://host:port}" --path "$${LOAD_PATH:-/healthz}" --requests "$${REQUESTS:-100}" --concurrency "$${CONCURRENCY:-10}" --max-error-rate "$${MAX_ERROR_RATE:-0.01}" --max-p95-ms "$${MAX_P95_MS:-1500}"
+	python3 scripts/load-smoke.py --url "$${URL:?set URL=http://host:port}" --path "$${LOAD_PATH:-/readyz}" --requests "$${REQUESTS:-100}" --concurrency "$${CONCURRENCY:-10}" --max-error-rate "$${MAX_ERROR_RATE:-0.01}" --max-p95-ms "$${MAX_P95_MS:-1500}"
+
+pdf-workload-smoke:
+	python3 scripts/pdf-workload-smoke.py --url "$${URL:?set URL=http://host:port}" --api-key "$${API_KEY:?set API_KEY=<service-or-admin-key>}" --requests "$${PDF_REQUESTS:-8}" --concurrency "$${PDF_CONCURRENCY:-2}" --max-error-rate "$${PDF_MAX_ERROR_RATE:-0}" --max-p95-ms "$${PDF_MAX_P95_MS:-30000}"
+
+production-env:
+	python3 scripts/check-production-env.py --env-file "$${ENV_FILE:-.env}" --url "$${URL:-}"
 
 install-backup:
 	bash scripts/install-backup-user.sh
@@ -105,25 +130,25 @@ release-readiness:
 	bash scripts/release-readiness.sh
 
 cleanup:
-	docker compose run --rm cleanup python -m app.cleanup
+	$(BASE_COMPOSE) run --rm cleanup python -m app.cleanup
 
 migrate:
-	docker compose run --rm api python -c 'from app.migrate import run_migrations; run_migrations()'
+	$(BASE_COMPOSE) run --rm api python -c 'from app.migrate import run_migrations; run_migrations()'
 
 scale-workers:
-	docker compose up -d --scale worker=$${WORKERS:-4} worker
+	$(PROD_COMPOSE) up -d --scale worker=$${WORKERS:-4} worker
 
 up-s3:
-	docker compose --profile s3 up -d seaweedfs
+	$(BASE_COMPOSE) --profile s3 up -d seaweedfs
 
 up-security:
-	docker compose --profile security up -d clamav
+	$(BASE_COMPOSE) --profile security up -d clamav
 
 up-observability:
-	docker compose --profile observability up -d prometheus otel-collector
+	$(OBS_COMPOSE) --profile observability up -d alert-sink alertmanager prometheus otel-collector
 
 up-archive:
-	docker compose --profile archive up -d paperless-db paperless
+	$(BASE_COMPOSE) --profile archive up -d paperless-db paperless
 
 secrets:
 	@echo "POSTGRES_PASSWORD=$$(openssl rand -hex 24)"
