@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --only-shell chromium"
   },
   "dependencies": {
     "next": "16.3.2",
@@ -14,6 +16,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@types/node": "24.3.3",
     "@types/react": "19.1.11",
     "@types/react-dom": "19.1.11",
