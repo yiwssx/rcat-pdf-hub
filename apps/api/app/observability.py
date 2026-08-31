@@ -8,8 +8,10 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from rq import Worker
 
 from app.config import get_settings
+from app.queue import pdf_queue
 
 settings = get_settings()
 
@@ -28,6 +30,7 @@ FILES = Counter("pdfhub_files_total", "File lifecycle events", ["event", "backen
 MALWARE = Counter("pdfhub_malware_scans_total", "Malware scanning outcomes", ["outcome"])
 ARCHIVE = Counter("pdfhub_archive_submissions_total", "Archive integration submissions", ["integration", "outcome"])
 QUEUE_DEPTH = Gauge("pdfhub_queue_depth", "Current RQ queue depth", ["queue"])
+QUEUE_WORKERS = Gauge("pdfhub_queue_workers", "Registered RQ workers for a queue", ["queue"])
 
 
 def record_job(operation: str, state: str) -> None:
@@ -48,6 +51,19 @@ def record_archive(integration: str, outcome: str) -> None:
 
 def set_queue_depth(queue: str, depth: int) -> None:
     QUEUE_DEPTH.labels(queue=queue).set(depth)
+
+
+def refresh_queue_metrics() -> tuple[int, int]:
+    """Refresh queue gauges from Redis at scrape/readiness time instead of event snapshots."""
+    try:
+        depth = len(pdf_queue)
+        workers = int(Worker.count(queue=pdf_queue))
+    except Exception:
+        depth = -1
+        workers = -1
+    QUEUE_DEPTH.labels(queue=settings.rq_queue).set(depth)
+    QUEUE_WORKERS.labels(queue=settings.rq_queue).set(workers)
+    return depth, workers
 
 
 def _setup_otel(app: FastAPI) -> None:
@@ -79,6 +95,7 @@ def install_observability(app: FastAPI) -> None:
     if settings.prometheus_enabled:
         @app.get("/metrics", include_in_schema=False)
         def metrics():
+            refresh_queue_metrics()
             return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     _setup_otel(app)
