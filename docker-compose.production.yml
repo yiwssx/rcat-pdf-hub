@@ -1,14 +1,28 @@
+x-stabilization-env: &stabilization-env
+  PDFHUB_JOB_HISTORY_DAYS: ${PDFHUB_JOB_HISTORY_DAYS:-30}
+  PDFHUB_WEBHOOK_HISTORY_DAYS: ${PDFHUB_WEBHOOK_HISTORY_DAYS:-30}
+  PDFHUB_ARCHIVE_HISTORY_DAYS: ${PDFHUB_ARCHIVE_HISTORY_DAYS:-90}
+  PDFHUB_AUDIT_RETENTION_DAYS: ${PDFHUB_AUDIT_RETENTION_DAYS:-90}
+
 services:
   api:
+    environment: *stabilization-env
     cpus: ${PDFHUB_API_CPUS:-2.0}
     mem_limit: ${PDFHUB_API_MEMORY_LIMIT:-2g}
     pids_limit: ${PDFHUB_API_PIDS_LIMIT:-256}
 
   worker:
+    environment: *stabilization-env
     cpus: ${PDFHUB_WORKER_CPUS:-2.0}
     mem_limit: ${PDFHUB_WORKER_MEMORY_LIMIT:-3g}
     pids_limit: ${PDFHUB_WORKER_PIDS_LIMIT:-256}
     stop_grace_period: ${PDFHUB_WORKER_STOP_GRACE_PERIOD:-31m}
+
+  cleanup:
+    environment: *stabilization-env
+
+  webhook:
+    environment: *stabilization-env
 
   gotenberg:
     cpus: ${PDFHUB_GOTENBERG_CPUS:-2.0}
