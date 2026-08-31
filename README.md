@@ -89,16 +89,33 @@ URLs:
 - Health: `http://localhost:8080/healthz`
 - Readiness: `http://localhost:8080/readyz`
 
-## UI
+## UI — Colorful Workspace
 
-หน้าหลักแบ่งเครื่องมือ 14 รายการเป็น 4 กลุ่มเพื่อหาได้เร็วขึ้น:
+0.5.1 ใช้ **Colorful Workspace Design System** เป็น visual authority ของทั้งระบบ ไม่ใช้แนว “พื้นขาว + แต้มสี” แบบแยกส่วนอีกต่อไป
 
-- **จัดการหน้าและเอกสาร** — OCR, Merge, Organize, Split, Compress
-- **แปลงไฟล์** — PDF→Image, Image→PDF, PDF/A, Office→PDF
-- **ปรับแต่งเอกสาร** — Watermark, Page number, Stamp
-- **แชร์และจัดเก็บ** — Signed URL, Paperless archive
+หน้าหลักแบ่งเครื่องมือ 14 รายการเป็น 4 กลุ่มสีเพื่อให้แยกงานได้เร็ว:
 
-Desktop ใช้ tool cards หลายคอลัมน์ ส่วน Mobile ย่อเป็น responsive grid + bottom navigation
+- **จัดการหน้าและเอกสาร — violet → pink**: OCR, Merge, Organize, Split, Compress
+- **แปลงไฟล์ — cyan → blue**: PDF→Image, Image→PDF, PDF/A, Office→PDF
+- **ปรับแต่งเอกสาร — orange → pink**: Watermark, Page number, Stamp
+- **แชร์และจัดเก็บ — green → teal**: Signed URL, Paperless archive
+
+Header, Login, Workspace, platform status, tool cards, advanced settings, jobs, Admin และ Mobile navigation ใช้ semantic token/radius/shadow/icon language ชุดเดียวกัน
+
+ไฟล์หลัก:
+
+- `apps/web/app/design-system.css` — visual authority และ semantic tokens
+- `apps/web/app/ui-refresh.css` — structural/auth/icon compatibility เท่านั้น ไม่เป็นเจ้าของสี
+- `UI_UX.md` — กติกา UI/UX และ review checklist
+- `scripts/validate-ui-system.py` — release guardrail
+
+Desktop ใช้ responsive tool cards หลายคอลัมน์ ส่วน Mobile ย่อเป็น 2-column tool grid + bottom navigation โดย touch target หลักไม่ต่ำกว่า 44 px
+
+ตรวจ design system โดยตรง:
+
+```bash
+make validate-ui
+```
 
 ## Service API Keys
 
@@ -151,6 +168,7 @@ Optional ------------> ClamAV / Prometheus / Alertmanager / OTel / Paperless / S
 ## Validation
 
 ```bash
+make validate-ui
 make validate-policy
 make validate-ops
 make validate-backend
@@ -160,6 +178,8 @@ make validate-compose
 make validate-runtime
 make validate-free
 ```
+
+`validate-ui` ถูกเรียกจาก `validate-free` และ `validate-frontend` ด้วย เพื่อป้องกัน stylesheet authority, semantic token และ accessibility contract หลุดจาก release
 
 Production readiness:
 
@@ -192,4 +212,4 @@ make dr-drill
 make local-ci-doctor
 ```
 
-รายละเอียด baseline ก่อนหน้าอยู่ใน `PHASE3.md`, `PHASE4.md`, `PHASE5.md`, `VALIDATION.md` และ `CHANGELOG.md`
+รายละเอียด baseline และนโยบายอยู่ใน `PHASE3.md`, `PHASE4.md`, `PHASE5.md`, `VALIDATION.md`, `UI_UX.md` และ `CHANGELOG.md`
