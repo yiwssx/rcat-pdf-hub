@@ -67,6 +67,9 @@ validation_compose_env() {
   export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
   export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
   export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
+  export PDFHUB_LOCAL_AUTH_ENABLED=true
+  export PDFHUB_LOCAL_ADMIN_USERNAME=admin
+  export PDFHUB_LOCAL_ADMIN_PASSWORD=free-ci-local-password-1234567890
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
   export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
@@ -206,7 +209,9 @@ runtime() {
   (
     cd apps/web
     PDFHUB_E2E_BASE_URL="http://127.0.0.1:${PDFHUB_HTTP_PORT}" \
-    PDFHUB_E2E_STACK=1 PDFHUB_E2E_API_KEY="${PDFHUB_ADMIN_API_KEY}" \
+    PDFHUB_E2E_STACK=1 \
+    PDFHUB_E2E_LOCAL_USER="${PDFHUB_LOCAL_ADMIN_USERNAME}" \
+    PDFHUB_E2E_LOCAL_PASSWORD="${PDFHUB_LOCAL_ADMIN_PASSWORD}" \
     PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" NEXT_TELEMETRY_DISABLED=1 \
       npm run test:e2e:stack 2>&1 | tee "${stack_e2e_log}"
   )
