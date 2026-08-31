@@ -11,6 +11,7 @@ from app.identity import (
     create_session_token,
     public_auth_config,
 )
+from app.principal_id import principal_name_for_identity
 from app.schemas import AuthMeOut, LdapLoginRequest
 from app.security import Principal, get_principal
 
@@ -69,12 +70,13 @@ def oidc_callback(code: str, state: str):
         raise HTTPException(status_code=404, detail="OIDC is disabled")
     try:
         identity, return_to = complete_oidc_callback(code, state)
+        principal_name = principal_name_for_identity(identity)
     except Exception as exc:
         audit_event("auth.oidc_failed", "anonymous", "identity", None, {"stage": "callback", "error": str(exc)[-1000:]})
         raise HTTPException(status_code=401, detail="OIDC authentication failed") from exc
     response = RedirectResponse(return_to, status_code=302)
     _set_session_cookie(response, identity)
-    audit_event("auth.login", identity["name"], "identity", identity["subject"], {"source": "oidc"})
+    audit_event("auth.login", principal_name, "identity", identity["subject"], {"source": "oidc"})
     return response
 
 
@@ -84,13 +86,14 @@ def ldap_login(req: LdapLoginRequest, response: Response):
         raise HTTPException(status_code=404, detail="LDAP is disabled")
     try:
         identity = authenticate_ldap(req.username, req.password)
+        principal_name = principal_name_for_identity(identity)
     except (LDAPException, ValueError) as exc:
         audit_event("auth.ldap_failed", f"ldap:{req.username}", "identity", None, {"error": str(exc)[-500:]})
         raise HTTPException(status_code=401, detail="LDAP authentication failed") from exc
     _set_session_cookie(response, identity)
-    audit_event("auth.login", identity["name"], "identity", identity["subject"], {"source": "ldap"})
+    audit_event("auth.login", principal_name, "identity", identity["subject"], {"source": "ldap"})
     return AuthMeOut(
-        name=identity["name"],
+        name=principal_name,
         display_name=identity.get("display_name"),
         subject=identity.get("subject"),
         scopes=sorted(identity.get("scopes", [])),
