@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Phase 5A hardening
+
+### Fixed
+- Validate Service API keys through `/api/v1/auth/me` before the Web Console enters authenticated state, preventing invalid keys from exposing a misleading connected UI.
+
+### Added
+- Playwright Chromium smoke coverage for invalid/valid API-key login, Workspace load, PDF preview, job submission/download and file upload.
+- `make validate-e2e` and mandatory browser smoke execution inside `make validate-free`.
+- Release-policy assertions that preserve the API-key authentication fix, browser smoke baseline and loopback management bindings.
+
+### Changed
+- Remove the superseded `pdf-hub-console.tsx` implementation and prune legacy Console CSS while retaining shared/Admin primitives.
+- Prometheus, OpenTelemetry collector and bundled Paperless host ports now bind to `127.0.0.1` by default through `PDFHUB_MANAGEMENT_BIND_HOST`; widening access is an explicit trusted-management-network choice.
+
 ## 0.4.1 — 2026-08-25
 
 ### Security
