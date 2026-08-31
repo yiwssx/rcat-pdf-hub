@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import json
 import secrets
 import time
@@ -48,15 +49,34 @@ def identity_from_claims(claims: dict, source: str) -> dict:
     groups = _claim_list(claims.get(settings.oidc_group_claim) or claims.get("groups"))
     is_admin = bool(set(groups) & settings.admin_group_set)
     scopes = {"*"} if is_admin else set(settings.human_scope_set)
-    safe_display = display[:110]
     return {
-        "name": f"user:{safe_display}"[:120],
+        "name": f"identity:{source}",
         "subject": subject,
         "display_name": display,
         "groups": groups,
         "scopes": sorted(scopes),
         "source": source,
+        "issuer": str(claims.get("iss") or ""),
         "is_identity_admin": is_admin,
+    }
+
+
+def authenticate_local(username: str, password: str) -> dict:
+    if not settings.local_auth_enabled:
+        raise ValueError("Local authentication is disabled")
+    candidate_user = username.strip()
+    user_ok = hmac.compare_digest(candidate_user, settings.local_admin_username)
+    password_ok = hmac.compare_digest(password, settings.local_admin_password)
+    if not (user_ok and password_ok):
+        raise ValueError("Invalid local credentials")
+    return {
+        "name": "local-admin",
+        "subject": candidate_user,
+        "display_name": "Local Admin",
+        "groups": ["local-admin"],
+        "scopes": ["*"],
+        "source": "local",
+        "is_identity_admin": True,
     }
 
 
@@ -73,6 +93,7 @@ def create_session_token(identity: dict) -> str:
         "pdfhub_groups": identity.get("groups", []),
         "pdfhub_scopes": identity.get("scopes", []),
         "pdfhub_source": identity.get("source", "session"),
+        "pdfhub_issuer": identity.get("issuer", ""),
         "pdfhub_identity_admin": bool(identity.get("is_identity_admin", False)),
     }
     return jwt.encode(payload, settings.auth_token_secret, algorithm="HS256")
@@ -94,6 +115,7 @@ def decode_session_token(token: str) -> dict:
         "groups": _claim_list(claims.get("pdfhub_groups")),
         "scopes": _claim_list(claims.get("pdfhub_scopes")),
         "source": str(claims.get("pdfhub_source") or "session"),
+        "issuer": str(claims.get("pdfhub_issuer") or ""),
         "is_identity_admin": bool(claims.get("pdfhub_identity_admin", False)),
     }
 
@@ -283,6 +305,7 @@ def authenticate_ldap(username: str, password: str) -> dict:
 def public_auth_config() -> dict:
     return {
         "session_cookie": settings.session_cookie_name,
+        "local": {"enabled": settings.local_auth_enabled},
         "oidc": {
             "enabled": settings.oidc_enabled,
             "issuer": settings.oidc_issuer if settings.oidc_enabled else None,
