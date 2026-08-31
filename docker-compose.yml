@@ -77,6 +77,9 @@ services:
       PDFHUB_SESSION_TTL_MINUTES: ${PDFHUB_SESSION_TTL_MINUTES:-480}
       PDFHUB_HUMAN_SCOPES: ${PDFHUB_HUMAN_SCOPES:-files:read,files:write,jobs:read,pdf:merge,pdf:split,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,archive:paperless}
       PDFHUB_ADMIN_GROUPS: ${PDFHUB_ADMIN_GROUPS:-pdfhub-admins}
+      PDFHUB_LOCAL_AUTH_ENABLED: ${PDFHUB_LOCAL_AUTH_ENABLED:-false}
+      PDFHUB_LOCAL_ADMIN_USERNAME: ${PDFHUB_LOCAL_ADMIN_USERNAME:-admin}
+      PDFHUB_LOCAL_ADMIN_PASSWORD: ${PDFHUB_LOCAL_ADMIN_PASSWORD:-}
       PDFHUB_OIDC_ENABLED: ${PDFHUB_OIDC_ENABLED:-false}
       PDFHUB_OIDC_ISSUER: ${PDFHUB_OIDC_ISSUER:-}
       PDFHUB_OIDC_CLIENT_ID: ${PDFHUB_OIDC_CLIENT_ID:-}
