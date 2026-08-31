@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -39,7 +39,15 @@ def effective_policy(db: Session, service_name: str) -> EffectivePolicy:
     )
 
 
-def _lock_service_policy(db: Session, service_name: str) -> None:
+def _lock_principal_quota(db: Session, service_name: str) -> None:
+    """Serialize quota check+commit for a principal within the current transaction."""
+    bind = db.get_bind()
+    if bind.dialect.name == "postgresql":
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:service_name))"),
+            {"service_name": service_name},
+        )
+        return
     db.execute(
         select(ServicePolicy.service_name)
         .where(ServicePolicy.service_name == service_name)
@@ -76,7 +84,7 @@ def ensure_rate_limit(service_name: str, per_minute: int) -> None:
 def ensure_daily_job_quota(db: Session, service_name: str, daily_limit: int) -> None:
     if daily_limit <= 0:
         return
-    _lock_service_policy(db, service_name)
+    _lock_principal_quota(db, service_name)
     now = datetime.now(timezone.utc)
     start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     count = db.scalar(
@@ -105,7 +113,7 @@ def active_storage_bytes(db: Session, service_name: str) -> int:
 def ensure_storage_quota(db: Session, service_name: str, max_storage_mb: int, incoming_bytes: int) -> None:
     if max_storage_mb <= 0:
         return
-    _lock_service_policy(db, service_name)
+    _lock_principal_quota(db, service_name)
     limit = max_storage_mb * 1024 * 1024
     if active_storage_bytes(db, service_name) + incoming_bytes > limit:
         raise HTTPException(
