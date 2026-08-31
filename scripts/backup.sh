@@ -7,6 +7,7 @@ cd "${ROOT}"
 BACKUP_ROOT="${PDFHUB_BACKUP_ROOT:-${ROOT}/backups}"
 RETENTION_DAYS="${PDFHUB_BACKUP_RETENTION_DAYS:-14}"
 PROJECT="${PDFHUB_COMPOSE_PROJECT:-}"
+COMPOSE_MODE="${PDFHUB_COMPOSE_MODE:-default}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_DIR="${1:-${BACKUP_ROOT}/${STAMP}}"
 
@@ -20,12 +21,13 @@ need git
 
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose plugin is required" >&2; exit 1; }
 
+case "${COMPOSE_MODE}" in default|nas) ;; *) echo "PDFHUB_COMPOSE_MODE must be default or nas" >&2; exit 2 ;; esac
+
 dc() {
-  if [ -n "${PROJECT}" ]; then
-    docker compose -p "${PROJECT}" "$@"
-  else
-    docker compose "$@"
-  fi
+  local args=()
+  if [ "${COMPOSE_MODE}" = "nas" ]; then args+=(-f docker-compose.yml -f docker-compose.nas.yml); fi
+  if [ -n "${PROJECT}" ]; then args+=(-p "${PROJECT}"); fi
+  docker compose "${args[@]}" "$@"
 }
 
 mkdir -p "${BACKUP_DIR}"
@@ -80,10 +82,7 @@ with tarfile.open(fileobj=sys.stdout.buffer, mode="w|gz") as archive:
                 archive.addfile(info, temp)
 ' >"${BACKUP_DIR}/s3-objects.tar.gz"
     ;;
-  *)
-    echo "Unsupported storage backend: ${storage_backend}" >&2
-    exit 1
-    ;;
+  *) echo "Unsupported storage backend: ${storage_backend}" >&2; exit 1 ;;
 esac
 
 cat >"${BACKUP_DIR}/manifest.env" <<EOF
@@ -92,6 +91,7 @@ PDFHUB_BACKUP_CREATED_AT=${STAMP}
 PDFHUB_RELEASE=${release}
 PDFHUB_GIT_SHA=${git_sha}
 PDFHUB_STORAGE_BACKEND=${storage_backend}
+PDFHUB_COMPOSE_MODE=${COMPOSE_MODE}
 EOF
 
 (
