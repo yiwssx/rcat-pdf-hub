@@ -6,13 +6,14 @@ from app.audit import audit_event
 from app.config import get_settings
 from app.identity import (
     authenticate_ldap,
+    authenticate_local,
     build_oidc_authorization_url,
     complete_oidc_callback,
     create_session_token,
     public_auth_config,
 )
 from app.principal_id import principal_name_for_identity
-from app.schemas import AuthMeOut, LdapLoginRequest
+from app.schemas import AuthMeOut, LdapLoginRequest, LocalLoginRequest
 from app.security import Principal, get_principal
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -51,6 +52,29 @@ def auth_config():
 @router.get("/me", response_model=AuthMeOut)
 def me(principal: Principal = Depends(get_principal)):
     return _me(principal)
+
+
+@router.post("/local/login", response_model=AuthMeOut)
+def local_login(req: LocalLoginRequest, response: Response):
+    if not settings.local_auth_enabled:
+        raise HTTPException(status_code=404, detail="Local authentication is disabled")
+    try:
+        identity = authenticate_local(req.username, req.password)
+        principal_name = principal_name_for_identity(identity)
+    except ValueError as exc:
+        audit_event("auth.local_failed", "local:anonymous", "identity", None, {"error": "invalid credentials"})
+        raise HTTPException(status_code=401, detail="Local authentication failed") from exc
+    _set_session_cookie(response, identity)
+    audit_event("auth.login", principal_name, "identity", identity["subject"], {"source": "local"})
+    return AuthMeOut(
+        name=principal_name,
+        display_name=identity.get("display_name"),
+        subject=identity.get("subject"),
+        scopes=sorted(identity.get("scopes", [])),
+        groups=sorted(identity.get("groups", [])),
+        auth_source="local",
+        is_admin=True,
+    )
 
 
 @router.get("/oidc/login")
