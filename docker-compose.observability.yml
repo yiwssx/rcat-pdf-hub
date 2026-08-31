@@ -1,0 +1,38 @@
+services:
+  prometheus:
+    depends_on:
+      alertmanager:
+        condition: service_started
+
+  alertmanager:
+    profiles: ["observability"]
+    image: prom/alertmanager:v0.34.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./ops/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}:${PDFHUB_ALERTMANAGER_PORT:-9093}:9093"
+    restart: unless-stopped
+
+  alert-sink:
+    profiles: ["observability"]
+    image: python:3.12.14-slim-bookworm
+    command: ["python", "/opt/pdfhub-alert-sink/server.py"]
+    environment:
+      PDFHUB_ALERT_SINK_DIR: /data
+    volumes:
+      - ./ops/alert-sink/server.py:/opt/pdfhub-alert-sink/server.py:ro
+      - alert_sink_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  alertmanager_data:
+  alert_sink_data:
