@@ -49,7 +49,7 @@ assert workflow_files == [".github/workflows/dependabot-patch-automerge.yml"], (
 dependency_workflow = read(".github/workflows/dependabot-patch-automerge.yml")
 for required in (
     "pull_request:",
-    "github.actor == 'dependabot[bot]'",
+    "github.event.pull_request.user.login == 'dependabot[bot]'",
     "contents: read",
     "pull-requests: write",
     "check-direct-dependency.py",
