@@ -156,11 +156,11 @@ test("connects with a valid key and propagates auth through preview, job, downlo
   await expect(page.locator(".badge.completed")).toContainText("100%");
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "ดาวน์โหลด" }).click();
+  await page.getByRole("button", { name: "ดาวน์โหลด", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain("pdfhub-file-output-1");
 
   await page.locator("#files").setInputFiles({ name: "scan.png", mimeType: "image/png", buffer: Buffer.from([1, 2, 3]) });
   await expect(page.getByText("2 ไฟล์", { exact: true })).toBeVisible();
-  await expect(page.getByText("scan.png", { exact: true })).toBeVisible();
+  await expect(page.locator("strong", { hasText: /^scan\.png$/ })).toBeVisible();
 });
