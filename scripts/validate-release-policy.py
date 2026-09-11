@@ -48,7 +48,7 @@ assert workflow_files == [".github/workflows/dependabot-patch-automerge.yml"], (
 )
 dependency_workflow = read(".github/workflows/dependabot-patch-automerge.yml")
 for required in (
-    "pull_request_target:",
+    "pull_request:",
     "github.actor == 'dependabot[bot]'",
     "contents: read",
     "pull-requests: write",
@@ -57,6 +57,7 @@ for required in (
     "merge_method=squash",
 ):
     assert required in dependency_workflow, f"Dependabot workflow missing guard: {required}"
+assert "pull_request_target:" not in dependency_workflow, "Dependabot merge workflow must not use pull_request_target"
 
 # Version-update automation remains direct npm patch-only. Security/nonstandard PRs use full validation.
 dependabot = read(".github/dependabot.yml")
