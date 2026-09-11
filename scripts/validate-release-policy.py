@@ -7,7 +7,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CURRENT_RELEASE = "0.5.0"
-NEXT_SECURITY_BASELINE = "16.3.3"
+NEXT_SECURITY_MIN = (16, 3, 3)
+NEXT_SECURITY_MAX_EXCLUSIVE = (16, 4, 0)
 PILLOW_MIN = (12, 3, 0)
 PILLOW_MAX_EXCLUSIVE = (13, 0, 0)
 
@@ -26,12 +27,36 @@ def pinned_requirement_version(requirements: str, package: str) -> tuple[int, in
     return tuple(int(part) for part in match.groups())
 
 
-# Zero-cost CI policy: no GitHub-hosted workflow can be introduced accidentally.
+def semver_version(value: str, label: str) -> tuple[int, int, int]:
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", value)
+    assert match, f"{label} must be exact x.y.z: {value}"
+    return tuple(int(part) for part in match.groups())
+
+
+# Zero-cost CI policy: this public repository may use one narrow GitHub-hosted
+# workflow for Dependabot patch validation/merge. Full validation remains local.
 workflow_dir = ROOT / ".github" / "workflows"
-workflow_files = []
+workflow_files: list[str] = []
 if workflow_dir.exists():
-    workflow_files = [p for p in workflow_dir.rglob("*") if p.suffix in {".yml", ".yaml"}]
-assert not workflow_files, f"GitHub Actions workflows are forbidden by zero-cost policy: {workflow_files}"
+    workflow_files = sorted(
+        p.relative_to(ROOT).as_posix()
+        for p in workflow_dir.rglob("*")
+        if p.suffix in {".yml", ".yaml"}
+    )
+assert workflow_files == [".github/workflows/dependabot-patch-automerge.yml"], (
+    f"Only the reviewed Dependabot patch workflow is allowed: {workflow_files}"
+)
+dependency_workflow = read(".github/workflows/dependabot-patch-automerge.yml")
+for required in (
+    "pull_request_target:",
+    "github.actor == 'dependabot[bot]'",
+    "contents: read",
+    "pull-requests: write",
+    "check-direct-dependency.py",
+    "validate-direct-dependency.sh",
+    "merge_method=squash",
+):
+    assert required in dependency_workflow, f"Dependabot workflow missing guard: {required}"
 
 # Version-update automation remains direct npm patch-only. Security/nonstandard PRs use full validation.
 dependabot = read(".github/dependabot.yml")
@@ -39,6 +64,8 @@ assert len(re.findall(r"^\s*-\s+package-ecosystem:", dependabot, flags=re.M)) ==
 assert re.search(r"^\s*-\s+package-ecosystem:\s*npm\s*$", dependabot, flags=re.M)
 assert re.search(r"^\s+directory:\s*/apps/web\s*$", dependabot, flags=re.M)
 assert re.search(r"^\s+-\s+dependency-type:\s*direct\s*$", dependabot, flags=re.M)
+assert re.search(r"^\s+open-pull-requests-limit:\s*1\s*$", dependabot, flags=re.M)
+assert re.search(r"^\s+interval:\s*daily\s*$", dependabot, flags=re.M)
 assert "version-update:semver-minor" in dependabot
 assert "version-update:semver-major" in dependabot
 for forbidden in ("package-ecosystem: pip", "package-ecosystem: docker", "package-ecosystem: github-actions"):
@@ -49,7 +76,11 @@ assert package["version"] == CURRENT_RELEASE
 for section in ("dependencies", "devDependencies"):
     for name, version in package.get(section, {}).items():
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), f"{name} must be exact x.y.z: {version}"
-assert package["dependencies"].get("next") == NEXT_SECURITY_BASELINE, "Next.js must remain on the reviewed Phase 5 security baseline"
+next_version = semver_version(package["dependencies"].get("next", ""), "Next.js")
+assert NEXT_SECURITY_MIN <= next_version < NEXT_SECURITY_MAX_EXCLUSIVE, (
+    "Next.js must stay on the reviewed 16.3.x patch line "
+    f">={'.'.join(map(str, NEXT_SECURITY_MIN))}; found {'.'.join(map(str, next_version))}"
+)
 assert "@playwright/test" in package.get("devDependencies", {}), "Playwright smoke coverage is required"
 assert package.get("scripts", {}).get("test:e2e") == "playwright test tests/e2e/pdf-hub.smoke.spec.ts"
 assert package.get("scripts", {}).get("test:e2e:stack") == "playwright test tests/e2e/pdf-hub.stack.spec.ts"
