@@ -1,0 +1,84 @@
+name: Dependabot patch auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: dependabot-patch-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Check out trusted base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch Dependabot head without executing it
+        run: |
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head:refs/remotes/origin/dependabot-pr"
+          test "$(git rev-parse refs/remotes/origin/dependabot-pr)" = "${HEAD_SHA}"
+
+      - name: Verify narrow direct patch policy
+        run: python3 scripts/check-direct-dependency.py "${BASE_SHA}" "${HEAD_SHA}"
+
+      - name: Materialize only the verified package manifest
+        run: |
+          git show "${HEAD_SHA}:apps/web/package.json" > apps/web/package.json
+          git config user.name "dependabot-validation"
+          git config user.email "dependabot-validation@users.noreply.github.com"
+          git add apps/web/package.json
+          git commit -m "test: materialize verified Dependabot patch"
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate dependency patch
+        run: bash scripts/validate-direct-dependency.sh "${BASE_SHA}"
+
+  merge:
+    needs: validate
+    if: needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Squash-merge unchanged validated patch
+        run: |
+          current_main="$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')"
+          current_head="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+
+          if [ "${current_main}" != "${BASE_SHA}" ]; then
+            echo "main moved after validation; refusing stale merge"
+            exit 1
+          fi
+          if [ "${current_head}" != "${HEAD_SHA}" ]; then
+            echo "PR head moved after validation; refusing stale merge"
+            exit 1
+          fi
+
+          result="$(gh api -X PUT "repos/${REPO}/pulls/${PR_NUMBER}/merge" \
+            -f merge_method=squash \
+            -f sha="${HEAD_SHA}")"
+          test "$(jq -r '.merged' <<<"${result}")" = "true"
