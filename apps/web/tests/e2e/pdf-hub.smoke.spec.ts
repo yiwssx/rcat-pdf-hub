@@ -146,7 +146,7 @@ test("connects with a valid key and propagates auth through preview, job, downlo
 
   await expect(page.getByText("Smoke Service")).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
-  await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
+  await expect(page.locator("strong", { hasText: /^example\.pdf$/ })).toBeVisible();
 
   await page.getByRole("button", { name: "ดูตัวอย่าง PDF" }).click();
   await expect(page.getByRole("img", { name: "Preview page 1" })).toBeVisible();
