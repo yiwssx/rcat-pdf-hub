@@ -1,58 +1,58 @@
 # RCAT PDF Hub
 
-ศูนย์กลางประมวลผล PDF แบบ **self-hosted / API-first** สำหรับให้หลายระบบใช้ PDF infrastructure ชุดเดียว โดยไม่ต้องติดตั้ง engine PDF ซ้ำในทุกโปรเจกต์
+A **self-hosted, API-first** PDF processing hub that lets multiple systems share a single PDF infrastructure stack without installing duplicate PDF engines in every project.
 
-> Status: **0.5.0 — Phase 5 production maturity**
-> Deployment target: Docker Compose บนเครื่องขององค์กร รองรับ local volume, NAS และ self-hosted S3-compatible storage
-> Cost policy: **zero-cost software/CI/CD** — ไม่พึ่ง paid runner, paid CI/CD หรือ paid cloud service
+> Status: **0.5.0 — Phase 5 production maturity**  
+> Deployment target: Docker Compose on institution-owned hardware with local volumes, NAS, or self-hosted S3-compatible storage  
+> Cost policy: **zero-cost software/CI/CD** — no paid runners, paid CI/CD, or paid cloud services are required
 
-## ความสามารถหลัก
+## Core capabilities
 
 ### PDF & media processing
 
-- รวม / แยก / เลือก / หมุน PDF — qpdf
-- บีบอัด — Ghostscript
-- OCR ไทย + อังกฤษ — OCRmyPDF + Tesseract `tha+eng`
+- Merge / split / select / rotate PDFs — qpdf
+- Compression — Ghostscript
+- Thai + English OCR — OCRmyPDF + Tesseract `tha+eng`
 - PDF/A-2
 - Word / Excel / PowerPoint / LibreOffice-compatible → PDF — Gotenberg
-- Watermark ภาษาไทย — pypdf + ReportLab + Noto Sans Thai
-- เลขหน้าและ PDF Stamp
-- Preview PDF → PNG — Poppler
-- JPEG / PNG / WebP / TIFF / BMP หลายไฟล์ → PDF
-- PDF → PNG/JPEG หลายหน้าเป็น ZIP
+- Thai text watermarks — pypdf + ReportLab + Noto Sans Thai
+- Page numbering and PDF stamps
+- PDF preview → PNG — Poppler
+- Batch JPEG / PNG / WebP / TIFF / BMP → PDF
+- Multi-page PDF → PNG/JPEG ZIP archive
 
 ### Platform / security
 
-- FastAPI + Next.js Web Console ผ่าน Caddy
+- FastAPI + Next.js Web Console behind Caddy
 - PostgreSQL metadata / job history
 - Valkey + RQ asynchronous processing
-- Service API Key + scopes + revoke + tenant/service isolation
-- OIDC Authorization Code + PKCE และ LDAP/Active Directory session
-- Per-service rate limit, daily job quota และ storage quota
-- HMAC signed short-lived download URL
+- Service API keys + scopes + revocation + tenant/service isolation
+- OIDC Authorization Code + PKCE and LDAP/Active Directory sessions
+- Per-service rate limits, daily job quotas, and storage quotas
+- HMAC-signed short-lived download URLs
 - Durable webhook retry / dead-letter queue / admin replay
 - JSONL append-only audit trail
 - ClamAV fail-closed scanning
 - Local / NAS / explicit self-hosted S3-compatible storage
 - Prometheus metrics + alert rules + OpenTelemetry OTLP tracing
 - Paperless-ngx archive integration
-- Alembic migration, `/healthz`, `/readyz`
+- Alembic migrations, `/healthz`, and `/readyz`
 
 ### Phase 5 production maturity
 
-- API key ถูกตรวจผ่าน `/api/v1/auth/me` ก่อน Web Console เปิด authenticated workspace
-- Playwright browser regression ทั้ง mocked API และ production Compose stack
+- API keys are validated through `/api/v1/auth/me` before the Web Console opens an authenticated workspace
+- Playwright browser regression coverage for both mocked APIs and the production Compose stack
 - Next.js security baseline `16.3.3`
-- Optional management ports bind `127.0.0.1` โดย default
-- Local CI มี visible commit status ทั้ง full-validation และ direct dependency lane
-- `make local-ci-doctor` ตรวจ health ของ executor และ GitHub status reporting
-- PostgreSQL + storage backup พร้อม manifest และ SHA-256 integrity
-- guarded restore + isolated disaster-recovery drill
-- Prometheus alert rules สำหรับ availability, 5xx, latency, queue backlog และ job failure
-- dependency-free load/latency smoke ที่วัด p50/p95/p99
-- unified `make release-readiness` production gate
+- Optional management ports bind to `127.0.0.1` by default
+- Local CI exposes visible commit statuses for both full-validation and direct-dependency lanes
+- `make local-ci-doctor` checks executor health and GitHub status reporting
+- PostgreSQL + storage backups with manifests and SHA-256 integrity verification
+- Guarded restore + isolated disaster-recovery drill
+- Prometheus alert rules for availability, 5xx errors, latency, queue backlog, and job failures
+- Dependency-free load/latency smoke test reporting p50/p95/p99
+- Unified `make release-readiness` production gate
 
-รายละเอียด milestone ดู `PHASE3.md`, `PHASE4.md` และ `PHASE5.md`
+See `PHASE3.md`, `PHASE4.md`, and `PHASE5.md` for milestone details.
 
 ## Architecture
 
@@ -80,21 +80,21 @@ Webhook Dispatcher --> retry / dead-letter delivery
 Optional ------------> ClamAV / Prometheus / OTel / Paperless / SeaweedFS
 ```
 
-Gotenberg, PostgreSQL, Valkey, ClamAV และ object storage ไม่ควร publish ตรงสู่ Internet ทุก request ภายนอกควรผ่าน PDF Hub API/Caddy ก่อน
+Gotenberg, PostgreSQL, Valkey, ClamAV, and object storage should not be published directly to the Internet. External requests should pass through the PDF Hub API/Caddy first.
 
 ## Quick start
 
-ต้องมี Docker Engine + Docker Compose plugin แนะนำ RAM **8 GB** หากใช้ OCR/Office พร้อมกันหลายงาน
+Requirements: Docker Engine + Docker Compose plugin. **8 GB RAM** is recommended when multiple OCR/Office jobs may run concurrently.
 
 ```bash
 cp .env.example .env
 make secrets
-# นำ secret ที่ได้ไปแทน placeholder ใน .env
+# Replace the placeholders in .env with the generated secrets.
 make config
 make up
 ```
 
-เปิด:
+Open:
 
 - Web Console: `http://SERVER_IP:8080`
 - Swagger: `http://SERVER_IP:8080/docs`
@@ -106,13 +106,13 @@ make ps
 make logs
 ```
 
-## Authentication / Service isolation
+## Authentication / service isolation
 
-`PDFHUB_ADMIN_API_KEY` เป็น bootstrap/break-glass key ที่มี scope `*` ควรใช้เฉพาะงานผู้ดูแลและไม่ฝังใน application
+`PDFHUB_ADMIN_API_KEY` is a bootstrap/break-glass key with `*` scope. Use it only for administrative operations and never embed it in an application.
 
-ระบบรองรับ machine-to-machine API key และ human login ผ่าน OIDC/LDAP การอนุญาต admin, scopes, quota และ service isolation ถูกบังคับที่ API layer ซึ่งเป็น authoritative authorization boundary
+The platform supports machine-to-machine API keys and human login through OIDC/LDAP. Admin authorization, scopes, quotas, and service isolation are enforced at the API layer, which is the authoritative authorization boundary.
 
-ตัวอย่างสร้าง service key:
+Example: create a service key:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/admin/api-keys \
@@ -128,7 +128,7 @@ curl -X POST http://localhost:8080/api/v1/admin/api-keys \
   }'
 ```
 
-plaintext API key (`pdfh_...`) ถูกคืนครั้งเดียว จากนั้นฐานข้อมูลเก็บเฉพาะ hash ที่ผสม server-side pepper
+The plaintext API key (`pdfh_...`) is returned only once. The database stores only a hash combined with a server-side pepper.
 
 ## Core API
 
@@ -157,13 +157,13 @@ plaintext API key (`pdfh_...`) ถูกคืนครั้งเดียว 
 | GET / POST | `/api/v1/admin/webhook-deliveries...` | `admin:keys` |
 | GET | `/api/v1/admin/audit` | `admin:keys` |
 
-รายละเอียด schema ที่แม่นที่สุดดูจาก Swagger `/docs`
+For the most accurate schema, use Swagger at `/docs`.
 
 ## Storage
 
-Default คือ local storage และสามารถใช้ NAS ผ่าน `docker-compose.nas.yml`
+Local storage is the default. NAS storage is supported through `docker-compose.nas.yml`.
 
-S3-compatible mode บังคับ `PDFHUB_S3_ENDPOINT_URL` อย่างชัดเจน เพื่อป้องกัน implicit fallback ไปยัง commercial endpoint โดยไม่ได้ตั้งใจ ตัวอย่าง bundled self-hosted target:
+S3-compatible mode requires an explicit `PDFHUB_S3_ENDPOINT_URL` to prevent unintended fallback to a commercial endpoint. A bundled self-hosted target is available:
 
 ```bash
 make up-s3
@@ -187,13 +187,13 @@ make up-archive         # Paperless-ngx
 make up-s3              # SeaweedFS
 ```
 
-Management ports ของ Prometheus, OTLP และ Paperless bind ที่ `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` โดย default หากต้องเปิดให้ management network อื่นเข้าถึง ให้เปลี่ยนเป็น trusted interface/IP โดยตั้งใจ
+Prometheus, OTLP, and Paperless management ports bind to `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` by default. If another management network needs access, change this value deliberately to a trusted interface/IP.
 
-Prometheus โหลด rules จาก `ops/prometheus/alerts.yml`; rule routing/notification destination เป็นการตั้งค่าของผู้ดูแล infrastructure ตามระบบแจ้งเตือนภายในองค์กร
+Prometheus loads rules from `ops/prometheus/alerts.yml`. Rule routing and notification destinations are infrastructure-level settings controlled by the operator and should point to the institution's chosen internal alerting system.
 
 ## Validation / local CI
 
-Development baseline: Python **3.12**, Node **24**, Docker Engine + Compose plugin และ Playwright-compatible Chromium libraries
+Development baseline: Python **3.12**, Node **24**, Docker Engine + Compose plugin, and Playwright-compatible Chromium libraries.
 
 ```bash
 make validate-policy
@@ -203,15 +203,15 @@ make validate-frontend
 make validate-e2e
 make validate-compose
 make validate-runtime
-# ทั้งหมด
+# Run all validation gates.
 make validate-free
 ```
 
-`validate-runtime` รวม production-stack browser flow ผ่าน Caddy → production Next.js → real FastAPI → worker/storage
+`validate-runtime` includes a production-stack browser flow through Caddy → production Next.js → real FastAPI → worker/storage.
 
-Warnings และ deprecations ถือเป็น failure
+Warnings and deprecations are treated as failures.
 
-ติดตั้ง local polling executor บนเครื่อง Linux ขององค์กร:
+Install the local polling executor on institution-owned Linux hardware:
 
 ```bash
 make install-local-ci
@@ -219,27 +219,27 @@ make local-ci-status
 make local-ci-doctor
 ```
 
-Local CI ต้องมี `gh` CLI ที่ authenticate และเข้าถึง repository ได้ เพื่อโพสต์ `local-ci/validate-free` และ `local-ci/dependency` commit status; หาก authentication ใช้งานไม่ได้ executor จะ fail แบบมองเห็นได้แทนการข้าม PR validation เงียบ ๆ
+Local CI requires the `gh` CLI to be authenticated and authorized for the repository so it can publish `local-ci/validate-free` and `local-ci/dependency` commit statuses. If authentication is unavailable, the executor fails visibly instead of silently skipping PR validation.
 
-Direct Dependabot npm forward-patch lane ถูกจำกัดเฉพาะ bot-only PR ที่เปลี่ยน `apps/web/package.json` หนึ่งไฟล์ และต้องผ่าน typecheck, production build และ browser smoke ก่อน squash merge ส่วน PR อื่นใช้ full `make validate-free` และไม่ auto-merge
+The direct Dependabot npm forward-patch lane is restricted to bot-only PRs that modify exactly one file, `apps/web/package.json`, and must pass typecheck, production build, and browser smoke before squash merge. All other PRs use full `make validate-free` validation and are not auto-merged.
 
 ## Backup / restore / disaster recovery
 
-สร้าง consistent backup ของ PostgreSQL + storage:
+Create a consistent backup of PostgreSQL + storage:
 
 ```bash
 make backup
 ```
 
-Backup ถูกเก็บใต้ `PDFHUB_BACKUP_ROOT` (default `./backups`) พร้อม `manifest.env` และ `SHA256SUMS`; รองรับ local/NAS และ self-hosted S3-compatible storage
+Backups are stored under `PDFHUB_BACKUP_ROOT` (default `./backups`) with `manifest.env` and `SHA256SUMS`. Local/NAS and self-hosted S3-compatible storage are supported.
 
-ตรวจ backup:
+Verify a backup:
 
 ```bash
 BACKUP=./backups/20260831T120000Z make backup-verify
 ```
 
-Restore เป็น destructive operation และต้องยืนยัน explicit:
+Restore is destructive and requires explicit confirmation:
 
 ```bash
 PDFHUB_RESTORE_CONFIRM=YES \
@@ -247,26 +247,26 @@ BACKUP=./backups/20260831T120000Z \
 make restore
 ```
 
-หลัง restore ระบบ flush เฉพาะ Valkey DB 0 ซึ่งเป็น ephemeral RQ state แล้วรัน migration และ readiness check เพื่อป้องกัน queued job เก่าชี้ metadata/storage คนละ snapshot
+After restore, the system flushes only Valkey DB 0, which contains ephemeral RQ state, then runs migrations and readiness checks. This prevents stale queued jobs from pointing to mismatched metadata/storage snapshots.
 
-ทดสอบ disaster recovery แบบ isolated Compose project โดยไม่แตะ production project:
+Run a disaster-recovery test in an isolated Compose project without touching the production project:
 
 ```bash
 BACKUP=./backups/20260831T120000Z make dr-drill
 ```
 
-ติดตั้ง daily backup timer แบบ systemd user service:
+Install the daily backup timer as a systemd user service:
 
 ```bash
 make install-backup
 make backup-status
 ```
 
-Default schedule 02:30 และ retention 14 วัน ปรับด้วย `PDFHUB_BACKUP_ON_CALENDAR`, `PDFHUB_BACKUP_ROOT`, `PDFHUB_BACKUP_RETENTION_DAYS`
+The default schedule is 02:30 with 14-day retention. Configure it with `PDFHUB_BACKUP_ON_CALENDAR`, `PDFHUB_BACKUP_ROOT`, and `PDFHUB_BACKUP_RETENTION_DAYS`.
 
 ## Load / release readiness
 
-Load smoke แบบไม่เพิ่ม Python dependency:
+Run the load smoke test without adding a Python dependency:
 
 ```bash
 URL=http://localhost:8080 \
@@ -281,7 +281,7 @@ Code-only release gate:
 PDFHUB_RELEASE_MODE=code make release-readiness
 ```
 
-Production gate ต้องมี backup ที่ตรวจได้และ deployment URL; default จะทำ DR drill ด้วย:
+The production gate requires a verifiable backup and a deployment URL. It runs a DR drill by default:
 
 ```bash
 BACKUP=./backups/20260831T120000Z \
@@ -291,14 +291,14 @@ make release-readiness
 
 ## Production checklist
 
-- ใช้ TLS/domain จริง และ `PDFHUB_SESSION_COOKIE_SECURE=true`
-- สร้าง secret จริงด้วย `make secrets`; ห้ามใช้ example/default secret
-- เปิด ClamAV fail-closed สำหรับไฟล์จากภายนอก
-- จำกัด `PDFHUB_WEBHOOK_ALLOWED_HOSTS`
-- คง management ports บน loopback/trusted management network
-- เปิด backup timer และทดสอบ restore/DR เป็นระยะ
-- ตรวจ Prometheus alerts และเชื่อม rule routing เข้าระบบแจ้งเตือนภายในที่เลือกใช้
-- รัน `make release-readiness` ก่อน production release สำคัญ
+- Use a real TLS/domain configuration and set `PDFHUB_SESSION_COOKIE_SECURE=true`
+- Generate production secrets with `make secrets`; never use example/default secrets
+- Enable ClamAV fail-closed scanning for externally supplied files
+- Restrict `PDFHUB_WEBHOOK_ALLOWED_HOSTS`
+- Keep management ports on loopback or a trusted management network
+- Enable the backup timer and test restore/DR periodically
+- Review Prometheus alerts and connect rule routing to the selected internal alerting system
+- Run `make release-readiness` before significant production releases
 
 ## Phase completion
 
@@ -310,4 +310,4 @@ make release-readiness
 
 ## License
 
-MIT สำหรับ source code ใน repository นี้ ดู `LICENSE`; dependencies ใช้ license ของ upstream
+MIT applies to source code in this repository. See `LICENSE`; dependencies remain under their respective upstream licenses.
