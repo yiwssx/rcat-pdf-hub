@@ -4,19 +4,20 @@ RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hos
 
 ## Policy
 
-- No GitHub-hosted Actions workflow is used.
-- Validation runs on institution-owned/local Linux hardware.
-- Normal PRs and nonstandard/security dependency PRs use full `make validate-free` and are never auto-merged by the full-validation lane.
-- The narrow Dependabot auto-merge lane accepts only bot-only direct npm forward patch updates that change exactly `apps/web/package.json`.
-- Direct dependency patches must pass typecheck, production build and Playwright browser smoke before merge.
+- Standard application PRs use full `make validate-free` on institution-owned/local Linux hardware.
+- GitHub-hosted Actions are limited to two guarded Dependabot workflows in this public repository: one npm patch lane and one Python security-validation lane.
+- The narrow Dependabot npm auto-merge lane runs only when `apps/web/package.json` changes, accepts only bot-only direct forward patch updates, and revalidates the exact base/head before squash merge.
+- A Dependabot Python security PR that changes exactly one existing exact pin in `apps/api/requirements.txt` is validated by full `make validate-free` on a read-only hosted runner. The workflow materializes only the verified requirements manifest onto trusted base code and never auto-merges.
+- Any other nonstandard/security dependency PR remains owned by the local full-validation lane and is never auto-merged.
+- Direct npm dependency patches must pass typecheck, production build and Playwright browser smoke before merge.
 - `package-lock.json` remains untracked; validation uses `npm install --package-lock=false` and confirms package metadata is not mutated.
-- Python/Node/container images and security baselines are explicit. Phase 5 uses Next.js `16.3.3` and the reviewed Pillow 12.x floor `>=12.3.0,<13.0.0`.
+- Python/Node/container images and security baselines are explicit. Phase 5 uses the reviewed Next.js `16.3.x` security line and the reviewed Pillow 12.x floor `>=12.3.0,<13.0.0`.
 - S3 mode requires an explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`.
 - Optional management services bind to loopback by default.
 - Browser regression, operations scripts and production Compose flow are mandatory gates.
 - Warnings and deprecations are treated as validation failures.
 
-## Required host
+## Required local host
 
 - Linux
 - Python **3.12**
@@ -74,7 +75,7 @@ make validate-free
 
 `validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview.
 
-## Direct dependency validation
+## Direct npm dependency validation
 
 ```bash
 BASE_REF=origin/main make validate-dependency
@@ -91,6 +92,19 @@ The gate rejects:
 
 An eligible patch must still pass install, typecheck, production build and browser smoke.
 
+## Python security dependency validation
+
+The hosted Python security lane is intentionally narrower than a normal full PR workflow. Before any PR-supplied dependency is installed, it checks that:
+
+- the author is `dependabot[bot]`
+- the base branch is `main`
+- the only changed file is `apps/api/requirements.txt`
+- exactly one existing `name[extras]==x.y.z` pin advances
+- no dependency name or extras set changes
+- the raw manifest diff contains only the verified removed and added pin
+
+The workflow then checks out trusted base code, materializes only the verified `requirements.txt`, sets up Python 3.12 and Node 24, and runs `make validate-free`. It has `contents: read` only and contains no merge job.
+
 ## Local CI
 
 Install the systemd user executor:
@@ -101,24 +115,25 @@ make local-ci-status
 make local-ci-doctor
 ```
 
-The installer now requires a reachable Docker daemon plus authenticated `gh` access. This is intentional: if GitHub status reporting is unavailable, PR enforcement must fail visibly instead of silently validating only `main`.
+The installer requires a reachable Docker daemon plus authenticated `gh` access. This is intentional: if GitHub status reporting is unavailable, PR enforcement must fail visibly instead of silently validating only `main`.
 
 Each cycle:
 
 1. fetches `origin/main`
 2. runs `make validate-free` when main changes
-3. records the exact fully validated main SHA
-4. checks open non-draft PRs against current main
-5. marks stale PR heads with `local-ci/validate-free = error`
-6. routes normal/nonstandard PRs through full validation
-7. posts `local-ci/validate-free` pending/success/failure/error
-8. routes an eligible Dependabot direct npm patch to the dedicated dependency lane
-9. posts `local-ci/dependency` pending/success/failure/error
-10. rechecks main/head SHA before accepting a result
-11. auto-merges only a validated eligible Dependabot forward patch
-12. writes the most recent cycle timestamp/SHA locally
+3. records the exact fully validated main SHA on success, or records the failing main SHA on failure
+4. continues PR routing even when current `main` fails, so a corrective or security PR cannot be starved behind a broken baseline
+5. checks open non-draft PRs against current main
+6. marks stale PR heads with `local-ci/validate-free = error`
+7. routes normal/nonstandard PRs through full validation
+8. posts `local-ci/validate-free` pending/success/failure/error
+9. routes an eligible Dependabot direct npm patch to the dedicated local dependency lane only when current `main` is fully passing
+10. posts `local-ci/dependency` pending/success/failure/error
+11. rechecks main/head SHA before accepting a result
+12. auto-merges only a validated eligible Dependabot forward npm patch
+13. writes the most recent cycle timestamp/SHA locally
 
-Normal PRs are **not auto-merged**.
+Normal PRs are **not auto-merged**. The local dependency auto-merge lane is suppressed while the current main SHA fails full validation.
 
 Diagnostics:
 
@@ -216,9 +231,9 @@ Production mode runs full repository validation, local-CI doctor, backup verific
 - Phase 5B local-CI/status/dependency security hardening implemented
 - Phase 5C backup/restore/DR/alerts/load/release tooling implemented
 - Web Console and FastAPI report `0.5.0`
-- Next.js security baseline = `16.3.3`
+- Next.js remains on the reviewed `16.3.x` security line
 - prior Phase 3/4 feature baselines retained
-- no GitHub-hosted workflow
+- GitHub-hosted execution is restricted to the two guarded Dependabot workflows described above
 - no paid infrastructure requirement
 
 No paid cloud service is required for any validation, recovery or deployment step.
