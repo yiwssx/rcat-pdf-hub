@@ -1,0 +1,58 @@
+name: Dependabot Python security validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/api/requirements.txt'
+
+concurrency:
+  group: dependabot-python-security-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Check out trusted base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch Dependabot head without executing it
+        run: |
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head:refs/remotes/origin/dependabot-security-pr"
+          test "$(git rev-parse refs/remotes/origin/dependabot-security-pr)" = "${HEAD_SHA}"
+
+      - name: Verify Python security dependency policy
+        run: python3 scripts/check-python-security-dependency.py "${BASE_SHA}" "${HEAD_SHA}"
+
+      - name: Materialize only the verified requirements manifest
+        run: |
+          git show "${HEAD_SHA}:apps/api/requirements.txt" > apps/api/requirements.txt
+          git config user.name "dependabot-security-validation"
+          git config user.email "dependabot-security-validation@users.noreply.github.com"
+          git add apps/api/requirements.txt
+          git commit -m "test: materialize verified Python security update"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Run full zero-cost validation
+        run: make validate-free
