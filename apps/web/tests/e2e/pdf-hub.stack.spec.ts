@@ -19,7 +19,14 @@ test("production stack: login, upload, process, preview and download", async ({ 
   const filename = `stack-smoke-${Date.now()}.png`;
   const fileInput = page.locator("#files");
   await expect(fileInput).toBeEnabled({ timeout: 30_000 });
+  const uploadResponsePromise = page.waitForResponse(
+    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/api/v1/files",
+    { timeout: 30_000 },
+  );
   await fileInput.setInputFiles({ name: filename, mimeType: "image/png", buffer: pngPixel });
+  const uploadResponse = await uploadResponsePromise;
+  const uploadBody = await uploadResponse.text();
+  expect(uploadResponse.ok(), `upload failed with HTTP ${uploadResponse.status()}: ${uploadBody}`).toBe(true);
   await expect(page.getByText(filename, { exact: true })).toBeVisible({ timeout: 30_000 });
 
   await page.getByRole("button", { name: /รูปภาพ → PDF/ }).first().click();
