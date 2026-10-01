@@ -33,8 +33,9 @@ def semver_version(value: str, label: str) -> tuple[int, int, int]:
     return tuple(int(part) for part in match.groups())
 
 
-# Zero-cost CI policy: this public repository may use one narrow GitHub-hosted
-# workflow for Dependabot patch validation/merge. Full validation remains local.
+# Zero-cost CI policy: this public repository may use two guarded GitHub-hosted
+# Dependabot workflows. The npm lane may auto-merge only one verified web patch;
+# the Python security lane performs full validation read-only and never merges.
 workflow_dir = ROOT / ".github" / "workflows"
 workflow_files: list[str] = []
 if workflow_dir.exists():
@@ -43,12 +44,15 @@ if workflow_dir.exists():
         for p in workflow_dir.rglob("*")
         if p.suffix in {".yml", ".yaml"}
     )
-assert workflow_files == [".github/workflows/dependabot-patch-automerge.yml"], (
-    f"Only the reviewed Dependabot patch workflow is allowed: {workflow_files}"
-)
+assert workflow_files == [
+    ".github/workflows/dependabot-patch-automerge.yml",
+    ".github/workflows/dependabot-python-security.yml",
+], f"Only the reviewed Dependabot workflows are allowed: {workflow_files}"
+
 dependency_workflow = read(".github/workflows/dependabot-patch-automerge.yml")
 for required in (
     "pull_request:",
+    "paths:\n      - 'apps/web/package.json'",
     "github.event.pull_request.user.login == 'dependabot[bot]'",
     "contents: read",
     "pull-requests: write",
@@ -56,8 +60,23 @@ for required in (
     "validate-direct-dependency.sh",
     "merge_method=squash",
 ):
-    assert required in dependency_workflow, f"Dependabot workflow missing guard: {required}"
-assert "pull_request_target:" not in dependency_workflow, "Dependabot merge workflow must not use pull_request_target"
+    assert required in dependency_workflow, f"Dependabot npm workflow missing guard: {required}"
+assert "pull_request_target:" not in dependency_workflow, "Dependabot npm workflow must not use pull_request_target"
+
+python_security_workflow = read(".github/workflows/dependabot-python-security.yml")
+for required in (
+    "pull_request:",
+    "paths:\n      - 'apps/api/requirements.txt'",
+    "github.event.pull_request.user.login == 'dependabot[bot]'",
+    "contents: read",
+    "check-python-security-dependency.py",
+    "make validate-free",
+):
+    assert required in python_security_workflow, f"Dependabot Python security workflow missing guard: {required}"
+assert "pull_request_target:" not in python_security_workflow, "Python security workflow must not use pull_request_target"
+assert "contents: write" not in python_security_workflow, "Python security workflow must stay read-only"
+assert "pull-requests: write" not in python_security_workflow, "Python security workflow must not gain PR write permission"
+assert "merge_method" not in python_security_workflow, "Python security workflow must never auto-merge"
 
 # Version-update automation remains direct npm patch-only. Security/nonstandard PRs use full validation.
 dependabot = read(".github/dependabot.yml")
@@ -201,6 +220,7 @@ assert "sha256sum -c SHA256SUMS" in verify_backup and "PGDMP" in verify_backup
 # Zero-cost validation must cover code, browser behavior, operations and the real Compose stack.
 for required in (
     "scripts/check-direct-dependency.py",
+    "scripts/check-python-security-dependency.py",
     "scripts/validate-free.sh",
     "scripts/validate-direct-dependency.sh",
     "scripts/local-ci-cycle.sh",
@@ -214,6 +234,7 @@ validate_free = read("scripts/validate-free.sh")
 assert "python3 scripts/validate-release-policy.py" in validate_free
 assert "operations()" in validate_free
 assert "npm run test:e2e:stack" in validate_free
+assert "check-python-security-dependency.py" in validate_free
 assert "Pillow==" not in validate_free, "Dependency policy must not be duplicated in validate-free.sh"
 
 validate_direct = read("scripts/validate-direct-dependency.sh")
@@ -229,6 +250,8 @@ assert "base is stale" in local_ci_prs
 assert "local-ci/dependency" in local_ci_dependabot
 assert "validate-direct-dependency.sh" in local_ci_dependabot
 assert "gh auth status" in local_ci_cycle
+assert "continuing PR routing" in local_ci_cycle
+assert "skipping local dependency auto-merge while current main is failing" in local_ci_cycle
 assert "gh auth status" in local_ci_install
 
 # User-facing defaults must not recommend known paid cloud services.
