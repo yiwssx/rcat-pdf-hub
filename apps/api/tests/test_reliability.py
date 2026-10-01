@@ -97,10 +97,10 @@ def test_private_webhook_requires_explicit_opt_in(monkeypatch):
     assert webhooks.validate_webhook_url("http://hook.internal/events") == "http://hook.internal/events"
 
 
-def test_dispatch_network_failure_never_raises(monkeypatch):
-    monkeypatch.setattr(webhooks.settings, "webhook_allowed_hosts", "hook.example.org"); monkeypatch.setattr(webhooks.settings, "webhook_allow_private_networks", False); monkeypatch.setattr(webhooks.socket, "getaddrinfo", lambda *_args, **_kwargs: _addr("93.184.216.34")); monkeypatch.setattr(webhooks.time, "sleep", lambda _seconds: None); monkeypatch.setattr(webhooks.httpx, "post", lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("offline")))
+def test_webhook_network_failure_is_durable_and_never_raises(monkeypatch):
+    monkeypatch.setattr(webhooks.settings, "webhook_allowed_hosts", "hook.example.org"); monkeypatch.setattr(webhooks.settings, "webhook_allow_private_networks", False); monkeypatch.setattr(webhooks.socket, "getaddrinfo", lambda *_args, **_kwargs: _addr("93.184.216.34")); monkeypatch.setattr(webhooks.httpx, "post", lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionError("offline")))
     with SessionLocal() as db:
-        _policy(db, webhook_url="https://hook.example.org/events"); job = JobRecord(operation="compress", status="completed", progress=100, requested_by="service-a", finished_at=datetime.now(timezone.utc)); db.add(job); db.commit(); db.refresh(job); assert webhooks.dispatch_job_webhook(db, job) is False
+        _policy(db, webhook_url="https://hook.example.org/events"); job = JobRecord(operation="compress", status="completed", progress=100, requested_by="service-a", finished_at=datetime.now(timezone.utc)); db.add(job); db.commit(); db.refresh(job); delivery = webhooks.queue_job_webhook(db, job); assert delivery is not None; assert webhooks.deliver_webhook(db, delivery) is False; assert delivery.status == "retrying"; assert delivery.attempt_count == 1
 
 
 def test_worker_rejects_output_that_exceeds_storage_quota(monkeypatch, tmp_path):
@@ -118,7 +118,7 @@ def test_audit_disk_failure_does_not_flip_completed_job(monkeypatch, tmp_path):
 
 
 def test_webhook_exception_does_not_flip_completed_job(monkeypatch, tmp_path):
-    job_id = _make_worker_job(monkeypatch, tmp_path); monkeypatch.setattr(worker_tasks.pdf_tools, "compress", lambda _src, dst: dst.write_bytes(b"result")); monkeypatch.setattr(worker_tasks, "dispatch_job_webhook", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("webhook bug"))); output_id = worker_tasks.process_job(job_id)
+    job_id = _make_worker_job(monkeypatch, tmp_path); monkeypatch.setattr(worker_tasks.pdf_tools, "compress", lambda _src, dst: dst.write_bytes(b"result")); monkeypatch.setattr(worker_tasks, "queue_job_webhook", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("webhook bug"))); output_id = worker_tasks.process_job(job_id)
     with SessionLocal() as db:
         job = db.get(JobRecord, job_id); assert job.status == "completed"; assert job.output_file_id == output_id
 
