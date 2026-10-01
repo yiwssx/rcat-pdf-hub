@@ -63,7 +63,11 @@ operations() {
     scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh; do
     bash -n "${script}"
   done
-  python3 -m py_compile scripts/load-smoke.py scripts/validate-release-policy.py scripts/check-direct-dependency.py
+  python3 -m py_compile \
+    scripts/load-smoke.py \
+    scripts/validate-release-policy.py \
+    scripts/check-direct-dependency.py \
+    scripts/check-python-security-dependency.py
   echo 'operations: PASS'
 }
 
