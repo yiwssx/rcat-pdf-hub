@@ -3,6 +3,8 @@ name: Dependabot patch auto-merge
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'apps/web/package.json'
 
 concurrency:
   group: dependabot-patch-${{ github.event.pull_request.number }}
