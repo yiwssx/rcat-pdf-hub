@@ -35,25 +35,37 @@ cleanup_main_worktree() {
 }
 trap cleanup_main_worktree EXIT
 
+main_failed=0
 if [ "${main_sha}" != "${last_pass}" ]; then
   log="${STATE_ROOT}/logs/main-${main_sha}.log"
   echo "local-ci: validating main ${main_sha}"
   if (cd "${worktree}" && make validate-free) 2>&1 | tee "${log}"; then
     printf '%s\n' "${main_sha}" > "${STATE_ROOT}/last-main-pass"
+    rm -f "${STATE_ROOT}/last-main-failure"
     echo "local-ci: main ${main_sha} PASS"
   else
+    main_failed=1
+    printf '%s\n' "${main_sha}" > "${STATE_ROOT}/last-main-failure"
     echo "local-ci: main ${main_sha} FAIL — see ${log}" >&2
-    exit 1
+    echo "local-ci: continuing PR routing so a corrective or security PR is never starved by a broken main baseline" >&2
   fi
 fi
 
 (
   cd "${worktree}"
   LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-prs.sh
-  LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-dependabot.sh
+  if [ "${main_failed}" -eq 0 ]; then
+    LOCAL_CI_STATE_ROOT="${STATE_ROOT}" bash scripts/local-ci-dependabot.sh
+  else
+    echo "local-ci: skipping local dependency auto-merge while current main is failing full validation" >&2
+  fi
 )
 
 printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"${STATE_ROOT}/last-cycle-at"
 printf '%s\n' "${main_sha}" >"${STATE_ROOT}/last-cycle-main"
 cleanup_main_worktree
 trap - EXIT
+
+if [ "${main_failed}" -ne 0 ]; then
+  exit 1
+fi
