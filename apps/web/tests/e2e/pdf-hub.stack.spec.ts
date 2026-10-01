@@ -17,7 +17,9 @@ test("production stack: login, upload, process, preview and download", async ({ 
   await expect(page.locator("#workspace")).toBeVisible({ timeout: 30_000 });
 
   const filename = `stack-smoke-${Date.now()}.png`;
-  await page.locator("#files").setInputFiles({ name: filename, mimeType: "image/png", buffer: pngPixel });
+  const fileInput = page.locator("#files");
+  await expect(fileInput).toBeEnabled({ timeout: 30_000 });
+  await fileInput.setInputFiles({ name: filename, mimeType: "image/png", buffer: pngPixel });
   await expect(page.getByText(filename, { exact: true })).toBeVisible({ timeout: 30_000 });
 
   await page.getByRole("button", { name: /รูปภาพ → PDF/ }).first().click();
