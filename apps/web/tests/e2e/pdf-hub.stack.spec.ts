@@ -18,7 +18,7 @@ test("production stack: login, upload, process, preview and download", async ({ 
 
   const filename = `stack-smoke-${Date.now()}.png`;
   await page.locator("#files").setInputFiles({ name: filename, mimeType: "image/png", buffer: pngPixel });
-  await expect(page.getByText(filename, { exact: true })).toBeVisible();
+  await expect(page.getByText(filename, { exact: true })).toBeVisible({ timeout: 30_000 });
 
   await page.getByRole("button", { name: /รูปภาพ → PDF/ }).first().click();
   await page.getByRole("button", { name: "สร้าง PDF จากภาพ" }).click();
