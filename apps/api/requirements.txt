@@ -9,7 +9,7 @@ rq==2.5.0
 httpx==0.28.1
 anyio==4.14.2
 ocrmypdf==17.8.1
-pypdf==6.16.1
+pypdf==6.19.0
 reportlab==5.0.0
 Pillow==12.3.0
 pytest==9.0.3
