@@ -55,4 +55,11 @@ jobs:
           node-version: '24'
 
       - name: Run full zero-cost validation
-        run: make validate-free
+        run: |
+          validation_log="$(mktemp)"
+          if ! make validate-free >"${validation_log}" 2>&1; then
+            echo "Full zero-cost validation failed; final output follows:" >&2
+            tail -n 160 "${validation_log}" >&2
+            exit 1
+          fi
+          echo "Full zero-cost validation: PASS"
