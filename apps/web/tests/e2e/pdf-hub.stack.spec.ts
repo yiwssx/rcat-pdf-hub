@@ -27,7 +27,7 @@ test("production stack: login, upload, process, preview and download", async ({ 
   const uploadResponse = await uploadResponsePromise;
   const uploadBody = await uploadResponse.text();
   expect(uploadResponse.ok(), `upload failed with HTTP ${uploadResponse.status()}: ${uploadBody}`).toBe(true);
-  await expect(page.getByText(filename, { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("#workspace-target .selectedFile strong")).toHaveText(filename, { timeout: 30_000 });
 
   await page.getByRole("button", { name: /รูปภาพ → PDF/ }).first().click();
   await page.getByRole("button", { name: "สร้าง PDF จากภาพ" }).click();
