@@ -188,7 +188,11 @@ runtime() {
 
   dc build --pull api worker cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
-  dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee "${up_log}"
+  dc up -d --no-build --wait --wait-timeout 240 postgres valkey gotenberg 2>&1 | tee "${up_log}"
+  check_clean_log "${up_log}"
+  dc run --rm --no-deps api python -c 'from app.migrate import run_migrations; run_migrations()' 2>&1 | tee -a "${up_log}"
+  check_clean_log "${up_log}"
+  dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee -a "${up_log}"
   check_clean_log "${up_log}"
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
