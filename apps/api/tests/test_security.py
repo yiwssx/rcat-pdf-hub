@@ -1,4 +1,7 @@
-from app.security import hash_api_key, new_api_key
+import hashlib
+import hmac
+
+from app.security import hash_api_key, new_api_key, settings
 
 
 def test_new_api_key_format():
@@ -7,7 +10,15 @@ def test_new_api_key_format():
     assert len(key) > 30
 
 
-def test_hash_is_stable_and_not_plaintext():
+def test_hash_is_stable_keyed_and_not_plaintext():
     value = "pdfh_test"
-    assert hash_api_key(value) == hash_api_key(value)
-    assert hash_api_key(value) != value
+    digest = hash_api_key(value)
+    expected = hmac.new(
+        settings.api_key_pepper.encode("utf-8"),
+        value.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    assert digest == expected
+    assert digest == hash_api_key(value)
+    assert digest != value

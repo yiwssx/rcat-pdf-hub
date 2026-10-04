@@ -1,3 +1,4 @@
+import re
 import subprocess
 import zipfile
 from io import BytesIO
@@ -19,6 +20,9 @@ from app.config import get_settings
 settings = get_settings()
 FONT_NAME = "Helvetica"
 ALLOWED_PAGE_FIELDS = {"page", "total"}
+PAGE_RANGE_RE = re.compile(r"^[0-9z,\-]+$")
+LANGUAGE_LIST_RE = re.compile(r"^[a-z0-9+_-]+$")
+TRUSTED_EXECUTABLES = {"qpdf", "gs", "ocrmypdf", "pdftoppm"}
 
 
 def _register_font() -> str:
@@ -40,8 +44,31 @@ def _register_font() -> str:
     return FONT_NAME
 
 
+def _validated_page_range(value: str) -> str:
+    if not PAGE_RANGE_RE.fullmatch(value):
+        raise ValueError("page range contains unsupported characters")
+    return value
+
+
+def _validated_languages(value: str) -> str:
+    if not LANGUAGE_LIST_RE.fullmatch(value):
+        raise ValueError("languages contains unsupported characters")
+    return value
+
+
 def _run(args: list[str], timeout: int = 1800) -> None:
-    completed = subprocess.run(args, capture_output=True, text=True, timeout=timeout, check=False)
+    if not args or args[0] not in TRUSTED_EXECUTABLES:
+        raise ValueError("untrusted PDF command")
+    if any("\x00" in arg or "\r" in arg or "\n" in arg for arg in args):
+        raise ValueError("command argument contains a control character")
+    completed = subprocess.run(
+        tuple(args),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+        shell=False,
+    )
     if completed.returncode != 0:
         message = (completed.stderr or completed.stdout or "PDF command failed")[-4000:]
         raise RuntimeError(message)
@@ -55,14 +82,16 @@ def merge(inputs: list[Path], output: Path) -> None:
 
 
 def split(input_file: Path, pages: str, output: Path) -> None:
-    _run(["qpdf", str(input_file), "--pages", ".", pages, "--", str(output)])
+    safe_pages = _validated_page_range(pages)
+    _run(["qpdf", str(input_file), "--pages", ".", safe_pages, "--", str(output)])
 
 
 def rotate(input_file: Path, degrees: int, pages: str, output: Path) -> None:
     if degrees not in {-270, -180, -90, 90, 180, 270}:
         raise ValueError("degrees must be one of ±90, ±180, ±270")
+    safe_pages = _validated_page_range(pages)
     sign = "+" if degrees > 0 else ""
-    _run(["qpdf", str(input_file), str(output), f"--rotate={sign}{degrees}:{pages}"])
+    _run(["qpdf", str(input_file), str(output), f"--rotate={sign}{degrees}:{safe_pages}"])
 
 
 def compress(input_file: Path, output: Path) -> None:
@@ -74,7 +103,8 @@ def compress(input_file: Path, output: Path) -> None:
 
 
 def ocr(input_file: Path, output: Path, languages: str, deskew: bool, rotate_pages: bool) -> None:
-    args = ["ocrmypdf", "--skip-text", "--optimize", "1", "-l", languages]
+    safe_languages = _validated_languages(languages)
+    args = ["ocrmypdf", "--skip-text", "--optimize", "1", "-l", safe_languages]
     if deskew:
         args.append("--deskew")
     if rotate_pages:
@@ -84,7 +114,8 @@ def ocr(input_file: Path, output: Path, languages: str, deskew: bool, rotate_pag
 
 
 def pdfa(input_file: Path, output: Path, languages: str = "tha+eng") -> None:
-    _run(["ocrmypdf", "--skip-text", "--output-type", "pdfa-2", "-l", languages, str(input_file), str(output)])
+    safe_languages = _validated_languages(languages)
+    _run(["ocrmypdf", "--skip-text", "--output-type", "pdfa-2", "-l", safe_languages, str(input_file), str(output)])
 
 
 def office_to_pdf(input_file: Path, output: Path) -> None:
@@ -175,6 +206,10 @@ def pdf_to_images(
 ) -> None:
     if image_format not in {"png", "jpeg"}:
         raise ValueError("format must be png or jpeg")
+    if dpi < 72 or dpi > 600:
+        raise ValueError("dpi must be between 72 and 600")
+    if first_page < 1:
+        raise ValueError("first_page must be positive")
     reader = PdfReader(str(input_file))
     total = len(reader.pages)
     if total < 1:
@@ -382,20 +417,47 @@ def stamp_pdf(
 
 
 def render_preview(input_file: Path, output_png: Path, page: int = 1, width: int = 640) -> None:
+    if page < 1:
+        raise ValueError("page must be positive")
+    if width < 64 or width > 4096:
+        raise ValueError("width must be between 64 and 4096")
+
+    reader = PdfReader(str(input_file))
+    if page > len(reader.pages):
+        raise RuntimeError("Preview page exceeds the PDF page count")
+
     output_png.parent.mkdir(parents=True, exist_ok=True)
-    prefix = output_png.with_suffix("")
-    _run([
-        "pdftoppm",
-        "-f", str(page),
-        "-singlefile",
-        "-png",
-        "-scale-to-x", str(width),
-        "-scale-to-y", "-1",
-        str(input_file),
-        str(prefix),
-    ], timeout=60)
-    generated = Path(f"{prefix}.png")
-    if generated != output_png and generated.exists():
-        generated.replace(output_png)
-    if not output_png.exists():
-        raise RuntimeError("Preview renderer did not create an image")
+    with TemporaryDirectory(prefix="pdfhub-preview-") as tmp:
+        tmp_path = Path(tmp)
+        selected_pdf = tmp_path / "selected.pdf"
+        prefix = tmp_path / "preview"
+
+        writer = PdfWriter()
+        writer.add_page(reader.pages[page - 1])
+        with selected_pdf.open("wb") as fh:
+            writer.write(fh)
+
+        _run([
+            "pdftoppm",
+            "-singlefile",
+            "-png",
+            str(selected_pdf),
+            str(prefix),
+        ], timeout=60)
+
+        generated = Path(f"{prefix}.png")
+        if not generated.exists():
+            raise RuntimeError("Preview renderer did not create an image")
+
+        with Image.open(generated) as raw:
+            if raw.width <= 0 or raw.height <= 0:
+                raise RuntimeError("Preview renderer created an invalid image")
+            target_height = max(1, round(raw.height * width / raw.width))
+            if raw.width == width:
+                raw.save(output_png, format="PNG")
+            else:
+                resized = raw.resize((width, target_height), Image.Resampling.LANCZOS)
+                try:
+                    resized.save(output_png, format="PNG")
+                finally:
+                    resized.close()
