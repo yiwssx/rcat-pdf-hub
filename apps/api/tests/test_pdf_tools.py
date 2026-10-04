@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
@@ -40,3 +41,22 @@ def test_stamp_pdf(tmp_path: Path):
 
     assert len(PdfReader(str(output)).pages) == 2
     assert output.stat().st_size > 0
+
+
+def test_page_range_validator_rejects_option_injection():
+    with pytest.raises(ValueError, match="page range"):
+        pdf_tools._validated_page_range("--help")
+    with pytest.raises(ValueError, match="page range"):
+        pdf_tools._validated_page_range("1-z;touch")
+
+
+def test_language_validator_rejects_command_metacharacters():
+    with pytest.raises(ValueError, match="languages"):
+        pdf_tools._validated_languages("eng;touch")
+    with pytest.raises(ValueError, match="languages"):
+        pdf_tools._validated_languages("eng\n--side-effect")
+
+
+def test_run_rejects_untrusted_executable():
+    with pytest.raises(ValueError, match="untrusted PDF command"):
+        pdf_tools._run(["sh", "-c", "true"])
