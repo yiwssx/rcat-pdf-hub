@@ -188,9 +188,11 @@ runtime() {
 
   dc build --pull api worker cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
-  dc up -d --no-build --wait --wait-timeout 240 postgres valkey gotenberg 2>&1 | tee "${up_log}"
+  dc up -d --no-build --wait --wait-timeout 240 postgres valkey gotenberg api 2>&1 | tee "${up_log}"
   check_clean_log "${up_log}"
-  dc run --rm --no-deps api python -c 'from app.migrate import run_migrations; run_migrations()' 2>&1 | tee -a "${up_log}"
+  dc exec -T api python -c 'from app.migrate import run_migrations; run_migrations()' 2>&1 | tee -a "${up_log}"
+  check_clean_log "${up_log}"
+  dc exec -T api python -c 'from app.db import engine; from sqlalchemy import inspect; tables=set(inspect(engine).get_table_names()); missing={"api_keys", "service_policies", "files", "jobs"}-tables; assert not missing, f"missing validation tables: {sorted(missing)}"' 2>&1 | tee -a "${up_log}"
   check_clean_log "${up_log}"
   dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee -a "${up_log}"
   check_clean_log "${up_log}"
