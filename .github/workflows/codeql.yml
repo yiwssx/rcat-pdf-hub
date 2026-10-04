@@ -34,9 +34,35 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended
+          queries: security-and-quality
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+
+      - name: Stage Python SARIF diagnostic
+        if: matrix.language == 'python'
+        run: cp ../results/python.sarif ./codeql-python.sarif
+
+      - name: Upload Python SARIF diagnostic
+        if: matrix.language == 'python'
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-security-quality-python
+          path: codeql-python.sarif
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Stage JavaScript SARIF diagnostic
+        if: matrix.language == 'javascript-typescript'
+        run: cp ../results/javascript.sarif ./codeql-javascript.sarif
+
+      - name: Upload JavaScript SARIF diagnostic
+        if: matrix.language == 'javascript-typescript'
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-security-quality-javascript
+          path: codeql-javascript.sarif
+          if-no-files-found: error
+          retention-days: 1
