@@ -421,20 +421,43 @@ def render_preview(input_file: Path, output_png: Path, page: int = 1, width: int
         raise ValueError("page must be positive")
     if width < 64 or width > 4096:
         raise ValueError("width must be between 64 and 4096")
+
+    reader = PdfReader(str(input_file))
+    if page > len(reader.pages):
+        raise RuntimeError("Preview page exceeds the PDF page count")
+
     output_png.parent.mkdir(parents=True, exist_ok=True)
-    prefix = output_png.with_suffix("")
-    _run([
-        "pdftoppm",
-        "-f", str(page),
-        "-singlefile",
-        "-png",
-        "-scale-to-x", str(width),
-        "-scale-to-y", "-1",
-        str(input_file),
-        str(prefix),
-    ], timeout=60)
-    generated = Path(f"{prefix}.png")
-    if generated != output_png and generated.exists():
-        generated.replace(output_png)
-    if not output_png.exists():
-        raise RuntimeError("Preview renderer did not create an image")
+    with TemporaryDirectory(prefix="pdfhub-preview-") as tmp:
+        tmp_path = Path(tmp)
+        selected_pdf = tmp_path / "selected.pdf"
+        prefix = tmp_path / "preview"
+
+        writer = PdfWriter()
+        writer.add_page(reader.pages[page - 1])
+        with selected_pdf.open("wb") as fh:
+            writer.write(fh)
+
+        _run([
+            "pdftoppm",
+            "-singlefile",
+            "-png",
+            str(selected_pdf),
+            str(prefix),
+        ], timeout=60)
+
+        generated = Path(f"{prefix}.png")
+        if not generated.exists():
+            raise RuntimeError("Preview renderer did not create an image")
+
+        with Image.open(generated) as raw:
+            if raw.width <= 0 or raw.height <= 0:
+                raise RuntimeError("Preview renderer created an invalid image")
+            target_height = max(1, round(raw.height * width / raw.width))
+            if raw.width == width:
+                raw.save(output_png, format="PNG")
+            else:
+                resized = raw.resize((width, target_height), Image.Resampling.LANCZOS)
+                try:
+                    resized.save(output_png, format="PNG")
+                finally:
+                    resized.close()
