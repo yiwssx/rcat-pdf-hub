@@ -54,6 +54,11 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Prepare Valkey kernel precondition
+        run: |
+          sudo sysctl -w vm.overcommit_memory=1
+          test "$(sysctl -n vm.overcommit_memory)" = "1"
+
       - name: Run full zero-cost validation
         run: |
           validation_log="$(mktemp)"
