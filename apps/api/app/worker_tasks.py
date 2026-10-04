@@ -235,6 +235,7 @@ def process_job(job_id: str) -> str:
             try:
                 delete_stored_name(stored_name)
             except Exception:
+                # Cleanup is best-effort and must not mask the original job-processing exception.
                 pass
         try:
             _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())

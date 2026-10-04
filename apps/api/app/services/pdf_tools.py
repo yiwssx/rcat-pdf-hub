@@ -271,6 +271,7 @@ def watermark_text(
             try:
                 c.setFillAlpha(opacity)
             except AttributeError:
+                # Transparency is optional in older ReportLab backends; opaque text is an acceptable fallback.
                 pass
             c.translate(_x, _y)
             c.rotate(rotation)

@@ -34,7 +34,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended
+          queries: security-and-quality
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
