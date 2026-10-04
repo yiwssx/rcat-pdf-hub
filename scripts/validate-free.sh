@@ -198,7 +198,11 @@ runtime() {
   check_clean_log "${up_log}"
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
-  dc exec -T api python -m pytest -q
+  dc exec -T \
+    -e PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-runtime-tests.db \
+    -e PDFHUB_REDIS_URL=redis://valkey:6379/15 \
+    -e PDFHUB_DATA_DIR=/tmp/pdfhub-runtime-test-data \
+    api python -m pytest -q
   test "$(dc ps --status running webhook --format json | wc -l)" -ge 1
 
   if ! (
