@@ -1,9 +1,9 @@
-import hashlib
 import hmac
 import json
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from hashlib import sha256
 from typing import Callable
 
 import httpx
@@ -37,7 +37,12 @@ class Principal:
 
 
 def hash_api_key(value: str) -> str:
-    return hashlib.sha256((settings.api_key_pepper + value).encode("utf-8")).hexdigest()
+    """Return a deterministic keyed digest suitable for indexed API-key lookup."""
+    return hmac.new(
+        settings.api_key_pepper.encode("utf-8"),
+        value.encode("utf-8"),
+        sha256,
+    ).hexdigest()
 
 
 def new_api_key() -> str:
