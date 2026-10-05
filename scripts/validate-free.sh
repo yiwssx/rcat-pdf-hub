@@ -209,7 +209,6 @@ runtime() {
     cd apps/web
     PDFHUB_E2E_BASE_URL="http://127.0.0.1:${PDFHUB_HTTP_PORT}" \
     PDFHUB_E2E_STACK=1 \
-    PDFHUB_E2E_API_KEY="${PDFHUB_ADMIN_API_KEY}" \
     PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" \
     NEXT_TELEMETRY_DISABLED=1 \
       npm run test:e2e:stack 2>&1 | tee "${stack_e2e_log}"
