@@ -1,6 +1,5 @@
 import { expect, Page, Route, test } from "@playwright/test";
 
-const VALID_KEY = "pdfh_test_valid";
 const pngPixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
@@ -17,41 +16,48 @@ const initialFile = {
   expires_at: null,
 };
 
-async function requireApiKey(route: Route) {
-  if (route.request().headers()["x-api-key"] === VALID_KEY) return true;
-  await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Missing or invalid API key" }) });
-  return false;
-}
-
 async function installApiMocks(page: Page) {
+  let sessionReady = false;
+
+  async function requireSession(route: Route) {
+    if (sessionReady && !route.request().headers()["x-api-key"]) return true;
+    await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ detail: "Authentication required" }) });
+    return false;
+  }
+
   await page.route("**/api/v1/auth/config", async (route) => {
     await route.fulfill({
       json: {
         session_cookie: "pdfhub_session",
         oidc: { enabled: false, issuer: null, login_url: null },
         ldap: { enabled: false },
-        api_key: { enabled: true },
+        web_console: { auto_login: true },
       },
     });
   });
 
+  await page.route("**/web-auth/session", async (route) => {
+    sessionReady = true;
+    await route.fulfill({ status: 204 });
+  });
+
   await page.route("**/api/v1/auth/me", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
-        name: "service:smoke-test",
-        display_name: "Smoke Service",
-        subject: null,
+        name: "web-console:smoke-test",
+        display_name: "Web Console",
+        subject: "smoke-test",
         scopes: ["files:read", "files:write", "jobs:read", "pdf:compress"],
         groups: [],
-        auth_source: "api_key",
+        auth_source: "web-console",
         is_admin: false,
       },
     });
   });
 
   await page.route("**/api/v1/integrations/status", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
         storage_backend: "local",
@@ -66,22 +72,22 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/files?limit=100", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ json: [initialFile] });
   });
 
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ json: [] });
   });
 
   await page.route("**/api/v1/files/file-pdf-1/preview**", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ status: 200, contentType: "image/png", body: pngPixel });
   });
 
   await page.route("**/api/v1/pdf/compress", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
         id: "job-compress-1",
@@ -92,13 +98,13 @@ async function installApiMocks(page: Page) {
         output_file_id: "file-output-1",
         params: {},
         error: null,
-        requested_by: "service:smoke-test",
+        requested_by: "web-console:smoke-test",
       },
     });
   });
 
   await page.route("**/api/v1/files/file-output-1/download", async (route) => {
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
   });
 
@@ -107,7 +113,7 @@ async function installApiMocks(page: Page) {
       await route.fallback();
       return;
     }
-    if (!(await requireApiKey(route))) return;
+    if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
         id: "file-image-1",
@@ -115,7 +121,7 @@ async function installApiMocks(page: Page) {
         content_type: "image/png",
         size: 3,
         sha256: "b".repeat(64),
-        source_system: "smoke-test",
+        source_system: "web-console:smoke-test",
         created_at: "2026-08-31T08:05:00Z",
         expires_at: null,
       },
@@ -127,24 +133,18 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page);
 });
 
-test("rejects an invalid API key without entering authenticated UI", async ({ page }) => {
+test("opens a Web Console session without exposing API-key login", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByLabel("Service API Key").fill("pdfh_wrong_key");
-  await page.getByRole("button", { name: "เชื่อมต่อ" }).click();
-
-  await expect(page.getByRole("heading", { name: "พร้อมเริ่มจัดการ PDF" })).toBeVisible();
-  await expect(page.locator("#workspace")).toHaveCount(0);
-  await expect(page.locator(".status")).toContainText("Missing or invalid API key");
+  await expect(page.getByLabel("Service API Key")).toHaveCount(0);
+  await expect(page.getByText("Web Console")).toBeVisible();
+  await expect(page.locator("#workspace")).toBeVisible();
+  await expect(page.getByRole("button", { name: "ผู้ดูแล" })).toHaveCount(0);
 });
 
-test("connects with a valid key and propagates auth through preview, job, download and upload", async ({ page }) => {
+test("propagates the session through preview, job, download and upload", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByLabel("Service API Key").fill(VALID_KEY);
-  await page.getByRole("button", { name: "เชื่อมต่อ" }).click();
-
-  await expect(page.getByText("Smoke Service")).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
   await expect(page.locator("strong", { hasText: /^example\.pdf$/ })).toBeVisible();
 

@@ -1,19 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-const apiKey = process.env.PDFHUB_E2E_API_KEY || "";
 const stackEnabled = process.env.PDFHUB_E2E_STACK === "1";
 const pngPixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
 );
 
-test("production stack: login, upload, process, preview and download", async ({ page }) => {
-  test.skip(!stackEnabled || !apiKey, "Set PDFHUB_E2E_STACK=1 and PDFHUB_E2E_API_KEY for real-stack smoke");
+test("production stack: web session, upload, process, preview and download", async ({ page }) => {
+  test.skip(!stackEnabled, "Set PDFHUB_E2E_STACK=1 for real-stack smoke");
   test.setTimeout(180_000);
 
   await page.goto("/");
-  await page.getByLabel("Service API Key").fill(apiKey);
-  await page.getByRole("button", { name: "เชื่อมต่อ" }).click();
+  await expect(page.getByLabel("Service API Key")).toHaveCount(0);
   await expect(page.locator("#workspace")).toBeVisible({ timeout: 30_000 });
 
   const filename = `stack-smoke-${Date.now()}.png`;

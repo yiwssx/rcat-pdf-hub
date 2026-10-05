@@ -26,7 +26,8 @@ A **self-hosted, API-first** PDF processing hub that lets multiple systems share
 - FastAPI + Next.js Web Console behind Caddy
 - PostgreSQL metadata / job history
 - Valkey + RQ asynchronous processing
-- Service API keys + scopes + revocation + tenant/service isolation
+- Service API keys + scopes + revocation + tenant/service isolation for machine-to-machine integration
+- HttpOnly Web Console sessions; users are never asked to paste a service API key into the browser
 - OIDC Authorization Code + PKCE and LDAP/Active Directory sessions
 - Per-service rate limits, daily job quotas, and storage quotas
 - HMAC-signed short-lived download URLs
@@ -40,7 +41,9 @@ A **self-hosted, API-first** PDF processing hub that lets multiple systems share
 
 ### Phase 5 production maturity
 
-- API keys are validated through `/api/v1/auth/me` before the Web Console opens an authenticated workspace
+- Web Console uses cookie sessions; when OIDC/LDAP are not configured, Next.js obtains an isolated non-admin session from an API endpoint that is reachable only on the internal Docker network
+- Enabling OIDC or LDAP disables automatic Web Console login so institutional identity remains authoritative
+- Service API keys remain available for machine-to-machine clients and administrative automation, not as a human login field
 - Playwright browser regression coverage for both mocked APIs and the production Compose stack
 - Next.js security baseline `16.3.3`
 - Optional management ports bind to `127.0.0.1` by default
@@ -64,23 +67,25 @@ Browser / Internal Systems
        /       \
       v         v
  Next.js UI   FastAPI
-                 |
-      +----------+----------+
-      |          |          |
- PostgreSQL    Valkey     Storage
-                 |      local/NAS/S3
-                 v
-              RQ Worker
-        qpdf / OCRmyPDF / Gotenberg
-        pypdf / ReportLab / Pillow
-        Tesseract / Poppler
+      |          |
+      |   +------+----------+
+      |   |      |          |
+      | PostgreSQL Valkey  Storage
+      |          |      local/NAS/S3
+      |          v
+      |       RQ Worker
+      | qpdf / OCRmyPDF / Gotenberg
+      | pypdf / ReportLab / Pillow
+      | Tesseract / Poppler
+      |
+      +-- internal Web Console session bootstrap --> FastAPI /internal/*
 
 Cleanup Worker ------> retention / temp cleanup
 Webhook Dispatcher --> retry / dead-letter delivery
 Optional ------------> ClamAV / Prometheus / OTel / Paperless / SeaweedFS
 ```
 
-Gotenberg, PostgreSQL, Valkey, ClamAV, and object storage should not be published directly to the Internet. External requests should pass through the PDF Hub API/Caddy first.
+Gotenberg, PostgreSQL, Valkey, ClamAV, object storage, and FastAPI's `/internal/*` routes must not be published directly to the Internet. External API requests should pass through the reviewed Caddy `/api/*` routes; Web Console session bootstrap is performed server-to-server by Next.js.
 
 ## Quick start
 
@@ -108,11 +113,17 @@ make logs
 
 ## Authentication / service isolation
 
-`PDFHUB_ADMIN_API_KEY` is a bootstrap/break-glass key with `*` scope. Use it only for administrative operations and never embed it in an application.
+`PDFHUB_ADMIN_API_KEY` is a bootstrap/break-glass key with `*` scope. Use it only for administrative operations and never embed it in a browser application.
 
-The platform supports machine-to-machine API keys and human login through OIDC/LDAP. Admin authorization, scopes, quotas, and service isolation are enforced at the API layer, which is the authoritative authorization boundary.
+**Human Web Console authentication is session based.** The Web Console does not display a Service API Key input and does not store service credentials in React state or browser storage.
 
-Example: create a service key:
+- If OIDC or LDAP is enabled, users authenticate with the configured institutional identity provider.
+- If neither OIDC nor LDAP is enabled, Next.js requests an isolated, non-admin Web Console session through `/internal/web-console/session` over the private Docker network. Each new browser session receives its own principal and the normal human scope set.
+- Direct calls to `/api/v1/*` still require a valid session, bearer identity, or service API key. The internal session endpoint is intentionally not exposed by Caddy's public API matcher.
+
+Admin authorization, scopes, quotas, and service isolation remain enforced at the API layer, which is the authoritative authorization boundary. Automatic Web Console sessions are never administrators; admin access must come from an authorized institutional identity or operator-side break-glass credential.
+
+Example: create a service key for another system:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/admin/api-keys \
@@ -128,7 +139,7 @@ curl -X POST http://localhost:8080/api/v1/admin/api-keys \
   }'
 ```
 
-The plaintext API key (`pdfh_...`) is returned only once. The database stores only a hash combined with a server-side pepper.
+The plaintext API key (`pdfh_...`) is returned only once. The database stores only a keyed digest combined with the server-side pepper.
 
 ## Core API
 
@@ -293,6 +304,9 @@ make release-readiness
 
 - Use a real TLS/domain configuration and set `PDFHUB_SESSION_COOKIE_SECURE=true`
 - Generate production secrets with `make secrets`; never use example/default secrets
+- For Internet-facing deployments, enable OIDC or LDAP; this automatically disables anonymous Web Console session bootstrap
+- If automatic Web Console sessions are retained, restrict Caddy access to the intended institutional/trusted network
+- Never publish the FastAPI container port or `/internal/*` routes directly
 - Enable ClamAV fail-closed scanning for externally supplied files
 - Restrict `PDFHUB_WEBHOOK_ALLOWED_HOSTS`
 - Keep management ports on loopback or a trusted management network

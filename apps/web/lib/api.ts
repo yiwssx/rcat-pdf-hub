@@ -61,7 +61,7 @@ export type AuthConfig = {
   session_cookie: string;
   oidc: { enabled: boolean; issuer: string | null; login_url: string | null };
   ldap: { enabled: boolean };
-  api_key: { enabled: boolean };
+  web_console: { auto_login: boolean };
 };
 
 export type AuthMe = {
@@ -136,7 +136,14 @@ export async function getAuthConfig(): Promise<AuthConfig> {
 }
 
 export async function getMe(auth = SESSION_AUTH): Promise<AuthMe> {
-  return expectJson<AuthMe>(await request("/api/v1/auth/me", { headers: headers(auth), cache: "no-store" }));
+  let response = await request("/api/v1/auth/me", { headers: headers(auth), cache: "no-store" });
+  if (auth === SESSION_AUTH && response.status === 401) {
+    const bootstrap = await request("/web-auth/session", { method: "POST", cache: "no-store" });
+    if (bootstrap.ok) {
+      response = await request("/api/v1/auth/me", { cache: "no-store" });
+    }
+  }
+  return expectJson<AuthMe>(response);
 }
 
 export async function ldapLogin(username: string, password: string): Promise<AuthMe> {
