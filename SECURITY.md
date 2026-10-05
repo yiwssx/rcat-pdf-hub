@@ -4,20 +4,25 @@ RCAT PDF Hub processes untrusted document uploads. Treat the processing plane as
 
 ## Production requirements
 
+- Keep FastAPI internal-only except through the reviewed Caddy routes; never publish `/internal/*` directly.
 - Keep Gotenberg, PostgreSQL and Valkey on the internal Docker network only.
 - Use a long random `PDFHUB_API_KEY_PEPPER`, bootstrap admin key and webhook master secret.
-- Use scoped service API keys; do not share one service key across unrelated systems.
+- Use scoped service API keys for machine-to-machine clients; do not share one service key across unrelated systems and never ask human users to paste one into the Web Console.
+- For Internet-facing Web Console deployments, enable OIDC or LDAP. Enabling either automatically disables anonymous Web Console session bootstrap.
+- If automatic Web Console sessions are retained, restrict Caddy access to the intended institutional or trusted network.
 - Keep `PDFHUB_WEBHOOK_ALLOWED_HOSTS` narrow. Prefer exact hostnames over `*` and restrict worker egress at the network layer.
 - Put the public endpoint behind TLS and an edge rate limiter/WAF.
 - Back up PostgreSQL and the PDF volume according to institutional retention policy.
 - Add malware scanning before accepting documents from untrusted public users.
 
-## Secret handling
+## Secret and session handling
 
 - Plaintext service API keys are returned once and are never written to the audit log.
-- Database stores a peppered SHA-256 digest of service API keys.
+- The database stores a deterministic HMAC-SHA-256 digest of service API keys keyed by `PDFHUB_API_KEY_PEPPER`; plaintext service keys are not stored.
 - Webhook signing keys are derived per service from a master secret and are not stored in the database.
-- The browser console keeps the entered API key in in-memory React state only; it does not use localStorage.
+- The Web Console does not accept or retain service API keys. Human browser access uses an HttpOnly session cookie.
+- When neither OIDC nor LDAP is enabled, Next.js obtains an isolated non-admin Web Console session from the internal FastAPI endpoint over the private Docker network. The resulting principal receives the configured human scopes, never `*` or administrator identity.
+- Direct `/api/v1/*` calls remain authenticated and continue to accept scoped service API keys for machine-to-machine use.
 
 ## Webhook SSRF controls
 
