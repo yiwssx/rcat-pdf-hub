@@ -1,21 +1,23 @@
 # Phase 5 — Production Maturity
 
-Status: completed implementation baseline for release 0.5.0.
+Status: completed implementation baseline for release 0.5.0, with the Web Console authentication correction merged after the original baseline.
 
 Phase 5 turns the completed Phase 4 feature set into an operationally mature service. It is intentionally split into three hardening tracks so security, validation and recovery remain explicit and independently reviewable.
 
 ## Phase 5A — Frontend and production hardening
 
-Completed baseline:
+Current completed baseline:
 
-- Service API keys are validated through `/api/v1/auth/me` before the Web Console enters authenticated state.
-- Failed key validation clears authentication/workspace state.
-- Browser smoke tests cover invalid and valid API-key login plus Workspace, preview, job/download and upload flows.
-- Browser mocks require protected requests to carry the expected API key, preventing false-green authentication regressions.
-- A production-stack browser smoke test exercises Caddy -> production Next.js -> real FastAPI -> worker/storage using the runtime Compose stack.
+- Human Web Console authentication is session based; the browser does not display or retain a Service API Key credential.
+- When neither OIDC nor LDAP is configured, Next.js obtains an isolated non-admin HttpOnly Web Console session from FastAPI over the private Docker network.
+- Enabling OIDC or LDAP disables automatic Web Console login so institutional identity remains authoritative.
+- Service API keys remain supported for machine-to-machine integrations and operator-side administrative automation.
+- Browser smoke tests cover Web Console session bootstrap, Workspace, preview, job/download and upload flows, and assert that protected browser requests do not depend on `X-API-Key`.
+- A production-stack browser smoke test exercises Caddy -> production Next.js -> real FastAPI -> worker/storage using the runtime Compose stack without a browser-entered API key.
+- Admin navigation is shown only for identities whose authoritative backend identity reports `is_admin`.
 - The superseded Web Console implementation and legacy Console CSS are removed/pruned.
 - Prometheus, OTLP and Paperless management ports bind to loopback by default.
-- Next.js is on the August 2026 Active LTS security patch baseline `16.3.3`.
+- Next.js remains on the reviewed 16.3.x security patch line enforced by release policy.
 
 ## Phase 5B — Validation, CI and security hardening
 
@@ -28,7 +30,7 @@ Completed baseline:
 - `scripts/local-ci-doctor.sh` checks toolchain versions, Docker/Compose, GitHub CLI authentication, repository access and systemd timer/service state.
 - Local CI installation requires authenticated GitHub CLI when PR validation/status reporting is expected.
 - Release policy verifies the Phase 5 validation, operations and monitoring baseline without relying on one brittle source-code string match.
-- Admin APIs remain backend-authorized; the UI hardening baseline documents that authorization is authoritative even when navigation is visible.
+- Admin APIs remain backend-authorized; frontend navigation is only a UX gate and is never the authorization boundary.
 
 ## Phase 5C — Operational maturity
 
@@ -45,7 +47,7 @@ Completed baseline:
 
 ## Release gate
 
-Before merging/releasing Phase 5:
+Before merging/releasing Phase 5 changes:
 
 1. `make local-ci-doctor`
 2. `make validate-free`
