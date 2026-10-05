@@ -60,6 +60,19 @@ def identity_from_claims(claims: dict, source: str) -> dict:
     }
 
 
+def create_web_console_identity() -> dict:
+    session_id = secrets.token_urlsafe(18)
+    return {
+        "name": f"web-console:{session_id}"[:120],
+        "subject": session_id,
+        "display_name": "Web Console",
+        "groups": [],
+        "scopes": sorted(settings.human_scope_set),
+        "source": "web-console",
+        "is_identity_admin": False,
+    }
+
+
 def create_session_token(identity: dict) -> str:
     now = int(time.time())
     payload = {
@@ -289,5 +302,5 @@ def public_auth_config() -> dict:
             "login_url": "/api/v1/auth/oidc/login" if settings.oidc_enabled else None,
         },
         "ldap": {"enabled": settings.ldap_enabled},
-        "api_key": {"enabled": True},
+        "web_console": {"auto_login": settings.web_console_auto_login_enabled},
     }

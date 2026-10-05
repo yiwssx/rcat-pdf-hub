@@ -71,7 +71,6 @@ function BrandGlyph() {
 export function PdfHubApp() {
   const [tab, setTab] = useState<Tab>("tools");
   const [auth, setAuth] = useState("");
-  const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [identity, setIdentity] = useState<AuthMe | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationStatus | null>(null);
@@ -114,6 +113,7 @@ export function PdfHubApp() {
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
   const authenticated = Boolean(auth);
   const targetIsPdf = Boolean(target && (target.content_type === "application/pdf" || target.original_name.toLowerCase().endsWith(".pdf")));
+  const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
 
   async function loadWorkspace(authValue = auth) {
     if (!authValue) return;
@@ -127,6 +127,22 @@ export function PdfHubApp() {
     finally { setBusy(false); }
   }
 
+  async function connectSession() {
+    setBusy(true);
+    try {
+      const me = await getMe(SESSION_AUTH);
+      setIdentity(me);
+      setAuth(SESSION_AUTH);
+      await loadWorkspace(SESSION_AUTH);
+    } catch (error) {
+      setAuth("");
+      setIdentity(null);
+      setMessage(error instanceof Error ? error.message : "ไม่สามารถสร้าง Web Console session ได้");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   useEffect(() => {
     let live = true;
     void (async () => {
@@ -138,7 +154,7 @@ export function PdfHubApp() {
           const me = await getMe(SESSION_AUTH);
           if (!live) return;
           setIdentity(me); setAuth(SESSION_AUTH); await loadWorkspace(SESSION_AUTH);
-        } catch { /* No session yet. */ }
+        } catch { /* No session yet; enterprise login or retry UI remains available. */ }
       } catch { if (live) setMessage("อ่านการตั้งค่า authentication ไม่สำเร็จ"); }
     })();
     return () => { live = false; };
@@ -161,30 +177,8 @@ export function PdfHubApp() {
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
-  async function connectApiKey() {
-    const value = apiKeyDraft.trim();
-    if (!value) return;
-    setBusy(true);
-    try {
-      const me = await getMe(value);
-      setIdentity(me);
-      setAuth(value);
-      setApiKeyDraft("");
-      await loadWorkspace(value);
-    } catch (error) {
-      setAuth("");
-      setIdentity(null);
-      setFiles([]);
-      setJobs([]);
-      setIntegrations(null);
-      setTargetId("");
-      setMessage(error instanceof Error ? error.message : "API Key ไม่ถูกต้อง");
-    } finally {
-      setBusy(false);
-    }
-  }
   async function loginLdap() { if (!ldapUser || !ldapPassword) return; setBusy(true); try { const me = await ldapLogin(ldapUser, ldapPassword); setIdentity(me); setAuth(SESSION_AUTH); setLdapPassword(""); await loadWorkspace(SESSION_AUTH); } catch (error) { setMessage(error instanceof Error ? error.message : "LDAP login ไม่สำเร็จ"); } finally { setBusy(false); } }
-  async function logout() { try { if (auth === SESSION_AUTH) await logoutSession(); } finally { setAuth(""); setIdentity(null); setFiles([]); setJobs([]); setIntegrations(null); setTargetId(""); setSignedUrl(null); setMessage("ออกจากระบบแล้ว"); } }
+  async function logout() { try { if (auth === SESSION_AUTH) await logoutSession(); } finally { setAuth(""); setIdentity(null); setFiles([]); setJobs([]); setIntegrations(null); setTargetId(""); setSignedUrl(null); setTab("tools"); setMessage("ออกจากระบบแล้ว"); } }
 
   async function onFiles(list: FileList | null) {
     if (!list?.length || !auth) return;
@@ -248,19 +242,19 @@ export function PdfHubApp() {
     <main className="shell" id="top">
       <header className="appHeader">
         <button className="brandButton" type="button" onClick={() => jumpTo("top")} aria-label="กลับด้านบน"><span className="brandLogo"><BrandGlyph /></span><span className="brandText"><strong>เครื่องมือ <em>PDF</em></strong><small>RCAT • ศูนย์กลางจัดการเอกสาร</small></span></button>
-        <div className="headerActions"><div className="status"><span className="statusDot" />{message}</div><nav className="desktopTabs" aria-label="PDF Hub sections"><button className={tab === "tools" ? "active" : ""} onClick={() => setTab("tools")}>เครื่องมือ</button><button className={tab === "admin" ? "active" : ""} onClick={() => setTab("admin")}>ผู้ดูแล</button></nav></div>
+        <div className="headerActions"><div className="status"><span className="statusDot" />{message}</div><nav className="desktopTabs" aria-label="PDF Hub sections"><button className={tab === "tools" ? "active" : ""} onClick={() => setTab("tools")}>เครื่องมือ</button>{identity?.is_admin && <button className={tab === "admin" ? "active" : ""} onClick={() => setTab("admin")}>ผู้ดูแล</button>}</nav></div>
       </header>
 
       {tab === "tools" && <section className="welcomeHero"><div className="welcomeCopy"><span className="eyebrow">PDF WORKSPACE • SELF-HOSTED</span><h1>จัดการเอกสารให้<br/><span>ง่ายกว่าเดิม</span></h1><p>รวม แยก OCR แปลงไฟล์ ใส่ลายน้ำ และจัดการ PDF จากพื้นที่ทำงานเดียว โดยข้อมูลยังอยู่ในระบบขององค์กร</p><div className="heroChips"><span>OCR ไทย + อังกฤษ</span><span>PDF/A</span><span>Secure download</span></div></div><div className="heroArt" aria-hidden="true"><span className="artOrb one"/><span className="artOrb two"/><div className="folderBack"/><div className="folderFront"/><div className="pdfSheet"><b>PDF</b><i/><i/><i/></div><div className="sparkle s1">✦</div><div className="sparkle s2">✦</div></div></section>}
 
       <section className={`authCard ${authenticated ? "connected" : ""}`}>
-        {authenticated && identity ? <><div className="userIdentity"><span className="avatar">{(identity.display_name || identity.name || "U").slice(0, 1).toUpperCase()}</span><div><strong>{identity.display_name || identity.name}</strong><small>{identity.auth_source} • {identity.groups.join(", ") || "authenticated"}</small></div></div><div className="authActions"><button className="secondary" onClick={() => void loadWorkspace()} disabled={busy}>รีเฟรชข้อมูล</button><button className="ghost" onClick={logout}>ออกจากระบบ</button></div></> : <><div className="loginIntro"><span className="loginIcon">↗</span><div><strong>เชื่อมต่อ PDF Hub</strong><small>เข้าสู่ระบบเพื่อเปิด Workspace และเครื่องมือทั้งหมด</small></div></div><div className="apiLogin"><input aria-label="Service API Key" type="password" value={apiKeyDraft} onChange={(e) => setApiKeyDraft(e.target.value)} placeholder="Service API Key • pdfh_..." autoComplete="off"/><button className="primary" onClick={connectApiKey} disabled={!apiKeyDraft || busy}>เชื่อมต่อ</button></div>{authConfig?.oidc.enabled && authConfig.oidc.login_url && <button className="secondary" onClick={() => { window.location.href = `${authConfig.oidc.login_url}?return_to=/`; }}>SSO Login</button>}</>}
+        {authenticated && identity ? <><div className="userIdentity"><span className="avatar">{(identity.display_name || identity.name || "U").slice(0, 1).toUpperCase()}</span><div><strong>{identity.display_name || identity.name}</strong><small>{identity.auth_source} • {identity.groups.join(", ") || "authenticated"}</small></div></div><div className="authActions"><button className="secondary" onClick={() => void loadWorkspace()} disabled={busy}>รีเฟรชข้อมูล</button><button className="ghost" onClick={logout}>ออกจากระบบ</button></div></> : <><div className="loginIntro"><span className="loginIcon">↗</span><div><strong>{enterpriseAuthEnabled ? "เข้าสู่ระบบ PDF Hub" : "เชื่อมต่อ PDF Hub"}</strong><small>{enterpriseAuthEnabled ? "ใช้บัญชีองค์กรเพื่อเปิด Workspace และเครื่องมือทั้งหมด" : "Web Console ใช้ session ภายในระบบ ไม่ต้องกรอก API Key"}</small></div></div>{authConfig?.oidc.enabled && authConfig.oidc.login_url && <button className="secondary" onClick={() => { window.location.href = `${authConfig.oidc.login_url}?return_to=/`; }}>SSO Login</button>}{!enterpriseAuthEnabled && <button className="primary" onClick={() => void connectSession()} disabled={busy}>{busy ? "กำลังเชื่อมต่อ..." : "เข้าใช้งาน"}</button>}</>}
         {authConfig?.ldap.enabled && auth !== SESSION_AUTH && <div className="ldapLogin"><label>LDAP user<input value={ldapUser} onChange={(e) => setLdapUser(e.target.value)} autoComplete="username"/></label><label>LDAP password<input type="password" value={ldapPassword} onChange={(e) => setLdapPassword(e.target.value)} autoComplete="current-password"/></label><button className="secondary" onClick={loginLdap} disabled={!ldapUser || !ldapPassword || busy}>LDAP Login</button></div>}
       </section>
 
       {authenticated && integrations && tab === "tools" && <section className="platformStrip" aria-label="Platform status"><div><span className="platformIcon storage">▰</span><p><strong>Storage</strong><small>{integrations.storage_backend.toUpperCase()}</small></p></div><div><span className="platformIcon shield">✓</span><p><strong>Malware scan</strong><small>{integrations.clamav_enabled ? "ClamAV พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div><div><span className="platformIcon secure">⌁</span><p><strong>Secure delivery</strong><small>Signed URL + webhook</small></p></div><div><span className="platformIcon archive">▣</span><p><strong>Archive</strong><small>{integrations.paperless_enabled ? "Paperless พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div></section>}
 
-      {tab === "admin" ? (authenticated ? <section className="adminPage"><div className="sectionIntro"><span className="sectionKicker">SYSTEM CONTROL</span><h2>จัดการระบบ</h2><p>API keys, quota, webhook และ audit trail สำหรับผู้ดูแล</p></div><AdminPanel apiKey={auth}/></section> : <section className="emptyState"><span>🔐</span><h2>เข้าสู่ระบบก่อนเปิดหน้าผู้ดูแล</h2><p>ใช้ Service API Key, OIDC SSO หรือ LDAP ตามที่ระบบเปิดใช้งาน</p></section>) : authenticated ? <>
+      {tab === "admin" ? (authenticated && identity?.is_admin ? <section className="adminPage"><div className="sectionIntro"><span className="sectionKicker">SYSTEM CONTROL</span><h2>จัดการระบบ</h2><p>API keys, quota, webhook และ audit trail สำหรับผู้ดูแล</p></div><AdminPanel apiKey={auth}/></section> : <section className="emptyState"><span>🔐</span><h2>ต้องใช้บัญชีผู้ดูแลระบบ</h2><p>สิทธิ์ผู้ดูแลมาจาก OIDC/LDAP group mapping หรือ bootstrap credential ฝั่งระบบ ไม่ได้ให้ผู้ใช้กรอก Service API Key ใน Web Console</p></section>) : authenticated ? <>
         <section className="workspaceGrid" id="workspace"><div className="uploadCard"><input id="files" type="file" multiple onChange={(e) => void onFiles(e.target.files)} disabled={busy}/><label htmlFor="files"><span className="uploadIcon">＋</span><span className="uploadBadge">เริ่มที่นี่</span><strong>เพิ่มไฟล์เข้า Workspace</strong><span>เลือก PDF, รูปภาพ หรือเอกสาร Office ได้หลายไฟล์</span><em>แตะเพื่อเลือกไฟล์</em></label></div><div className="targetCard" id="workspace-target"><div className="panelTitle"><div><span className="sectionKicker">WORKSPACE</span><h2>ไฟล์ที่เลือก</h2></div><span className="countPill">{files.length} ไฟล์</span></div><select value={targetId} onChange={(e) => { setTargetId(e.target.value); setPreviewUrl(null); setSignedUrl(null); }}><option value="">— เลือกไฟล์ —</option>{files.map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}</select>{target ? <div className="selectedFile"><span className="fileGlyph">PDF</span><div><strong>{target.original_name}</strong><small>{(target.size / 1024 / 1024).toFixed(2)} MB • {target.content_type}</small></div></div> : <div className="noTarget">เลือกไฟล์เพื่อเริ่มใช้เครื่องมือ</div>}<div className="previewControls"><label>หน้า<input type="number" min="1" value={previewPage} onChange={(e) => setPreviewPage(Math.max(1, Number(e.target.value)))}/></label><button className="secondary" onClick={preview} disabled={!targetId || !targetIsPdf}>ดูตัวอย่าง PDF</button></div><div className="signedRow"><label>ลิงก์หมดอายุ (วินาที)<input type="number" min="30" max="3600" value={signedTtl} onChange={(e) => setSignedTtl(Math.max(30, Number(e.target.value)))}/></label><button className="secondary" onClick={makeSignedLink} disabled={!targetId || busy}>สร้าง Signed URL</button></div>{signedUrl && <div className="secretBox"><strong>ลิงก์ดาวน์โหลดชั่วคราว</strong><code>{signedUrl}</code><div className="rowActions"><a className="ghost" href={signedUrl} target="_blank" rel="noreferrer">เปิด</a><button className="ghost" onClick={copySignedLink}>คัดลอก</button></div></div>}</div></section>
         {previewUrl && <section className="previewPanel"><div className="panelTitle"><div><span className="sectionKicker">PREVIEW</span><h2>ตัวอย่างหน้า {previewPage}</h2></div><button className="ghost" onClick={() => setPreviewUrl(null)}>ปิด</button></div><div className="previewCanvas"><Image src={previewUrl} alt={`Preview page ${previewPage}`} width={900} height={1200} unoptimized/></div></section>}
         <section className="toolsSection" id="quick-tools"><div className="sectionIntro toolsIntro"><div><span className="sectionKicker">ALL TOOLS</span><h2>เครื่องมือทั้งหมด</h2><p>รวมเครื่องมือ PDF <strong>14 รายการ</strong> พร้อมคำอธิบายสั้น ๆ เลือกใช้ได้ทันที</p></div><span className="toolsBubble">PDF</span></div><div className="toolCardGrid">{toolCards.map((tool) => <button key={tool.title} className={`toolCard ${tool.tone}`} disabled={tool.disabled} onClick={tool.onClick}><span className="toolIcon"><ToolIcon name={tool.icon}/></span><span className="toolCopy">{tool.badge && <em>{tool.badge}</em>}<strong>{tool.title}</strong><small>{tool.description}</small></span><span className="toolArrow">›</span></button>)}</div></section>
@@ -273,9 +267,9 @@ export function PdfHubApp() {
           <div className="toolConfig" id="pdf-stamp"><div className="configHead"><span className="miniIcon purple"><ToolIcon name="stamp"/></span><div><h3>ประทับ PDF</h3><small>Overlay</small></div></div><label>ไฟล์ Stamp<select value={stampId} onChange={(e) => setStampId(e.target.value)}><option value="">— เลือก PDF —</option>{pdfFiles.filter((file) => file.id !== targetId).map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}</select></label><div className="inlineFields"><label>ตำแหน่ง<select value={stampPosition} onChange={(e) => setStampPosition(e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label><label>Scale<input type="number" min="0.03" max="0.8" step="0.01" value={stampScale} onChange={(e) => setStampScale(Number(e.target.value))}/></label></div><button className="primary full" onClick={() => void run("stamp")} disabled={busy || !targetIsPdf || !stampId}>ประทับ PDF</button></div>
         </div></section>
         <section className="jobsSection" id="jobs"><div className="panelTitle"><div><span className="sectionKicker">RECENT</span><h2>งานล่าสุด</h2></div><button className="ghost" onClick={() => void loadWorkspace()} disabled={busy}>รีเฟรช</button></div><div className="jobList">{jobs.length ? jobs.map((job) => <div className="job" key={job.id}><span className={`jobStatusDot ${job.status}`}/><div className="jobInfo"><strong>{job.operation}</strong><code>{job.id}</code></div><span className={`badge ${job.status}`}>{job.status} • {job.progress}%</span>{job.output_file_id && <button className="downloadButton" onClick={() => void download(job.output_file_id!)}>ดาวน์โหลด</button>}{job.error && <small className="jobError">{job.error}</small>}</div>) : <div className="noJobs"><span>◷</span><p>ยังไม่มีงานประมวลผล</p></div>}</div></section>
-      </> : <section className="emptyState"><span>📄</span><h2>พร้อมเริ่มจัดการ PDF</h2><p>เชื่อมต่อระบบด้านบน แล้วเพิ่มไฟล์เข้า Workspace เพื่อเปิดเครื่องมือทั้งหมด</p></section>}
+      </> : <section className="emptyState"><span>📄</span><h2>พร้อมเริ่มจัดการ PDF</h2><p>{enterpriseAuthEnabled ? "เข้าสู่ระบบด้วยบัญชีองค์กรเพื่อเปิด Workspace" : "ระบบจะสร้าง Web Console session ให้โดยอัตโนมัติ โดยไม่ต้องใช้ API Key"}</p></section>}
 
-      <nav className="mobileNav" aria-label="เมนูหลัก"><button onClick={() => jumpTo("top")}><span>⌂</span><small>หน้าแรก</small></button><button className={tab === "tools" ? "active" : ""} onClick={() => jumpTo("quick-tools")}><span>▦</span><small>เครื่องมือ</small></button><button className="navScan" onClick={() => jumpTo("workspace")}><span><ToolIcon name="scan"/></span><small>เพิ่มไฟล์</small></button><button onClick={() => jumpTo("jobs")}><span>◷</span><small>ล่าสุด</small></button><button className={tab === "admin" ? "active" : ""} onClick={() => { setTab("admin"); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span>⚙</span><small>ตั้งค่า</small></button></nav>
+      <nav className="mobileNav" aria-label="เมนูหลัก"><button onClick={() => jumpTo("top")}><span>⌂</span><small>หน้าแรก</small></button><button className={tab === "tools" ? "active" : ""} onClick={() => jumpTo("quick-tools")}><span>▦</span><small>เครื่องมือ</small></button><button className="navScan" onClick={() => jumpTo("workspace")}><span><ToolIcon name="scan"/></span><small>เพิ่มไฟล์</small></button><button onClick={() => jumpTo("jobs")}><span>◷</span><small>ล่าสุด</small></button>{identity?.is_admin && <button className={tab === "admin" ? "active" : ""} onClick={() => { setTab("admin"); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span>⚙</span><small>ตั้งค่า</small></button>}</nav>
     </main>
   );
 }

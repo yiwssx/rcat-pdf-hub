@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     human_scopes: str = DEFAULT_HUMAN_SCOPES
     admin_groups: str = "pdfhub-admins"
 
+    # When no institutional identity provider is enabled, the Web Console can
+    # mint an isolated, non-admin HttpOnly session through the internal API.
+    web_console_auto_login: bool = True
+
     # OIDC Authorization Code + PKCE SSO.
     oidc_enabled: bool = False
     oidc_issuer: str = ""
@@ -168,6 +172,12 @@ class Settings(BaseSettings):
     @property
     def admin_group_set(self) -> set[str]:
         return {x.strip() for x in self.admin_groups.split(",") if x.strip()}
+
+    @property
+    def web_console_auto_login_enabled(self) -> bool:
+        # Institutional identity always wins: enabling OIDC or LDAP disables the
+        # anonymous Web Console bootstrap even if the flag was left on.
+        return self.web_console_auto_login and not self.oidc_enabled and not self.ldap_enabled
 
     @property
     def oidc_redirect_uri(self) -> str:
