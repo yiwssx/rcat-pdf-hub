@@ -13,7 +13,7 @@ from app.policy import ensure_daily_job_quota
 from app.queue import pdf_queue, redis_conn
 from app.schemas import JobOut
 from app.security import Principal, require_scope
-from rq.command import send_stop_job
+from rq.command import send_stop_job_command
 from rq.job import Job as RQJob
 
 settings = get_settings()
@@ -93,7 +93,7 @@ def cancel_job(
     try:
         rq_job = RQJob.fetch(job.rq_job_id, connection=redis_conn)
         if job.status == "running":
-            send_stop_job(redis_conn, rq_job.id)
+            send_stop_job_command(redis_conn, rq_job.id)
         else:
             rq_job.cancel()
     except Exception as exc:
