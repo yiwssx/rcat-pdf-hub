@@ -17,12 +17,12 @@ Note on mocking strategy:
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from datetime import datetime, timezone
 
 from app.services.user_service import UserService
 from app.models import User
-from app.exceptions import NotFoundError, ConflictError, ForbiddenError
+from app.exceptions import NotFoundError, ConflictError
 
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────────
