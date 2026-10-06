@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = ROOT / "apps" / "api"
 WEB_API = ROOT / "apps" / "web" / "lib" / "api.ts"
 MANIFEST = ROOT / "apps" / "web" / "lib" / "api-contract.json"
-ARTIFACT = ROOT / "artifacts" / "contracts" / "openapi.json"
+ARTIFACT = Path(os.environ.get("PDFHUB_CONTRACT_ARTIFACT", str(ROOT / "artifacts" / "contracts" / "openapi.json")))
 
 os.environ.setdefault("PDFHUB_DATABASE_URL", "sqlite+pysqlite:////tmp/pdfhub-contract.db")
 os.environ.setdefault("PDFHUB_DATA_DIR", "/tmp/pdfhub-contract-data")
