@@ -131,11 +131,12 @@ assert NEXT_SECURITY_MIN <= next_version < NEXT_SECURITY_MAX_EXCLUSIVE, (
     f">={'.'.join(map(str, NEXT_SECURITY_MIN))}; found {'.'.join(map(str, next_version))}"
 )
 assert "@playwright/test" in package.get("devDependencies", {}), "Playwright smoke coverage is required"
-assert package.get("scripts", {}).get("test:e2e") == "playwright test tests/e2e/pdf-hub.smoke.spec.ts"
+assert package.get("scripts", {}).get("test:e2e") == "playwright test tests/e2e/pdf-hub.smoke.spec.ts tests/e2e/pdf-hub.ui-regression.spec.ts"
 assert package.get("scripts", {}).get("test:e2e:stack") == "playwright test tests/e2e/pdf-hub.stack.spec.ts"
 for required in (
     "apps/web/playwright.config.ts",
     "apps/web/tests/e2e/pdf-hub.smoke.spec.ts",
+    "apps/web/tests/e2e/pdf-hub.ui-regression.spec.ts",
     "apps/web/tests/e2e/pdf-hub.stack.spec.ts",
     "apps/web/app/web-auth/session/route.ts",
     "apps/api/app/routers/internal.py",

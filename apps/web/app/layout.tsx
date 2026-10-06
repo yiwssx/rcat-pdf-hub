@@ -6,6 +6,10 @@ export const metadata = {
   description: "ศูนย์กลางเครื่องมือ PDF และเอกสารแบบ self-hosted",
 };
 
+export const viewport = {
+  themeColor: "#f5f7ff",
+};
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th">
