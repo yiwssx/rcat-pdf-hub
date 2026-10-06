@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { AuthMe, Job, UploadedFile } from "../../lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
 import { BrandGlyph, ToolIcon, ToolIconName } from "./tool-icons";
 
 export type ToolDefinition = {
@@ -296,51 +296,170 @@ export function DocumentWorkspace({
 }
 
 export function FilesScreen({
-  files,
+  auth,
   busy,
+  refreshKey,
+  onPageItems,
   onFiles,
   onSelectFile,
   onDownload,
   onDelete,
   onRetention,
 }: {
-  files: UploadedFile[];
+  auth: string;
   busy: boolean;
-  onFiles: (files: FileList | null) => void;
-  onSelectFile: (id: string) => void;
-  onDownload: (id: string) => void;
-  onDelete: (ids: string[]) => void;
-  onRetention: (id: string, keep: boolean) => void;
+  refreshKey: string;
+  onPageItems: (files: UploadedFile[]) => void;
+  onFiles: (files: FileList | null) => Promise<void>;
+  onSelectFile: (file: UploadedFile) => void;
+  onDownload: (id: string) => Promise<void>;
+  onDelete: (ids: string[]) => Promise<void>;
+  onRetention: (id: string, keep: boolean) => Promise<void>;
 }) {
+  const pageSize = 50;
   const [query, setQuery] = useState("");
+  const [kind, setKind] = useState<FileLibraryKind>("all");
+  const [sort, setSort] = useState<FileLibrarySort>("created_at");
+  const [order, setOrder] = useState<FileLibraryOrder>("desc");
+  const [includeExpired, setIncludeExpired] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [reloadToken, setReloadToken] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
-  const shown = useMemo(() => files.filter((file) => file.original_name.toLowerCase().includes(query.trim().toLowerCase())), [files, query]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [page, setPage] = useState<FileLibraryPage>({
+    items: [],
+    total: 0,
+    limit: pageSize,
+    offset: 0,
+    has_more: false,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setLoading(true);
+        setLoadError("");
+        try {
+          const result = await queryFileLibrary(auth, {
+            limit: pageSize,
+            offset,
+            q: query,
+            kind,
+            include_expired: includeExpired,
+            sort,
+            order,
+          });
+          if (cancelled) return;
+          if (result.total > 0 && result.items.length === 0 && offset > 0) {
+            setOffset(Math.max(0, offset - pageSize));
+            return;
+          }
+          setPage(result);
+          onPageItems(result.items);
+          setSelected((old) => old.filter((id) => result.items.some((file) => file.id === id)));
+        } catch (error) {
+          if (!cancelled) {
+            setLoadError(error instanceof Error ? error.message : "โหลดคลังไฟล์ไม่สำเร็จ");
+          }
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    }, query.trim() ? 250 : 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [auth, includeExpired, kind, offset, onPageItems, order, query, refreshKey, reloadToken, sort]);
+
+  const currentPage = page.total === 0 ? 0 : Math.floor(page.offset / page.limit) + 1;
+  const totalPages = page.total === 0 ? 0 : Math.ceil(page.total / page.limit);
+
+  function resetAnd(change: () => void) {
+    setOffset(0);
+    change();
+  }
+
+  async function mutate(action: () => Promise<void>) {
+    await action();
+    setReloadToken((value) => value + 1);
+  }
+
   return (
     <main className="v3Main">
       <section className="v3FilesHead">
-        <div><span className="v3Kicker">FILES</span><h1>ไฟล์ทั้งหมด</h1><p>{files.length} ไฟล์ใน Workspace</p></div>
+        <div><span className="v3Kicker">FILES</span><h1>ไฟล์ทั้งหมด</h1><p>{page.total} ไฟล์ใน Workspace</p></div>
         <div className="v3FilesActions">
-          {selected.length > 0 && <><span>{selected.length} รายการ</span><button type="button" className="v3DangerButton" disabled={busy} onClick={() => { onDelete(selected); setSelected([]); }}>ลบที่เลือก</button></>}
-          <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(e) => onFiles(e.target.files)}/>＋ เพิ่มไฟล์</label>
+          {selected.length > 0 && <><span>{selected.length} รายการ</span><button type="button" className="v3DangerButton" disabled={busy} onClick={() => void mutate(async () => { await onDelete(selected); setSelected([]); })}>ลบที่เลือก</button></>}
+          <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(event) => {
+            const input = event.currentTarget;
+            const list = input.files;
+            void mutate(async () => {
+              await onFiles(list);
+              input.value = "";
+              setOffset(0);
+            });
+          }}/>＋ เพิ่มไฟล์</label>
         </div>
       </section>
-      <div className="v3Search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ค้นหาชื่อไฟล์…"/></div>
-      <section className="v3FileLibrary">
-        {shown.map((file) => <div key={file.id} className="v3LibraryRow">
+
+      <section className="v3LibraryToolbar" aria-label="ตัวกรองคลังไฟล์">
+        <div className="v3Search"><span>⌕</span><input aria-label="ค้นหาชื่อไฟล์" value={query} onChange={(event) => resetAnd(() => setQuery(event.target.value))} placeholder="ค้นหาชื่อไฟล์…"/></div>
+        <label>ประเภท
+          <select aria-label="ประเภทไฟล์" value={kind} onChange={(event) => resetAnd(() => setKind(event.target.value as FileLibraryKind))}>
+            <option value="all">ทั้งหมด</option>
+            <option value="pdf">PDF</option>
+            <option value="image">รูปภาพ</option>
+            <option value="other">อื่น ๆ</option>
+          </select>
+        </label>
+        <label>เรียงตาม
+          <select aria-label="เรียงไฟล์ตาม" value={sort} onChange={(event) => resetAnd(() => setSort(event.target.value as FileLibrarySort))}>
+            <option value="created_at">วันที่เพิ่ม</option>
+            <option value="name">ชื่อไฟล์</option>
+            <option value="size">ขนาด</option>
+            <option value="expires_at">วันหมดอายุ</option>
+          </select>
+        </label>
+        <label>ลำดับ
+          <select aria-label="ลำดับการเรียง" value={order} onChange={(event) => resetAnd(() => setOrder(event.target.value as FileLibraryOrder))}>
+            <option value="desc">มาก → น้อย</option>
+            <option value="asc">น้อย → มาก</option>
+          </select>
+        </label>
+        <label className="v3ExpiredToggle"><input type="checkbox" checked={includeExpired} onChange={(event) => resetAnd(() => setIncludeExpired(event.target.checked))}/> รวมไฟล์หมดอายุ</label>
+      </section>
+
+      <div className="v3LibraryStatus" role="status">
+        <span>{loading ? "กำลังโหลด…" : loadError ? "โหลดข้อมูลไม่สำเร็จ" : page.total > 0 ? `แสดง ${page.offset + 1}–${page.offset + page.items.length} จาก ${page.total}` : "ไม่พบไฟล์"}</span>
+        {loadError && <small>{loadError}</small>}
+      </div>
+
+      <section className="v3FileLibrary" aria-busy={loading}>
+        {page.items.map((file) => <div key={file.id} className="v3LibraryRow">
           <label className="v3FileCheck" onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.includes(file.id)} onChange={(event) => setSelected((old) => event.target.checked ? [...old, file.id] : old.filter((id) => id !== file.id))}/></label>
-          <button type="button" className="v3FileOpen" onClick={() => onSelectFile(file.id)}>
+          <button type="button" className="v3FileOpen" onClick={() => onSelectFile(file)}>
             <span className={`v3FileBadge ${fileKind(file).toLowerCase()}`}>{fileKind(file)}</span>
             <div><strong>{file.original_name}</strong><small>{file.content_type} • {file.expires_at ? `หมดอายุ ${new Date(file.expires_at).toLocaleString("th-TH")}` : "เก็บถาวร"}</small></div>
           </button>
           <span>{sizeLabel(file.size)}</span>
           <div className="v3FileRowActions">
-            <button type="button" onClick={() => onDownload(file.id)}>ดาวน์โหลด</button>
-            <button type="button" onClick={() => onRetention(file.id, Boolean(file.expires_at))}>{file.expires_at ? "เก็บถาวร" : "ใช้ retention"}</button>
-            <button type="button" className="danger" onClick={() => onDelete([file.id])}>ลบ</button>
+            <button type="button" onClick={() => void onDownload(file.id)}>ดาวน์โหลด</button>
+            <button type="button" onClick={() => void mutate(() => onRetention(file.id, Boolean(file.expires_at)))}>{file.expires_at ? "เก็บถาวร" : "ใช้ retention"}</button>
+            <button type="button" className="danger" onClick={() => void mutate(() => onDelete([file.id]))}>ลบ</button>
           </div>
         </div>)}
-        {shown.length === 0 && <div className="v3LibraryEmpty"><span>◫</span><h2>ไม่พบไฟล์</h2><p>{query ? "ลองค้นหาด้วยคำอื่น" : "เพิ่มไฟล์เพื่อเริ่มใช้งาน"}</p></div>}
+        {!loading && page.items.length === 0 && <div className="v3LibraryEmpty"><span>◫</span><h2>ไม่พบไฟล์</h2><p>{query ? "ลองค้นหาด้วยคำอื่นหรือเปลี่ยนตัวกรอง" : "เพิ่มไฟล์เพื่อเริ่มใช้งาน"}</p></div>}
       </section>
+
+      <nav className="v3LibraryPagination" aria-label="หน้าคลังไฟล์">
+        <button type="button" disabled={loading || page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - page.limit))}>← ก่อนหน้า</button>
+        <span>{page.total === 0 ? "0 รายการ" : `หน้า ${currentPage} จาก ${totalPages}`}</span>
+        <button type="button" disabled={loading || !page.has_more} onClick={() => setOffset(page.offset + page.limit)}>ถัดไป →</button>
+      </nav>
     </main>
   );
 }
