@@ -124,8 +124,21 @@ test("keeps the paged file-library controls usable on mobile", async ({ page }) 
   await expect(page.getByLabel("ค้นหาชื่อไฟล์")).toBeVisible();
   await expect(page.getByLabel("ประเภทไฟล์")).toBeVisible();
 
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(1);
+  const layout = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    offenders: Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          className: element.className,
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        };
+      })
+      .filter((item) => item.right > window.innerWidth + 1 || item.left < -1)
+      .slice(0, 12),
+  }));
+  expect(layout.overflow, JSON.stringify(layout.offenders)).toBeLessThanOrEqual(1);
 });
