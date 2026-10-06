@@ -1,9 +1,10 @@
 import json
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import desc, or_, select, update
+from sqlalchemy import asc, desc, func, not_, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
@@ -14,7 +15,7 @@ from app.malware import MalwareDetected, scan_file
 from app.filetypes import validate_uploaded_file
 from app.models import ArchiveRecord, FileRecord, JobRecord
 from app.policy import ensure_storage_quota
-from app.schemas import FileBulkDeleteRequest, FileOut, FileRetentionUpdate, PageInfoOut, SignedDownloadOut
+from app.schemas import FileBulkDeleteRequest, FileLibraryPageOut, FileOut, FileRetentionUpdate, PageInfoOut, SignedDownloadOut
 from app.security import Principal, require_scope
 from app.services import pdf_tools
 from pypdf import PdfReader
@@ -96,6 +97,70 @@ def list_files(
     if "*" not in principal.scopes:
         stmt = stmt.where(FileRecord.source_system == principal.name)
     return db.scalars(stmt).all()
+
+
+@router.get("/library", response_model=FileLibraryPageOut)
+def query_file_library(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0, le=1000000),
+    q: str = Query(default="", max_length=200),
+    kind: Literal["all", "pdf", "image", "other"] = Query(default="all"),
+    include_expired: bool = Query(default=False),
+    sort: Literal["created_at", "name", "size", "expires_at"] = Query(default="created_at"),
+    order: Literal["asc", "desc"] = Query(default="desc"),
+    principal: Principal = Depends(require_scope("files:read")),
+    db: Session = Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    filters = []
+
+    if "*" not in principal.scopes:
+        filters.append(FileRecord.source_system == principal.name)
+    if not include_expired:
+        filters.append(or_(FileRecord.expires_at.is_(None), FileRecord.expires_at > now))
+
+    normalized_query = q.strip()
+    if normalized_query:
+        filters.append(FileRecord.original_name.icontains(normalized_query, autoescape=True))
+
+    if kind == "pdf":
+        filters.append(FileRecord.content_type == "application/pdf")
+    elif kind == "image":
+        filters.append(FileRecord.content_type.startswith("image/"))
+    elif kind == "other":
+        filters.append(
+            (FileRecord.content_type != "application/pdf")
+            & not_(FileRecord.content_type.startswith("image/"))
+        )
+
+    sort_columns = {
+        "created_at": FileRecord.created_at,
+        "name": func.lower(FileRecord.original_name),
+        "size": FileRecord.size,
+        "expires_at": FileRecord.expires_at,
+    }
+    sort_column = sort_columns[sort]
+    direction = asc if order == "asc" else desc
+
+    count_stmt = select(func.count()).select_from(FileRecord)
+    data_stmt = select(FileRecord)
+    if filters:
+        count_stmt = count_stmt.where(*filters)
+        data_stmt = data_stmt.where(*filters)
+
+    # ID is the deterministic tie-breaker so pagination cannot reshuffle rows
+    # that share the selected sort value.
+    data_stmt = data_stmt.order_by(direction(sort_column), direction(FileRecord.id)).offset(offset).limit(limit)
+    total = int(db.scalar(count_stmt) or 0)
+    items = db.scalars(data_stmt).all()
+
+    return FileLibraryPageOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=offset + len(items) < total,
+    )
 
 
 @router.post("", response_model=FileOut)
