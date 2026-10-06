@@ -219,6 +219,18 @@ assert 'request("/web-auth/session"' in web_api
 assert "identity?.is_admin" in web_app
 assert not (ROOT / "apps/web/app/components/pdf-hub-console.tsx").exists(), "Superseded console implementation must stay removed"
 
+# Phase 6 workstream state must remain repository-owned and resumable.
+phase6_tracker_path = "docs/workstreams/phase6-production-hardening-tracker.md"
+assert (ROOT / phase6_tracker_path).exists(), f"Missing Phase 6 tracker: {phase6_tracker_path}"
+phase6_tracker = read(phase6_tracker_path)
+for marker in (
+    "Tracker role: **canonical source of truth for Phase 6 execution status**",
+    "Phase 6 target release: `0.6.0`",
+    "## Activity log",
+    "## Current next action",
+):
+    assert marker in phase6_tracker, f"Phase 6 tracker missing governance marker: {marker}"
+
 # Release metadata must agree while retaining prior completed baselines.
 assert f'version="{CURRENT_RELEASE}"' in read("apps/api/app/main.py")
 assert f"{CURRENT_RELEASE} — Phase 5 production maturity" in read("README.md")
