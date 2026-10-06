@@ -1,5 +1,5 @@
 import "./globals.css";
-import "./app-v2.css";
+import "./app-v3.css";
 
 export const metadata = {
   title: "RCAT PDF Hub",
