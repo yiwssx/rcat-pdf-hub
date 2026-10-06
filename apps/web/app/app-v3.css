@@ -433,6 +433,13 @@ button.full { width:100%; margin-top:2px; }
 .advancedSection.isOpen { display:block; animation:v3-pop .18s ease-out; }
 .advancedSection .advancedGrid { grid-template-columns:1fr; }
 .advancedSection .toolConfig { display:none; max-width:760px; margin:0 auto; }
+.advancedSection[data-active-tool="ocr"] #ocr,
+.advancedSection[data-active-tool="merge-pdf"] #merge-pdf,
+.advancedSection[data-active-tool="compress"] #compress,
+.advancedSection[data-active-tool="pdfa"] #pdfa,
+.advancedSection[data-active-tool="office-to-pdf"] #office-to-pdf,
+.advancedSection[data-active-tool="signed-link"] #signed-link,
+.advancedSection[data-active-tool="archive"] #archive,
 .advancedSection[data-active-tool="images-to-pdf"] #images-to-pdf,
 .advancedSection[data-active-tool="pdf-to-images"] #pdf-to-images,
 .advancedSection[data-active-tool="split-rotate"] #split-rotate,
@@ -452,6 +459,65 @@ button.full { width:100%; margin-top:2px; }
   border-radius:24px;
   padding:22px;
   box-shadow:0 14px 34px rgba(76,87,128,.08);
+}
+.miniIcon.rose { background:linear-gradient(145deg,#ff6a9b,#e83e83); }
+.miniIcon.blue { background:linear-gradient(145deg,#5b8cff,#2563eb); }
+.miniIcon.amber { background:linear-gradient(145deg,#f8b94c,#e58a12); }
+.miniIcon.green { background:linear-gradient(145deg,#4acb79,#16a34a); }
+.miniIcon.orange { background:linear-gradient(145deg,#ff9b4d,#e97818); }
+.miniIcon.sky { background:linear-gradient(145deg,#55c0ee,#168fc9); }
+.miniIcon.teal { background:linear-gradient(145deg,#45c8bc,#0f9f92); }
+
+.taskSummary {
+  display:grid;
+  gap:4px;
+  padding:14px 15px;
+  border:1px solid #eceef5;
+  border-radius:16px;
+  background:#f9faff;
+}
+.taskSummary strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--app-ink);
+  font-size:13px;
+}
+.taskSummary small { color:#7b849b; line-height:1.5; }
+
+.mergeFileList {
+  display:grid;
+  gap:7px;
+  max-height:240px;
+  overflow:auto;
+  padding-right:3px;
+}
+.mergeFileList > div {
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  align-items:center;
+  gap:9px;
+  padding:9px 11px;
+  border:1px solid #eceef5;
+  border-radius:13px;
+  background:#fafbff;
+}
+.mergeFileList span {
+  width:25px;
+  height:25px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  color:#4f46e5;
+  background:#eef0ff;
+  font-size:10px;
+  font-weight:900;
+}
+.mergeFileList strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
 }
 
 /* Jobs are useful but secondary. */
