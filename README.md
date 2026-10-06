@@ -136,11 +136,15 @@ make up-prod-nas
 - Docker JSON log rotation is enabled for all services;
 - application containers run with a read-only root filesystem, `no-new-privileges`, and all Linux capabilities dropped;
 - writable temporary space is explicit `tmpfs`, while document data remains on the existing data/NAS volumes;
-- PID, memory, and CPU ceilings are defined for core and optional services and can be tuned through environment variables.
+- PID, memory, and CPU ceilings are defined for core and optional services and can be tuned through environment variables;
+- production traffic is split across explicit edge, application, data, management, and egress networks; the application/data/management networks are internal;
+- only Caddy is published for normal user/API traffic, while management UIs keep their existing trusted-interface binding.
 
 Leave `PDFHUB_SESSION_COOKIE_SECURE` and `PDFHUB_WEB_CONSOLE_AUTO_LOGIN` blank in `.env` to use the development/production mode-aware defaults. Set them explicitly only when the deployment architecture requires an override.
 
 The most commonly tuned production ceilings are documented in `.env.example` (API, worker, and Gotenberg). All remaining defaults are visible in `docker-compose.prod.yml`; change them only after observing actual host/resource usage.
+
+Production Caddy requires an explicit `PDFHUB_PUBLIC_BIND_HOST`. Keep `127.0.0.1` when the reverse proxy is on the same host; when the upstream reverse proxy is on another machine, set this to the PDF Hub server's trusted LAN interface address rather than `0.0.0.0`.
 
 Backup/restore tooling must use the same deployment mode through `PDFHUB_COMPOSE_MODE`:
 
