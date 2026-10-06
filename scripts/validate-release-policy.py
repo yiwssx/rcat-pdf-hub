@@ -169,6 +169,19 @@ assert 'getByLabel("Service API Key")' in smoke and "toHaveCount(0)" in smoke
 for protected_flow in ("integrations/status", "files?limit=200&offset=0", "files/library", "jobs?limit=50", "/preview", "/pdf/compress", "/download"):
     assert protected_flow in smoke, f"Mocked browser smoke is missing protected flow: {protected_flow}"
 
+ui_regression = read("apps/web/tests/e2e/pdf-hub.ui-regression.spec.ts")
+for marker in (
+    "automatedAccessibilityFindings",
+    '"critical" | "serious"',
+    "accessible-name",
+    "image-alt",
+    "aria-hidden-focus",
+    "duplicate-id",
+    "positive-tabindex",
+    "has no critical or serious automated accessibility findings",
+):
+    assert marker in ui_regression, f"Accessibility browser gate missing marker: {marker}"
+
 # Runtime/container baselines are intentionally frozen and changed only by explicit developer review.
 requirements = read("apps/api/requirements.txt")
 python_lock = read("apps/api/requirements.lock")
