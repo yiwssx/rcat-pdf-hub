@@ -177,10 +177,6 @@ a.ghost {
   outline-offset: 2px;
 }
 
-:where(button, a, summary) {
-  -webkit-tap-highlight-color: rgba(99, 102, 241, .10);
-}
-
 .v3AdminMetric strong,
 .v3JobBadge,
 .quotaLine,
