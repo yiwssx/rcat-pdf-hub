@@ -257,6 +257,9 @@ assert "PDFHUB_DOWNLOAD_SIGNING_SECRET" in compose
 management_bind = "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}"
 for mapping in (
     f'{management_bind}:${{PDFHUB_PROMETHEUS_PORT:-9090}}:9090',
+    f'{management_bind}:${{PDFHUB_ALERTMANAGER_PORT:-9093}}:9093',
+    f'{management_bind}:${{PDFHUB_TEMPO_PORT:-3200}}:3200',
+    f'{management_bind}:${{PDFHUB_GRAFANA_PORT:-3001}}:3000',
     f'{management_bind}:${{PDFHUB_OTEL_GRPC_PORT:-4317}}:4317',
     f'{management_bind}:${{PDFHUB_OTEL_HTTP_PORT:-4318}}:4318',
     f'{management_bind}:${{PAPERLESS_HTTP_PORT:-8001}}:8000',
