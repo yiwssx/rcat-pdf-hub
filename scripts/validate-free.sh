@@ -77,7 +77,8 @@ operations() {
     scripts/check-production-network.py \
     scripts/check-worker-pools.py \
     scripts/check-grafana-provisioning.py \
-    scripts/validate-api-contract.py
+    scripts/validate-api-contract.py \
+    scripts/backend-coverage.py
   echo 'operations: PASS'
 }
 
@@ -99,8 +100,9 @@ backend() {
     python -m compileall -q app tests alembic
     cd ../..
     python scripts/validate-api-contract.py
+    cd ../..
+    python scripts/backend-coverage.py
     cd apps/api
-    python -m pytest -q
     rm -f /tmp/pdfhub-migrate-fresh.db /tmp/pdfhub-migrate-adopt.db
     PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db python -c 'from app.migrate import run_migrations; run_migrations()'
     PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<'PY'

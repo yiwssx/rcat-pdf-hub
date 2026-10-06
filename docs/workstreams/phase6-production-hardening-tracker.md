@@ -80,7 +80,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6F.3 | Scalable frontend file-library UX | COMPLETE | PR #102 |
 | 6F.4 | DB ↔ storage integrity reconciliation | COMPLETE | PR #103 |
 | 6G.1 | OpenAPI ↔ frontend contract validation/generation | COMPLETE | PR #104 |
-| 6G.2 | Backend coverage baseline and non-regression gate | PENDING | — |
+| 6G.2 | Backend coverage baseline and non-regression gate | COMPLETE | PR #105; Core API CI run 37519020885 |
 | 6G.3 | Automated accessibility regression gate | PENDING | — |
 | 6G.4 | Frontend/browser performance regression baseline | PENDING | — |
 | 6H.1 | Targeted architecture cleanup | PENDING | — |
@@ -237,12 +237,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6F.3 | Reworked the dedicated Files screen around the paged server query contract with debounced filename search, kind/expiry filters, sorting, 50-row pagination, mutation refresh and responsive browser coverage; `/files` no longer preloads the whole library. | PR #102 | COMPLETE |
 | 2026-10-06 | 6F.4 | Added administrator-only dry-run DB↔storage reconciliation for local/NAS and self-hosted S3, reporting missing/orphan objects, size mismatches, backend mismatches and duplicate local names without mutating storage. | PR #103 | COMPLETE |
 | 2026-10-07 | 6G.1 | Added generated FastAPI OpenAPI evidence plus a frontend-consumed contract manifest that gates method/path/response-schema drift and undeclared client API calls in Core API CI and zero-cost validation. | PR #104 | COMPLETE |
+| 2026-10-07 | 6G.2 | Added repository-owned backend statement-line coverage measurement around the complete pytest suite and locked the measured 61.36% baseline as a non-regression floor. | PR #105; Core API CI run 37519020885 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6G.2 — Backend coverage baseline and non-regression gate.**
+**Start Task 6G.3 — Automated accessibility regression gate.**
 
-Measure the current application-line coverage with repository-owned tooling, commit the accepted baseline, and fail validation if later backend changes silently reduce it.
+Fail the browser validation lane on critical or serious automated accessibility findings across the primary user-facing routes without introducing a paid service dependency.
 
 ## Status update convention
 

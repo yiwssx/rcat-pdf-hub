@@ -72,8 +72,14 @@ assert "pull-requests: write" not in web_ci_workflow
 assert "pull_request_target:" not in web_ci_workflow
 
 core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
-for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "make validate-compose", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
+for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "make validate-compose", "docker build -t rcat-pdf-hub-api-test apps/api", "scripts/backend-coverage.py"):
     assert required in core_api_ci_workflow, f"Core API CI workflow missing guard: {required}"
+backend_coverage = read("scripts/backend-coverage.py")
+assert 'pytest.main(["-q", "-p", "no:cacheprovider"])' in backend_coverage, "Backend coverage wrapper must execute the full pytest suite"
+assert "backend coverage gate: PASS" in backend_coverage
+coverage_baseline = json.loads(read("quality/backend-coverage-baseline.json"))
+assert float(coverage_baseline["minimum_percent"]) > 0, "Backend coverage floor must remain non-zero"
+assert float(coverage_baseline["measured_percent"]) >= float(coverage_baseline["minimum_percent"])
 assert "contents: write" not in core_api_ci_workflow
 assert "pull-requests: write" not in core_api_ci_workflow
 assert "pull_request_target:" not in core_api_ci_workflow
