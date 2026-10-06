@@ -86,6 +86,26 @@ def split(input_file: Path, pages: str, output: Path) -> None:
     _run(["qpdf", str(input_file), "--pages", ".", safe_pages, "--", str(output)])
 
 
+def organize(input_file: Path, pages: list[dict], output: Path) -> None:
+    reader = PdfReader(str(input_file))
+    writer = PdfWriter()
+    total = len(reader.pages)
+    if not pages:
+        raise ValueError("At least one page is required")
+    for item in pages:
+        page_number = int(item.get("page", 0))
+        rotation = int(item.get("rotation", 0)) % 360
+        if page_number < 1 or page_number > total:
+            raise ValueError(f"Page out of range: {page_number}")
+        if rotation not in {0, 90, 180, 270}:
+            raise ValueError("rotation must be 0, 90, 180, or 270")
+        writer.add_page(reader.pages[page_number - 1])
+        if rotation:
+            writer.pages[-1].rotate(rotation)
+    with output.open("wb") as fh:
+        writer.write(fh)
+
+
 def rotate(input_file: Path, degrees: int, pages: str, output: Path) -> None:
     if degrees not in {-270, -180, -90, 90, 180, 270}:
         raise ValueError("degrees must be one of ±90, ±180, ±270")
