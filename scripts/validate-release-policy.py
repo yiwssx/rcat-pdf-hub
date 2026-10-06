@@ -236,6 +236,15 @@ for image in expected_images:
 for floating in ("image: valkey/valkey:8-alpine", "image: caddy:2-alpine", "image: clamav/clamav:stable", ":latest"):
     assert floating not in compose, f"Floating image tag is forbidden: {floating}"
 assert 'command: ["python", "-m", "app.webhook_runner"]' in compose
+for marker in (
+    "PDFHUB_RQ_INTERACTIVE_QUEUE: ${PDFHUB_RQ_INTERACTIVE_QUEUE:-pdf-interactive}",
+    "PDFHUB_RQ_QUEUE: ${PDFHUB_RQ_QUEUE:-pdf}",
+    "PDFHUB_RQ_HEAVY_QUEUE: ${PDFHUB_RQ_HEAVY_QUEUE:-pdf-heavy}",
+    '$PDFHUB_RQ_INTERACTIVE_QUEUE',
+    '$PDFHUB_RQ_QUEUE',
+    '$PDFHUB_RQ_HEAVY_QUEUE',
+):
+    assert marker in compose, f"Queue routing Compose baseline missing: {marker}"
 assert "PDFHUB_DOWNLOAD_SIGNING_SECRET" in compose
 
 # Optional management UIs/collectors must not bind to every host interface by default.
@@ -247,8 +256,15 @@ for mapping in (
     f'{management_bind}:${{PAPERLESS_HTTP_PORT:-8001}}:8000',
 ):
     assert mapping in compose, f"Management port is not loopback-bound by default: {mapping}"
-assert "PDFHUB_PUBLIC_BIND_HOST=127.0.0.1" in read(".env.example")
-assert "PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1" in read(".env.example")
+env_example = read(".env.example")
+assert "PDFHUB_PUBLIC_BIND_HOST=127.0.0.1" in env_example
+assert "PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1" in env_example
+for marker in (
+    "PDFHUB_RQ_INTERACTIVE_QUEUE=pdf-interactive",
+    "PDFHUB_RQ_QUEUE=pdf",
+    "PDFHUB_RQ_HEAVY_QUEUE=pdf-heavy",
+):
+    assert marker in env_example, f"Queue routing environment baseline missing: {marker}"
 
 # The internal session-minting endpoint must stay off Caddy's public API matcher.
 caddy = read("ops/caddy/Caddyfile")
@@ -295,6 +311,26 @@ phase5 = read("PHASE5.md")
 for section in ("Phase 5A", "Phase 5B", "Phase 5C"):
     assert section in phase5, f"Missing {section} completion documentation"
 assert f"## {CURRENT_RELEASE}" in read("CHANGELOG.md")
+
+# Phase 6 queue routing must remain centralized and fully classified.
+queue_module = read("apps/api/app/queue.py")
+for marker in (
+    "INTERACTIVE_OPERATIONS",
+    "PDF_OPERATIONS",
+    "HEAVY_OPERATIONS",
+    "queue_class_for_operation",
+    "enqueue_processing_job",
+    "Unsupported PDF operation for queue routing",
+):
+    assert marker in queue_module, f"Queue routing module missing: {marker}"
+assert (ROOT / "apps/api/tests/test_queue_routing.py").exists(), "Missing queue routing regression tests"
+assert (ROOT / "docs/adr/0002-job-queue-classes.md").exists(), "Missing queue routing ADR"
+pdf_router = read("apps/api/app/routers/pdf.py")
+jobs_router = read("apps/api/app/routers/jobs.py")
+assert "enqueue_processing_job(operation, job.id)" in pdf_router
+assert "enqueue_processing_job(job.operation, job.id)" in jobs_router
+assert "pdf_queue.enqueue(" not in pdf_router
+assert "pdf_queue.enqueue(" not in jobs_router
 
 # Phase 4 feature components remain part of the production foundation.
 for required in (
