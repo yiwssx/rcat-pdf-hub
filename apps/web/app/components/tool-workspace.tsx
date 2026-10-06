@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import { IntegrationStatus, UploadedFile } from "../../lib/api";
 import { ToolPanel } from "./tool-panel";
+import { ToolWorkspaceSettings } from "./tool-workspace-state";
 
 type ToolWorkspaceProps = {
   tool: string;
@@ -13,6 +14,8 @@ type ToolWorkspaceProps = {
   targetIsPdf: boolean;
   busy: boolean;
   integrations: IntegrationStatus | null;
+  settings: ToolWorkspaceSettings;
+  onSettingsChange: Dispatch<SetStateAction<ToolWorkspaceSettings>>;
   onSubmit: (operation: string, payload: object) => Promise<void>;
   onCreateSignedLink: (ttlSeconds: number) => Promise<string | null>;
   onArchive: () => Promise<void>;
@@ -29,48 +32,56 @@ export function ToolWorkspace({
   targetIsPdf,
   busy,
   integrations,
+  settings,
+  onSettingsChange,
   onSubmit,
   onCreateSignedLink,
   onArchive,
   onMessage,
   onClose,
 }: ToolWorkspaceProps) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [signedTtl, setSignedTtl] = useState(300);
-  const [splitPages, setSplitPages] = useState("1-3");
-  const [rotateDegrees, setRotateDegrees] = useState(90);
-  const [rotatePages, setRotatePages] = useState("1-z");
-  const [watermarkText, setWatermarkText] = useState("เอกสารภายใน");
-  const [watermarkOpacity, setWatermarkOpacity] = useState(0.18);
-  const [watermarkRotation, setWatermarkRotation] = useState(45);
-  const [watermarkFontSize, setWatermarkFontSize] = useState(48);
-  const [watermarkPosition, setWatermarkPosition] = useState("center");
-  const [pageFormat, setPageFormat] = useState("หน้า {page} / {total}");
-  const [pageStart, setPageStart] = useState(1);
-  const [pagePosition, setPagePosition] = useState("bottom-center");
-  const [stampId, setStampId] = useState("");
-  const [stampPosition, setStampPosition] = useState("bottom-right");
-  const [stampScale, setStampScale] = useState(0.2);
-  const [imagePageSize, setImagePageSize] = useState("a4");
-  const [imageFit, setImageFit] = useState("contain");
-  const [imageDpi, setImageDpi] = useState(150);
-  const [rasterFormat, setRasterFormat] = useState("png");
-  const [rasterDpi, setRasterDpi] = useState(150);
-  const [rasterFirstPage, setRasterFirstPage] = useState(1);
-  const [rasterLastPage, setRasterLastPage] = useState("");
-  const [mergeOrder, setMergeOrder] = useState<string[]>([]);
+  const {
+    signedTtl,
+    splitPages,
+    rotateDegrees,
+    rotatePages,
+    watermarkText,
+    watermarkOpacity,
+    watermarkRotation,
+    watermarkFontSize,
+    watermarkPosition,
+    pageFormat,
+    pageStart,
+    pagePosition,
+    stampId,
+    stampPosition,
+    stampScale,
+    imagePageSize,
+    imageFit,
+    imageDpi,
+    rasterFormat,
+    rasterDpi,
+    rasterFirstPage,
+    rasterLastPage,
+    mergeOrder,
+  } = settings;
+  const signedUrl = settings.signedTargetId === target.id ? settings.signedUrl : null;
+
+  function setSetting<K extends keyof ToolWorkspaceSettings>(key: K, value: ToolWorkspaceSettings[K]) {
+    onSettingsChange((old) => ({ ...old, [key]: value }));
+  }
 
   useEffect(() => {
-    setMergeOrder((old) => {
+    onSettingsChange((old) => {
       const available = pdfFiles.map((file) => file.id);
-      const kept = old.filter((id) => available.includes(id));
-      return kept.length > 0 ? kept : available;
+      const kept = old.mergeOrder.filter((id) => available.includes(id));
+      const next = kept.length > 0 ? kept : available;
+      if (next.length === old.mergeOrder.length && next.every((id, index) => id === old.mergeOrder[index])) {
+        return old;
+      }
+      return { ...old, mergeOrder: next };
     });
-  }, [pdfFiles]);
-
-  useEffect(() => {
-    setSignedUrl(null);
-  }, [target.id]);
+  }, [pdfFiles, onSettingsChange]);
 
   async function run(operation: string) {
     if (!target.id && operation !== "merge" && operation !== "images-to-pdf") {
@@ -187,7 +198,9 @@ export function ToolWorkspace({
 
   async function createSignedLink() {
     const url = await onCreateSignedLink(signedTtl);
-    if (url) setSignedUrl(url);
+    if (url) {
+      onSettingsChange((old) => ({ ...old, signedUrl: url, signedTargetId: target.id }));
+    }
   }
 
   async function copySignedLink() {
@@ -234,29 +247,29 @@ export function ToolWorkspace({
       rasterFirstPage={rasterFirstPage}
       rasterLastPage={rasterLastPage}
       mergeOrder={mergeOrder}
-      setSignedTtl={setSignedTtl}
-      setSplitPages={setSplitPages}
-      setRotateDegrees={setRotateDegrees}
-      setRotatePages={setRotatePages}
-      setWatermarkText={setWatermarkText}
-      setWatermarkOpacity={setWatermarkOpacity}
-      setWatermarkRotation={setWatermarkRotation}
-      setWatermarkFontSize={setWatermarkFontSize}
-      setWatermarkPosition={setWatermarkPosition}
-      setPageFormat={setPageFormat}
-      setPageStart={setPageStart}
-      setPagePosition={setPagePosition}
-      setStampId={setStampId}
-      setStampPosition={setStampPosition}
-      setStampScale={setStampScale}
-      setImagePageSize={setImagePageSize}
-      setImageFit={setImageFit}
-      setImageDpi={setImageDpi}
-      setRasterFormat={setRasterFormat}
-      setRasterDpi={setRasterDpi}
-      setRasterFirstPage={setRasterFirstPage}
-      setRasterLastPage={setRasterLastPage}
-      setMergeOrder={setMergeOrder}
+      setSignedTtl={(value) => setSetting("signedTtl", value)}
+      setSplitPages={(value) => setSetting("splitPages", value)}
+      setRotateDegrees={(value) => setSetting("rotateDegrees", value)}
+      setRotatePages={(value) => setSetting("rotatePages", value)}
+      setWatermarkText={(value) => setSetting("watermarkText", value)}
+      setWatermarkOpacity={(value) => setSetting("watermarkOpacity", value)}
+      setWatermarkRotation={(value) => setSetting("watermarkRotation", value)}
+      setWatermarkFontSize={(value) => setSetting("watermarkFontSize", value)}
+      setWatermarkPosition={(value) => setSetting("watermarkPosition", value)}
+      setPageFormat={(value) => setSetting("pageFormat", value)}
+      setPageStart={(value) => setSetting("pageStart", value)}
+      setPagePosition={(value) => setSetting("pagePosition", value)}
+      setStampId={(value) => setSetting("stampId", value)}
+      setStampPosition={(value) => setSetting("stampPosition", value)}
+      setStampScale={(value) => setSetting("stampScale", value)}
+      setImagePageSize={(value) => setSetting("imagePageSize", value)}
+      setImageFit={(value) => setSetting("imageFit", value)}
+      setImageDpi={(value) => setSetting("imageDpi", value)}
+      setRasterFormat={(value) => setSetting("rasterFormat", value)}
+      setRasterDpi={(value) => setSetting("rasterDpi", value)}
+      setRasterFirstPage={(value) => setSetting("rasterFirstPage", value)}
+      setRasterLastPage={(value) => setSetting("rasterLastPage", value)}
+      setMergeOrder={(value) => setSetting("mergeOrder", value)}
       onRun={(operation) => void run(operation)}
       onSignedLink={() => void createSignedLink()}
       onCopySignedLink={() => void copySignedLink()}
