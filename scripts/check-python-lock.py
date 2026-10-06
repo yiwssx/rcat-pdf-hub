@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIRECT_PATH = ROOT / "apps/api/requirements.txt"
 LOCK_PATH = ROOT / "apps/api/requirements.lock"
 NORMALIZE_RE = re.compile(r"[-_.]+")
-LOCK_PIN_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.-]+)==(?P<version>[^\\s\\\\]+)(?:\\s+\\\\)?$")
+LOCK_PIN_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.-]+)==(?P<version>[^\s\\]+)(?:\s+\\)?$")
 
 
 def normalize(name: str) -> str:
