@@ -18,7 +18,10 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     NPM_CONFIG_UPDATE_NOTIFIER=false
-RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
+# The standalone runtime only needs node. Remove npm/npx and their bundled package
+# tree from the final image to reduce attack surface and avoid shipping build tooling.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx && \
+    addgroup -S nextjs && adduser -S nextjs -G nextjs
 COPY --from=build /app/public ./public
 COPY --from=build --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nextjs /app/.next/static ./.next/static
