@@ -103,4 +103,8 @@ print(
     f"openapi/frontend contract: PASS "
     f"({len(manifest['endpoints'])} endpoints, {len(manifest.get('families', []))} families)"
 )
-print(f"generated OpenAPI artifact: {ARTIFACT.relative_to(ROOT)}")
+try:
+    artifact_label = ARTIFACT.relative_to(ROOT)
+except ValueError:
+    artifact_label = ARTIFACT
+print(f"generated OpenAPI artifact: {artifact_label}")
