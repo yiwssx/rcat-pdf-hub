@@ -96,6 +96,19 @@ Phase 6F.3 moves the dedicated `/files` screen to this paged contract. Search, k
 
 Phase 6F.4 adds the administrator-only `/api/v1/admin/storage-reconciliation` report. Backend tests exercise local/NAS-style directories and self-hosted S3 listings for missing objects, orphan objects, size mismatches and duplicate local names. The response always declares `dry_run: true`; there is no repair or delete endpoint in this phase.
 
+## OpenAPI ↔ frontend contract validation
+
+Phase 6G.1 generates a canonical OpenAPI artifact directly from the FastAPI application and validates the frontend API client against it.
+
+`apps/web/lib/api-contract.json` records the frontend-consumed method/path/response-schema contract. `scripts/validate-api-contract.py` fails when:
+
+- a declared frontend endpoint or endpoint family disappears from OpenAPI;
+- a named response schema changes;
+- a frontend API call marker disappears;
+- a new `/api/v1/` call is added to `apps/web/lib/api.ts` without being declared.
+
+The validator writes `artifacts/contracts/openapi.json` for inspection/release evidence; generated artifacts remain untracked.
+
 ## Queue routing validation
 
 Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.
