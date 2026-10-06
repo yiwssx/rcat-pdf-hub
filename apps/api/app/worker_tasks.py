@@ -201,6 +201,12 @@ def process_job(job_id: str) -> str:
             raise RuntimeError("Processed output was rejected by malware scanning") from exc
         record_malware(scan_status)
 
+        db.refresh(job)
+        if job.status == "cancelled":
+            output.unlink(missing_ok=True)
+            audit_event("job.cancelled_before_commit", job.requested_by, "job", job.id, {"operation": job.operation})
+            return ""
+
         digest = _output_hash(output)
         output_size = output.stat().st_size
         if job.requested_by != "bootstrap-admin":
