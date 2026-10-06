@@ -104,6 +104,9 @@ def process_job(job_id: str) -> str:
     if not job:
         db.close()
         raise RuntimeError(f"Unknown job {job_id}")
+    if job.status == "cancelled":
+        db.close()
+        return ""
 
     suffix, content_type = _output_spec(job.operation)
     output = new_output_path(job.id, suffix=suffix)
@@ -240,9 +243,15 @@ def process_job(job_id: str) -> str:
                 # Cleanup is best-effort and must not mask the original job-processing exception.
                 pass
         try:
-            _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
+            db.refresh(job)
+            if job.status != "cancelled":
+                _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
         except Exception:
             db.rollback()
+        if job.status == "cancelled":
+            record_job(job.operation, "cancelled")
+            audit_event("job.cancelled_worker_stop", job.requested_by, "job", job.id, {"operation": job.operation})
+            return ""
         record_job(job.operation, "failed")
         audit_event(
             "job.failed",
