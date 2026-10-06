@@ -5,6 +5,7 @@ import pytest
 
 from app import malware, storage
 from app.identity import create_session_token, decode_session_token, identity_from_claims
+from app.rbac import ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER, scopes_for_roles
 from app.integrations import paperless
 
 
@@ -14,6 +15,7 @@ def test_session_token_round_trip():
         "subject": "oidc-subject-123",
         "display_name": "Teacher",
         "groups": ["teachers"],
+        "roles": [ROLE_OPERATOR],
         "scopes": ["files:read", "pdf:ocr"],
         "source": "oidc",
         "is_identity_admin": False,
@@ -22,7 +24,8 @@ def test_session_token_round_trip():
     assert decoded["name"] == identity["name"]
     assert decoded["subject"] == identity["subject"]
     assert decoded["groups"] == ["teachers"]
-    assert set(decoded["scopes"]) == {"files:read", "pdf:ocr"}
+    assert decoded["roles"] == [ROLE_OPERATOR]
+    assert {"files:read", "pdf:ocr"} <= set(decoded["scopes"])
     assert decoded["source"] == "oidc"
 
 
@@ -33,7 +36,15 @@ def test_identity_admin_group_receives_wildcard(monkeypatch):
         "oidc",
     )
     assert identity["is_identity_admin"] is True
+    assert identity["roles"] == [ROLE_ADMIN]
     assert identity["scopes"] == ["*"]
+
+
+def test_human_role_permission_matrix():
+    operator_scopes = {"files:read", "files:write", "jobs:read", "jobs:manage", "pdf:ocr"}
+    assert scopes_for_roles((ROLE_VIEWER,), operator_scopes) == {"files:read", "jobs:read"}
+    assert scopes_for_roles((ROLE_OPERATOR,), operator_scopes) == operator_scopes
+    assert scopes_for_roles((ROLE_ADMIN,), operator_scopes) == {"*"}
 
 
 def test_clamav_scan_rejects_found(monkeypatch, tmp_path: Path):

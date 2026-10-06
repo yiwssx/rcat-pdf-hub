@@ -193,6 +193,7 @@ class AuthMeOut(BaseModel):
     subject: str | None
     scopes: list[str]
     groups: list[str]
+    roles: list[str]
     auth_source: str
     is_admin: bool
 

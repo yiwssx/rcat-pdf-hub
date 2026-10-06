@@ -72,7 +72,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6D.1 | Self-hosted Alertmanager integration | COMPLETE | PR #94; Core API CI run 37461773365 |
 | 6D.2 | Persistent OpenTelemetry trace backend | COMPLETE | PR #95; Core API CI run 37463105409 |
 | 6D.3 | Self-hosted operations dashboard | COMPLETE | PR #96; Core API CI run 37464626603 |
-| 6E.1 | Human RBAC role model and permission matrix | PENDING | — |
+| 6E.1 | Human RBAC role model and permission matrix | COMPLETE | PR #97 |
 | 6E.2 | OIDC/LDAP group-to-role mapping | PENDING | — |
 | 6E.3 | Admin effective-role/scope visibility | PENDING | — |
 | 6F.1 | Server-side file pagination/search/sort/filter | PENDING | — |
@@ -229,12 +229,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6D.1 | Wired Prometheus alert delivery to a bundled persistent Alertmanager on the private management plane; added config validation, loopback management access and production resource hardening. | PR #94; Core API CI run 37461773365 | COMPLETE |
 | 2026-10-06 | 6D.2 | Replaced debug-only trace export with a persistent single-node Tempo backend, routed OTel Collector over the private management plane, and added Tempo/Collector config validation. Extended production-network and CI path policy to cover the complete observability topology. | PR #95; Core API CI run 37463105409 | COMPLETE |
 | 2026-10-06 | 6D.3 | Added storage-capacity metrics and a provisioned self-hosted Grafana operations console backed by Prometheus and Tempo, with dashboard contract validation, explicit production credentials, frozen release-policy coverage and private production management placement. | PR #96; Core API CI run 37464626603 | COMPLETE |
+| 2026-10-06 | 6E.1 | Added explicit viewer/operator/admin human roles, centralized role-to-scope expansion, role-bearing sessions and principal/schema propagation, while keeping service API keys scope-based. | PR #97 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6E.1 — Human RBAC role model and permission matrix.**
+**Start Task 6E.2 — OIDC/LDAP group-to-role mapping.**
 
-Define explicit human roles and effective scopes as the next Phase 6 workstream. Phase 6D operations visibility is complete; do not reopen its Alertmanager, Tempo, or Grafana implementation unless production evidence identifies a regression.
+Map institutional groups to explicit human roles and fail closed when an authenticated identity has no recognized mapping. Do not grant administrator privilege from missing or unknown mappings.
 
 ## Status update convention
 

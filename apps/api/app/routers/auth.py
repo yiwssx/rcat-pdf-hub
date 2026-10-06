@@ -41,6 +41,7 @@ def _me(principal: Principal) -> AuthMeOut:
         subject=principal.subject,
         scopes=sorted(principal.scopes),
         groups=sorted(principal.groups),
+        roles=sorted(principal.roles),
         auth_source=principal.auth_source,
         is_admin=principal.is_bootstrap_admin or principal.is_identity_admin or "*" in principal.scopes,
     )
@@ -103,6 +104,7 @@ def local_login(req: LocalLoginRequest, response: Response):
         subject=identity["subject"],
         scopes=identity["scopes"],
         groups=identity["groups"],
+        roles=identity["roles"],
         auth_source="local-admin",
         is_admin=True,
     )
@@ -125,6 +127,7 @@ def ldap_login(req: LdapLoginRequest, response: Response):
         subject=identity.get("subject"),
         scopes=sorted(identity.get("scopes", [])),
         groups=sorted(identity.get("groups", [])),
+        roles=sorted(identity.get("roles", [])),
         auth_source="ldap",
         is_admin=bool(identity.get("is_identity_admin")) or "*" in set(identity.get("scopes", [])),
     )
