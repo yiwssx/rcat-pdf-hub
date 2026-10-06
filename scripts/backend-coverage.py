@@ -32,21 +32,26 @@ sources = {
     if path.name != "__init__.py"
 }
 covered: dict[Path, set[int]] = {path: set() for path in sources}
+covered_by_filename = {str(path): covered[path] for path in sources}
 
 
-def trace(frame, event, arg):
+def app_trace(frame, event, arg):
     if event == "line":
-        filename = Path(frame.f_code.co_filename).resolve()
-        if filename in covered:
-            covered[filename].add(frame.f_lineno)
-    return trace
+        covered_by_filename[frame.f_code.co_filename].add(frame.f_lineno)
+    return app_trace
+
+
+def global_trace(frame, event, arg):
+    if event == "call" and frame.f_code.co_filename in covered_by_filename:
+        return app_trace
+    return None
 
 
 os.chdir(API_ROOT)
 sys.path.insert(0, str(API_ROOT))
 import pytest  # noqa: E402
 
-sys.settrace(trace)
+sys.settrace(global_trace)
 try:
     exit_code = pytest.main(["-q"])
 finally:
