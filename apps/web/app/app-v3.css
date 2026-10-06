@@ -737,6 +737,7 @@ a { color: inherit; }
   font-weight:850;
 }
 .v3LibraryToolbar select {
+  box-sizing:border-box;
   width:100%;
   min-width:0;
   max-width:100%;
@@ -753,6 +754,7 @@ a { color: inherit; }
   box-shadow:0 0 0 4px rgba(99,102,241,.07);
 }
 .v3LibraryToolbar .v3ExpiredToggle {
+  box-sizing:border-box;
   min-height:42px;
   display:flex;
   align-items:center;
