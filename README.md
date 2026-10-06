@@ -284,14 +284,16 @@ See `docs/adr/0002-job-queue-classes.md` and `docs/adr/0003-dedicated-worker-poo
 
 ```bash
 make up-security        # ClamAV
-make up-observability   # Alertmanager + Prometheus + OpenTelemetry Collector
+make up-observability   # Alertmanager + Prometheus + Tempo + OpenTelemetry Collector
 make up-archive         # Paperless-ngx
 make up-s3              # SeaweedFS
 ```
 
-Alertmanager, Prometheus, OTLP, and Paperless management ports bind to `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` by default. If another management network needs access, change this value deliberately to a trusted interface/IP.
+Alertmanager, Prometheus, Tempo, OTLP, and Paperless management ports bind to `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` by default. If another management network needs access, change this value deliberately to a trusted interface/IP.
 
 Prometheus loads rules from `ops/prometheus/alerts.yml` and routes firing alerts to the bundled Alertmanager at `alertmanager:9093`. Alertmanager persists state in the `alertmanager_data` volume and exposes its operator UI on `PDFHUB_ALERTMANAGER_PORT` (default `9093`, loopback-only by default). The committed receiver intentionally keeps notification delivery self-hosted and operator-visible; institution-specific SMTP/webhook integrations can be added to `ops/alertmanager/alertmanager.yml` without changing application code.
+
+OpenTelemetry Collector now exports traces to the bundled single-node Tempo backend instead of the debug exporter. Tempo persists its WAL and trace blocks in `tempo_data` and exposes the query API on `PDFHUB_TEMPO_PORT` (default `3200`, loopback-only by default). To emit application traces, set `PDFHUB_OTEL_ENDPOINT=http://otel-collector:4318/v1/traces` and restart the API; the collector forwards them over the private management network to Tempo.
 
 ## Validation / local CI
 

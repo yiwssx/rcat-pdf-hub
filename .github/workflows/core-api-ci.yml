@@ -8,6 +8,9 @@ on:
       - ".env.example"
       - "scripts/**"
       - "ops/prometheus/**"
+      - "ops/alertmanager/**"
+      - "ops/otel/**"
+      - "ops/tempo/**"
       - "Makefile"
       - ".github/workflows/core-api-ci.yml"
   workflow_dispatch:

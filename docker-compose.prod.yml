@@ -157,8 +157,17 @@ services:
     mem_limit: ${PDFHUB_ALERTMANAGER_MEMORY_LIMIT:-512m}
     cpus: ${PDFHUB_ALERTMANAGER_CPUS:-0.5}
 
+  tempo:
+    networks: [management]
+    logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_TEMPO_MEMORY_LIMIT:-1g}
+    cpus: ${PDFHUB_TEMPO_CPUS:-1.0}
+
   otel-collector:
-    networks: [management, egress]
+    networks: [management]
     logging: *production-logging
     security_opt:
       - no-new-privileges:true

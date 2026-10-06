@@ -27,6 +27,14 @@ docker compose -p "${project}" --profile observability run --rm --no-deps \
   --entrypoint /bin/amtool alertmanager \
   check-config /etc/alertmanager/alertmanager.yml
 
+docker compose -p "${project}" --profile observability run --rm --no-deps \
+  --entrypoint /tempo tempo \
+  --config.file=/etc/tempo/tempo.yml --config.verify=true
+
+docker compose -p "${project}" --profile observability run --rm --no-deps \
+  --entrypoint /otelcol-contrib otel-collector \
+  validate --config=/etc/otelcol-contrib/config.yaml
+
 cleanup
 trap - EXIT
-echo "prometheus + alertmanager validation: PASS"
+echo "observability configuration validation: PASS"
