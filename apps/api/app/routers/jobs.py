@@ -146,3 +146,23 @@ def retry_job(
         raise HTTPException(status_code=503, detail="Queue backend unavailable") from exc
     audit_event("job.retried", principal.name, "job", job.id, {"source_job_id": source.id, "operation": job.operation})
     return serialize(job)
+
+
+@router.delete("/terminal")
+def clear_terminal_jobs(
+    principal: Principal = Depends(require_scope("jobs:manage")),
+    db: Session = Depends(get_db),
+):
+    statuses = ("completed", "failed", "cancelled")
+    stmt = select(JobRecord).where(JobRecord.status.in_(statuses))
+    if "*" not in principal.scopes:
+        stmt = stmt.where(JobRecord.requested_by == principal.name)
+    rows = db.scalars(stmt).all()
+    job_ids = [job.id for job in rows]
+    if job_ids:
+        db.execute(delete(WebhookDelivery).where(WebhookDelivery.job_id.in_(job_ids)))
+        for job in rows:
+            db.delete(job)
+        db.commit()
+    audit_event("job.history_cleared", principal.name, "job", None, {"count": len(job_ids)})
+    return {"deleted": len(job_ids)}
