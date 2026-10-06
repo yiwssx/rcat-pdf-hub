@@ -29,6 +29,7 @@ def test_internal_web_console_session_is_non_admin(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["auth_source"] == "web-console"
+    assert payload["roles"] == ["operator"]
     assert payload["is_admin"] is False
     assert "*" not in payload["scopes"]
     assert "pdfhub_session=" in response.headers.get("set-cookie", "")
@@ -46,6 +47,7 @@ def test_cookie_session_authentication(monkeypatch):
         "subject": "teacher-1",
         "display_name": "Teacher",
         "groups": ["teachers"],
+        "roles": ["operator"],
         "scopes": ["files:read"],
         "source": "oidc",
         "is_identity_admin": False,
@@ -59,7 +61,8 @@ def test_cookie_session_authentication(monkeypatch):
     payload = response.json()
     assert payload["name"] == "user:teacher"
     assert payload["auth_source"] == "oidc"
-    assert payload["scopes"] == ["files:read"]
+    assert payload["roles"] == ["operator"]
+    assert "files:read" in payload["scopes"]
 
 
 def test_logout_clears_session_cookie():
