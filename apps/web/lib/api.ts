@@ -209,7 +209,14 @@ export async function uploadFile(file: File, auth: string): Promise<UploadedFile
 }
 
 export async function listFiles(auth: string): Promise<UploadedFile[]> {
-  return expectJson<UploadedFile[]>(await request("/api/v1/files?limit=100", { headers: headers(auth), cache: "no-store" }));
+  const rows: UploadedFile[] = [];
+  const pageSize = 200;
+  for (let offset = 0; offset < 2000; offset += pageSize) {
+    const page = await expectJson<UploadedFile[]>(await request(`/api/v1/files?limit=${pageSize}&offset=${offset}`, { headers: headers(auth), cache: "no-store" }));
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
 }
 
 
@@ -249,6 +256,10 @@ export async function listJobs(auth: string): Promise<Job[]> {
   return expectJson<Job[]>(await request("/api/v1/jobs?limit=50", { headers: headers(auth), cache: "no-store" }));
 }
 
+
+export async function clearTerminalJobs(auth: string): Promise<{ deleted: number }> {
+  return expectJson(await request("/api/v1/jobs/terminal", { method: "DELETE", headers: headers(auth) }));
+}
 
 export async function cancelJob(jobId: string, auth: string): Promise<Job> {
   return expectJson<Job>(await request(`/api/v1/jobs/${jobId}/cancel`, { method: "POST", headers: headers(auth) }));
