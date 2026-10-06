@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build lock-python config secrets local-admin-hash cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: up up-nas down logs ps test build lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -20,6 +20,15 @@ build:
 
 lock-python:
 	bash scripts/compile-python-lock.sh
+
+validate-supply-chain-source:
+	bash scripts/supply-chain.sh source
+
+validate-supply-chain-images:
+	bash scripts/supply-chain.sh images
+
+validate-supply-chain:
+	bash scripts/supply-chain.sh all
 
 config:
 	docker compose config
