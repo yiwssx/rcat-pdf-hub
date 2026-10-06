@@ -33,6 +33,7 @@ class Principal:
     subject: str | None = None
     display_name: str | None = None
     groups: set[str] = field(default_factory=set)
+    roles: set[str] = field(default_factory=set)
     auth_source: str = "api_key"
 
 
@@ -56,6 +57,7 @@ def _service_principal(supplied: str, db: Session) -> Principal:
             scopes={"*"},
             is_bootstrap_admin=True,
             is_identity_admin=True,
+            roles={"admin"},
             auth_source="bootstrap",
         )
 
@@ -92,6 +94,7 @@ def _identity_principal(identity: dict) -> Principal:
         subject=str(identity.get("subject") or ""),
         display_name=str(identity.get("display_name") or name),
         groups=set(identity.get("groups") or []),
+        roles=set(identity.get("roles") or []),
         auth_source=str(identity.get("source") or "identity"),
     )
 
