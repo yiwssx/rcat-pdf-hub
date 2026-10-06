@@ -177,8 +177,16 @@ The plaintext API key (`pdfh_...`) is returned only once. The database stores on
 | GET | `/api/v1/files/{id}/download` | `files:read` |
 | POST | `/api/v1/files/{id}/signed-download` | `files:read` |
 | GET | `/api/v1/files/{id}/preview` | `files:read` |
+| GET | `/api/v1/files/{id}/pages` | `files:read` |
+| POST | `/api/v1/files/{id}/retention` | `files:write` |
+| DELETE | `/api/v1/files/{id}` | `files:write` |
+| POST | `/api/v1/files/bulk-delete` | `files:write` |
 | GET | `/api/v1/jobs` | `jobs:read` |
+| POST | `/api/v1/jobs/{id}/cancel` | `jobs:manage` |
+| POST | `/api/v1/jobs/{id}/retry` | `jobs:manage` + operation scope |
+| DELETE | `/api/v1/jobs/terminal` | `jobs:manage` |
 | POST | `/api/v1/pdf/merge` | `pdf:merge` |
+| POST | `/api/v1/pdf/organize` | `pdf:split` |
 | POST | `/api/v1/pdf/images-to-pdf` | `pdf:image-to-pdf` |
 | POST | `/api/v1/pdf/pdf-to-images` | `pdf:pdf-to-image` |
 | POST | `/api/v1/pdf/split` | `pdf:split` |
