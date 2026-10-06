@@ -46,7 +46,7 @@ if [ -n "${backup_compose_mode}" ] && [ "${backup_compose_mode}" != "${COMPOSE_M
 fi
 
 # Stop request/worker surfaces while keeping database/queue infrastructure available for replacement.
-dc stop caddy web worker cleanup webhook api >/dev/null 2>&1 || true
+dc stop caddy web worker-interactive worker worker-heavy cleanup webhook api >/dev/null 2>&1 || true
 
 dc up -d --wait --wait-timeout 120 postgres valkey gotenberg >/dev/null
 printf 'restore: replacing PostgreSQL database\n'
@@ -112,7 +112,7 @@ esac
 # Adopt/upgrade the restored schema to the current release before accepting traffic.
 dc run --rm --no-deps -T api python -c 'from app.migrate import run_migrations; run_migrations()'
 
-dc up -d --no-build --wait --wait-timeout 180 api worker cleanup webhook web caddy >/dev/null
+dc up -d --no-build --wait --wait-timeout 180 api worker-interactive worker worker-heavy cleanup webhook web caddy >/dev/null
 
 if [ "${PDFHUB_RESTORE_SKIP_HEALTHCHECK:-false}" != "true" ]; then
   port="${PDFHUB_HTTP_PORT:-8080}"
