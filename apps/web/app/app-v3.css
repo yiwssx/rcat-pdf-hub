@@ -920,7 +920,7 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
 .v3AdminLoginLinks { display:flex; justify-content:space-between; gap:10px; align-items:center; }
 .v3AdminLoginLinks a,.v3AdminLoginLinks button { border:0;background:transparent;color:#6871c9;font-size:9px;font-weight:850;text-decoration:none;cursor:pointer; }
 
-.v3MergeList > div { grid-template-columns:26px minmax(0,1fr) 20px; cursor:grab; }
+.v3MergeList > div { grid-template-columns:26px minmax(0,1fr) 20px 28px; cursor:grab; }
 .v3MergeList > div:active { cursor:grabbing; }
 .v3MergeList > div > b { color:#a5aabb;font-size:15px; }
 
@@ -1034,4 +1034,15 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
 .v3JobHeaderActions { display:flex;align-items:center;gap:6px; }
 .v3JobDrawer > header .v3JobHeaderActions button.clear {
   width:auto;height:34px;padding:6px 9px;color:#7a6270;border-color:#eee0e5;background:#fff8fa;font-size:8px;font-weight:850;
+}
+
+.v3MergeList > div > button {
+  width:26px;height:26px;padding:0;border:1px solid #ecdde2;border-radius:8px;color:#bd4657;background:#fff7f8;cursor:pointer;
+}
+.v3MergeList > div > button:disabled { opacity:.35;cursor:not-allowed; }
+.v3MergeAvailable { display:grid;gap:6px;padding:9px;border:1px dashed #e1e4ee;border-radius:11px;background:#fbfcff; }
+.v3MergeAvailable > small { color:var(--v3-muted);font-size:8px;font-weight:850; }
+.v3MergeAvailable > div { display:flex;gap:5px;flex-wrap:wrap; }
+.v3MergeAvailable button {
+  min-height:29px;padding:5px 8px;border:1px solid #e3e6f0;border-radius:8px;color:#596488;background:#fff;font-size:8px;font-weight:850;cursor:pointer;
 }
