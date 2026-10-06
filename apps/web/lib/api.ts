@@ -11,6 +11,28 @@ export type UploadedFile = {
   expires_at: string | null;
 };
 
+export type FileLibraryKind = "all" | "pdf" | "image" | "other";
+export type FileLibrarySort = "created_at" | "name" | "size" | "expires_at";
+export type FileLibraryOrder = "asc" | "desc";
+
+export type FileLibraryQuery = {
+  limit?: number;
+  offset?: number;
+  q?: string;
+  kind?: FileLibraryKind;
+  include_expired?: boolean;
+  sort?: FileLibrarySort;
+  order?: FileLibraryOrder;
+};
+
+export type FileLibraryPage = {
+  items: UploadedFile[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+};
+
 export type Job = {
   id: string;
   operation: string;
@@ -218,6 +240,22 @@ export async function listFiles(auth: string): Promise<UploadedFile[]> {
     if (page.length < pageSize) break;
   }
   return rows;
+}
+
+
+export async function queryFileLibrary(auth: string, query: FileLibraryQuery = {}): Promise<FileLibraryPage> {
+  const params = new URLSearchParams();
+  params.set("limit", String(query.limit ?? 50));
+  params.set("offset", String(query.offset ?? 0));
+  if (query.q?.trim()) params.set("q", query.q.trim());
+  params.set("kind", query.kind ?? "all");
+  if (query.include_expired) params.set("include_expired", "true");
+  params.set("sort", query.sort ?? "created_at");
+  params.set("order", query.order ?? "desc");
+  return expectJson<FileLibraryPage>(await request(`/api/v1/files/library?${params.toString()}`, {
+    headers: headers(auth),
+    cache: "no-store",
+  }));
 }
 
 
