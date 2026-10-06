@@ -66,7 +66,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6B.1 | Production Compose override/profile | COMPLETE | PR #88; Core API CI run 37451698412 |
 | 6B.2 | Container runtime hardening | COMPLETE | PR #89; hardened-stack CI run 37452941554 |
 | 6B.3 | Production network-boundary hardening | COMPLETE | PR #90; segmented-stack CI run 37454223063 |
-| 6C.1 | Queue classification/routing | PENDING | — |
+| 6C.1 | Queue classification/routing | IN PROGRESS | PR pending |
 | 6C.2 | Dedicated lightweight/heavy worker pools | PENDING | — |
 | 6C.3 | Per-queue observability and alerts | PENDING | — |
 | 6D.1 | Self-hosted Alertmanager integration | PENDING | — |
