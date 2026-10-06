@@ -82,7 +82,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6G.1 | OpenAPI ↔ frontend contract validation/generation | COMPLETE | PR #104 |
 | 6G.2 | Backend coverage baseline and non-regression gate | COMPLETE | PR #105; Core API CI run 37519020885 |
 | 6G.3 | Automated accessibility regression gate | COMPLETE | PR #106 |
-| 6G.4 | Frontend/browser performance regression baseline | PENDING | — |
+| 6G.4 | Frontend/browser performance regression baseline | COMPLETE | PR #107; Web CI run 37517934071 |
 | 6H.1 | Targeted architecture cleanup | PENDING | — |
 | 6H.2 | Documentation / operational runbook reconciliation | PENDING | — |
 | 6H.3 | Release baseline and `v0.6.0` release | PENDING | — |
@@ -239,12 +239,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-07 | 6G.1 | Added generated FastAPI OpenAPI evidence plus a frontend-consumed contract manifest that gates method/path/response-schema drift and undeclared client API calls in Core API CI and zero-cost validation. | PR #104 | COMPLETE |
 | 2026-10-07 | 6G.2 | Added repository-owned backend statement-line coverage measurement around the complete pytest suite and locked the measured 61.36% baseline as a non-regression floor. | PR #105; Core API CI run 37519020885 | COMPLETE |
 | 2026-10-07 | 6G.3 | Added a dependency-free Playwright accessibility audit that blocks critical/serious findings on the Workspace and Files routes, including accessible-name, image-alt, hidden-focus, duplicate-ID and tabindex rules. | PR #106 | COMPLETE |
+| 2026-10-07 | 6G.4 | Measured Workspace/Files browser resource, DOM and navigation baselines in Web CI, committed route-specific budgets derived from those measurements and added an enforced Playwright performance regression gate. | PR #107; Web CI run 37517934071 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6G.4 — Frontend/browser performance regression baseline.**
+**Start Task 6H.1 — Targeted architecture cleanup.**
 
-Measure the current browser route footprint and timing in the existing Playwright lane, commit evidence-backed budgets, and fail later regressions against those measured thresholds.
+Phase 6G quality gates are complete. Use the accumulated Phase 6 evidence to perform only targeted architecture cleanup at demonstrated seams or duplication; do not broaden the release workstream into speculative refactoring.
 
 ## Status update convention
 
