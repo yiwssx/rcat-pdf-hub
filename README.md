@@ -129,13 +129,18 @@ make up-prod
 make up-prod-nas
 ```
 
-`docker-compose.prod.yml` currently provides the production operational baseline:
+`docker-compose.prod.yml` provides the production operational and runtime-hardening baseline:
 
 - secure session cookies default to enabled;
 - automatic anonymous Web Console bootstrap defaults to disabled;
-- Docker JSON log rotation is enabled for all services.
+- Docker JSON log rotation is enabled for all services;
+- application containers run with a read-only root filesystem, `no-new-privileges`, and all Linux capabilities dropped;
+- writable temporary space is explicit `tmpfs`, while document data remains on the existing data/NAS volumes;
+- PID, memory, and CPU ceilings are defined for core and optional services and can be tuned through environment variables.
 
 Leave `PDFHUB_SESSION_COOKIE_SECURE` and `PDFHUB_WEB_CONSOLE_AUTO_LOGIN` blank in `.env` to use the development/production mode-aware defaults. Set them explicitly only when the deployment architecture requires an override.
+
+The most commonly tuned production ceilings are documented in `.env.example` (API, worker, and Gotenberg). All remaining defaults are visible in `docker-compose.prod.yml`; change them only after observing actual host/resource usage.
 
 Backup/restore tooling must use the same deployment mode through `PDFHUB_COMPOSE_MODE`:
 
