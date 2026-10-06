@@ -21,7 +21,7 @@ def hash_password(password: str) -> str:
         p=SCRYPT_P,
         dklen=SCRYPT_DKLEN,
     )
-    return "scrypt$%d$%d$%d$%s$%s" % (
+    return "scrypt:%d:%d:%d:%s:%s" % (
         SCRYPT_N,
         SCRYPT_R,
         SCRYPT_P,
@@ -36,7 +36,7 @@ def _decode(value: str) -> bytes:
 
 def verify_password(password: str, encoded: str) -> bool:
     try:
-        algorithm, n_raw, r_raw, p_raw, salt_raw, digest_raw = encoded.split("$", 5)
+        algorithm, n_raw, r_raw, p_raw, salt_raw, digest_raw = encoded.split(":", 5)
         if algorithm != "scrypt":
             return False
         n, r, p = int(n_raw), int(r_raw), int(p_raw)
