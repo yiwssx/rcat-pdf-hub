@@ -11,7 +11,7 @@ from app.audit import audit_event, read_audit_events
 from app.config import get_settings
 from app.db import get_db
 from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy, WebhookDelivery
-from app.policy import active_storage_bytes, effective_policy
+from app.policy import effective_policy
 from app.queue import pdf_queue, redis_conn
 from app.schemas import (
     ApiKeyCreate,
