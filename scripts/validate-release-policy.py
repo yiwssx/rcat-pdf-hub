@@ -189,6 +189,7 @@ assert "pip install --no-cache-dir --require-hashes -r requirements.lock" in api
 assert web_dockerfile.count("FROM node:24.19.0-alpine3.24") == 3
 assert "COPY package.json package-lock.json ./" in web_dockerfile
 assert "RUN npm ci --no-audit --no-fund" in web_dockerfile
+assert "/usr/local/lib/node_modules/npm" in web_dockerfile and "/usr/local/bin/npm" in web_dockerfile, "Web runtime must strip npm build tooling from the final image"
 
 compose = read("docker-compose.yml")
 expected_images = {
@@ -305,6 +306,7 @@ for required in (
     "scripts/check-python-security-dependency.py",
     "scripts/check-python-lock.py",
     "scripts/compile-python-lock.sh",
+    "scripts/supply-chain.sh",
     "scripts/validate-free.sh",
     "scripts/validate-direct-dependency.sh",
     "scripts/local-ci-cycle.sh",
@@ -326,6 +328,27 @@ assert "Pillow==" not in validate_free, "Dependency policy must not be duplicate
 
 makefile = read("Makefile")
 assert "lock-python:" in makefile and "scripts/compile-python-lock.sh" in makefile
+for target in ("validate-supply-chain-source:", "validate-supply-chain-images:", "validate-supply-chain:"):
+    assert target in makefile, f"Missing supply-chain Make target: {target}"
+
+supply_chain = read("scripts/supply-chain.sh")
+for marker in (
+    "aquasec/trivy:0.75.0",
+    "--format cyclonedx",
+    "--severity CRITICAL",
+    "--ignore-unfixed",
+    "--exit-code 1",
+    "source.cdx.json",
+    "${label}-image.cdx.json",
+    "scan_one_image",
+):
+    assert marker in supply_chain, f"Supply-chain gate missing policy marker: {marker}"
+assert "artifacts/" in read(".gitignore"), "Generated supply-chain artifacts must stay untracked"
+assert (ROOT / "docs/security/supply-chain-policy.md").exists(), "Missing supply-chain policy documentation"
+
+release_readiness = read("scripts/release-readiness.sh")
+assert "make validate-supply-chain-source" in release_readiness
+assert "make validate-supply-chain-images" in release_readiness
 
 validate_direct = read("scripts/validate-direct-dependency.sh")
 assert 'python3 scripts/check-direct-dependency.py "${BASE_REF}" HEAD' in validate_direct

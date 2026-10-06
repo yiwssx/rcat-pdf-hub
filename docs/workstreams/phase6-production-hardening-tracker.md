@@ -62,7 +62,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6.0 | Baseline verification / clean starting state | COMPLETE | Starting main `d3965ac4f0ec7fed8af01d9f4649109532334c87`; PR #84 |
 | 6A.1 | Frontend reproducible install: committed npm lockfile + `npm ci` | COMPLETE | PR #85 |
 | 6A.2 | Python reproducible dependency lock with transitive pins/hashes | COMPLETE | PR #86 |
-| 6A.3 | Supply-chain scan + SBOM generation | PENDING | — |
+| 6A.3 | Supply-chain scan + SBOM generation | COMPLETE | PR #87; validation run 37450728102 |
 | 6B.1 | Production Compose override/profile | PENDING | — |
 | 6B.2 | Container runtime hardening | PENDING | — |
 | 6B.3 | Production network-boundary hardening | PENDING | — |
@@ -219,12 +219,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6.0 | Verified clean Phase 6 starting state: no open implementation PRs; recorded exact `main` SHA; added release-policy guard for tracker continuity | Starting main `d3965ac4f0ec7fed8af01d9f4649109532334c87`; PR #84 | COMPLETE |
 | 2026-10-06 | 6A.1 | Committed npm lockfile; switched Web CI, Docker build, local validation and dependency validation to `npm ci`; required Dependabot manifest+lockfile synchronization | PR #85 | COMPLETE |
 | 2026-10-06 | 6A.2 | Added a hash-pinned transitive Python lock, reproducible lock generator, lock validator, `--require-hashes` installs, and synchronized security-update validation | PR #86 | COMPLETE |
+| 2026-10-06 | 6A.3 | Added pinned Trivy source/image scanning and CycloneDX SBOM generation. The first image gate exposed fixable CRITICAL findings in API `perl-base` and Web runtime npm `tar`; upgraded `perl-base` and removed npm/npx from the standalone Web runtime. Source + API + Web image gates then passed. | PR #87; run 37450728102 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6A.3 — Supply-chain scan and SBOM generation.**
+**Start Task 6B.1 — Production Compose override/profile.**
 
-Add zero-cost SBOM generation and container/dependency scanning with an explicit severity policy, without introducing paid services or weakening existing CodeQL/Dependency Review gates.
+Create a production-specific Compose override/profile that preserves the current development workflow while providing an explicit place for runtime hardening, production resource policy, and later network-boundary controls.
 
 ## Status update convention
 

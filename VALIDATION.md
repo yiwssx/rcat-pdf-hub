@@ -15,6 +15,7 @@ RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hos
 - S3 mode requires an explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`.
 - Optional management services bind to loopback by default.
 - Browser regression, operations scripts and production Compose flow are mandatory gates.
+- Phase 6 release readiness generates CycloneDX SBOMs and runs pinned Trivy vulnerability scans; fixable CRITICAL dependency/image findings are blocking.
 - Warnings and deprecations are treated as validation failures.
 
 ## Required local host
@@ -51,6 +52,8 @@ make validate-frontend
 make validate-e2e
 make validate-compose
 make validate-runtime
+make validate-supply-chain-source
+make validate-supply-chain-images
 ```
 
 All gates:
@@ -169,6 +172,22 @@ journalctl --user -u rcat-pdf-hub-local-ci.service
 
 `local-ci-doctor` checks tool versions, Docker/Compose, GitHub authentication/repository access, timer state, latest validated main and local-CI commit-status presence on current PR heads.
 
+## Supply-chain validation
+
+Phase 6 uses pinned Trivy `0.75.0` without a paid scanning service.
+
+```bash
+make validate-supply-chain-source
+make validate-supply-chain-images
+make validate-supply-chain
+```
+
+The source gate generates `artifacts/supply-chain/source.cdx.json`, vulnerability JSON and configuration findings. The image gate builds/scans the API and Web production images and emits per-image CycloneDX SBOMs and vulnerability JSON.
+
+The blocking policy is deliberately narrow at this stage: **fixable CRITICAL** dependency/image vulnerabilities fail the gate. HIGH and unfixed CRITICAL findings remain reportable and require review. Phase 6B may promote specific container/configuration findings to blocking once the hardening baseline is implemented.
+
+Generated supply-chain artifacts are ignored by Git and are intended to be retained with release evidence.
+
 ## Phase 5 operational validation
 
 ### Backup integrity
@@ -248,7 +267,7 @@ URL=https://pdf.example.org \
 make release-readiness
 ```
 
-Production mode runs full repository validation, local-CI doctor, backup verification, isolated DR drill and target load smoke. `PDFHUB_RELEASE_SKIP_DR=true` exists only for an explicit operator exception; a normal production release should not skip the DR drill.
+Code mode additionally runs the source dependency/SBOM gate. Production mode also scans the production API/Web images and generates image SBOMs before backup verification, isolated DR drill and target load smoke. `PDFHUB_RELEASE_SKIP_DR=true` exists only for an explicit operator exception; a normal production release should not skip the DR drill.
 
 ## Release 0.5.0 acceptance baseline
 

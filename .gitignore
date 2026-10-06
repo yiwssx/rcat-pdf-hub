@@ -11,3 +11,4 @@ coverage/
 .local-ci/
 .DS_Store
 *.log
+artifacts/

@@ -10,6 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN python -m venv "$VIRTUAL_ENV"
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade perl-base && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       qpdf ghostscript poppler-utils \
       tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng \
