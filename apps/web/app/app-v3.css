@@ -1048,118 +1048,118 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
 }
 
 
-/* V3 readability pass: keep the candy UI, remove micro-text. */
+/* V3 readability pass: comfortable desktop/mobile typography. */
 body {
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 17px;
+  line-height: 1.55;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
-.v3Kicker { font-size: 12px; }
-.v3TextLink { font-size: 14px; }
+.v3Kicker { font-size: 13px; }
+.v3TextLink { font-size: 15px; }
 
-.v3Brand strong { font-size: 18px; }
-.v3Brand small { font-size: 12px; }
-.v3PrimaryNav a { font-size: 14px; }
-.v3Status { font-size: 12px; }
-.v3JobsButton strong { font-size: 13px; }
-.v3JobsButton em { font-size: 11px; }
+.v3Brand strong { font-size: 20px; }
+.v3Brand small { font-size: 13px; }
+.v3PrimaryNav a { font-size: 15px; }
+.v3Status { font-size: 13px; }
+.v3JobsButton strong { font-size: 14px; }
+.v3JobsButton em { font-size: 12px; }
 
-.v3AccountName strong { font-size: 13px; }
-.v3AccountName small { font-size: 11px; }
-.v3Account summary b { font-size: 13px; }
-.v3AccountMeta strong { font-size: 14px; }
-.v3AccountMeta small { font-size: 11px; }
+.v3AccountName strong { font-size: 14px; }
+.v3AccountName small { font-size: 12px; }
+.v3Account summary b { font-size: 14px; }
+.v3AccountMeta strong { font-size: 15px; }
+.v3AccountMeta small { font-size: 12px; }
 .v3AccountMenu a,
-.v3AccountMenu button { font-size: 13px; }
+.v3AccountMenu button { font-size: 14px; }
 
-.v3LoginCard p { font-size: 15px; }
-.v3LoginMessage { font-size: 12px; }
+.v3LoginCard p { font-size: 16px; }
+.v3LoginMessage { font-size: 13px; }
 
 .v3HomeTitle p,
-.v3FilesHead p { font-size: 15px; }
-.v3Dropzone p { font-size: 14px; }
-.v3UploadButton { font-size: 13px; }
+.v3FilesHead p { font-size: 16px; }
+.v3Dropzone p { font-size: 15px; }
+.v3UploadButton { font-size: 14px; }
 
-.v3SectionHead p { font-size: 14px; }
-.v3SectionHead > a { font-size: 13px; }
-.v3RecentFile strong { font-size: 13px; }
-.v3RecentFile small { font-size: 11px; }
-.v3EmptyMini p { font-size: 13px; }
-.v3FileBadge { font-size: 10px; }
+.v3SectionHead p { font-size: 15px; }
+.v3SectionHead > a { font-size: 14px; }
+.v3RecentFile strong { font-size: 14px; }
+.v3RecentFile small { font-size: 12px; }
+.v3EmptyMini p { font-size: 14px; }
+.v3FileBadge { font-size: 11px; }
 
-.v3ToolCardText em { font-size: 10px; }
-.v3ToolCardText strong { font-size: 15px; }
-.v3ToolCardText small { font-size: 12px; line-height: 1.5; }
+.v3ToolCardText em { font-size: 11px; }
+.v3ToolCardText strong { font-size: 16px; }
+.v3ToolCardText small { font-size: 13px; line-height: 1.55; }
 
-.v3BackLink { font-size: 13px; }
-.v3DocumentBar strong { font-size: 14px; }
-.v3DocumentBar small { font-size: 12px; }
-.v3PreviewToolbar strong { font-size: 13px; }
-.v3PreviewActions label { font-size: 12px; }
-.v3PreviewActions button { font-size: 12px; }
-.v3PreviewPlaceholder p { font-size: 13px; }
+.v3BackLink { font-size: 14px; }
+.v3DocumentBar strong { font-size: 15px; }
+.v3DocumentBar small { font-size: 13px; }
+.v3PreviewToolbar strong { font-size: 14px; }
+.v3PreviewActions label { font-size: 13px; }
+.v3PreviewActions button { font-size: 13px; }
+.v3PreviewPlaceholder p { font-size: 14px; }
 
-.v3ActionHead p { font-size: 13px; }
-.v3CompactTool strong { font-size: 13px; }
-.v3CompactTool small { font-size: 11px; }
+.v3ActionHead p { font-size: 14px; }
+.v3CompactTool strong { font-size: 14px; }
+.v3CompactTool small { font-size: 12px; }
 
-.v3ToolPanelHead h2 { font-size: 20px; }
-.v3ToolPanelHead p { font-size: 12px; }
-.v3TaskSummary strong { font-size: 13px; }
+.v3ToolPanelHead h2 { font-size: 21px; }
+.v3ToolPanelHead p { font-size: 13px; }
+.v3TaskSummary strong { font-size: 14px; }
 .v3TaskSummary small,
-.v3FieldNote { font-size: 11px; }
-.v3InfoBox { font-size: 12px; }
-.v3Field { font-size: 12px; }
-.v3Field small { font-size: 11px; }
+.v3FieldNote { font-size: 12px; }
+.v3InfoBox { font-size: 13px; }
+.v3Field { font-size: 14px; }
+.v3Field small { font-size: 12px; }
 
-.v3JobItem .jobInfo strong { font-size: 12px; }
-.v3JobItem .jobInfo small { font-size: 11px; }
-.v3JobItem .jobInfo em { font-size: 10px; }
-.v3JobBadge { font-size: 10px; }
+.v3JobItem .jobInfo strong { font-size: 14px; }
+.v3JobItem .jobInfo small { font-size: 12px; }
+.v3JobItem .jobInfo em { font-size: 11px; }
+.v3JobBadge { font-size: 11px; }
 .v3JobItem .downloadButton,
-.v3JobActions button { font-size: 11px; }
-.v3DrawerEmpty p { font-size: 12px; }
+.v3JobActions button { font-size: 12px; }
+.v3DrawerEmpty p { font-size: 13px; }
 
-.v3SystemStrip strong { font-size: 12px; }
-.v3SystemStrip small { font-size: 11px; }
-.v3AccessDenied p { font-size: 13px; }
-.v3AccessDenied a { font-size: 12px; }
+.v3SystemStrip strong { font-size: 14px; }
+.v3SystemStrip small { font-size: 12px; }
+.v3AccessDenied p { font-size: 14px; }
+.v3AccessDenied a { font-size: 13px; }
 
 button.primary,
 button.secondary,
 button.ghost,
 button.dangerButton,
-a.ghost { font-size: 13px; }
+a.ghost { font-size: 14px; }
 
-.v3AdminLoginCard code { font-size: 11px; }
+.v3AdminLoginCard code { font-size: 12px; }
 .v3AdminLoginLinks a,
-.v3AdminLoginLinks button { font-size: 11px; }
+.v3AdminLoginLinks button { font-size: 13px; }
 
-.v3PageThumb > div:nth-of-type(2) strong { font-size: 11px; }
-.v3PageThumb > div:nth-of-type(2) small { font-size: 10px; }
-.v3OrganizerLoading { font-size: 12px; }
-.v3AdvancedDetails summary { font-size: 12px; }
+.v3PageThumb > div:nth-of-type(2) strong { font-size: 13px; }
+.v3PageThumb > div:nth-of-type(2) small { font-size: 11px; }
+.v3OrganizerLoading { font-size: 13px; }
+.v3AdvancedDetails summary { font-size: 13px; }
 
-.v3FilesActions > span { font-size: 11px; }
-.v3DangerButton { font-size: 12px; }
-.v3FileOpen strong { font-size: 13px; }
-.v3FileOpen small { font-size: 11px; }
-.v3FileRowActions button { font-size: 11px; }
+.v3FilesActions > span { font-size: 13px; }
+.v3DangerButton { font-size: 13px; }
+.v3FileOpen strong { font-size: 14px; }
+.v3FileOpen small { font-size: 12px; }
+.v3FileRowActions button { font-size: 12px; }
 
-.v3AdminMetric span { font-size: 10px; }
-.v3AdminMetric small { font-size: 11px; }
-.v3MiniButton { font-size: 11px; }
-.v3DiagnosticGrid span { font-size: 11px; }
-.v3DiagnosticGrid strong { font-size: 11px; }
-.v3JobDrawer > header .v3JobHeaderActions button.clear { font-size: 11px; }
-.v3MergeAvailable > small { font-size: 11px; }
-.v3MergeAvailable button { font-size: 11px; }
+.v3AdminMetric span { font-size: 11px; }
+.v3AdminMetric small { font-size: 12px; }
+.v3MiniButton { font-size: 12px; }
+.v3DiagnosticGrid span { font-size: 12px; }
+.v3DiagnosticGrid strong { font-size: 12px; }
+.v3JobDrawer > header .v3JobHeaderActions button.clear { font-size: 12px; }
+.v3MergeAvailable > small { font-size: 12px; }
+.v3MergeAvailable button { font-size: 12px; }
 
 @media (max-width: 620px) {
-  body { font-size: 16px; }
-  .v3Brand strong { font-size: 16px; }
-  .v3ToolCardText strong { font-size: 14px; }
-  .v3ToolCardText small { font-size: 12px; }
+  body { font-size: 17px; }
+  .v3Brand strong { font-size: 17px; }
+  .v3ToolCardText strong { font-size: 15px; }
+  .v3ToolCardText small { font-size: 13px; }
 }
