@@ -1,0 +1,54 @@
+x-production-logging: &production-logging
+  driver: json-file
+  options:
+    max-size: ${PDFHUB_LOG_MAX_SIZE:-10m}
+    max-file: "${PDFHUB_LOG_MAX_FILES:-5}"
+
+services:
+  postgres:
+    logging: *production-logging
+
+  valkey:
+    logging: *production-logging
+
+  gotenberg:
+    logging: *production-logging
+
+  api:
+    environment:
+      PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-true}
+      PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-false}
+    logging: *production-logging
+
+  worker:
+    logging: *production-logging
+
+  cleanup:
+    logging: *production-logging
+
+  webhook:
+    logging: *production-logging
+
+  web:
+    logging: *production-logging
+
+  caddy:
+    logging: *production-logging
+
+  seaweedfs:
+    logging: *production-logging
+
+  clamav:
+    logging: *production-logging
+
+  prometheus:
+    logging: *production-logging
+
+  otel-collector:
+    logging: *production-logging
+
+  paperless-db:
+    logging: *production-logging
+
+  paperless:
+    logging: *production-logging
