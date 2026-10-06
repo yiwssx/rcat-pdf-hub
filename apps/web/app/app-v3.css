@@ -489,6 +489,8 @@ button.full { width:100%; margin-top:2px; }
   .uploadCard,.uploadCard label { min-height:220px; }
   .toolCardGrid { grid-template-columns:1fr 1fr; }
   .toolWorkbenchIntro { align-items:center; }
+  .mobileNav { grid-template-columns:repeat(4,1fr); }
+  .mobileNav.hasAdmin { grid-template-columns:repeat(5,1fr); }
 }
 
 @media (max-width: 560px) {
@@ -533,7 +535,7 @@ button.full { width:100%; margin-top:2px; }
   .toolWorkbenchIntro .sectionIntro h2 { font-size:23px; }
 
   .mobileNav { grid-template-columns:repeat(4,1fr); }
-  .mobileNav:has(button:nth-child(5)) { grid-template-columns:repeat(5,1fr); }
+  .mobileNav.hasAdmin { grid-template-columns:repeat(5,1fr); }
 }
 
 @media (max-width: 390px) {
