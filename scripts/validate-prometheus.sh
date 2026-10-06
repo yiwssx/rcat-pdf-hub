@@ -29,7 +29,7 @@ docker compose -p "${project}" --profile observability run --rm --no-deps \
 
 docker compose -p "${project}" --profile observability run --rm --no-deps \
   --entrypoint /tempo tempo \
-  --config.file=/etc/tempo/tempo.yml --config.verify
+  --config.file=/etc/tempo/tempo.yml --config.verify=true
 
 docker compose -p "${project}" --profile observability run --rm --no-deps \
   --entrypoint /otelcol-contrib otel-collector \
