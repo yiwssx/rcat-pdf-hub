@@ -88,16 +88,16 @@ def cancel_job(
     job = _owned_job(db, job_id, principal)
     if job.status not in {"queued", "running"}:
         raise HTTPException(status_code=409, detail="Only queued or running jobs can be cancelled")
+    if not job.rq_job_id:
+        raise HTTPException(status_code=409, detail="Queue job reference is missing")
     try:
-        if job.rq_job_id:
-            rq_job = RQJob.fetch(job.rq_job_id, connection=redis_conn)
-            if job.status == "running":
-                send_stop_job(redis_conn, rq_job.id)
-            else:
-                rq_job.cancel()
-    except Exception:
-        # The database remains authoritative even if the queue record has already disappeared.
-        pass
+        rq_job = RQJob.fetch(job.rq_job_id, connection=redis_conn)
+        if job.status == "running":
+            send_stop_job(redis_conn, rq_job.id)
+        else:
+            rq_job.cancel()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Unable to cancel queue job") from exc
     job.status = "cancelled"
     job.progress = 100
     job.error = "Cancelled by user"
