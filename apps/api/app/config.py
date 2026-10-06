@@ -111,8 +111,11 @@ class Settings(BaseSettings):
     clamav_timeout_seconds: int = 30
     clamav_fail_closed: bool = True
 
-    # Queue / horizontal worker tuning.
+    # Queue / horizontal worker tuning. Phase 6 routes operations by workload
+    # class while the transitional worker listens to all three queues.
+    rq_interactive_queue: str = "pdf-interactive"
     rq_queue: str = "pdf"
+    rq_heavy_queue: str = "pdf-heavy"
     rq_job_timeout_seconds: int = 1800
 
     # Observability.
@@ -154,6 +157,11 @@ class Settings(BaseSettings):
             raise ValueError("Paperless integration enabled but PAPERLESS_TOKEN is empty")
         if self.signed_download_default_ttl_seconds > self.signed_download_max_ttl_seconds:
             raise ValueError("SIGNED_DOWNLOAD_DEFAULT_TTL_SECONDS cannot exceed SIGNED_DOWNLOAD_MAX_TTL_SECONDS")
+        queue_names = (self.rq_interactive_queue, self.rq_queue, self.rq_heavy_queue)
+        if any(not name.strip() for name in queue_names):
+            raise ValueError("RQ queue names must not be empty")
+        if len(set(queue_names)) != len(queue_names):
+            raise ValueError("RQ queue names must be distinct")
         return self
 
     @property
