@@ -139,44 +139,59 @@ test("opens a Web Console session without exposing API-key login", async ({ page
   await expect(page.getByLabel("Service API Key")).toHaveCount(0);
   await expect(page.getByText("Web Console")).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
-  await expect(page.getByRole("button", { name: "ผู้ดูแล" })).toHaveCount(0);
+  await expect(page.locator(".v3HomeTitle")).toContainText("จัดการเอกสารของคุณ");
+  await expect(page.locator(".welcomeHero")).toHaveCount(0);
+  await expect(page.locator(".authCard")).toHaveCount(0);
 });
 
-test("V3 opens only the selected task workspace", async ({ page }) => {
+test("V3 switches from home into a focused tool workspace without long-page sections", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /ลายน้ำ/ }).first().click();
+
+  await expect(page.locator("#workspace-target")).toBeVisible();
+  await expect(page.locator(".v3ToolPanel")).toBeVisible();
+  await expect(page.locator(".v3ToolPanel")).toContainText("ลายน้ำ PDF");
+  await expect(page.locator(".jobsSection")).toHaveCount(0);
+  await expect(page.locator(".advancedSection")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "กลับไปเลือกเครื่องมือ" }).click();
+  await expect(page.locator(".v3ToolPanel")).toHaveCount(0);
+  await expect(page.getByText("ทำอะไรกับไฟล์นี้?")).toBeVisible();
+});
+
+test("propagates the session through preview, job drawer, download and upload", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator("#workspace")).toBeVisible();
-  await page.getByRole("button", { name: /ใส่ลายน้ำ PDF/ }).click();
-
-  const workbench = page.locator("#advanced-tools");
-  await expect(workbench).toBeVisible();
-  await expect(workbench.locator("#watermark")).toBeVisible();
-  await expect(workbench.locator("#pdf-to-images")).toBeHidden();
-
-  await workbench.getByRole("button", { name: "ปิด" }).click();
-  await expect(workbench).toBeHidden();
-});
-
-test("propagates the session through preview, job, download and upload", async ({ page }) => {
-  await page.goto("/");
-
-  await expect(page.locator("#workspace")).toBeVisible();
-  await expect(page.locator("strong", { hasText: /^example\.pdf$/ })).toBeVisible();
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await expect(page.locator("#workspace-target")).toBeVisible();
 
   await page.getByRole("button", { name: "ดูตัวอย่าง PDF" }).click();
   await expect(page.getByRole("img", { name: "Preview page 1" })).toBeVisible();
 
-  await page.getByRole("button", { name: "ลดขนาด PDF" }).click();
-  await page.locator("#advanced-tools").getByRole("button", { name: "บีบอัด PDF" }).click();
+  await page.getByRole("button", { name: /ลดขนาด PDF/ }).click();
+  await page.getByRole("button", { name: "บีบอัด PDF" }).click();
+  await expect(page.locator(".v3JobDrawer")).toBeVisible();
   await expect(page.locator(".jobInfo").getByText("compress", { exact: true })).toBeVisible();
-  await expect(page.locator(".badge.completed")).toContainText("100%");
+  await expect(page.locator(".v3JobBadge.completed")).toContainText("100%");
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "ดาวน์โหลด", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain("pdfhub-file-output-1");
 
+  await page.locator(".v3JobDrawer").getByRole("button", { name: "×" }).click();
+  await page.getByRole("button", { name: /กลับ/ }).click();
   await page.locator("#files").setInputFiles({ name: "scan.png", mimeType: "image/png", buffer: Buffer.from([1, 2, 3]) });
-  await expect(page.getByText("2 ไฟล์", { exact: true })).toBeVisible();
-  await expect(page.locator("strong", { hasText: /^scan\.png$/ })).toBeVisible();
+  await expect(page.locator("#workspace-target")).toBeVisible();
+  await expect(page.getByText("scan.png", { exact: true })).toBeVisible();
+});
+
+test("files is a dedicated route instead of a section in the home page", async ({ page }) => {
+  await page.goto("/files");
+  await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
+  await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
+  await expect(page.locator(".v3FileLibrary")).toBeVisible();
 });
