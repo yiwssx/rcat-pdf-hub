@@ -224,52 +224,8 @@ export function ToolWorkspace({
       busy={busy}
       integrations={integrations}
       signedUrl={signedUrl}
-      signedTtl={signedTtl}
-      splitPages={splitPages}
-      rotateDegrees={rotateDegrees}
-      rotatePages={rotatePages}
-      watermarkText={watermarkText}
-      watermarkOpacity={watermarkOpacity}
-      watermarkRotation={watermarkRotation}
-      watermarkFontSize={watermarkFontSize}
-      watermarkPosition={watermarkPosition}
-      pageFormat={pageFormat}
-      pageStart={pageStart}
-      pagePosition={pagePosition}
-      stampId={stampId}
-      stampPosition={stampPosition}
-      stampScale={stampScale}
-      imagePageSize={imagePageSize}
-      imageFit={imageFit}
-      imageDpi={imageDpi}
-      rasterFormat={rasterFormat}
-      rasterDpi={rasterDpi}
-      rasterFirstPage={rasterFirstPage}
-      rasterLastPage={rasterLastPage}
-      mergeOrder={mergeOrder}
-      setSignedTtl={(value) => setSetting("signedTtl", value)}
-      setSplitPages={(value) => setSetting("splitPages", value)}
-      setRotateDegrees={(value) => setSetting("rotateDegrees", value)}
-      setRotatePages={(value) => setSetting("rotatePages", value)}
-      setWatermarkText={(value) => setSetting("watermarkText", value)}
-      setWatermarkOpacity={(value) => setSetting("watermarkOpacity", value)}
-      setWatermarkRotation={(value) => setSetting("watermarkRotation", value)}
-      setWatermarkFontSize={(value) => setSetting("watermarkFontSize", value)}
-      setWatermarkPosition={(value) => setSetting("watermarkPosition", value)}
-      setPageFormat={(value) => setSetting("pageFormat", value)}
-      setPageStart={(value) => setSetting("pageStart", value)}
-      setPagePosition={(value) => setSetting("pagePosition", value)}
-      setStampId={(value) => setSetting("stampId", value)}
-      setStampPosition={(value) => setSetting("stampPosition", value)}
-      setStampScale={(value) => setSetting("stampScale", value)}
-      setImagePageSize={(value) => setSetting("imagePageSize", value)}
-      setImageFit={(value) => setSetting("imageFit", value)}
-      setImageDpi={(value) => setSetting("imageDpi", value)}
-      setRasterFormat={(value) => setSetting("rasterFormat", value)}
-      setRasterDpi={(value) => setSetting("rasterDpi", value)}
-      setRasterFirstPage={(value) => setSetting("rasterFirstPage", value)}
-      setRasterLastPage={(value) => setSetting("rasterLastPage", value)}
-      setMergeOrder={(value) => setSetting("mergeOrder", value)}
+      settings={settings}
+      onSettingChange={setSetting}
       onRun={(operation) => void run(operation)}
       onSignedLink={() => void createSignedLink()}
       onCopySignedLink={() => void copySignedLink()}

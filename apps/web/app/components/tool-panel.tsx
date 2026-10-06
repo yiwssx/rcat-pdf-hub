@@ -4,12 +4,18 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { getPageInfo, IntegrationStatus, UploadedFile } from "../../lib/api";
 import { ToolIcon, ToolIconName } from "./tool-icons";
+import { ToolWorkspaceSettings } from "./tool-workspace-state";
 
 const positionOptions = [
   ["center", "กลาง"],
   ["top-left", "บนซ้าย"], ["top-center", "บนกลาง"], ["top-right", "บนขวา"],
   ["bottom-left", "ล่างซ้าย"], ["bottom-center", "ล่างกลาง"], ["bottom-right", "ล่างขวา"],
 ] as const;
+
+type ToolSettingSetter = <K extends keyof ToolWorkspaceSettings>(
+  key: K,
+  value: ToolWorkspaceSettings[K],
+) => void;
 
 type Props = {
   tool: string;
@@ -21,52 +27,8 @@ type Props = {
   busy: boolean;
   integrations: IntegrationStatus | null;
   signedUrl: string | null;
-  signedTtl: number;
-  splitPages: string;
-  rotateDegrees: number;
-  rotatePages: string;
-  watermarkText: string;
-  watermarkOpacity: number;
-  watermarkRotation: number;
-  watermarkFontSize: number;
-  watermarkPosition: string;
-  pageFormat: string;
-  pageStart: number;
-  pagePosition: string;
-  stampId: string;
-  stampPosition: string;
-  stampScale: number;
-  imagePageSize: string;
-  imageFit: string;
-  imageDpi: number;
-  rasterFormat: string;
-  rasterDpi: number;
-  rasterFirstPage: number;
-  rasterLastPage: string;
-  mergeOrder: string[];
-  setSignedTtl: (value: number) => void;
-  setSplitPages: (value: string) => void;
-  setRotateDegrees: (value: number) => void;
-  setRotatePages: (value: string) => void;
-  setWatermarkText: (value: string) => void;
-  setWatermarkOpacity: (value: number) => void;
-  setWatermarkRotation: (value: number) => void;
-  setWatermarkFontSize: (value: number) => void;
-  setWatermarkPosition: (value: string) => void;
-  setPageFormat: (value: string) => void;
-  setPageStart: (value: number) => void;
-  setPagePosition: (value: string) => void;
-  setStampId: (value: string) => void;
-  setStampPosition: (value: string) => void;
-  setStampScale: (value: number) => void;
-  setImagePageSize: (value: string) => void;
-  setImageFit: (value: string) => void;
-  setImageDpi: (value: number) => void;
-  setRasterFormat: (value: string) => void;
-  setRasterDpi: (value: number) => void;
-  setRasterFirstPage: (value: number) => void;
-  setRasterLastPage: (value: string) => void;
-  setMergeOrder: (value: string[]) => void;
+  settings: ToolWorkspaceSettings;
+  onSettingChange: ToolSettingSetter;
   onRun: (operation: string) => void;
   onSignedLink: () => void;
   onCopySignedLink: () => void;
@@ -74,7 +36,6 @@ type Props = {
   onOrganize: (pages: Array<{ page: number; rotation: number }>) => void;
   onClose: () => void;
 };
-
 const meta: Record<string, { title: string; subtitle: string; icon: ToolIconName; tone: string }> = {
   ocr: { title: "สแกน / OCR", subtitle: "อ่านข้อความไทย + อังกฤษ", icon: "scan", tone: "rose" },
   "merge-pdf": { title: "รวมไฟล์ PDF", subtitle: "ตรวจรายการก่อนรวมเอกสาร", icon: "merge", tone: "blue" },
@@ -100,11 +61,11 @@ export function ToolPanel(props: Props) {
   const [pagesLoading, setPagesLoading] = useState(false);
   const mergeFiles = useMemo(() => {
     const byId = new Map(props.pdfFiles.map((file) => [file.id, file]));
-    return props.mergeOrder.map((id) => byId.get(id)).filter((file): file is UploadedFile => Boolean(file));
-  }, [props.pdfFiles, props.mergeOrder]);
+    return props.settings.mergeOrder.map((id) => byId.get(id)).filter((file): file is UploadedFile => Boolean(file));
+  }, [props.pdfFiles, props.settings.mergeOrder]);
   const availableMergeFiles = useMemo(
-    () => props.pdfFiles.filter((file) => !props.mergeOrder.includes(file.id)),
-    [props.pdfFiles, props.mergeOrder],
+    () => props.pdfFiles.filter((file) => !props.settings.mergeOrder.includes(file.id)),
+    [props.pdfFiles, props.settings.mergeOrder],
   );
 
   useEffect(() => {
@@ -128,7 +89,7 @@ export function ToolPanel(props: Props) {
     const next = [...ids];
     const [item] = next.splice(from, 1);
     next.splice(to, 0, item);
-    props.setMergeOrder(next);
+    props.onSettingChange("mergeOrder", next);
   }
 
   function movePage(fromPage: number, toPage: number) {
@@ -174,8 +135,8 @@ export function ToolPanel(props: Props) {
             onDragStart={(event) => event.dataTransfer.setData("text/plain", file.id)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => { event.preventDefault(); moveMerge(event.dataTransfer.getData("text/plain"), file.id); }}
-          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b><button type="button" aria-label={`เอา ${file.original_name} ออกจากชุดรวม`} disabled={mergeFiles.length <= 2} onClick={() => props.setMergeOrder(props.mergeOrder.filter((id) => id !== file.id))}>×</button></div>)}</div>
-          {availableMergeFiles.length > 0 && <div className="v3MergeAvailable"><small>ไฟล์อื่นใน Workspace</small><div>{availableMergeFiles.map((file) => <button type="button" key={file.id} onClick={() => props.setMergeOrder([...props.mergeOrder, file.id])}>＋ {file.original_name}</button>)}</div></div>}
+          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b><button type="button" aria-label={`เอา ${file.original_name} ออกจากชุดรวม`} disabled={mergeFiles.length <= 2} onClick={() => props.onSettingChange("mergeOrder", props.settings.mergeOrder.filter((id) => id !== file.id))}>×</button></div>)}</div>
+          {availableMergeFiles.length > 0 && <div className="v3MergeAvailable"><small>ไฟล์อื่นใน Workspace</small><div>{availableMergeFiles.map((file) => <button type="button" key={file.id} onClick={() => props.onSettingChange("mergeOrder", [...props.settings.mergeOrder, file.id])}>＋ {file.original_name}</button>)}</div></div>}
           <button className="v3PrimaryAction" onClick={() => props.onRun("merge")} disabled={busy || mergeFiles.length < 2}>รวม PDF {mergeFiles.length} ไฟล์</button>
         </>}
 
@@ -200,7 +161,7 @@ export function ToolPanel(props: Props) {
           </div>}
           <button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</button>
           <details className="v3AdvancedDetails"><summary>เลือกหน้าด้วยช่วงตัวเลข</summary>
-            <label className="v3Field">หน้าที่ต้องการ<input value={props.splitPages} onChange={(e) => props.setSplitPages(e.target.value)} placeholder="1-3,5"/></label>
+            <label className="v3Field">หน้าที่ต้องการ<input value={props.settings.splitPages} onChange={(e) => props.onSettingChange("splitPages", e.target.value)} placeholder="1-3,5"/></label>
             <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf}>สร้าง PDF จากหน้าที่เลือก</button>
           </details>
         </>}
@@ -212,40 +173,40 @@ export function ToolPanel(props: Props) {
 
         {tool === "pdf-to-images" && <>
           <div className="v3FieldRow three">
-            <label className="v3Field">รูปแบบ<select value={props.rasterFormat} onChange={(e) => props.setRasterFormat(e.target.value)}><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label>
-            <label className="v3Field">DPI<input type="number" min="72" max="600" value={props.rasterDpi} onChange={(e) => props.setRasterDpi(Number(e.target.value))}/></label>
-            <label className="v3Field">หน้าแรก<input type="number" min="1" value={props.rasterFirstPage} onChange={(e) => props.setRasterFirstPage(Math.max(1, Number(e.target.value)))}/></label>
+            <label className="v3Field">รูปแบบ<select value={props.settings.rasterFormat} onChange={(e) => props.onSettingChange("rasterFormat", e.target.value)}><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label>
+            <label className="v3Field">DPI<input type="number" min="72" max="600" value={props.settings.rasterDpi} onChange={(e) => props.onSettingChange("rasterDpi", Number(e.target.value))}/></label>
+            <label className="v3Field">หน้าแรก<input type="number" min="1" value={props.settings.rasterFirstPage} onChange={(e) => props.onSettingChange("rasterFirstPage", Math.max(1, Number(e.target.value)))}/></label>
           </div>
-          <label className="v3Field">หน้าสุดท้าย <small>เว้นว่างเพื่อแปลงต่อเนื่อง</small><input type="number" min={props.rasterFirstPage} value={props.rasterLastPage} onChange={(e) => props.setRasterLastPage(e.target.value)}/></label>
+          <label className="v3Field">หน้าสุดท้าย <small>เว้นว่างเพื่อแปลงต่อเนื่อง</small><input type="number" min={props.settings.rasterFirstPage} value={props.settings.rasterLastPage} onChange={(e) => props.onSettingChange("rasterLastPage", e.target.value)}/></label>
           <button className="v3PrimaryAction" onClick={() => props.onRun("pdf-to-images")} disabled={busy || !targetIsPdf}>แปลงเป็น ZIP รูปภาพ</button>
         </>}
 
         {tool === "images-to-pdf" && <>
           <div className="v3FieldNote">พบรูปภาพ {imageFiles.length} ไฟล์ใน Workspace</div>
           <div className="v3FieldRow three">
-            <label className="v3Field">ขนาดหน้า<select value={props.imagePageSize} onChange={(e) => props.setImagePageSize(e.target.value)}><option value="auto">Auto</option><option value="a4">A4</option><option value="letter">Letter</option></select></label>
-            <label className="v3Field">การจัดวาง<select value={props.imageFit} onChange={(e) => props.setImageFit(e.target.value)}><option value="contain">พอดีหน้า</option><option value="cover">เต็มหน้า</option></select></label>
-            <label className="v3Field">DPI<input type="number" min="72" max="600" value={props.imageDpi} onChange={(e) => props.setImageDpi(Number(e.target.value))}/></label>
+            <label className="v3Field">ขนาดหน้า<select value={props.settings.imagePageSize} onChange={(e) => props.onSettingChange("imagePageSize", e.target.value)}><option value="auto">Auto</option><option value="a4">A4</option><option value="letter">Letter</option></select></label>
+            <label className="v3Field">การจัดวาง<select value={props.settings.imageFit} onChange={(e) => props.onSettingChange("imageFit", e.target.value)}><option value="contain">พอดีหน้า</option><option value="cover">เต็มหน้า</option></select></label>
+            <label className="v3Field">DPI<input type="number" min="72" max="600" value={props.settings.imageDpi} onChange={(e) => props.onSettingChange("imageDpi", Number(e.target.value))}/></label>
           </div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("images-to-pdf")} disabled={busy || imageFiles.length < 1}>สร้าง PDF จากภาพ</button>
         </>}
 
         {tool === "watermark" && <>
-          <label className="v3Field">ข้อความ<input value={props.watermarkText} onChange={(e) => props.setWatermarkText(e.target.value)}/></label>
+          <label className="v3Field">ข้อความ<input value={props.settings.watermarkText} onChange={(e) => props.onSettingChange("watermarkText", e.target.value)}/></label>
           <div className="v3FieldRow three">
-            <label className="v3Field">ขนาด<input type="number" value={props.watermarkFontSize} onChange={(e) => props.setWatermarkFontSize(Number(e.target.value))}/></label>
-            <label className="v3Field">ความโปร่งใส<input type="number" min="0.02" max="1" step="0.01" value={props.watermarkOpacity} onChange={(e) => props.setWatermarkOpacity(Number(e.target.value))}/></label>
-            <label className="v3Field">มุม<input type="number" value={props.watermarkRotation} onChange={(e) => props.setWatermarkRotation(Number(e.target.value))}/></label>
+            <label className="v3Field">ขนาด<input type="number" value={props.settings.watermarkFontSize} onChange={(e) => props.onSettingChange("watermarkFontSize", Number(e.target.value))}/></label>
+            <label className="v3Field">ความโปร่งใส<input type="number" min="0.02" max="1" step="0.01" value={props.settings.watermarkOpacity} onChange={(e) => props.onSettingChange("watermarkOpacity", Number(e.target.value))}/></label>
+            <label className="v3Field">มุม<input type="number" value={props.settings.watermarkRotation} onChange={(e) => props.onSettingChange("watermarkRotation", Number(e.target.value))}/></label>
           </div>
-          <label className="v3Field">ตำแหน่ง<select value={props.watermarkPosition} onChange={(e) => props.setWatermarkPosition(e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+          <label className="v3Field">ตำแหน่ง<select value={props.settings.watermarkPosition} onChange={(e) => props.onSettingChange("watermarkPosition", e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           <button className="v3PrimaryAction" onClick={() => props.onRun("watermark")} disabled={busy || !targetIsPdf}>ใส่ลายน้ำ</button>
         </>}
 
         {tool === "page-numbers" && <>
-          <label className="v3Field">รูปแบบ<input value={props.pageFormat} onChange={(e) => props.setPageFormat(e.target.value)}/></label>
+          <label className="v3Field">รูปแบบ<input value={props.settings.pageFormat} onChange={(e) => props.onSettingChange("pageFormat", e.target.value)}/></label>
           <div className="v3FieldRow">
-            <label className="v3Field">เริ่มเลข<input type="number" min="0" value={props.pageStart} onChange={(e) => props.setPageStart(Number(e.target.value))}/></label>
-            <label className="v3Field">ตำแหน่ง<select value={props.pagePosition} onChange={(e) => props.setPagePosition(e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+            <label className="v3Field">เริ่มเลข<input type="number" min="0" value={props.settings.pageStart} onChange={(e) => props.onSettingChange("pageStart", Number(e.target.value))}/></label>
+            <label className="v3Field">ตำแหน่ง<select value={props.settings.pagePosition} onChange={(e) => props.onSettingChange("pagePosition", e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           </div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("page-numbers")} disabled={busy || !targetIsPdf}>ใส่เลขหน้า</button>
         </>}
@@ -261,17 +222,17 @@ export function ToolPanel(props: Props) {
         </>}
 
         {tool === "pdf-stamp" && <>
-          <label className="v3Field">ไฟล์ตราประทับ<select value={props.stampId} onChange={(e) => props.setStampId(e.target.value)}><option value="">— เลือก PDF —</option>{pdfFiles.filter((file) => file.id !== target.id).map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}</select></label>
+          <label className="v3Field">ไฟล์ตราประทับ<select value={props.settings.stampId} onChange={(e) => props.onSettingChange("stampId", e.target.value)}><option value="">— เลือก PDF —</option>{pdfFiles.filter((file) => file.id !== target.id).map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}</select></label>
           <div className="v3FieldRow">
-            <label className="v3Field">ตำแหน่ง<select value={props.stampPosition} onChange={(e) => props.setStampPosition(e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-            <label className="v3Field">ขนาด<input type="number" min="0.03" max="0.8" step="0.01" value={props.stampScale} onChange={(e) => props.setStampScale(Number(e.target.value))}/></label>
+            <label className="v3Field">ตำแหน่ง<select value={props.settings.stampPosition} onChange={(e) => props.onSettingChange("stampPosition", e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+            <label className="v3Field">ขนาด<input type="number" min="0.03" max="0.8" step="0.01" value={props.settings.stampScale} onChange={(e) => props.onSettingChange("stampScale", Number(e.target.value))}/></label>
           </div>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("stamp")} disabled={busy || !targetIsPdf || !props.stampId}>ประทับ PDF</button>
+          <button className="v3PrimaryAction" onClick={() => props.onRun("stamp")} disabled={busy || !targetIsPdf || !props.settings.stampId}>ประทับ PDF</button>
         </>}
 
         {tool === "signed-link" && <>
           <Summary target={target} note="ลิงก์จะหมดอายุอัตโนมัติ"/>
-          <label className="v3Field">อายุลิงก์ (วินาที)<input type="number" min="30" max="3600" value={props.signedTtl} onChange={(e) => props.setSignedTtl(Math.max(30, Number(e.target.value)))}/></label>
+          <label className="v3Field">อายุลิงก์ (วินาที)<input type="number" min="30" max="3600" value={props.settings.signedTtl} onChange={(e) => props.onSettingChange("signedTtl", Math.max(30, Number(e.target.value)))}/></label>
           <button className="v3PrimaryAction" onClick={props.onSignedLink} disabled={busy}>สร้างลิงก์ดาวน์โหลด</button>
           {signedUrl && <div className="v3Secret"><strong>ลิงก์พร้อมใช้งาน</strong><code>{signedUrl}</code><div><a href={signedUrl} target="_blank" rel="noreferrer">เปิด</a><button onClick={props.onCopySignedLink}>คัดลอก</button></div></div>}
         </>}
