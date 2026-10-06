@@ -190,6 +190,8 @@ Generated supply-chain artifacts are ignored by Git and are intended to be retai
 
 ## Production Compose validation
 
+Production runtime validation now uses the production overlay for the real-stack path. Local HTTP validation explicitly disables the Secure cookie flag and enables the internal test bootstrap so the browser smoke can run without weakening production defaults.
+
 Production deployment is an explicit Compose overlay rather than a fork of the development stack:
 
 ```bash
@@ -198,7 +200,7 @@ make up-prod
 make up-prod-nas
 ```
 
-`docker-compose.prod.yml` is always combined with the base file. It supplies production-mode authentication defaults and bounded Docker log retention while leaving runtime privilege/resource hardening and network segmentation to Tasks 6B.2 and 6B.3.
+`docker-compose.prod.yml` is always combined with the base file. It supplies production-mode authentication defaults, bounded Docker log retention, and the Task 6B.2 runtime-hardening baseline. Application containers are read-only, drop all Linux capabilities, use `no-new-privileges`, and receive explicit writable `tmpfs` space plus PID/CPU/memory ceilings. Network segmentation remains Task 6B.3.
 
 Operator backup/restore scripts accept `PDFHUB_COMPOSE_MODE=prod` and `PDFHUB_COMPOSE_MODE=prod-nas` so backup metadata records the actual deployment shape.
 
