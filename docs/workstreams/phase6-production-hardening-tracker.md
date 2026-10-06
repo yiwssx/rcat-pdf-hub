@@ -59,7 +59,7 @@ Recent pre-Phase-6 hardening/refactor work:
 
 | Task | Scope | Status | Primary evidence |
 | --- | --- | --- | --- |
-| 6.0 | Baseline verification / clean starting state | PENDING | — |
+| 6.0 | Baseline verification / clean starting state | COMPLETE | Starting main `d3965ac4f0ec7fed8af01d9f4649109532334c87`; PR #84 |
 | 6A.1 | Frontend reproducible install: committed npm lockfile + `npm ci` | PENDING | — |
 | 6A.2 | Python reproducible dependency lock with transitive pins/hashes | PENDING | — |
 | 6A.3 | Supply-chain scan + SBOM generation | PENDING | — |
@@ -216,18 +216,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | Phase 6 planning | Created the Production Hardening & Scale execution plan and canonical tracker | This document | ACTIVE |
 | 2026-10-06 | Architecture baseline | Tool Workspace seam and ToolPanel interface cleanup already merged before Phase 6 execution | PR #80, PR #81 | BASELINE |
 | 2026-10-06 | Security baseline | Cleared current CodeQL unused-import findings from vendored pytest skill template | PR #82 | BASELINE |
+| 2026-10-06 | 6.0 | Verified clean Phase 6 starting state: no open implementation PRs; recorded exact `main` SHA; added release-policy guard for tracker continuity | Starting main `d3965ac4f0ec7fed8af01d9f4649109532334c87`; PR #84 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6.0 — Baseline verification.**
+**Start Task 6A.1 — Frontend reproducible install.**
 
-Before 6A.1 implementation:
-
-1. confirm `main` has no open implementation PRs;
-2. confirm current required CI/security checks are green;
-3. run/validate the repository release-policy baseline;
-4. record the exact starting `main` SHA in this tracker;
-5. then create the dedicated 6A.1 PR for frontend dependency reproducibility.
+Create a dedicated implementation PR that commits the npm lockfile, converts CI/Docker/local validation to `npm ci`, updates dependency automation/release policy, and proves a clean checkout installs/builds/tests from the committed lockfile.
 
 ## Status update convention
 
