@@ -10,7 +10,7 @@ from app.db import get_db
 from app.models import FileRecord, JobRecord
 from app.observability import record_job, set_queue_depth
 from app.policy import ensure_daily_job_quota
-from app.queue import pdf_queue
+from app.queue import enqueue_processing_job
 from app.routers.jobs import serialize
 from app.schemas import (
     ImageToPdfRequest,
@@ -76,12 +76,7 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
     db.commit()
     db.refresh(job)
     try:
-        rq_job = pdf_queue.enqueue(
-            "app.worker_tasks.process_job",
-            job.id,
-            job_timeout=settings.rq_job_timeout_seconds,
-            result_ttl=86400,
-        )
+        queue, rq_job = enqueue_processing_job(operation, job.id)
     except Exception as exc:
         job.status = "failed"
         job.progress = 100
@@ -98,8 +93,14 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
     job.rq_job_id = rq_job.id
     db.commit()
     record_job(operation, "queued")
-    set_queue_depth(settings.rq_queue, len(pdf_queue))
-    audit_event("job.queued", principal.name, "job", job.id, {"operation": operation, "input_count": len(file_ids)})
+    set_queue_depth(queue.name, len(queue))
+    audit_event(
+        "job.queued",
+        principal.name,
+        "job",
+        job.id,
+        {"operation": operation, "queue": queue.name, "input_count": len(file_ids)},
+    )
     return serialize(job)
 
 
