@@ -13,12 +13,14 @@ processors:
     limit_mib: 256
 
 exporters:
-  debug:
-    verbosity: basic
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [otlp/tempo]
