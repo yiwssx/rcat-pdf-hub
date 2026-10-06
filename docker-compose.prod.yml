@@ -175,6 +175,17 @@ services:
     mem_limit: ${PDFHUB_OTEL_MEMORY_LIMIT:-1g}
     cpus: ${PDFHUB_OTEL_CPUS:-1.0}
 
+  grafana:
+    networks: [management]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${PDFHUB_GRAFANA_ADMIN_PASSWORD:?set PDFHUB_GRAFANA_ADMIN_PASSWORD in .env}
+    logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_GRAFANA_MEMORY_LIMIT:-768m}
+    cpus: ${PDFHUB_GRAFANA_CPUS:-1.0}
+
   paperless-db:
     networks: [data]
     logging: *production-logging
