@@ -142,6 +142,21 @@ test("opens a Web Console session without exposing API-key login", async ({ page
   await expect(page.getByRole("button", { name: "ผู้ดูแล" })).toHaveCount(0);
 });
 
+test("V3 opens only the selected task workspace", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("#workspace")).toBeVisible();
+  await page.getByRole("button", { name: /ใส่ลายน้ำ PDF/ }).click();
+
+  const workbench = page.locator("#advanced-tools");
+  await expect(workbench).toBeVisible();
+  await expect(workbench.locator("#watermark")).toBeVisible();
+  await expect(workbench.locator("#pdf-to-images")).toBeHidden();
+
+  await workbench.getByRole("button", { name: "ปิด" }).click();
+  await expect(workbench).toBeHidden();
+});
+
 test("propagates the session through preview, job, download and upload", async ({ page }) => {
   await page.goto("/");
 
@@ -152,6 +167,7 @@ test("propagates the session through preview, job, download and upload", async (
   await expect(page.getByRole("img", { name: "Preview page 1" })).toBeVisible();
 
   await page.getByRole("button", { name: "ลดขนาด PDF" }).click();
+  await page.locator("#advanced-tools").getByRole("button", { name: "บีบอัด PDF" }).click();
   await expect(page.locator(".jobInfo").getByText("compress", { exact: true })).toBeVisible();
   await expect(page.locator(".badge.completed")).toContainText("100%");
 
