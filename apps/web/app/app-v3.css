@@ -719,7 +719,7 @@ a { color: inherit; }
   background:#fff;
 }
 .v3Search span { color:#8d95aa; }
-.v3Search input { border:0; background:transparent; box-shadow:none; }
+.v3Search input { box-sizing:border-box; border:0; background:transparent; box-shadow:none; }
 .v3LibraryToolbar {
   display:grid;
   grid-template-columns:minmax(260px,1fr) repeat(3,minmax(120px,auto)) auto;
