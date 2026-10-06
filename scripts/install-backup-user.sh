@@ -14,7 +14,7 @@ for cmd in systemctl bash docker sha256sum git; do
   command -v "${cmd}" >/dev/null 2>&1 || { echo "Missing required command: ${cmd}" >&2; exit 1; }
 done
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose plugin is required" >&2; exit 1; }
-case "${COMPOSE_MODE}" in default|nas) ;; *) echo "PDFHUB_COMPOSE_MODE must be default or nas" >&2; exit 2 ;; esac
+case "${COMPOSE_MODE}" in default|nas|prod|prod-nas) ;; *) echo "PDFHUB_COMPOSE_MODE must be default, nas, prod, or prod-nas" >&2; exit 2 ;; esac
 
 if [[ "${ROOT}" =~ [[:space:]] ]] || [[ "${BACKUP_ROOT}" =~ [[:space:]] ]]; then
   echo "Repository and backup paths must not contain whitespace for this systemd unit" >&2
