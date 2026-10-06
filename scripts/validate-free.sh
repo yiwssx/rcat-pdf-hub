@@ -75,7 +75,8 @@ operations() {
     scripts/check-python-security-dependency.py \
     scripts/check-python-lock.py \
     scripts/check-production-network.py \
-    scripts/check-worker-pools.py
+    scripts/check-worker-pools.py \
+    scripts/check-grafana-provisioning.py
   echo 'operations: PASS'
 }
 
