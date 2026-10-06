@@ -228,7 +228,10 @@ expected_images = {
     "chrislusf/seaweedfs:4.44",
     "clamav/clamav:1.5.4",
     "prom/prometheus:v3.13.2",
+    "prom/alertmanager:v0.34.1",
+    "grafana/tempo:3.1.0",
     "otel/opentelemetry-collector-contrib:0.159.0",
+    "grafana/grafana:13.2.3",
     "ghcr.io/paperless-ngx/paperless-ngx:3.0.5",
 }
 for image in expected_images:
@@ -282,6 +285,12 @@ prometheus = read("ops/prometheus/prometheus.yml")
 alerts = read("ops/prometheus/alerts.yml")
 assert "/etc/prometheus/alerts.yml" in prometheus
 assert "./ops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro" in compose
+assert 'targets: ["alertmanager:9093"]' in prometheus
+assert "./ops/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro" in compose
+assert "./ops/tempo/tempo.yml:/etc/tempo/tempo.yml:ro" in compose
+assert "./ops/grafana/provisioning:/etc/grafana/provisioning:ro" in compose
+assert "./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro" in compose
+assert "PDFHUB_GRAFANA_ADMIN_PASSWORD=replace-with-a-long-random-dashboard-password" in env_example
 for alert in ("PdfHubApiDown", "PdfHubHighServerErrorRate", "PdfHubP95LatencyHigh", "PdfHubQueueBacklog", "PdfHubRepeatedJobFailures"):
     assert f"alert: {alert}" in alerts, f"Missing Phase 5 Prometheus alert: {alert}"
 
