@@ -110,6 +110,23 @@ async function installApiMocks(page: Page) {
     });
   });
 
+  await page.route("**/api/v1/pdf/watermark", async (route) => {
+    if (!(await requireSession(route))) return;
+    await route.fulfill({
+      json: {
+        id: "job-watermark-1",
+        operation: "watermark",
+        status: "queued",
+        progress: 0,
+        input_file_ids: [initialFile.id],
+        output_file_id: null,
+        params: {},
+        error: null,
+        requested_by: "web-console:smoke-test",
+      },
+    });
+  });
+
   await page.route("**/api/v1/files/file-output-1/download", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
@@ -176,6 +193,32 @@ test("V3 switches from home into a focused tool workspace without long-page sect
   await page.getByRole("button", { name: "กลับไปเลือกเครื่องมือ" }).click();
   await expect(page.locator(".v3ToolPanel")).toHaveCount(0);
   await expect(page.getByText("ทำอะไรกับไฟล์นี้?")).toBeVisible();
+});
+
+test("tool workspace owns settings and submits the configured watermark payload", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /ลายน้ำ/ }).click();
+
+  await page.getByLabel("ข้อความ").fill("เอกสารทดสอบ");
+  await page.getByLabel("ความโปร่งใส").fill("0.25");
+
+  const requestPromise = page.waitForRequest("**/api/v1/pdf/watermark");
+  await page.getByRole("button", { name: "ใส่ลายน้ำ" }).click();
+  const request = await requestPromise;
+
+  expect(request.postDataJSON()).toMatchObject({
+    file_id: initialFile.id,
+    text: "เอกสารทดสอบ",
+    opacity: 0.25,
+    rotation: 45,
+    position: "center",
+    margin: 36,
+  });
+  await expect(page.locator(".v3JobDrawer")).toBeVisible();
+  await page.locator(".v3JobDrawer").getByRole("button", { name: "×" }).click();
+  await page.getByRole("button", { name: /ลายน้ำ/ }).click();
+  await expect(page.getByLabel("ข้อความ")).toHaveValue("เอกสารทดสอบ");
 });
 
 test("propagates the session through preview, job drawer, download and upload", async ({ page }) => {

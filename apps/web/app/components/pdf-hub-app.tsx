@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
   archiveToPaperless,
@@ -30,8 +31,7 @@ import {
   uploadFile,
   UploadedFile,
 } from "../../lib/api";
-import { AdminPanel } from "./admin-panel";
-import { ToolPanel } from "./tool-panel";
+import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import {
   AppHeader,
   DocumentWorkspace,
@@ -43,6 +43,16 @@ import {
 } from "./v3-ui";
 
 export type PdfHubView = "workspace" | "files" | "admin";
+
+const AdminPanel = dynamic(
+  () => import("./admin-panel").then((module) => module.AdminPanel),
+  { loading: () => <div className="v3InfoBox" role="status">กำลังโหลดเครื่องมือผู้ดูแล…</div> },
+);
+
+const ToolWorkspace = dynamic(
+  () => import("./tool-workspace").then((module) => module.ToolWorkspace),
+  { loading: () => <div className="v3InfoBox" role="status">กำลังโหลดเครื่องมือ PDF…</div> },
+);
 
 const imageContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
 
@@ -79,36 +89,12 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const [activeTool, setActiveTool] = useState("");
   const [pendingTool, setPendingTool] = useState("");
   const [jobsOpen, setJobsOpen] = useState(false);
-  const [mergeOrder, setMergeOrder] = useState<string[]>([]);
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
-
   const [ldapUser, setLdapUser] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [signedTtl, setSignedTtl] = useState(300);
-  const [splitPages, setSplitPages] = useState("1-3");
-  const [rotateDegrees, setRotateDegrees] = useState(90);
-  const [rotatePages, setRotatePages] = useState("1-z");
-  const [watermarkText, setWatermarkText] = useState("เอกสารภายใน");
-  const [watermarkOpacity, setWatermarkOpacity] = useState(0.18);
-  const [watermarkRotation, setWatermarkRotation] = useState(45);
-  const [watermarkFontSize, setWatermarkFontSize] = useState(48);
-  const [watermarkPosition, setWatermarkPosition] = useState("center");
-  const [pageFormat, setPageFormat] = useState("หน้า {page} / {total}");
-  const [pageStart, setPageStart] = useState(1);
-  const [pagePosition, setPagePosition] = useState("bottom-center");
-  const [stampId, setStampId] = useState("");
-  const [stampPosition, setStampPosition] = useState("bottom-right");
-  const [stampScale, setStampScale] = useState(0.2);
-  const [imagePageSize, setImagePageSize] = useState("a4");
-  const [imageFit, setImageFit] = useState("contain");
-  const [imageDpi, setImageDpi] = useState(150);
-  const [rasterFormat, setRasterFormat] = useState("png");
-  const [rasterDpi, setRasterDpi] = useState(150);
-  const [rasterFirstPage, setRasterFirstPage] = useState(1);
-  const [rasterLastPage, setRasterLastPage] = useState("");
+  const [toolSettings, setToolSettings] = useState(createToolWorkspaceSettings);
 
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
   const pdfFiles = useMemo(() => files.filter((file) => isPdf(file)), [files]);
@@ -116,6 +102,14 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const targetIsPdf = isPdf(target);
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
   const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
+
+  function clearSignedToolResult() {
+    setToolSettings((old) => (
+      old.signedUrl === null && old.signedTargetId === null
+        ? old
+        : { ...old, signedUrl: null, signedTargetId: null }
+    ));
+  }
 
   async function loadWorkspace(authValue = auth) {
     if (!authValue) return;
@@ -176,14 +170,6 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    setMergeOrder((old) => {
-      const available = pdfFiles.map((file) => file.id);
-      const kept = old.filter((id) => available.includes(id));
-      return kept.length > 0 ? kept : available;
-    });
-  }, [pdfFiles]);
 
   useEffect(() => {
     if (initialView !== "admin" || !auth || !identity?.is_admin) return;
@@ -256,7 +242,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
         if (pendingTool) setActiveTool(pendingTool);
       }
       setPendingTool("");
-      setSignedUrl(null);
+      clearSignedToolResult();
       setMessage(`อัปโหลดแล้ว ${uploaded.length} ไฟล์`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
@@ -270,7 +256,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setActiveTool("");
     setPreviewUrl(null);
     setPreviewPage(1);
-    setSignedUrl(null);
+    clearSignedToolResult();
   }
 
   function chooseTool(tool: ToolDefinition) {
@@ -309,7 +295,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setTargetId(candidate.id);
     setActiveTool(tool.id);
     setPreviewUrl(null);
-    setSignedUrl(null);
+    clearSignedToolResult();
   }
 
   async function submit(operation: string, payload: object) {
@@ -325,45 +311,6 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       setMessage(error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ");
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function run(operation: string) {
-    if (!targetId && operation !== "merge" && operation !== "images-to-pdf") {
-      setMessage("เลือกไฟล์ก่อน");
-      return;
-    }
-    switch (operation) {
-      case "merge":
-        if (pdfFiles.length < 2) return setMessage("Merge ต้องมี PDF อย่างน้อย 2 ไฟล์");
-        return submit("merge", { file_ids: mergeOrder.length ? mergeOrder : pdfFiles.map((file) => file.id) });
-      case "images-to-pdf":
-        if (imageFiles.length < 1) return setMessage("ต้องมีไฟล์ภาพอย่างน้อย 1 ไฟล์");
-        return submit("images-to-pdf", { file_ids: imageFiles.map((file) => file.id), page_size: imagePageSize, fit: imageFit, margin: 18, dpi: imageDpi });
-      case "pdf-to-images":
-        if (!targetIsPdf) return setMessage("PDF → รูปภาพ ต้องเลือกไฟล์ PDF");
-        return submit("pdf-to-images", { file_id: targetId, format: rasterFormat, dpi: rasterDpi, first_page: rasterFirstPage, last_page: rasterLastPage ? Number(rasterLastPage) : null });
-      case "split":
-        return submit("split", { file_id: targetId, pages: splitPages });
-      case "rotate":
-        return submit("rotate", { file_id: targetId, degrees: rotateDegrees, pages: rotatePages });
-      case "ocr":
-        return submit("ocr", { file_id: targetId, languages: "tha+eng", deskew: true, rotate_pages: true });
-      case "compress":
-        return submit("compress", { file_id: targetId });
-      case "pdfa":
-        return submit("pdfa", { file_id: targetId, languages: "tha+eng", deskew: false, rotate_pages: false });
-      case "office-to-pdf":
-        return submit("office-to-pdf", { file_id: targetId });
-      case "watermark":
-        return submit("watermark", { file_id: targetId, text: watermarkText, font_size: watermarkFontSize, opacity: watermarkOpacity, rotation: watermarkRotation, position: watermarkPosition, margin: 36 });
-      case "page-numbers":
-        return submit("page-numbers", { file_id: targetId, format: pageFormat, start_number: pageStart, font_size: 10, position: pagePosition, margin: 24 });
-      case "stamp":
-        if (!stampId) return setMessage("เลือกไฟล์ PDF ที่จะใช้เป็นตราประทับก่อน");
-        return submit("stamp", { file_id: targetId, stamp_file_id: stampId, position: stampPosition, scale: stampScale, margin: 24 });
-      default:
-        setMessage("ไม่รู้จัก operation");
     }
   }
 
@@ -397,27 +344,18 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     }
   }
 
-  async function makeSignedLink() {
-    if (!auth || !targetId) return;
+  async function createSignedLink(ttlSeconds: number): Promise<string | null> {
+    if (!auth || !targetId) return null;
     setBusy(true);
     try {
-      const result = await createSignedDownload(targetId, auth, signedTtl);
-      setSignedUrl(result.url);
+      const result = await createSignedDownload(targetId, auth, ttlSeconds);
       setMessage("สร้างลิงก์ดาวน์โหลดแล้ว");
+      return result.url;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "สร้างลิงก์ไม่สำเร็จ");
+      return null;
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function copySignedLink() {
-    if (!signedUrl) return;
-    try {
-      await navigator.clipboard.writeText(signedUrl);
-      setMessage("คัดลอกลิงก์แล้ว");
-    } catch {
-      setMessage("คัดลอกอัตโนมัติไม่ได้");
     }
   }
 
@@ -509,69 +447,25 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     />;
   }
 
-  const toolPanel = target ? <ToolPanel
-    tool={activeTool}
-    auth={auth}
-    target={target}
-    pdfFiles={pdfFiles}
-    imageFiles={imageFiles}
-    targetIsPdf={targetIsPdf}
-    busy={busy}
-    integrations={integrations}
-    signedUrl={signedUrl}
-    signedTtl={signedTtl}
-    splitPages={splitPages}
-    rotateDegrees={rotateDegrees}
-    rotatePages={rotatePages}
-    watermarkText={watermarkText}
-    watermarkOpacity={watermarkOpacity}
-    watermarkRotation={watermarkRotation}
-    watermarkFontSize={watermarkFontSize}
-    watermarkPosition={watermarkPosition}
-    pageFormat={pageFormat}
-    pageStart={pageStart}
-    pagePosition={pagePosition}
-    stampId={stampId}
-    stampPosition={stampPosition}
-    stampScale={stampScale}
-    imagePageSize={imagePageSize}
-    imageFit={imageFit}
-    imageDpi={imageDpi}
-    rasterFormat={rasterFormat}
-    rasterDpi={rasterDpi}
-    rasterFirstPage={rasterFirstPage}
-    rasterLastPage={rasterLastPage}
-    mergeOrder={mergeOrder}
-    setSignedTtl={setSignedTtl}
-    setSplitPages={setSplitPages}
-    setRotateDegrees={setRotateDegrees}
-    setRotatePages={setRotatePages}
-    setWatermarkText={setWatermarkText}
-    setWatermarkOpacity={setWatermarkOpacity}
-    setWatermarkRotation={setWatermarkRotation}
-    setWatermarkFontSize={setWatermarkFontSize}
-    setWatermarkPosition={setWatermarkPosition}
-    setPageFormat={setPageFormat}
-    setPageStart={setPageStart}
-    setPagePosition={setPagePosition}
-    setStampId={setStampId}
-    setStampPosition={setStampPosition}
-    setStampScale={setStampScale}
-    setImagePageSize={setImagePageSize}
-    setImageFit={setImageFit}
-    setImageDpi={setImageDpi}
-    setRasterFormat={setRasterFormat}
-    setRasterDpi={setRasterDpi}
-    setRasterFirstPage={setRasterFirstPage}
-    setRasterLastPage={setRasterLastPage}
-    setMergeOrder={setMergeOrder}
-    onRun={(operation) => void run(operation)}
-    onSignedLink={() => void makeSignedLink()}
-    onCopySignedLink={() => void copySignedLink()}
-    onArchive={() => void archive()}
-    onOrganize={(pages) => void submit("organize", { file_id: targetId, pages })}
-    onClose={() => setActiveTool("")}
-  /> : null;
+  const toolPanel = target ? (
+    <ToolWorkspace
+      tool={activeTool}
+      auth={auth}
+      target={target}
+      pdfFiles={pdfFiles}
+      imageFiles={imageFiles}
+      targetIsPdf={targetIsPdf}
+      busy={busy}
+      integrations={integrations}
+      settings={toolSettings}
+      onSettingsChange={setToolSettings}
+      onSubmit={submit}
+      onCreateSignedLink={createSignedLink}
+      onArchive={archive}
+      onMessage={setMessage}
+      onClose={() => setActiveTool("")}
+    />
+  ) : null;
 
   return (
     <div className="v3App">

@@ -1,0 +1,281 @@
+"use client";
+
+import { Dispatch, SetStateAction, useEffect } from "react";
+import { IntegrationStatus, UploadedFile } from "../../lib/api";
+import { ToolPanel } from "./tool-panel";
+import { ToolWorkspaceSettings } from "./tool-workspace-state";
+
+type ToolWorkspaceProps = {
+  tool: string;
+  auth: string;
+  target: UploadedFile;
+  pdfFiles: UploadedFile[];
+  imageFiles: UploadedFile[];
+  targetIsPdf: boolean;
+  busy: boolean;
+  integrations: IntegrationStatus | null;
+  settings: ToolWorkspaceSettings;
+  onSettingsChange: Dispatch<SetStateAction<ToolWorkspaceSettings>>;
+  onSubmit: (operation: string, payload: object) => Promise<void>;
+  onCreateSignedLink: (ttlSeconds: number) => Promise<string | null>;
+  onArchive: () => Promise<void>;
+  onMessage: (message: string) => void;
+  onClose: () => void;
+};
+
+export function ToolWorkspace({
+  tool,
+  auth,
+  target,
+  pdfFiles,
+  imageFiles,
+  targetIsPdf,
+  busy,
+  integrations,
+  settings,
+  onSettingsChange,
+  onSubmit,
+  onCreateSignedLink,
+  onArchive,
+  onMessage,
+  onClose,
+}: ToolWorkspaceProps) {
+  const {
+    signedTtl,
+    splitPages,
+    rotateDegrees,
+    rotatePages,
+    watermarkText,
+    watermarkOpacity,
+    watermarkRotation,
+    watermarkFontSize,
+    watermarkPosition,
+    pageFormat,
+    pageStart,
+    pagePosition,
+    stampId,
+    stampPosition,
+    stampScale,
+    imagePageSize,
+    imageFit,
+    imageDpi,
+    rasterFormat,
+    rasterDpi,
+    rasterFirstPage,
+    rasterLastPage,
+    mergeOrder,
+  } = settings;
+  const signedUrl = settings.signedTargetId === target.id ? settings.signedUrl : null;
+
+  function setSetting<K extends keyof ToolWorkspaceSettings>(key: K, value: ToolWorkspaceSettings[K]) {
+    onSettingsChange((old) => ({ ...old, [key]: value }));
+  }
+
+  useEffect(() => {
+    onSettingsChange((old) => {
+      const available = pdfFiles.map((file) => file.id);
+      const kept = old.mergeOrder.filter((id) => available.includes(id));
+      const next = kept.length > 0 ? kept : available;
+      if (next.length === old.mergeOrder.length && next.every((id, index) => id === old.mergeOrder[index])) {
+        return old;
+      }
+      return { ...old, mergeOrder: next };
+    });
+  }, [pdfFiles, onSettingsChange]);
+
+  async function run(operation: string) {
+    if (!target.id && operation !== "merge" && operation !== "images-to-pdf") {
+      onMessage("เลือกไฟล์ก่อน");
+      return;
+    }
+
+    switch (operation) {
+      case "merge":
+        if (pdfFiles.length < 2) {
+          onMessage("Merge ต้องมี PDF อย่างน้อย 2 ไฟล์");
+          return;
+        }
+        await onSubmit("merge", {
+          file_ids: mergeOrder.length ? mergeOrder : pdfFiles.map((file) => file.id),
+        });
+        return;
+      case "images-to-pdf":
+        if (imageFiles.length < 1) {
+          onMessage("ต้องมีไฟล์ภาพอย่างน้อย 1 ไฟล์");
+          return;
+        }
+        await onSubmit("images-to-pdf", {
+          file_ids: imageFiles.map((file) => file.id),
+          page_size: imagePageSize,
+          fit: imageFit,
+          margin: 18,
+          dpi: imageDpi,
+        });
+        return;
+      case "pdf-to-images":
+        if (!targetIsPdf) {
+          onMessage("PDF → รูปภาพ ต้องเลือกไฟล์ PDF");
+          return;
+        }
+        await onSubmit("pdf-to-images", {
+          file_id: target.id,
+          format: rasterFormat,
+          dpi: rasterDpi,
+          first_page: rasterFirstPage,
+          last_page: rasterLastPage ? Number(rasterLastPage) : null,
+        });
+        return;
+      case "split":
+        await onSubmit("split", { file_id: target.id, pages: splitPages });
+        return;
+      case "rotate":
+        await onSubmit("rotate", {
+          file_id: target.id,
+          degrees: rotateDegrees,
+          pages: rotatePages,
+        });
+        return;
+      case "ocr":
+        await onSubmit("ocr", {
+          file_id: target.id,
+          languages: "tha+eng",
+          deskew: true,
+          rotate_pages: true,
+        });
+        return;
+      case "compress":
+        await onSubmit("compress", { file_id: target.id });
+        return;
+      case "pdfa":
+        await onSubmit("pdfa", {
+          file_id: target.id,
+          languages: "tha+eng",
+          deskew: false,
+          rotate_pages: false,
+        });
+        return;
+      case "office-to-pdf":
+        await onSubmit("office-to-pdf", { file_id: target.id });
+        return;
+      case "watermark":
+        await onSubmit("watermark", {
+          file_id: target.id,
+          text: watermarkText,
+          font_size: watermarkFontSize,
+          opacity: watermarkOpacity,
+          rotation: watermarkRotation,
+          position: watermarkPosition,
+          margin: 36,
+        });
+        return;
+      case "page-numbers":
+        await onSubmit("page-numbers", {
+          file_id: target.id,
+          format: pageFormat,
+          start_number: pageStart,
+          font_size: 10,
+          position: pagePosition,
+          margin: 24,
+        });
+        return;
+      case "stamp":
+        if (!stampId) {
+          onMessage("เลือกไฟล์ PDF ที่จะใช้เป็นตราประทับก่อน");
+          return;
+        }
+        await onSubmit("stamp", {
+          file_id: target.id,
+          stamp_file_id: stampId,
+          position: stampPosition,
+          scale: stampScale,
+          margin: 24,
+        });
+        return;
+      default:
+        onMessage("ไม่รู้จัก operation");
+    }
+  }
+
+  async function createSignedLink() {
+    const url = await onCreateSignedLink(signedTtl);
+    if (url) {
+      onSettingsChange((old) => ({ ...old, signedUrl: url, signedTargetId: target.id }));
+    }
+  }
+
+  async function copySignedLink() {
+    if (!signedUrl) return;
+    try {
+      await navigator.clipboard.writeText(signedUrl);
+      onMessage("คัดลอกลิงก์แล้ว");
+    } catch {
+      onMessage("คัดลอกอัตโนมัติไม่ได้");
+    }
+  }
+
+  return (
+    <ToolPanel
+      tool={tool}
+      auth={auth}
+      target={target}
+      pdfFiles={pdfFiles}
+      imageFiles={imageFiles}
+      targetIsPdf={targetIsPdf}
+      busy={busy}
+      integrations={integrations}
+      signedUrl={signedUrl}
+      signedTtl={signedTtl}
+      splitPages={splitPages}
+      rotateDegrees={rotateDegrees}
+      rotatePages={rotatePages}
+      watermarkText={watermarkText}
+      watermarkOpacity={watermarkOpacity}
+      watermarkRotation={watermarkRotation}
+      watermarkFontSize={watermarkFontSize}
+      watermarkPosition={watermarkPosition}
+      pageFormat={pageFormat}
+      pageStart={pageStart}
+      pagePosition={pagePosition}
+      stampId={stampId}
+      stampPosition={stampPosition}
+      stampScale={stampScale}
+      imagePageSize={imagePageSize}
+      imageFit={imageFit}
+      imageDpi={imageDpi}
+      rasterFormat={rasterFormat}
+      rasterDpi={rasterDpi}
+      rasterFirstPage={rasterFirstPage}
+      rasterLastPage={rasterLastPage}
+      mergeOrder={mergeOrder}
+      setSignedTtl={(value) => setSetting("signedTtl", value)}
+      setSplitPages={(value) => setSetting("splitPages", value)}
+      setRotateDegrees={(value) => setSetting("rotateDegrees", value)}
+      setRotatePages={(value) => setSetting("rotatePages", value)}
+      setWatermarkText={(value) => setSetting("watermarkText", value)}
+      setWatermarkOpacity={(value) => setSetting("watermarkOpacity", value)}
+      setWatermarkRotation={(value) => setSetting("watermarkRotation", value)}
+      setWatermarkFontSize={(value) => setSetting("watermarkFontSize", value)}
+      setWatermarkPosition={(value) => setSetting("watermarkPosition", value)}
+      setPageFormat={(value) => setSetting("pageFormat", value)}
+      setPageStart={(value) => setSetting("pageStart", value)}
+      setPagePosition={(value) => setSetting("pagePosition", value)}
+      setStampId={(value) => setSetting("stampId", value)}
+      setStampPosition={(value) => setSetting("stampPosition", value)}
+      setStampScale={(value) => setSetting("stampScale", value)}
+      setImagePageSize={(value) => setSetting("imagePageSize", value)}
+      setImageFit={(value) => setSetting("imageFit", value)}
+      setImageDpi={(value) => setSetting("imageDpi", value)}
+      setRasterFormat={(value) => setSetting("rasterFormat", value)}
+      setRasterDpi={(value) => setSetting("rasterDpi", value)}
+      setRasterFirstPage={(value) => setSetting("rasterFirstPage", value)}
+      setRasterLastPage={(value) => setSetting("rasterLastPage", value)}
+      setMergeOrder={(value) => setSetting("mergeOrder", value)}
+      onRun={(operation) => void run(operation)}
+      onSignedLink={() => void createSignedLink()}
+      onCopySignedLink={() => void copySignedLink()}
+      onArchive={() => void onArchive()}
+      onOrganize={(pages) => void onSubmit("organize", { file_id: target.id, pages })}
+      onClose={onClose}
+    />
+  );
+}
