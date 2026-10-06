@@ -37,7 +37,10 @@ groups:
           description: The API p95 request latency has remained above two seconds for ten minutes.
 
       - alert: PdfHubQueueBacklog
-        expr: max(pdfhub_queue_depth) > 25
+        expr: |
+          (max(pdfhub_queue_depth) > 25)
+          and
+          (pdfhub_queue_metrics_collection_ok == 1)
         for: 10m
         labels:
           severity: warning
@@ -47,9 +50,13 @@ groups:
 
       - alert: PdfHubInteractiveQueueStarved
         expr: |
-          pdfhub_queue_depth{queue_class="interactive"} > 0
-          and on (queue, queue_class)
-          pdfhub_queue_workers{queue_class="interactive"} < 1
+          (
+            pdfhub_queue_depth{queue_class="interactive"} > 0
+            and on (queue, queue_class)
+            pdfhub_queue_workers{queue_class="interactive"} < 1
+          )
+          and ignoring (queue, queue_class)
+          (pdfhub_queue_metrics_collection_ok == 1)
         for: 2m
         labels:
           severity: critical
@@ -59,9 +66,13 @@ groups:
 
       - alert: PdfHubHeavyQueueBacklog
         expr: |
-          pdfhub_queue_depth{queue_class="heavy"} > 0
-          and on (queue, queue_class)
-          pdfhub_queue_oldest_job_age_seconds{queue_class="heavy"} > 900
+          (
+            pdfhub_queue_depth{queue_class="heavy"} > 0
+            and on (queue, queue_class)
+            pdfhub_queue_oldest_job_age_seconds{queue_class="heavy"} > 900
+          )
+          and ignoring (queue, queue_class)
+          (pdfhub_queue_metrics_collection_ok == 1)
         for: 10m
         labels:
           severity: warning
@@ -70,7 +81,10 @@ groups:
           description: The oldest heavy job has waited more than 15 minutes while the queue remains non-empty.
 
       - alert: PdfHubWorkerPoolMissing
-        expr: pdfhub_queue_workers < 1
+        expr: |
+          (pdfhub_queue_workers < 1)
+          and ignoring (queue, queue_class)
+          (pdfhub_queue_metrics_collection_ok == 1)
         for: 2m
         labels:
           severity: critical
@@ -88,7 +102,12 @@ groups:
           description: Queue/worker or cross-process job telemetry could not be refreshed for five minutes.
 
       - alert: PdfHubRepeatedJobFailures
-        expr: sum(increase(pdfhub_job_events_cumulative{state=~"failed|queue_failed"}[15m])) > 5
+        expr: |
+          (
+            sum(increase(pdfhub_job_events_cumulative{state=~"failed|queue_failed"}[15m])) > 5
+          )
+          and
+          (pdfhub_job_metrics_collection_ok == 1)
         for: 5m
         labels:
           severity: warning
@@ -98,9 +117,13 @@ groups:
 
       - alert: PdfHubQueueClassRepeatedFailures
         expr: |
-          sum by (queue_class) (
-            increase(pdfhub_job_events_cumulative{state=~"failed|queue_failed"}[15m])
-          ) > 3
+          (
+            sum by (queue_class) (
+              increase(pdfhub_job_events_cumulative{state=~"failed|queue_failed"}[15m])
+            ) > 3
+          )
+          and ignoring (queue_class)
+          (pdfhub_job_metrics_collection_ok == 1)
         for: 5m
         labels:
           severity: warning
