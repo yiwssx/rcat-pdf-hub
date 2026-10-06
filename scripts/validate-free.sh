@@ -44,6 +44,7 @@ validation_compose_env() {
   export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
+  export PDFHUB_PUBLIC_BIND_HOST=127.0.0.1
   export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$"
   export PDFHUB_SESSION_COOKIE_SECURE=false
   export PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true
@@ -71,7 +72,8 @@ operations() {
     scripts/validate-release-policy.py \
     scripts/check-direct-dependency.py \
     scripts/check-python-security-dependency.py \
-    scripts/check-python-lock.py
+    scripts/check-python-lock.py \
+    scripts/check-production-network.py
   echo 'operations: PASS'
 }
 
@@ -169,6 +171,8 @@ compose_config() {
   : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-prod-all.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive config --format json >/tmp/pdfhub-compose-prod-all.json
+  python3 scripts/check-production-network.py /tmp/pdfhub-compose-prod-all.json "${PDFHUB_PUBLIC_BIND_HOST}" "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}"
   : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-prod-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
@@ -212,6 +216,8 @@ runtime() {
   dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee -a "${up_log}"
   check_clean_log "${up_log}"
   PDFHUB_COMPOSE_PROJECT="${project}" bash scripts/validate-container-hardening.sh
+  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive config --format json >/tmp/pdfhub-runtime-prod.json
+  python3 scripts/check-production-network.py /tmp/pdfhub-runtime-prod.json "${PDFHUB_PUBLIC_BIND_HOST}" "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}"
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
   dc exec -T \

@@ -65,7 +65,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6A.3 | Supply-chain scan + SBOM generation | COMPLETE | PR #87; validation run 37450728102 |
 | 6B.1 | Production Compose override/profile | COMPLETE | PR #88; Core API CI run 37451698412 |
 | 6B.2 | Container runtime hardening | COMPLETE | PR #89; hardened-stack CI run 37452941554 |
-| 6B.3 | Production network-boundary hardening | PENDING | — |
+| 6B.3 | Production network-boundary hardening | COMPLETE | PR #90; segmented-stack CI run 37454223063 |
 | 6C.1 | Queue classification/routing | PENDING | — |
 | 6C.2 | Dedicated lightweight/heavy worker pools | PENDING | — |
 | 6C.3 | Per-queue observability and alerts | PENDING | — |
@@ -222,12 +222,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6A.3 | Added pinned Trivy source/image scanning and CycloneDX SBOM generation. The first image gate exposed fixable CRITICAL findings in API `perl-base` and Web runtime npm `tar`; upgraded `perl-base` and removed npm/npx from the standalone Web runtime. Source + API + Web image gates then passed. | PR #87; run 37450728102 | COMPLETE |
 | 2026-10-06 | 6B.1 | Added an explicit production Compose overlay with production auth defaults, bounded log rotation, standard/NAS production targets, and backup/restore support for `prod` / `prod-nas`; development Compose behavior remains unchanged. | PR #88; Core API CI run 37451698412 | COMPLETE |
 | 2026-10-06 | 6B.2 | Hardened production containers with read-only application roots, dropped capabilities, `no-new-privileges`, explicit tmpfs, and PID/CPU/memory ceilings. Added Docker-inspect runtime verification and exercised the hardened full core stack successfully before returning CI to the normal lightweight lane. | PR #89; hardened-stack CI run 37452941554 | COMPLETE |
+| 2026-10-06 | 6B.3 | Segmented production traffic into explicit edge/app/data/management/egress networks, made internal networks Docker-internal, required an explicit trusted Caddy bind, and machine-validated that internal services publish no host ports. The segmented core stack was started successfully and served health traffic through Caddy. | PR #90; segmented-stack CI run 37454223063 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6B.3 — Production network-boundary hardening.**
+**Start Task 6C.1 — Queue classification and routing.**
 
-Segment edge/application/data/management traffic in the production Compose override, keep database/queue/conversion/internal services off host ports, and make the public Caddy bind explicit without breaking the existing reverse-proxy deployment model.
+Define explicit interactive, standard PDF, and heavy job classes; route every supported operation deterministically without changing API contracts, then cover the routing matrix with backend tests before introducing separate worker pools.
 
 ## Status update convention
 
