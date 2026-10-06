@@ -7,7 +7,9 @@ from reportlab.pdfgen import canvas
 from app import security
 from app.filetypes import validate_uploaded_file
 from app.identity import create_web_console_identity
-from app.main import app
+from app.db import SessionLocal
+from app.main import app, migrate_legacy_web_console_ownership
+from app.models import FileRecord, JobRecord
 from app.passwords import hash_password, verify_password
 from app.services import pdf_tools
 
@@ -79,3 +81,44 @@ def test_pdf_organizer_reorders_and_rotates_pages(tmp_path: Path):
     assert "THREE" in (reader.pages[0].extract_text() or "")
     assert int(reader.pages[0].get("/Rotate", 0)) % 360 == 90
     assert "ONE" in (reader.pages[1].extract_text() or "")
+
+
+def test_legacy_web_console_ownership_is_migrated(monkeypatch):
+    monkeypatch.setattr("app.main.settings.web_console_auto_login", True)
+    monkeypatch.setattr("app.main.settings.oidc_enabled", False)
+    monkeypatch.setattr("app.main.settings.ldap_enabled", False)
+    monkeypatch.setattr("app.main.settings.web_console_workspace_id", "rcat-test")
+    monkeypatch.setattr("app.main.audit_event", lambda *args, **kwargs: None)
+
+    db = SessionLocal()
+    file = FileRecord(
+        original_name="legacy.pdf",
+        stored_name="legacy-migration-test.pdf",
+        content_type="application/pdf",
+        size=1,
+        sha256="f" * 64,
+        source_system="web-console:old-random-session",
+    )
+    job = JobRecord(
+        operation="compress",
+        input_file_ids_json="[]",
+        params_json="{}",
+        requested_by="web-console:another-old-session",
+    )
+    db.add(file)
+    db.add(job)
+    db.commit()
+    file_id, job_id = file.id, job.id
+    db.close()
+
+    result = migrate_legacy_web_console_ownership()
+    assert result["files"] >= 1
+    assert result["jobs"] >= 1
+
+    db = SessionLocal()
+    assert db.get(FileRecord, file_id).source_system == "web-console:rcat-test"
+    assert db.get(JobRecord, job_id).requested_by == "web-console:rcat-test"
+    db.delete(db.get(FileRecord, file_id))
+    db.delete(db.get(JobRecord, job_id))
+    db.commit()
+    db.close()
