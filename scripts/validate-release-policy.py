@@ -182,6 +182,20 @@ for marker in (
 ):
     assert marker in ui_regression, f"Accessibility browser gate missing marker: {marker}"
 
+performance_baseline = json.loads(read("quality/browser-performance-baseline.json"))
+assert performance_baseline.get("ready") is True, "Browser performance baseline must be enforced"
+for route in ("/", "/files"):
+    route_baseline = performance_baseline["routes"][route]
+    assert route_baseline.get("measured") and route_baseline.get("maximum"), f"Missing browser performance baseline for {route}"
+    for metric in ("domNodes", "resources", "scriptResources", "encodedBytes", "domContentLoadedMs"):
+        assert route_baseline["maximum"][metric] >= route_baseline["measured"][metric]
+for marker in (
+    "keeps browser performance within the measured Phase 6 baseline",
+    "PERF_BASELINE_CANDIDATE",
+    "browser-performance-baseline.json",
+):
+    assert marker in ui_regression, f"Browser performance gate missing marker: {marker}"
+
 # Runtime/container baselines are intentionally frozen and changed only by explicit developer review.
 requirements = read("apps/api/requirements.txt")
 python_lock = read("apps/api/requirements.lock")
