@@ -727,7 +727,8 @@ a { color: inherit; }
   gap:9px;
   margin-bottom:10px;
 }
-.v3LibraryToolbar .v3Search { margin-bottom:0; }
+.v3LibraryToolbar .v3Search { min-width:0; margin-bottom:0; }
+.v3LibraryToolbar > * { min-width:0; }
 .v3LibraryToolbar > label {
   display:grid;
   gap:5px;
@@ -736,6 +737,9 @@ a { color: inherit; }
   font-weight:850;
 }
 .v3LibraryToolbar select {
+  width:100%;
+  min-width:0;
+  max-width:100%;
   min-height:42px;
   padding:8px 30px 8px 10px;
   border:1px solid var(--v3-line);
@@ -757,7 +761,7 @@ a { color: inherit; }
   border:1px solid var(--v3-line);
   border-radius:12px;
   background:#fff;
-  white-space:nowrap;
+  white-space:normal;
 }
 .v3ExpiredToggle input { accent-color:#6b63df; }
 .v3LibraryStatus {
@@ -1114,8 +1118,9 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
   .v3LibraryToolbar .v3Search { grid-column:auto; }
   .v3LibraryToolbar .v3ExpiredToggle { min-height:40px; }
   .v3LibraryStatus { align-items:flex-start; flex-direction:column; gap:2px; }
-  .v3LibraryPagination { justify-content:space-between; gap:6px; }
-  .v3LibraryPagination button { padding:7px 9px; }
+  .v3LibraryPagination { width:100%; min-width:0; justify-content:space-between; gap:6px; }
+  .v3LibraryPagination button { min-width:0; padding:7px 9px; }
+  .v3LibraryPagination span { min-width:0; }
   .v3PageOrganizer { grid-template-columns:1fr 1fr; }
   .v3FilesActions { width:100%;flex-wrap:wrap; }
   .v3LibraryRow { grid-template-columns:25px minmax(0,1fr);gap:8px; }
