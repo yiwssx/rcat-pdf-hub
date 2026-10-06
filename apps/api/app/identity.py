@@ -127,17 +127,23 @@ def decode_session_token(token: str) -> dict:
     roles_claim = _claim_list(claims.get("pdfhub_roles"))
     if roles_claim:
         roles = normalize_roles(roles_claim)
-    elif bool(claims.get("pdfhub_identity_admin", False)):
-        roles = (ROLE_ADMIN,)
+        scopes = scopes_for_roles(roles, settings.human_scope_set)
+    elif source in {"oidc", "ldap", "local-admin"}:
+        roles = (ROLE_ADMIN,) if bool(claims.get("pdfhub_identity_admin", False)) or source == "local-admin" else (ROLE_OPERATOR,)
+        scopes = scopes_for_roles(roles, settings.human_scope_set)
     else:
-        roles = (ROLE_OPERATOR,)
+        # Backward compatibility for legacy/custom signed sessions that predate
+        # human RBAC. Preserve their signed scopes instead of broadening them
+        # into the operator role.
+        roles = ()
+        scopes = set(_claim_list(claims.get("pdfhub_scopes")))
     return {
         "name": str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120],
         "subject": str(claims["sub"]),
         "display_name": str(claims.get("pdfhub_display_name") or claims["sub"]),
         "groups": _claim_list(claims.get("pdfhub_groups")),
         "roles": list(roles),
-        "scopes": sorted(scopes_for_roles(roles, settings.human_scope_set)),
+        "scopes": sorted(scopes),
         "source": source,
         "is_identity_admin": is_admin_role(roles),
     }
