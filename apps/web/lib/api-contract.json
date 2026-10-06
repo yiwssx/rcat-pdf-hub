@@ -1,0 +1,186 @@
+{
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/config",
+      "response": null,
+      "client_marker": "\"/api/v1/auth/config\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "response": "AuthMeOut",
+      "client_marker": "\"/api/v1/auth/me\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/local/login",
+      "response": "AuthMeOut",
+      "client_marker": "\"/api/v1/auth/local/login\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/ldap/login",
+      "response": "AuthMeOut",
+      "client_marker": "\"/api/v1/auth/ldap/login\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "response": null,
+      "client_marker": "\"/api/v1/auth/logout\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/integrations/status",
+      "response": null,
+      "client_marker": "\"/api/v1/integrations/status\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/files",
+      "response": "FileOut",
+      "client_marker": "\"/api/v1/files\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/files",
+      "response": "list[FileOut]",
+      "client_marker": "`/api/v1/files?limit=${pageSize}&offset=${offset}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/files/library",
+      "response": "FileLibraryPageOut",
+      "client_marker": "`/api/v1/files/library?${params.toString()}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/files/{file_id}/pages",
+      "response": "PageInfoOut",
+      "client_marker": "`/api/v1/files/${fileId}/pages`"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/files/{file_id}/retention",
+      "response": "FileOut",
+      "client_marker": "`/api/v1/files/${fileId}/retention`"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/files/{file_id}",
+      "response": null,
+      "client_marker": "`/api/v1/files/${fileId}`"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/files/bulk-delete",
+      "response": null,
+      "client_marker": "\"/api/v1/files/bulk-delete\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/jobs",
+      "response": "list[JobOut]",
+      "client_marker": "\"/api/v1/jobs?limit=50\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/jobs/terminal",
+      "response": null,
+      "client_marker": "\"/api/v1/jobs/terminal\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/jobs/{job_id}/cancel",
+      "response": "JobOut",
+      "client_marker": "`/api/v1/jobs/${jobId}/cancel`"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/jobs/{job_id}/retry",
+      "response": "JobOut",
+      "client_marker": "`/api/v1/jobs/${jobId}/retry`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/files/{file_id}/preview",
+      "response": null,
+      "client_marker": "`/api/v1/files/${fileId}/preview?page=${page}&width=${width}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/files/{file_id}/download",
+      "response": null,
+      "client_marker": "`/api/v1/files/${fileId}/download`"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/files/{file_id}/signed-download",
+      "response": "SignedDownloadOut",
+      "client_marker": "`/api/v1/files/${fileId}/signed-download?ttl_seconds=${ttlSeconds}`"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/integrations/paperless/{file_id}",
+      "response": "ArchiveOut",
+      "client_marker": "`/api/v1/integrations/paperless/${fileId}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/api-keys",
+      "response": "list[ApiKeyOut]",
+      "client_marker": "\"/api/v1/admin/api-keys\""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/api-keys",
+      "response": "ApiKeyCreated",
+      "client_marker": "\"/api/v1/admin/api-keys\""
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/api-keys/{key_id}",
+      "response": "ApiKeyOut",
+      "client_marker": "`/api/v1/admin/api-keys/${keyId}`"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/service-policies/{service_name}",
+      "response": "ServicePolicyOut",
+      "client_marker": "`/api/v1/admin/service-policies/${encodeURIComponent(policy.service_name)}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/webhook-deliveries",
+      "response": "list[WebhookDeliveryOut]",
+      "client_marker": "`/api/v1/admin/webhook-deliveries${query}`"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/webhook-deliveries/{delivery_id}/retry",
+      "response": "WebhookDeliveryOut",
+      "client_marker": "`/api/v1/admin/webhook-deliveries/${deliveryId}/retry`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit",
+      "response": null,
+      "client_marker": "\"/api/v1/admin/audit?limit=100\""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/status",
+      "response": null,
+      "client_marker": "\"/api/v1/admin/status\""
+    }
+  ],
+  "families": [
+    {
+      "method": "POST",
+      "prefix": "/api/v1/pdf/",
+      "response": "JobOut",
+      "client_marker": "`/api/v1/pdf/${path}`"
+    }
+  ]
+}
