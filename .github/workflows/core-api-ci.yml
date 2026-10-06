@@ -20,15 +20,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - name: Bootstrap reproducible Python lockfile
-        run: |
-          docker run --rm -v "$PWD/apps/api:/work" -w /work python:3.12.14-slim-bookworm sh -c             "python -m pip install --disable-pip-version-check --no-cache-dir pip-tools==7.5.2 >/dev/null && pip-compile --quiet --generate-hashes --strip-extras --output-file=requirements.lock requirements.txt"
-          echo 'PDFHUB_PYLOCK_BEGIN'
-          base64 -w0 apps/api/requirements.lock
-          echo
-          echo 'PDFHUB_PYLOCK_END'
       - name: Validate repository release policy
         run: python3 scripts/validate-release-policy.py
+      - name: Validate Python dependency lock
+        run: python3 scripts/check-python-lock.py
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
       - name: Run API tests
