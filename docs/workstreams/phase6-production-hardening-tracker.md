@@ -76,7 +76,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6E.2 | OIDC/LDAP group-to-role mapping | COMPLETE | PR #98 |
 | 6E.3 | Admin effective-role/scope visibility | COMPLETE | PR #99 |
 | 6F.1 | Server-side file pagination/search/sort/filter | COMPLETE | PR #100 |
-| 6F.2 | Database indexes for file-library query patterns | PENDING | — |
+| 6F.2 | Database indexes for file-library query patterns | COMPLETE | PR #101 |
 | 6F.3 | Scalable frontend file-library UX | PENDING | — |
 | 6F.4 | DB ↔ storage integrity reconciliation | PENDING | — |
 | 6G.1 | OpenAPI ↔ frontend contract validation/generation | PENDING | — |
@@ -233,10 +233,11 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6E.2 | Added explicit viewer/operator/admin group mappings for OIDC/LDAP, fail-closed unmapped identities, configuration ambiguity checks and per-request institutional session remapping. | PR #98 | COMPLETE |
 | 2026-10-06 | 6E.3 | Added Admin Console effective-access visibility for identity, auth source, mapped role/groups and resolved scopes, backed by browser regression coverage and without exposing credentials. | PR #99 | COMPLETE |
 | 2026-10-06 | 6F.1 | Added a backward-compatible paged file-library query endpoint with SQL-backed filename search, kind/expiry filtering, deterministic sorting, totals and ownership isolation. | PR #100 | COMPLETE |
+| 2026-10-06 | 6F.2 | Added owner/sort/kind composite indexes plus PostgreSQL trigram filename-search indexing, with fresh-migration regression coverage tied to the 6F.1 server-side query shapes. | PR #101 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6F.2 — Database indexes for file-library query patterns.**
+**Start Task 6F.3 — Scalable frontend file-library UX.**
 
 Use the 6F.1 server-side query shapes as the evidence base for targeted indexes. Validate generated migrations and query-plan behavior rather than adding speculative indexes.
 

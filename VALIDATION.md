@@ -78,6 +78,20 @@ make validate-free
 
 `validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview.
 
+## File-library query/index validation
+
+Phase 6F.1 moves file-library search, filtering, sorting and pagination into SQL through `/api/v1/files/library`.
+
+Phase 6F.2 indexes the measured query shapes rather than adding generic indexes:
+
+- `source_system + created_at + id` for the default owner-scoped library view;
+- `source_system + size + id` and `source_system + expires_at + id` for alternate server-side sorts;
+- `source_system + content_type + created_at + id` for file-kind filtering;
+- `source_system + lower(original_name) + id` for deterministic name ordering;
+- PostgreSQL `pg_trgm` GIN on `lower(original_name)` for case-insensitive contains search.
+
+The backend migration gate applies these indexes on a fresh SQLite database as a portability check; PostgreSQL additionally receives the trigram index used by production filename search.
+
 ## Queue routing validation
 
 Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.
