@@ -28,10 +28,12 @@ docker compose -p "${project}" --profile observability run --rm --no-deps \
   check-config /etc/alertmanager/alertmanager.yml
 
 docker compose -p "${project}" --profile observability run --rm --no-deps \
-  tempo --config.file=/etc/tempo/tempo.yml --config.verify
+  --entrypoint /tempo tempo \
+  --config.file=/etc/tempo/tempo.yml --config.verify
 
 docker compose -p "${project}" --profile observability run --rm --no-deps \
-  otel-collector validate --config=/etc/otelcol-contrib/config.yaml
+  --entrypoint /otelcol-contrib otel-collector \
+  validate --config=/etc/otelcol-contrib/config.yaml
 
 cleanup
 trap - EXIT
