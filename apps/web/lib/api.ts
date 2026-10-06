@@ -77,6 +77,8 @@ export type AuthMe = {
 
 export type IntegrationStatus = {
   storage_backend: "local" | "s3";
+  storage_write_ok: boolean;
+  gotenberg_ok: boolean;
   clamav_enabled: boolean;
   paperless_enabled: boolean;
   oidc_enabled: boolean;
