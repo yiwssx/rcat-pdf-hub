@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
+import pytest
 
+from app import security
 from app.db import SessionLocal
 from app.identity import create_session_token
 from app.main import app
@@ -9,6 +11,11 @@ from app.models import FileRecord
 
 
 ADMIN_KEY = "pdfh_ci_admin_key_change_me"
+
+
+@pytest.fixture(autouse=True)
+def disable_external_rate_limit(monkeypatch):
+    monkeypatch.setattr(security, "ensure_rate_limit", lambda *args, **kwargs: None)
 
 
 def _file(
