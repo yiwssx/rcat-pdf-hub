@@ -78,6 +78,12 @@ make validate-free
 
 `validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview.
 
+## Queue routing validation
+
+Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.
+
+The base Compose worker is intentionally transitional during 6C.1 and listens to `PDFHUB_RQ_INTERACTIVE_QUEUE`, `PDFHUB_RQ_QUEUE`, and `PDFHUB_RQ_HEAVY_QUEUE`. Dedicated worker pools are introduced separately in 6C.2.
+
 ## Direct npm dependency validation
 
 ```bash
