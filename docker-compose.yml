@@ -141,7 +141,7 @@ services:
 
   worker:
     build: ./apps/api
-    command: ["sh", "-c", "exec rq worker --url \"$PDFHUB_REDIS_URL\" \"$PDFHUB_RQ_INTERACTIVE_QUEUE\" \"$PDFHUB_RQ_QUEUE\" \"$PDFHUB_RQ_HEAVY_QUEUE\""]
+    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_INTERACTIVE_QUEUE\" \"$$PDFHUB_RQ_QUEUE\" \"$$PDFHUB_RQ_HEAVY_QUEUE\""]
     environment: *api-env
     volumes:
       - pdf_data:/data
