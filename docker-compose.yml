@@ -111,7 +111,9 @@ services:
       PDFHUB_CLAMAV_HOST: ${PDFHUB_CLAMAV_HOST:-clamav}
       PDFHUB_CLAMAV_PORT: ${PDFHUB_CLAMAV_PORT:-3310}
       PDFHUB_CLAMAV_FAIL_CLOSED: ${PDFHUB_CLAMAV_FAIL_CLOSED:-true}
+      PDFHUB_RQ_INTERACTIVE_QUEUE: ${PDFHUB_RQ_INTERACTIVE_QUEUE:-pdf-interactive}
       PDFHUB_RQ_QUEUE: ${PDFHUB_RQ_QUEUE:-pdf}
+      PDFHUB_RQ_HEAVY_QUEUE: ${PDFHUB_RQ_HEAVY_QUEUE:-pdf-heavy}
       PDFHUB_RQ_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_JOB_TIMEOUT_SECONDS:-1800}
       PDFHUB_PROMETHEUS_ENABLED: ${PDFHUB_PROMETHEUS_ENABLED:-true}
       PDFHUB_OTEL_ENDPOINT: ${PDFHUB_OTEL_ENDPOINT:-}
@@ -139,7 +141,7 @@ services:
 
   worker:
     build: ./apps/api
-    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_QUEUE\""]
+    command: ["sh", "-c", "exec rq worker --url \"$PDFHUB_REDIS_URL\" \"$PDFHUB_RQ_INTERACTIVE_QUEUE\" \"$PDFHUB_RQ_QUEUE\" \"$PDFHUB_RQ_HEAVY_QUEUE\""]
     environment: *api-env
     volumes:
       - pdf_data:/data
