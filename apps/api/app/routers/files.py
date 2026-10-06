@@ -1,8 +1,9 @@
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import desc, or_, select
+from sqlalchemy import desc, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
@@ -10,13 +11,16 @@ from app.config import get_settings
 from app.db import get_db
 from app.downloads import issue_signed_download, verify_signed_download
 from app.malware import MalwareDetected, scan_file
-from app.models import FileRecord
+from app.filetypes import validate_uploaded_file
+from app.models import ArchiveRecord, FileRecord, JobRecord
 from app.policy import ensure_storage_quota
-from app.schemas import FileOut, SignedDownloadOut
+from app.schemas import FileBulkDeleteRequest, FileOut, FileRetentionUpdate, PageInfoOut, SignedDownloadOut
 from app.security import Principal, require_scope
 from app.services import pdf_tools
+from pypdf import PdfReader
 from app.storage import (
     default_expiry,
+    delete_previews,
     delete_stored_name,
     path_for_stored_name,
     preview_path,
@@ -51,6 +55,30 @@ def _active_file_path(record: FileRecord):
         return path_for_stored_name(record.stored_name)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=410, detail="File data has expired") from exc
+
+
+def _active_job_uses_file(db: Session, file_id: str) -> bool:
+    rows = db.scalars(select(JobRecord).where(JobRecord.status.in_(("queued", "running")))).all()
+    for job in rows:
+        try:
+            if file_id in json.loads(job.input_file_ids_json):
+                return True
+        except (TypeError, json.JSONDecodeError):
+            continue
+    return False
+
+
+def _delete_file_record(db: Session, record: FileRecord, principal: Principal) -> int:
+    if _active_job_uses_file(db, record.id):
+        raise HTTPException(status_code=409, detail="File is being used by an active job")
+    removed_bytes = delete_stored_name(record.stored_name) + delete_previews(record.id)
+    db.execute(update(JobRecord).where(JobRecord.output_file_id == record.id).values(output_file_id=None))
+    for archive in db.scalars(select(ArchiveRecord).where(ArchiveRecord.file_id == record.id)).all():
+        db.delete(archive)
+    db.delete(record)
+    db.commit()
+    audit_event("file.deleted", principal.name, "file", record.id, {"name": record.original_name, "bytes_removed": removed_bytes})
+    return removed_bytes
 
 
 @router.get("", response_model=list[FileOut])
@@ -90,6 +118,7 @@ async def upload_file(
             )
             raise HTTPException(status_code=422, detail="Uploaded file was rejected by malware scanning") from exc
         audit_event("file.malware_scanned", principal.name, "file", None, {"name": original, "status": scan_status})
+        normalized_content_type = validate_uploaded_file(staged, original)
 
         if not principal.is_bootstrap_admin:
             ensure_storage_quota(db, principal.name, principal.max_storage_mb, size)
@@ -98,7 +127,7 @@ async def upload_file(
         record = FileRecord(
             original_name=original,
             stored_name=stored_name,
-            content_type=file.content_type or "application/octet-stream",
+            content_type=normalized_content_type,
             size=size,
             sha256=digest,
             source_system=principal.name,
@@ -200,6 +229,72 @@ def signed_download_file(
         {"expires": expires},
     )
     return FileResponse(path, media_type=record.content_type, filename=record.original_name)
+
+
+@router.get("/{file_id}/pages", response_model=PageInfoOut)
+def page_info(
+    file_id: str,
+    principal: Principal = Depends(require_scope("files:read")),
+    db: Session = Depends(get_db),
+):
+    record = _owned_file(db, file_id, principal)
+    if record.content_type != "application/pdf" and not record.original_name.lower().endswith(".pdf"):
+        raise HTTPException(status_code=415, detail="Page information is available for PDF files only")
+    try:
+        pages = len(PdfReader(str(_active_file_path(record))).pages)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="Unable to read PDF page count") from exc
+    return PageInfoOut(file_id=record.id, pages=pages)
+
+
+@router.post("/{file_id}/retention", response_model=FileOut)
+def update_retention(
+    file_id: str,
+    req: FileRetentionUpdate,
+    principal: Principal = Depends(require_scope("files:write")),
+    db: Session = Depends(get_db),
+):
+    record = _owned_file(db, file_id, principal)
+    record.expires_at = None if req.keep else default_expiry()
+    db.commit()
+    db.refresh(record)
+    audit_event("file.retention_updated", principal.name, "file", record.id, {"keep": req.keep})
+    return record
+
+
+@router.delete("/{file_id}")
+def delete_file(
+    file_id: str,
+    principal: Principal = Depends(require_scope("files:write")),
+    db: Session = Depends(get_db),
+):
+    record = _owned_file(db, file_id, principal)
+    removed = _delete_file_record(db, record, principal)
+    return {"deleted": [file_id], "bytes_removed": removed}
+
+
+@router.post("/bulk-delete")
+def bulk_delete_files(
+    req: FileBulkDeleteRequest,
+    principal: Principal = Depends(require_scope("files:write")),
+    db: Session = Depends(get_db),
+):
+    records = [_owned_file(db, file_id, principal) for file_id in dict.fromkeys(req.file_ids)]
+    for record in records:
+        if _active_job_uses_file(db, record.id):
+            raise HTTPException(status_code=409, detail=f"File is being used by an active job: {record.id}")
+    removed_bytes = 0
+    deleted = []
+    for record in records:
+        removed_bytes += delete_stored_name(record.stored_name) + delete_previews(record.id)
+        db.execute(update(JobRecord).where(JobRecord.output_file_id == record.id).values(output_file_id=None))
+        for archive in db.scalars(select(ArchiveRecord).where(ArchiveRecord.file_id == record.id)).all():
+            db.delete(archive)
+        deleted.append(record.id)
+        db.delete(record)
+    db.commit()
+    audit_event("file.bulk_deleted", principal.name, "file", None, {"file_ids": deleted, "bytes_removed": removed_bytes})
+    return {"deleted": deleted, "bytes_removed": removed_bytes}
 
 
 @router.get("/{file_id}/preview")
