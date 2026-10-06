@@ -1168,7 +1168,7 @@ a.ghost { font-size: 14px; }
 /* Skill-driven accessibility and rendering hardening. */
 .v3LibraryRow {
   content-visibility: auto;
-  contain-intrinsic-size: 68px;
+  contain-intrinsic-block-size: 68px;
 }
 
 .v3DrawerLayer,
@@ -1176,8 +1176,13 @@ a.ghost { font-size: 14px; }
   overscroll-behavior: contain;
 }
 
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: rgba(99, 102, 241, .10);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
   .v3JobDrawer { animation: none; }
   .v3ToolCard,
   .v3PageImage { transition: none; }
