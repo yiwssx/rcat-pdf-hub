@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: "24"
       - run: npm install --no-audit --no-fund
+      - name: Bootstrap reproducible npm lockfile
+        run: |
+          echo 'PDFHUB_LOCKFILE_BEGIN'
+          base64 -w0 package-lock.json
+          echo
+          echo 'PDFHUB_LOCKFILE_END'
       - run: npm run typecheck
       - run: npm run build
       - run: npx playwright install --with-deps chromium
