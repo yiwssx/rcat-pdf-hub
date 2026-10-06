@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test tests/e2e/pdf-hub.smoke.spec.ts",
+    "test:e2e": "playwright test tests/e2e/pdf-hub.smoke.spec.ts tests/e2e/pdf-hub.ui-regression.spec.ts",
     "test:e2e:stack": "playwright test tests/e2e/pdf-hub.stack.spec.ts",
     "test:e2e:install": "playwright install --only-shell chromium"
   },
