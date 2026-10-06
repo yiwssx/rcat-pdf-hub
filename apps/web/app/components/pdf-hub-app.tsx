@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import {
   archiveToPaperless,
@@ -30,8 +31,6 @@ import {
   uploadFile,
   UploadedFile,
 } from "../../lib/api";
-import { AdminPanel } from "./admin-panel";
-import { ToolWorkspace } from "./tool-workspace";
 import {
   AppHeader,
   DocumentWorkspace,
@@ -43,6 +42,16 @@ import {
 } from "./v3-ui";
 
 export type PdfHubView = "workspace" | "files" | "admin";
+
+const AdminPanel = dynamic(
+  () => import("./admin-panel").then((module) => module.AdminPanel),
+  { loading: () => <div className="v3InfoBox" role="status">กำลังโหลดเครื่องมือผู้ดูแล…</div> },
+);
+
+const ToolWorkspace = dynamic(
+  () => import("./tool-workspace").then((module) => module.ToolWorkspace),
+  { loading: () => <div className="v3InfoBox" role="status">กำลังโหลดเครื่องมือ PDF…</div> },
+);
 
 const imageContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
 
