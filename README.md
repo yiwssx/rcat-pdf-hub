@@ -28,7 +28,7 @@ A **self-hosted, API-first** PDF processing hub that lets multiple systems share
 
 - FastAPI + Next.js Web Console behind Caddy
 - PostgreSQL metadata / job history
-- Valkey + RQ asynchronous processing
+- Valkey + RQ asynchronous processing with explicit interactive / standard PDF / heavy workload queues
 - Service API keys + scopes + revocation + tenant/service isolation for machine-to-machine integration
 - HttpOnly Web Console sessions; users are never asked to paste a service API key into the browser
 - OIDC Authorization Code + PKCE and LDAP/Active Directory sessions
@@ -259,6 +259,18 @@ PDFHUB_S3_ACCESS_KEY=<random>
 PDFHUB_S3_SECRET_KEY=<random>
 PDFHUB_S3_AUTO_CREATE_BUCKET=true
 ```
+
+## Queue routing
+
+Phase 6 classifies asynchronous document work before dedicated worker pools are introduced:
+
+- `pdf-interactive`: organize, split, rotate, watermark, page numbers, stamp
+- `pdf`: merge, compression, images-to-PDF
+- `pdf-heavy`: OCR, PDF/A, Office conversion, PDF-to-images
+
+The API routes new jobs and retries through the same central policy in `app.queue`. Unknown operation names fail closed. During Task 6C.1 the existing worker consumes all three queues so no job class is left unserved; Task 6C.2 separates these into dedicated worker pools.
+
+See `docs/adr/0002-job-queue-classes.md`.
 
 ## Optional self-hosted profiles
 

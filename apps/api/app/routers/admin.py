@@ -12,7 +12,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy, WebhookDelivery
 from app.policy import effective_policy
-from app.queue import pdf_queue, redis_conn
+from app.queue import all_processing_queues, redis_conn
 from app.schemas import (
     ApiKeyCreate,
     ApiKeyCreated,
@@ -116,9 +116,13 @@ def admin_status(
         workers = len(Worker.all(connection=redis_conn))
     except Exception:
         workers = 0
+    queue_depths: dict[str, int] = {}
     try:
-        queue_depth = len(pdf_queue)
+        for queue in all_processing_queues():
+            queue_depths[queue.name] = len(queue)
+        queue_depth = sum(queue_depths.values())
     except Exception:
+        queue_depths = {}
         queue_depth = -1
 
     job_counts = {
@@ -134,6 +138,7 @@ def admin_status(
         "redis_ok": redis_ok,
         "workers": workers,
         "queue_depth": queue_depth,
+        "queue_depths": queue_depths,
         "storage_backend": settings.storage_backend,
         "storage_write_ok": storage_write_ok,
         "gotenberg_ok": gotenberg_ok,
