@@ -4,51 +4,134 @@ x-production-logging: &production-logging
     max-size: ${PDFHUB_LOG_MAX_SIZE:-10m}
     max-file: "${PDFHUB_LOG_MAX_FILES:-5}"
 
+x-app-hardening: &app-hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+
 services:
   postgres:
     logging: *production-logging
+    pids_limit: ${PDFHUB_POSTGRES_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_POSTGRES_MEMORY_LIMIT:-1g}
+    cpus: ${PDFHUB_POSTGRES_CPUS:-2.0}
 
   valkey:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_VALKEY_PIDS_LIMIT:-128}
+    mem_limit: ${PDFHUB_VALKEY_MEMORY_LIMIT:-512m}
+    cpus: ${PDFHUB_VALKEY_CPUS:-1.0}
 
   gotenberg:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_GOTENBERG_PIDS_LIMIT:-512}
+    mem_limit: ${PDFHUB_GOTENBERG_MEMORY_LIMIT:-2g}
+    cpus: ${PDFHUB_GOTENBERG_CPUS:-2.0}
 
   api:
+    <<: *app-hardening
+    pids_limit: ${PDFHUB_API_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_API_MEMORY_LIMIT:-1g}
+    cpus: ${PDFHUB_API_CPUS:-2.0}
+    tmpfs:
+      - /tmp:size=${PDFHUB_API_TMPFS_SIZE:-512m},mode=1777
     environment:
       PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-true}
       PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-false}
     logging: *production-logging
 
   worker:
+    <<: *app-hardening
     logging: *production-logging
+    pids_limit: ${PDFHUB_WORKER_PIDS_LIMIT:-512}
+    mem_limit: ${PDFHUB_WORKER_MEMORY_LIMIT:-3g}
+    cpus: ${PDFHUB_WORKER_CPUS:-4.0}
+    tmpfs:
+      - /tmp:size=${PDFHUB_WORKER_TMPFS_SIZE:-2g},mode=1777
 
   cleanup:
+    <<: *app-hardening
     logging: *production-logging
+    pids_limit: ${PDFHUB_BACKGROUND_PIDS_LIMIT:-128}
+    mem_limit: ${PDFHUB_BACKGROUND_MEMORY_LIMIT:-512m}
+    cpus: ${PDFHUB_BACKGROUND_CPUS:-1.0}
+    tmpfs:
+      - /tmp:size=${PDFHUB_BACKGROUND_TMPFS_SIZE:-256m},mode=1777
 
   webhook:
+    <<: *app-hardening
     logging: *production-logging
+    pids_limit: ${PDFHUB_BACKGROUND_PIDS_LIMIT:-128}
+    mem_limit: ${PDFHUB_BACKGROUND_MEMORY_LIMIT:-512m}
+    cpus: ${PDFHUB_BACKGROUND_CPUS:-1.0}
+    tmpfs:
+      - /tmp:size=${PDFHUB_BACKGROUND_TMPFS_SIZE:-256m},mode=1777
 
   web:
+    <<: *app-hardening
     logging: *production-logging
+    pids_limit: ${PDFHUB_WEB_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_WEB_MEMORY_LIMIT:-768m}
+    cpus: ${PDFHUB_WEB_CPUS:-1.0}
+    tmpfs:
+      - /tmp:size=${PDFHUB_WEB_TMPFS_SIZE:-256m},mode=1777
 
   caddy:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_CADDY_PIDS_LIMIT:-128}
+    mem_limit: ${PDFHUB_CADDY_MEMORY_LIMIT:-256m}
+    cpus: ${PDFHUB_CADDY_CPUS:-0.5}
 
   seaweedfs:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_SEAWEEDFS_MEMORY_LIMIT:-2g}
+    cpus: ${PDFHUB_SEAWEEDFS_CPUS:-2.0}
 
   clamav:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_CLAMAV_MEMORY_LIMIT:-2g}
+    cpus: ${PDFHUB_CLAMAV_CPUS:-2.0}
 
   prometheus:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_PROMETHEUS_MEMORY_LIMIT:-2g}
+    cpus: ${PDFHUB_PROMETHEUS_CPUS:-2.0}
 
   otel-collector:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_OTEL_MEMORY_LIMIT:-1g}
+    cpus: ${PDFHUB_OTEL_CPUS:-1.0}
 
   paperless-db:
     logging: *production-logging
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_PAPERLESS_DB_MEMORY_LIMIT:-1g}
+    cpus: ${PDFHUB_PAPERLESS_DB_CPUS:-2.0}
 
   paperless:
     logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_PAPERLESS_MEMORY_LIMIT:-2g}
+    cpus: ${PDFHUB_PAPERLESS_CPUS:-2.0}
