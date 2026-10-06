@@ -181,7 +181,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setMergeOrder((old) => {
       const available = pdfFiles.map((file) => file.id);
       const kept = old.filter((id) => available.includes(id));
-      return [...kept, ...available.filter((id) => !kept.includes(id))];
+      return kept.length > 0 ? kept : available;
     });
   }, [pdfFiles]);
 
