@@ -71,6 +71,7 @@ export type AuthMe = {
   subject: string | null;
   scopes: string[];
   groups: string[];
+  roles: string[];
   auth_source: string;
   is_admin: boolean;
 };
