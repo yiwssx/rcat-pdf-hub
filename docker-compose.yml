@@ -280,6 +280,17 @@ services:
       - "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}:${PDFHUB_ALERTMANAGER_PORT:-9093}:9093"
     restart: unless-stopped
 
+  tempo:
+    profiles: ["observability"]
+    image: grafana/tempo:3.1.0
+    command: ["--config.file=/etc/tempo/tempo.yml"]
+    volumes:
+      - ./ops/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}:${PDFHUB_TEMPO_PORT:-3200}:3200"
+    restart: unless-stopped
+
   otel-collector:
     profiles: ["observability"]
     image: otel/opentelemetry-collector-contrib:0.159.0
@@ -289,6 +300,8 @@ services:
     ports:
       - "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}:${PDFHUB_OTEL_GRPC_PORT:-4317}:4317"
       - "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}:${PDFHUB_OTEL_HTTP_PORT:-4318}:4318"
+    depends_on:
+      - tempo
     restart: unless-stopped
 
   paperless-db:
@@ -334,6 +347,7 @@ volumes:
   clamav_db:
   prometheus_data:
   alertmanager_data:
+  tempo_data:
   paperless_db_data:
   paperless_data:
   paperless_media:
