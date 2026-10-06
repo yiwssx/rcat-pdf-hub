@@ -97,6 +97,10 @@ def admin_status(
         workers = len(Worker.all(connection=redis_conn))
     except Exception:
         workers = 0
+    try:
+        queue_depth = len(pdf_queue)
+    except Exception:
+        queue_depth = -1
 
     job_counts = {
         status: int(db.scalar(select(func.count()).select_from(JobRecord).where(JobRecord.status == status)) or 0)
@@ -110,7 +114,7 @@ def admin_status(
         "database_ok": database_ok,
         "redis_ok": redis_ok,
         "workers": workers,
-        "queue_depth": len(pdf_queue),
+        "queue_depth": queue_depth,
         "storage_backend": settings.storage_backend,
         "data_dir": str(settings.data_dir),
         "disk": disk_data,
