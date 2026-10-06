@@ -61,15 +61,29 @@ def identity_from_claims(claims: dict, source: str) -> dict:
 
 
 def create_web_console_identity() -> dict:
-    session_id = secrets.token_urlsafe(18)
+    workspace_id = settings.web_console_workspace_id.strip() or "default"
+    subject = f"workspace:{workspace_id}"[:120]
     return {
-        "name": f"web-console:{session_id}"[:120],
-        "subject": session_id,
+        "name": f"web-console:{workspace_id}"[:120],
+        "subject": subject,
         "display_name": "Web Console",
-        "groups": [],
+        "groups": ["web-console"],
         "scopes": sorted(settings.human_scope_set),
         "source": "web-console",
         "is_identity_admin": False,
+    }
+
+
+def create_local_admin_identity(username: str) -> dict:
+    safe_username = username.strip()[:80]
+    return {
+        "name": f"local-admin:{safe_username}"[:120],
+        "subject": f"local-admin:{safe_username}"[:120],
+        "display_name": safe_username,
+        "groups": ["pdfhub-admins", "local-admin"],
+        "scopes": ["*"],
+        "source": "local-admin",
+        "is_identity_admin": True,
     }
 
 
@@ -303,4 +317,5 @@ def public_auth_config() -> dict:
         },
         "ldap": {"enabled": settings.ldap_enabled},
         "web_console": {"auto_login": settings.web_console_auto_login_enabled},
+        "local_admin": {"enabled": settings.local_admin_enabled},
     }
