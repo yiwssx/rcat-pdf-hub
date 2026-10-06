@@ -1,6 +1,8 @@
 "use client";
 
-import { IntegrationStatus, UploadedFile } from "../../lib/api";
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { getPageInfo, IntegrationStatus, UploadedFile } from "../../lib/api";
 import { ToolIcon, ToolIconName } from "./tool-icons";
 
 const positionOptions = [
@@ -11,6 +13,7 @@ const positionOptions = [
 
 type Props = {
   tool: string;
+  auth: string;
   target: UploadedFile;
   pdfFiles: UploadedFile[];
   imageFiles: UploadedFile[];
@@ -40,6 +43,7 @@ type Props = {
   rasterDpi: number;
   rasterFirstPage: number;
   rasterLastPage: string;
+  mergeOrder: string[];
   setSignedTtl: (value: number) => void;
   setSplitPages: (value: string) => void;
   setRotateDegrees: (value: number) => void;
@@ -62,10 +66,12 @@ type Props = {
   setRasterDpi: (value: number) => void;
   setRasterFirstPage: (value: number) => void;
   setRasterLastPage: (value: string) => void;
+  setMergeOrder: (value: string[]) => void;
   onRun: (operation: string) => void;
   onSignedLink: () => void;
   onCopySignedLink: () => void;
   onArchive: () => void;
+  onOrganize: (pages: Array<{ page: number; rotation: number }>) => void;
   onClose: () => void;
 };
 
@@ -90,6 +96,54 @@ function Summary({ target, note }: { target: UploadedFile; note: string }) {
 }
 
 export function ToolPanel(props: Props) {
+  const [pageItems, setPageItems] = useState<Array<{ page: number; rotation: number }>>([]);
+  const [pagesLoading, setPagesLoading] = useState(false);
+  const mergeFiles = useMemo(() => {
+    const byId = new Map(props.pdfFiles.map((file) => [file.id, file]));
+    const ordered = props.mergeOrder.map((id) => byId.get(id)).filter((file): file is UploadedFile => Boolean(file));
+    const missing = props.pdfFiles.filter((file) => !props.mergeOrder.includes(file.id));
+    return [...ordered, ...missing];
+  }, [props.pdfFiles, props.mergeOrder]);
+
+  useEffect(() => {
+    if (props.tool !== "split-rotate" || !props.targetIsPdf) return;
+    let live = true;
+    setPagesLoading(true);
+    void getPageInfo(props.target.id, props.auth)
+      .then((info) => {
+        if (live) setPageItems(Array.from({ length: info.pages }, (_, index) => ({ page: index + 1, rotation: 0 })));
+      })
+      .finally(() => { if (live) setPagesLoading(false); });
+    return () => { live = false; };
+  }, [props.tool, props.target.id, props.targetIsPdf, props.auth]);
+
+  function moveMerge(draggedId: string, targetId: string) {
+    if (!draggedId || draggedId === targetId) return;
+    const ids = mergeFiles.map((file) => file.id);
+    const from = ids.indexOf(draggedId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...ids];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    props.setMergeOrder(next);
+  }
+
+  function movePage(fromPage: number, toPage: number) {
+    if (fromPage === toPage) return;
+    const from = pageItems.findIndex((item) => item.page === fromPage);
+    const to = pageItems.findIndex((item) => item.page === toPage);
+    if (from < 0 || to < 0) return;
+    const next = [...pageItems];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    setPageItems(next);
+  }
+
+  function rotatePage(page: number) {
+    setPageItems((old) => old.map((item) => item.page === page ? { ...item, rotation: (item.rotation + 90) % 360 } : item));
+  }
+
   const info = meta[props.tool] || { title: "เครื่องมือ", subtitle: "", icon: "organize" as ToolIconName, tone: "violet" };
   const {
     tool, target, pdfFiles, imageFiles, targetIsPdf, busy, integrations, signedUrl,
@@ -111,20 +165,41 @@ export function ToolPanel(props: Props) {
         </>}
 
         {tool === "merge-pdf" && <>
-          <div className="v3FieldNote">จะรวม PDF {pdfFiles.length} ไฟล์ตามลำดับด้านล่าง</div>
-          <div className="v3MergeList">{pdfFiles.map((file, index) => <div key={file.id}><span>{index + 1}</span><strong>{file.original_name}</strong></div>)}</div>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("merge")} disabled={busy || pdfFiles.length < 2}>รวม PDF {pdfFiles.length} ไฟล์</button>
+          <div className="v3FieldNote">ลากเพื่อจัดลำดับ PDF {mergeFiles.length} ไฟล์ก่อนรวม</div>
+          <div className="v3MergeList">{mergeFiles.map((file, index) => <div
+            key={file.id}
+            draggable
+            onDragStart={(event) => event.dataTransfer.setData("text/plain", file.id)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => { event.preventDefault(); moveMerge(event.dataTransfer.getData("text/plain"), file.id); }}
+          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b></div>)}</div>
+          <button className="v3PrimaryAction" onClick={() => props.onRun("merge")} disabled={busy || mergeFiles.length < 2}>รวม PDF {mergeFiles.length} ไฟล์</button>
         </>}
 
         {tool === "split-rotate" && <>
-          <label className="v3Field">หน้าที่ต้องการ<input value={props.splitPages} onChange={(e) => props.setSplitPages(e.target.value)} placeholder="1-3,5"/></label>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf}>สร้าง PDF จากหน้าที่เลือก</button>
-          <div className="v3Divider"/>
-          <div className="v3FieldRow">
-            <label className="v3Field">หมุน<select value={props.rotateDegrees} onChange={(e) => props.setRotateDegrees(Number(e.target.value))}><option value={90}>+90°</option><option value={180}>180°</option><option value={270}>+270°</option><option value={-90}>-90°</option></select></label>
-            <label className="v3Field">หน้า<input value={props.rotatePages} onChange={(e) => props.setRotatePages(e.target.value)}/></label>
-          </div>
-          <button className="v3SecondaryAction" onClick={() => props.onRun("rotate")} disabled={busy || !targetIsPdf}>หมุนหน้า</button>
+          <div className="v3FieldNote">ลาก thumbnail เพื่อเรียงหน้าใหม่ • ↻ เพื่อหมุน • × เพื่อตัดหน้าออก</div>
+          {pagesLoading ? <div className="v3OrganizerLoading">กำลังอ่านจำนวนหน้า…</div> : <div className="v3PageOrganizer">
+            {pageItems.map((item, index) => <div
+              className="v3PageThumb"
+              key={item.page}
+              draggable
+              onDragStart={(event) => event.dataTransfer.setData("text/plain", String(item.page))}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => { event.preventDefault(); movePage(Number(event.dataTransfer.getData("text/plain")), item.page); }}
+            >
+              <div className="v3PageImage" style={{ transform: `rotate(${item.rotation}deg)` }}>
+                <Image src={`/api/v1/files/${target.id}/preview?page=${item.page}&width=180`} alt={`หน้า ${item.page}`} width={180} height={240} unoptimized/>
+              </div>
+              <div><strong>{index + 1}</strong><small>เดิม {item.page}</small></div>
+              <button type="button" onClick={() => rotatePage(item.page)} aria-label={`หมุนหน้า ${item.page}`}>↻</button>
+              <button type="button" className="danger" onClick={() => setPageItems((old) => old.filter((page) => page.page !== item.page))} aria-label={`ลบหน้า ${item.page}`}>×</button>
+            </div>)}
+          </div>}
+          <button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</button>
+          <details className="v3AdvancedDetails"><summary>เลือกหน้าด้วยช่วงตัวเลข</summary>
+            <label className="v3Field">หน้าที่ต้องการ<input value={props.splitPages} onChange={(e) => props.setSplitPages(e.target.value)} placeholder="1-3,5"/></label>
+            <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf}>สร้าง PDF จากหน้าที่เลือก</button>
+          </details>
         </>}
 
         {tool === "compress" && <>
