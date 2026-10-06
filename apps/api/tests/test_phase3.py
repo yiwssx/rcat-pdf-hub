@@ -25,7 +25,7 @@ def test_session_token_round_trip():
     assert decoded["subject"] == identity["subject"]
     assert decoded["groups"] == ["teachers"]
     assert decoded["roles"] == [ROLE_OPERATOR]
-    assert set(decoded["scopes"]) == set(identity["scopes"]) | (set(decoded["scopes"]) - set(identity["scopes"]))
+    assert {"files:read", "pdf:ocr"} <= set(decoded["scopes"])
     assert decoded["source"] == "oidc"
 
 
