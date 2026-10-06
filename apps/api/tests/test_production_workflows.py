@@ -182,3 +182,23 @@ def test_job_history_cleanup_requires_manage_scope_and_preserves_active_jobs(mon
     assert db.get(JobRecord, queued_id) is not None
     assert db.get(JobRecord, other_id) is not None
     db.close()
+
+
+def test_legacy_web_console_cookie_is_normalized_to_stable_workspace(monkeypatch):
+    monkeypatch.setattr("app.identity.settings.web_console_auto_login", True)
+    monkeypatch.setattr("app.identity.settings.oidc_enabled", False)
+    monkeypatch.setattr("app.identity.settings.ldap_enabled", False)
+    monkeypatch.setattr("app.identity.settings.web_console_workspace_id", "rcat-stable")
+    legacy = {
+        "name": "web-console:old-random-cookie",
+        "subject": "old-random-cookie",
+        "display_name": "Web Console",
+        "groups": [],
+        "scopes": ["files:read"],
+        "source": "web-console",
+        "is_identity_admin": False,
+    }
+    decoded = __import__("app.identity", fromlist=["decode_session_token"]).decode_session_token(create_session_token(legacy))
+    assert decoded["name"] == "web-console:rcat-stable"
+    assert decoded["subject"] == "workspace:rcat-stable"
+    assert "jobs:manage" in decoded["scopes"]
