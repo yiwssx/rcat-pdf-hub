@@ -103,6 +103,14 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
   const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
 
+  function clearSignedToolResult() {
+    setToolSettings((old) => (
+      old.signedUrl === null && old.signedTargetId === null
+        ? old
+        : { ...old, signedUrl: null, signedTargetId: null }
+    ));
+  }
+
   async function loadWorkspace(authValue = auth) {
     if (!authValue) return;
     setBusy(true);
@@ -234,6 +242,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
         if (pendingTool) setActiveTool(pendingTool);
       }
       setPendingTool("");
+      clearSignedToolResult();
       setMessage(`อัปโหลดแล้ว ${uploaded.length} ไฟล์`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
@@ -247,6 +256,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setActiveTool("");
     setPreviewUrl(null);
     setPreviewPage(1);
+    clearSignedToolResult();
   }
 
   function chooseTool(tool: ToolDefinition) {
@@ -285,6 +295,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setTargetId(candidate.id);
     setActiveTool(tool.id);
     setPreviewUrl(null);
+    clearSignedToolResult();
   }
 
   async function submit(operation: string, payload: object) {
