@@ -189,6 +189,7 @@ assert "pip install --no-cache-dir --require-hashes -r requirements.lock" in api
 assert web_dockerfile.count("FROM node:24.19.0-alpine3.24") == 3
 assert "COPY package.json package-lock.json ./" in web_dockerfile
 assert "RUN npm ci --no-audit --no-fund" in web_dockerfile
+assert "/usr/local/lib/node_modules/npm" in web_dockerfile and "/usr/local/bin/npm" in web_dockerfile, "Web runtime must strip npm build tooling from the final image"
 
 compose = read("docker-compose.yml")
 expected_images = {
