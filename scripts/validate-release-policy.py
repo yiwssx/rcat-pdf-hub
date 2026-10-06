@@ -174,8 +174,7 @@ for raw in requirements.splitlines():
     assert "==" in line, f"Direct Python dependency must be exactly pinned: {line}"
     requirement, version = line.split("==", 1)
     name = requirement.split("[", 1)[0]
-    normalized = re.sub(r"[-_.]+", "-", name).lower()
-    pattern = rf"(?mi)^{re.escape(normalized).replace(r'\-', '[-_.]')}=={re.escape(version)}(?:\s+\\)?$"
+    pattern = rf"(?mi)^{re.escape(name)}=={re.escape(version)}(?:\s+\\)?$"
     assert re.search(pattern, python_lock), f"Python lock is missing direct pin {line}"
 pillow_version = pinned_requirement_version(requirements, "Pillow")
 assert PILLOW_MIN <= pillow_version < PILLOW_MAX_EXCLUSIVE, (
