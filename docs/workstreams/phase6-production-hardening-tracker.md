@@ -71,7 +71,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6C.3 | Per-queue observability and alerts | COMPLETE | PR #93; Core API CI run 37460370481 |
 | 6D.1 | Self-hosted Alertmanager integration | COMPLETE | PR #94; Core API CI run 37461773365 |
 | 6D.2 | Persistent OpenTelemetry trace backend | COMPLETE | PR #95; Core API CI run 37463105409 |
-| 6D.3 | Self-hosted operations dashboard | PENDING | — |
+| 6D.3 | Self-hosted operations dashboard | IN PROGRESS | PR pending |
 | 6E.1 | Human RBAC role model and permission matrix | PENDING | — |
 | 6E.2 | OIDC/LDAP group-to-role mapping | PENDING | — |
 | 6E.3 | Admin effective-role/scope visibility | PENDING | — |
@@ -228,6 +228,7 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6C.3 | Added workload-class queue depth, oldest-job age and worker-pool metrics plus Redis-backed cross-process job event/duration telemetry; added starvation, backlog, missing-pool, collection-health and queue-class failure alerts. Prometheus rule validation was added to the Core API gate. | PR #93; Core API CI run 37460370481 | COMPLETE |
 | 2026-10-06 | 6D.1 | Wired Prometheus alert delivery to a bundled persistent Alertmanager on the private management plane; added config validation, loopback management access and production resource hardening. | PR #94; Core API CI run 37461773365 | COMPLETE |
 | 2026-10-06 | 6D.2 | Replaced debug-only trace export with a persistent single-node Tempo backend, routed OTel Collector over the private management plane, and added Tempo/Collector config validation. Extended production-network and CI path policy to cover the complete observability topology. | PR #95; Core API CI run 37463105409 | COMPLETE |
+| 2026-10-06 | 6D.3 | Added storage-capacity metrics and a provisioned self-hosted Grafana operations console backed by Prometheus and Tempo, with dashboard contract validation and private production management placement. | PR pending | IN PROGRESS |
 
 ## Current next action
 
