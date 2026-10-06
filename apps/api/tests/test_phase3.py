@@ -14,7 +14,7 @@ def test_session_token_round_trip():
         "name": "user:teacher@example.org",
         "subject": "oidc-subject-123",
         "display_name": "Teacher",
-        "groups": ["teachers"],
+        "groups": ["pdfhub-users"],
         "roles": [ROLE_OPERATOR],
         "scopes": ["files:read", "pdf:ocr"],
         "source": "oidc",
@@ -23,7 +23,7 @@ def test_session_token_round_trip():
     decoded = decode_session_token(create_session_token(identity))
     assert decoded["name"] == identity["name"]
     assert decoded["subject"] == identity["subject"]
-    assert decoded["groups"] == ["teachers"]
+    assert decoded["groups"] == ["pdfhub-users"]
     assert decoded["roles"] == [ROLE_OPERATOR]
     assert {"files:read", "pdf:ocr"} <= set(decoded["scopes"])
     assert decoded["source"] == "oidc"
