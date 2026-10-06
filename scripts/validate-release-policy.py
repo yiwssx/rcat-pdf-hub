@@ -431,7 +431,7 @@ makefile = read("Makefile")
 assert "lock-python:" in makefile and "scripts/compile-python-lock.sh" in makefile
 for target in ("up-prod:", "up-prod-nas:", "down-prod:", "prod-config:", "scale-workers:", "scale-prod-workers:"):
     assert target in makefile, f"Missing production/worker Compose target: {target}"
-for marker in ("worker-interactive=${INTERACTIVE_WORKERS:-2}", "worker=${PDF_WORKERS:-2}", "worker-heavy=${HEAVY_WORKERS:-1}"):
+for marker in ("worker-interactive=$${INTERACTIVE_WORKERS:-2}", "worker=$${PDF_WORKERS:-2}", "worker-heavy=$${HEAVY_WORKERS:-1}"):
     assert marker in makefile, f"Worker scaling policy missing: {marker}"
 for target in ("validate-supply-chain-source:", "validate-supply-chain-images:", "validate-supply-chain:"):
     assert target in makefile, f"Missing supply-chain Make target: {target}"
