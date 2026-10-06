@@ -46,6 +46,19 @@ async function installWorkspaceMocks(page: Page) {
     await route.fulfill({ json: [] });
   });
 
+  await page.route("**/api/v1/files/library**", async (route) => {
+    const url = new URL(route.request().url());
+    await route.fulfill({
+      json: {
+        items: [],
+        total: 0,
+        limit: Number(url.searchParams.get("limit") || "50"),
+        offset: Number(url.searchParams.get("offset") || "0"),
+        has_more: false,
+      },
+    });
+  });
+
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
     await route.fulfill({ json: [] });
   });
@@ -101,4 +114,31 @@ test("provides visible keyboard focus and honors reduced motion", async ({ page 
   await jobsButton.click();
   await expect(page.locator(".v3JobDrawer")).toBeVisible();
   await expect(page.locator(".v3JobDrawer")).toHaveCSS("animation-name", "none");
+});
+
+test("keeps the paged file-library controls usable on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/files");
+
+  await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
+  await expect(page.getByLabel("ค้นหาชื่อไฟล์")).toBeVisible();
+  await expect(page.getByLabel("ประเภทไฟล์")).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    offenders: Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          className: element.className,
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        };
+      })
+      .filter((item) => item.right > window.innerWidth + 1 || item.left < -1)
+      .slice(0, 12),
+  }));
+  expect(layout.overflow, JSON.stringify(layout.offenders)).toBeLessThanOrEqual(1);
 });

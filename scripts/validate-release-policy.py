@@ -160,7 +160,7 @@ smoke = read("apps/web/tests/e2e/pdf-hub.smoke.spec.ts")
 assert "requireSession" in smoke
 assert "/web-auth/session" in smoke
 assert 'getByLabel("Service API Key")' in smoke and "toHaveCount(0)" in smoke
-for protected_flow in ("integrations/status", "files?limit=200&offset=0", "jobs?limit=50", "/preview", "/pdf/compress", "/download"):
+for protected_flow in ("integrations/status", "files?limit=200&offset=0", "files/library", "jobs?limit=50", "/preview", "/pdf/compress", "/download"):
     assert protected_flow in smoke, f"Mocked browser smoke is missing protected flow: {protected_flow}"
 
 # Runtime/container baselines are intentionally frozen and changed only by explicit developer review.

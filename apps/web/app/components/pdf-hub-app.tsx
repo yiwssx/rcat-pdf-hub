@@ -117,7 +117,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setBusy(true);
     try {
       const [fileRows, jobRows, status] = await Promise.all([
-        listFiles(authValue),
+        initialView === "workspace" ? listFiles(authValue) : Promise.resolve([]),
         listJobs(authValue),
         getIntegrationStatus(authValue),
       ]);
@@ -183,7 +183,10 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       try {
         const jobRows = await listJobs(auth);
         setJobs(jobRows);
-        if (!jobRows.some((job) => job.status === "queued" || job.status === "running")) {
+        if (
+          initialView === "workspace"
+          && !jobRows.some((job) => job.status === "queued" || job.status === "running")
+        ) {
           setFiles(await listFiles(auth));
         }
       } catch {
@@ -191,7 +194,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       }
     }, 2500);
     return () => window.clearInterval(timer);
-  }, [auth, activeJobs]);
+  }, [auth, activeJobs, initialView]);
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -258,6 +261,11 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setPreviewUrl(null);
     setPreviewPage(1);
     clearSignedToolResult();
+  }
+
+  function selectLibraryFile(file: UploadedFile) {
+    setFiles((old) => [file, ...old.filter((item) => item.id !== file.id)]);
+    selectFile(file.id);
   }
 
   function chooseTool(tool: ToolDefinition) {
@@ -506,7 +514,17 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
           onPreviewPage={setPreviewPage}
         />
       ) : initialView === "files" ? (
-        <FilesScreen files={files} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onDownload={(id) => void download(id)} onDelete={(ids) => void deleteFiles(ids)} onRetention={(id, keep) => void updateRetention(id, keep)}/>
+        <FilesScreen
+          auth={auth}
+          busy={busy}
+          refreshKey={`${activeJobs ? "active" : "idle"}:${jobs[0]?.id || ""}:${jobs[0]?.status || ""}`}
+          onPageItems={setFiles}
+          onFiles={onFiles}
+          onSelectFile={selectLibraryFile}
+          onDownload={download}
+          onDelete={deleteFiles}
+          onRetention={updateRetention}
+        />
       ) : (
         <HomeScreen files={files} tools={tools} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
       )}

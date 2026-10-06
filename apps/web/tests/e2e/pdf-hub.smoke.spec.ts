@@ -121,6 +121,26 @@ async function installApiMocks(page: Page) {
     await route.fulfill({ json: [initialFile] });
   });
 
+  await page.route("**/api/v1/files/library**", async (route) => {
+    if (!(await requireSession(route))) return;
+    const url = new URL(route.request().url());
+    const q = (url.searchParams.get("q") || "").toLowerCase();
+    const kind = url.searchParams.get("kind") || "all";
+    const offset = Number(url.searchParams.get("offset") || "0");
+    let items = [initialFile];
+    if (q) items = items.filter((file) => file.original_name.toLowerCase().includes(q));
+    if (kind === "image") items = [];
+    await route.fulfill({
+      json: {
+        items,
+        total: items.length,
+        limit: Number(url.searchParams.get("limit") || "50"),
+        offset,
+        has_more: false,
+      },
+    });
+  });
+
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ json: [] });
@@ -298,6 +318,28 @@ test("files is a dedicated route instead of a section in the home page", async (
   await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
   await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
   await expect(page.locator(".v3FileLibrary")).toBeVisible();
+});
+
+test("files route sends search and filters to the paged server API", async ({ page }) => {
+  await page.goto("/files");
+  await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
+
+  const searchRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname === "/api/v1/files/library" && url.searchParams.get("q") === "missing";
+  });
+  await page.getByLabel("ค้นหาชื่อไฟล์").fill("missing");
+  await searchRequest;
+  await expect(page.getByText("example.pdf", { exact: true })).toHaveCount(0);
+
+  const filterRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return url.pathname === "/api/v1/files/library" && url.searchParams.get("kind") === "pdf";
+  });
+  await page.getByLabel("ค้นหาชื่อไฟล์").fill("");
+  await page.getByLabel("ประเภทไฟล์").selectOption("pdf");
+  await filterRequest;
+  await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
 });
 
 
