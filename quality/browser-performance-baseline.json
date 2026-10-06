@@ -1,0 +1,43 @@
+{
+  "ready": true,
+  "source": {
+    "workflow": "Web CI",
+    "run": 37517934071,
+    "measured_at": "2026-10-06",
+    "policy": "DOM/resource/byte ceilings are 15% above the measured baseline; DOMContentLoaded ceiling is 4x the measured value to absorb shared-runner/dev-server timing variance while still catching large regressions."
+  },
+  "routes": {
+    "/": {
+      "measured": {
+        "domNodes": 224,
+        "resources": 23,
+        "scriptResources": 15,
+        "encodedBytes": 838452,
+        "domContentLoadedMs": 137
+      },
+      "maximum": {
+        "domNodes": 258,
+        "resources": 27,
+        "scriptResources": 18,
+        "encodedBytes": 964220,
+        "domContentLoadedMs": 548
+      }
+    },
+    "/files": {
+      "measured": {
+        "domNodes": 112,
+        "resources": 23,
+        "scriptResources": 15,
+        "encodedBytes": 838511,
+        "domContentLoadedMs": 49
+      },
+      "maximum": {
+        "domNodes": 129,
+        "resources": 27,
+        "scriptResources": 18,
+        "encodedBytes": 964288,
+        "domContentLoadedMs": 196
+      }
+    }
+  }
+}
