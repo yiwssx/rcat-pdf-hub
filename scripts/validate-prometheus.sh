@@ -35,6 +35,8 @@ docker compose -p "${project}" --profile observability run --rm --no-deps \
   --entrypoint /otelcol-contrib otel-collector \
   validate --config=/etc/otelcol-contrib/config.yaml
 
+python3 scripts/check-grafana-provisioning.py
+
 cleanup
 trap - EXIT
 echo "observability configuration validation: PASS"
