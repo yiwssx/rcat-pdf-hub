@@ -88,7 +88,11 @@ minimum = float(baseline["minimum_percent"])
 accepted = float(baseline["measured_percent"])
 print(f"backend coverage: {percent:.2f}% ({total_covered}/{total_statements})")
 print(f"accepted baseline: {accepted:.2f}% | enforced floor: {minimum:.2f}%")
-print(f"coverage artifact: {ARTIFACT.relative_to(ROOT)}")
+try:
+    artifact_label = ARTIFACT.relative_to(ROOT)
+except ValueError:
+    artifact_label = ARTIFACT
+print(f"coverage artifact: {artifact_label}")
 if percent + 1e-9 < minimum:
     raise SystemExit(
         f"Backend coverage regression: {percent:.2f}% is below the accepted floor {minimum:.2f}%"
