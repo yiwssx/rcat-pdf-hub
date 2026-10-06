@@ -43,6 +43,23 @@ async function installApiMocks(page: Page) {
   });
 
   await page.route("**/api/v1/auth/me", async (route) => {
+    const referer = route.request().headers()["referer"] || "";
+    if (/\/admin\/?(?:[?#]|$)/.test(referer)) {
+      sessionReady = true;
+      await route.fulfill({
+        json: {
+          name: "user:admin@example.org",
+          display_name: "RCAT Administrator",
+          subject: "oidc-admin-1",
+          scopes: ["*"],
+          groups: ["pdfhub-admins"],
+          roles: ["admin"],
+          auth_source: "oidc",
+          is_admin: true,
+        },
+      });
+      return;
+    }
     if (!(await requireSession(route))) return;
     await route.fulfill({
       json: {
@@ -51,8 +68,35 @@ async function installApiMocks(page: Page) {
         subject: "smoke-test",
         scopes: ["files:read", "files:write", "jobs:read", "jobs:manage", "pdf:compress"],
         groups: [],
+        roles: ["operator"],
         auth_source: "web-console",
         is_admin: false,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/admin/status", async (route) => {
+    await route.fulfill({
+      json: {
+        database_ok: true,
+        redis_ok: true,
+        workers: 3,
+        queue_depth: 0,
+        storage_backend: "local",
+        storage_write_ok: true,
+        gotenberg_ok: true,
+        data_dir: "/data",
+        disk: { total: 107374182400, used: 21474836480, free: 85899345920 },
+        pdfhub_bytes: 4096,
+        files: 1,
+        jobs: { queued: 0, running: 0, completed: 1, failed: 0, cancelled: 0 },
+        retention_hours: 24,
+        cleanup_temporary_hours: 6,
+        clamav_enabled: true,
+        paperless_enabled: false,
+        tools: { qpdf: true, gs: true, ocrmypdf: true, tesseract: true, pdftoppm: true },
+        auth: { local_admin: true, oidc: true, ldap: false, web_console_auto_login: false },
+        principal: "user:admin@example.org",
       },
     });
   });
@@ -272,6 +316,21 @@ test("admin login is a dedicated route and never requests a Service API Key", as
   await expect(page.getByLabel("Service API Key")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "ผู้ดูแล RCAT PDF Hub" })).toBeVisible();
   await expect(page.getByText(/Local Admin ยังไม่ได้เปิดใช้/)).toBeVisible();
+});
+
+
+test("admin console exposes effective identity role groups and scopes", async ({ page }) => {
+  await page.goto("/admin");
+
+  const access = page.locator(".v3EffectiveAccess");
+  await expect(access).toBeVisible();
+  await expect(access).toContainText("RCAT Administrator");
+  await expect(access).toContainText("oidc");
+  await expect(access).toContainText("pdfhub-admins");
+  await expect(access).toContainText("admin");
+  await expect(access.locator("code")).toHaveText("*");
+  await expect(access.locator('input[type="password"]')).toHaveCount(0);
+  await expect(access.locator('input[name*="key" i]')).toHaveCount(0);
 });
 
 
