@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     human_scopes: str = DEFAULT_HUMAN_SCOPES
     admin_groups: str = "pdfhub-admins"
+    local_admin_username: str = "admin"
+    local_admin_password_hash: str = ""
+    web_console_workspace_id: str = "rcat-default"
 
     # When no institutional identity provider is enabled, the Web Console can
     # mint an isolated, non-admin HttpOnly session through the internal API.
@@ -178,6 +181,10 @@ class Settings(BaseSettings):
         # Institutional identity always wins: enabling OIDC or LDAP disables the
         # anonymous Web Console bootstrap even if the flag was left on.
         return self.web_console_auto_login and not self.oidc_enabled and not self.ldap_enabled
+
+    @property
+    def local_admin_enabled(self) -> bool:
+        return bool(self.local_admin_username.strip() and self.local_admin_password_hash.strip())
 
     @property
     def oidc_redirect_uri(self) -> str:
