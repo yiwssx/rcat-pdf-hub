@@ -10,7 +10,7 @@ from app.audit import audit_event
 from app.config import get_settings
 from app.models import FileRecord, JobRecord, WebhookDelivery
 from app.policy import ensure_daily_job_quota
-from app.queue import pdf_queue, redis_conn
+from app.queue import enqueue_processing_job, redis_conn
 from app.schemas import JobOut
 from app.security import Principal, require_scope
 from rq.command import send_stop_job_command
@@ -134,7 +134,7 @@ def retry_job(
     db.commit()
     db.refresh(job)
     try:
-        queued = pdf_queue.enqueue("app.worker_tasks.process_job", job.id, job_timeout=settings.rq_job_timeout_seconds, result_ttl=86400)
+        queue, queued = enqueue_processing_job(job.operation, job.id)
         job.rq_job_id = queued.id
         db.commit()
     except Exception as exc:
@@ -144,7 +144,13 @@ def retry_job(
         job.finished_at = datetime.now(timezone.utc)
         db.commit()
         raise HTTPException(status_code=503, detail="Queue backend unavailable") from exc
-    audit_event("job.retried", principal.name, "job", job.id, {"source_job_id": source.id, "operation": job.operation})
+    audit_event(
+        "job.retried",
+        principal.name,
+        "job",
+        job.id,
+        {"source_job_id": source.id, "operation": job.operation, "queue": queue.name},
+    )
     return serialize(job)
 
 
