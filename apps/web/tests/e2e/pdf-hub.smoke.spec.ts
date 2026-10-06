@@ -167,6 +167,7 @@ test("propagates the session through preview, job, download and upload", async (
   await expect(page.getByRole("img", { name: "Preview page 1" })).toBeVisible();
 
   await page.getByRole("button", { name: "ลดขนาด PDF" }).click();
+  await page.locator("#advanced-tools").getByRole("button", { name: "บีบอัด PDF" }).click();
   await expect(page.locator(".jobInfo").getByText("compress", { exact: true })).toBeVisible();
   await expect(page.locator(".badge.completed")).toContainText("100%");
 
