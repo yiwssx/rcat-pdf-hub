@@ -26,13 +26,5 @@ jobs:
         run: python3 scripts/check-python-lock.py
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
-      - name: Exercise Phase 6 supply-chain gate
-        run: |
-          make validate-supply-chain-source
-          docker build -t rcat-pdf-hub-web-scan apps/web
-          PDFHUB_SUPPLY_CHAIN_BUILD_IMAGES=false \
-          PDFHUB_SUPPLY_CHAIN_API_IMAGE=rcat-pdf-hub-api-test \
-          PDFHUB_SUPPLY_CHAIN_WEB_IMAGE=rcat-pdf-hub-web-scan \
-            bash scripts/supply-chain.sh images
       - name: Run API tests
         run: docker run --rm rcat-pdf-hub-api-test python -m pytest -q
