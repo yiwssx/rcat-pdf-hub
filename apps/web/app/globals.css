@@ -169,3 +169,29 @@ a.ghost {
   .panelHeader { align-items: flex-start; flex-direction: column; }
   .auditRow { grid-template-columns: 1fr; gap: 4px; }
 }
+
+
+/* Global interaction accessibility. */
+:where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid rgba(99, 102, 241, .55);
+  outline-offset: 2px;
+}
+
+:where(button, a, summary) {
+  -webkit-tap-highlight-color: rgba(99, 102, 241, .10);
+}
+
+.v3AdminMetric strong,
+.v3JobBadge,
+.quotaLine,
+.auditRow time {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
