@@ -107,7 +107,7 @@ def _bearer_identity(token: str) -> Principal:
     if settings.oidc_enabled:
         try:
             return _identity_principal(identity_from_claims(validate_oidc_token(token), "oidc-bearer"))
-        except (jwt.PyJWTError, RuntimeError, httpx.HTTPError) as exc:
+        except (jwt.PyJWTError, RuntimeError, ValueError, httpx.HTTPError) as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token") from exc
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token")
 
