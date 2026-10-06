@@ -121,6 +121,17 @@ Phase 6G.3 extends the existing Playwright UI regression lane with a repository-
 
 Blocking rules cover missing image alternatives, unnamed interactive controls, focusable content hidden from assistive technology, missing document language, duplicate IDs and positive tabindex. The implementation uses the existing browser runtime and introduces no hosted accessibility service or additional npm dependency.
 
+## Frontend/browser performance regression baseline
+
+Phase 6G.4 measures the primary Workspace and Files routes in the existing Chromium regression lane. Web CI run `37517934071` established the baseline:
+
+| Route | DOM nodes | Resources | Script resources | Encoded bytes | DOMContentLoaded |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `/` | 224 | 23 | 15 | 838,452 | 137 ms |
+| `/files` | 112 | 23 | 15 | 838,511 | 49 ms |
+
+`quality/browser-performance-baseline.json` stores both the measured values and enforced ceilings. DOM/resource/byte budgets are 15% above the measured baseline. DOMContentLoaded uses a 4× measured ceiling to absorb shared-runner and Next.js development-server timing variance while still detecting large regressions. The Playwright test logs `PERF_BASELINE_CANDIDATE` on every run so future baseline changes remain evidence-backed.
+
 ## Queue routing validation
 
 Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.
