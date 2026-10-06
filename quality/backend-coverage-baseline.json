@@ -1,6 +1,13 @@
 {
   "metric": "python-statement-line-execution",
-  "measured_percent": 0,
-  "minimum_percent": 0,
-  "note": "Bootstrap placeholder for Task 6G.2; replace with the measured CI baseline before merge."
+  "measured_percent": 61.36,
+  "minimum_percent": 61.36,
+  "measured_statements": 3046,
+  "measured_covered": 1869,
+  "source": {
+    "workflow": "Core API CI",
+    "run": 37519020885,
+    "measured_at": "2026-10-07"
+  },
+  "note": "Accepted Phase 6G.2 baseline. Backend validation fails if application statement-line execution drops below this percentage."
 }
