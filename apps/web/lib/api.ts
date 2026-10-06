@@ -14,7 +14,7 @@ export type UploadedFile = {
 export type Job = {
   id: string;
   operation: string;
-  status: "queued" | "running" | "completed" | "failed";
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
   progress: number;
   input_file_ids: string[];
   output_file_id: string | null;
@@ -94,6 +94,32 @@ export type ArchiveRecord = {
   error: string | null;
   created_at: string;
   updated_at: string;
+};
+
+
+export type PageInfo = {
+  file_id: string;
+  pages: number;
+};
+
+export type AdminStatus = {
+  database_ok: boolean;
+  redis_ok: boolean;
+  workers: number;
+  queue_depth: number;
+  storage_backend: "local" | "s3";
+  data_dir: string;
+  disk: { total: number; used: number; free: number };
+  pdfhub_bytes: number;
+  files: number;
+  jobs: Record<string, number>;
+  retention_hours: number;
+  cleanup_temporary_hours: number;
+  clamav_enabled: boolean;
+  paperless_enabled: boolean;
+  tools: Record<string, boolean>;
+  auth: { local_admin: boolean; oidc: boolean; ldap: boolean; web_console_auto_login: boolean };
+  principal: string;
 };
 
 export type SignedDownload = {
@@ -184,6 +210,31 @@ export async function listFiles(auth: string): Promise<UploadedFile[]> {
   return expectJson<UploadedFile[]>(await request("/api/v1/files?limit=100", { headers: headers(auth), cache: "no-store" }));
 }
 
+
+export async function getPageInfo(fileId: string, auth: string): Promise<PageInfo> {
+  return expectJson<PageInfo>(await request(`/api/v1/files/${fileId}/pages`, { headers: headers(auth), cache: "no-store" }));
+}
+
+export async function setFileRetention(fileId: string, keep: boolean, auth: string): Promise<UploadedFile> {
+  return expectJson<UploadedFile>(await request(`/api/v1/files/${fileId}/retention`, {
+    method: "POST",
+    headers: { ...headers(auth), "Content-Type": "application/json" },
+    body: JSON.stringify({ keep }),
+  }));
+}
+
+export async function deleteFile(fileId: string, auth: string): Promise<{ deleted: string[]; bytes_removed: number }> {
+  return expectJson(await request(`/api/v1/files/${fileId}`, { method: "DELETE", headers: headers(auth) }));
+}
+
+export async function bulkDeleteFiles(fileIds: string[], auth: string): Promise<{ deleted: string[]; bytes_removed: number }> {
+  return expectJson(await request("/api/v1/files/bulk-delete", {
+    method: "POST",
+    headers: { ...headers(auth), "Content-Type": "application/json" },
+    body: JSON.stringify({ file_ids: fileIds }),
+  }));
+}
+
 export async function createJob(path: string, payload: object, auth: string): Promise<Job> {
   return expectJson<Job>(await request(`/api/v1/pdf/${path}`, {
     method: "POST",
@@ -194,6 +245,15 @@ export async function createJob(path: string, payload: object, auth: string): Pr
 
 export async function listJobs(auth: string): Promise<Job[]> {
   return expectJson<Job[]>(await request("/api/v1/jobs?limit=50", { headers: headers(auth), cache: "no-store" }));
+}
+
+
+export async function cancelJob(jobId: string, auth: string): Promise<Job> {
+  return expectJson<Job>(await request(`/api/v1/jobs/${jobId}/cancel`, { method: "POST", headers: headers(auth) }));
+}
+
+export async function retryJob(jobId: string, auth: string): Promise<Job> {
+  return expectJson<Job>(await request(`/api/v1/jobs/${jobId}/retry`, { method: "POST", headers: headers(auth) }));
 }
 
 export async function fetchPreview(fileId: string, auth: string, page = 1, width = 900): Promise<Blob> {
@@ -268,4 +328,9 @@ export async function retryWebhookDelivery(deliveryId: string, auth: string): Pr
 
 export async function listAudit(auth: string): Promise<AuditEvent[]> {
   return expectJson<AuditEvent[]>(await request("/api/v1/admin/audit?limit=100", { headers: headers(auth), cache: "no-store" }));
+}
+
+
+export async function getAdminStatus(auth: string): Promise<AdminStatus> {
+  return expectJson<AdminStatus>(await request("/api/v1/admin/status", { headers: headers(auth), cache: "no-store" }));
 }
