@@ -79,6 +79,11 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const [activeTool, setActiveTool] = useState("");
   const [pendingTool, setPendingTool] = useState("");
   const [jobsOpen, setJobsOpen] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
+  const [ldapUser, setLdapUser] = useState("");
+  const [ldapPassword, setLdapPassword] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewPage, setPreviewPage] = useState(1);
 
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
   const pdfFiles = useMemo(() => files.filter((file) => isPdf(file)), [files]);
