@@ -1000,6 +1000,19 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
 .v3JobActions button.danger { color:#c74352;border-color:#f3d6db;background:#fff6f7; }
 .v3JobActions .downloadButton { grid-column:auto; }
 
+.v3EffectiveAccess { margin-bottom:10px;padding:15px;border:1px solid var(--v3-line);border-radius:17px;background:#fff;box-shadow:var(--v3-shadow-soft); }
+.v3EffectiveAccess .v3SectionHead { margin-bottom:10px; }
+.v3EffectiveAccess .v3SectionHead h2 { font-size:18px; }
+.v3EffectiveAccessGrid { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px; }
+.v3EffectiveAccessItem { min-width:0;padding:11px;border:1px solid #e8e9f2;border-radius:12px;background:#fafaff; }
+.v3EffectiveAccessItem span,.v3EffectiveScopes > span { color:#737be0;font-size:11px;font-weight:950;letter-spacing:.1em; }
+.v3EffectiveAccessItem strong { display:block;margin-top:4px;overflow-wrap:anywhere;font-size:15px; }
+.v3EffectiveAccessItem small { display:block;margin-top:2px;overflow-wrap:anywhere;color:var(--v3-muted);font-size:12px; }
+.v3EffectiveScopes { margin-top:9px;padding:11px;border-radius:12px;background:#f8f9fc; }
+.v3EffectiveScopes > div { display:flex;flex-wrap:wrap;gap:6px;margin-top:7px; }
+.v3EffectiveScopes code { padding:4px 7px;border:1px solid #e1e4f0;border-radius:8px;background:#fff;color:#515a84;font-size:12px;overflow-wrap:anywhere; }
+.v3EffectiveAccessNote { margin:9px 0 0;color:var(--v3-muted);font-size:12px; }
+
 .v3AdminOverview { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:10px; }
 .v3AdminMetric { min-width:0;padding:14px;border:1px solid var(--v3-line);border-radius:16px;background:#fff;box-shadow:var(--v3-shadow-soft); }
 .v3AdminMetric span { color:#737be0;font-size:8px;font-weight:950;letter-spacing:.12em; }
