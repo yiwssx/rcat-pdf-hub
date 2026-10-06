@@ -10,6 +10,7 @@ RCAT PDF Hub processes untrusted document uploads. Treat the processing plane as
 - Use scoped service API keys for machine-to-machine clients; do not share one service key across unrelated systems and never ask human users to paste one into the Web Console.
 - For Internet-facing Web Console deployments, enable OIDC or LDAP. Enabling either automatically disables anonymous Web Console session bootstrap.
 - Map OIDC/LDAP groups explicitly to PDF Hub human roles. Missing or unknown group mappings fail closed; administrator access requires an explicit admin-group mapping.
+- The Admin Console may display effective identity, role, groups, and scopes for authorization troubleshooting, but must never render passwords, API keys, cookies, bearer tokens, or session secrets.
 - If automatic Web Console sessions are retained, restrict Caddy access to the intended institutional or trusted network.
 - Keep `PDFHUB_WEBHOOK_ALLOWED_HOSTS` narrow. Prefer exact hostnames over `*` and restrict worker egress at the network layer.
 - Put the public endpoint behind TLS and an edge rate limiter/WAF.

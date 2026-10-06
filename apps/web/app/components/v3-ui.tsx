@@ -80,6 +80,46 @@ export function AppHeader({
   );
 }
 
+export function AdminIdentityPanel({ identity }: { identity: AuthMe }) {
+  const roles = identity.roles.length ? identity.roles : ["—"];
+  const scopes = identity.scopes.length ? identity.scopes : ["—"];
+  const groups = identity.groups.length ? identity.groups : ["—"];
+
+  return (
+    <section className="v3EffectiveAccess" aria-labelledby="effective-access-title">
+      <div className="v3SectionHead">
+        <div>
+          <span className="v3Kicker">EFFECTIVE ACCESS</span>
+          <h2 id="effective-access-title">สิทธิ์ที่มีผลจริง</h2>
+          <p>ข้อมูล identity และ authorization ที่ API ใช้ตัดสินสิทธิ์ของบัญชีนี้</p>
+        </div>
+      </div>
+      <div className="v3EffectiveAccessGrid">
+        <div className="v3EffectiveAccessItem">
+          <span>IDENTITY</span>
+          <strong>{identity.display_name || identity.name}</strong>
+          <small>{identity.subject || identity.name}</small>
+        </div>
+        <div className="v3EffectiveAccessItem">
+          <span>AUTH SOURCE</span>
+          <strong>{identity.auth_source}</strong>
+          <small>{groups.join(", ")}</small>
+        </div>
+        <div className="v3EffectiveAccessItem">
+          <span>ROLE</span>
+          <strong>{roles.join(", ")}</strong>
+          <small>{identity.is_admin ? "administrator" : "human user"}</small>
+        </div>
+      </div>
+      <div className="v3EffectiveScopes">
+        <span>EFFECTIVE SCOPES</span>
+        <div>{scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
+      </div>
+      <p className="v3EffectiveAccessNote">แสดงเฉพาะข้อมูลสิทธิ์ที่คำนวณแล้ว ไม่แสดง credential หรือข้อมูลลับของ session</p>
+    </section>
+  );
+}
+
 export function LoginScreen({
   enterprise,
   oidcUrl,

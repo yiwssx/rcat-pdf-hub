@@ -164,7 +164,7 @@ Backup/restore tooling must use the same deployment mode through `PDFHUB_COMPOSE
 - If neither OIDC nor LDAP is enabled, Next.js requests an isolated, non-admin Web Console session through `/internal/web-console/session` over the private Docker network. Sessions reuse the configured stable internal workspace principal so files and job history remain available after session renewal.
 - Direct calls to `/api/v1/*` still require a valid session, bearer identity, or service API key. The internal session endpoint is intentionally not exposed by Caddy's public API matcher.
 
-Admin authorization, scopes, quotas, and service isolation remain enforced at the API layer, which is the authoritative authorization boundary. Automatic Web Console sessions are never administrators; admin access must come from an authorized institutional identity or operator-side break-glass credential.
+Admin authorization, scopes, quotas, and service isolation remain enforced at the API layer, which is the authoritative authorization boundary. The Admin Console displays the signed-in administrator's effective identity, authentication source, mapped role/groups, and resolved scopes from the API so operators can verify access without exposing credentials. Automatic Web Console sessions are never administrators; admin access must come from an authorized institutional identity or operator-side break-glass credential.
 
 ### Local Admin / persistent internal workspace
 

@@ -33,6 +33,7 @@ import {
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import {
+  AdminIdentityPanel,
   AppHeader,
   DocumentWorkspace,
   FilesScreen,
@@ -478,6 +479,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
             <a className="v3TextLink" href="/">← กลับ Workspace</a>
           </section>
           {identity.is_admin ? <>
+            <AdminIdentityPanel identity={identity}/>
             {adminStatus && <section className="v3AdminOverview"><div className="v3AdminMetric"><span>FILES</span><strong>{adminStatus.files}</strong><small>{(adminStatus.pdfhub_bytes / 1024 / 1024).toFixed(1)} MB ใน PDF Hub</small></div><div className="v3AdminMetric"><span>QUEUE</span><strong>{adminStatus.queue_depth}</strong><small>{adminStatus.workers} worker</small></div><div className="v3AdminMetric"><span>DISK FREE</span><strong>{(adminStatus.disk.free / 1024 / 1024 / 1024).toFixed(1)} GB</strong><small>{adminStatus.data_dir}</small></div><div className="v3AdminMetric"><span>SERVICES</span><strong>{adminStatus.database_ok && adminStatus.redis_ok ? "OK" : "WARN"}</strong><small>DB {adminStatus.database_ok ? "✓" : "×"} • Redis {adminStatus.redis_ok ? "✓" : "×"}</small></div></section>}
             {adminStatus && <section className="v3Diagnostics"><div className="v3SectionHead"><div><span className="v3Kicker">DIAGNOSTICS</span><h2>เครื่องมือประมวลผล</h2></div><button className="v3MiniButton" onClick={() => void getAdminStatus(auth).then(setAdminStatus)}>รีเฟรช</button></div><div className="v3DiagnosticGrid">{Object.entries({ ...adminStatus.tools, gotenberg: adminStatus.gotenberg_ok, storage: adminStatus.storage_write_ok }).map(([name, ok]) => <div key={name} className={ok ? "ok" : "bad"}><span>{ok ? "✓" : "×"}</span><strong>{name}</strong></div>)}</div></section>}
             {integrations && <section className="v3SystemStrip">
