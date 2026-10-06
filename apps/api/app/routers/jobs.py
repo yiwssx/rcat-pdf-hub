@@ -1,13 +1,22 @@
 import json
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import JobRecord
+from app.audit import audit_event
+from app.config import get_settings
+from app.models import FileRecord, JobRecord
+from app.policy import ensure_daily_job_quota
+from app.queue import pdf_queue, redis_conn
 from app.schemas import JobOut
 from app.security import Principal, require_scope
+from rq.command import send_stop_job
+from rq.job import Job as RQJob
+
+settings = get_settings()
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
@@ -26,18 +35,36 @@ def serialize(job: JobRecord) -> JobOut:
     )
 
 
+OPERATION_SCOPES = {
+    "merge": "pdf:merge", "organize": "pdf:split", "split": "pdf:split", "rotate": "pdf:rotate",
+    "compress": "pdf:compress", "ocr": "pdf:ocr", "pdfa": "pdf:pdfa", "office-to-pdf": "pdf:convert",
+    "watermark": "pdf:watermark", "page-numbers": "pdf:page-number", "stamp": "pdf:stamp",
+    "images-to-pdf": "pdf:image-to-pdf", "pdf-to-images": "pdf:pdf-to-image",
+}
+
+
+def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
+    job = db.get(JobRecord, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if "*" not in principal.scopes and job.requested_by != principal.name:
+        raise HTTPException(status_code=403, detail="Job belongs to another service")
+    return job
+
+
+def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
+    required = OPERATION_SCOPES.get(job.operation)
+    if required and "*" not in principal.scopes and required not in principal.scopes:
+        raise HTTPException(status_code=403, detail=f"Missing scope: {required}")
+
+
 @router.get("/{job_id}", response_model=JobOut)
 def get_job(
     job_id: str,
     principal: Principal = Depends(require_scope("jobs:read")),
     db: Session = Depends(get_db),
 ):
-    job = db.get(JobRecord, job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    if "*" not in principal.scopes and job.requested_by != principal.name:
-        raise HTTPException(status_code=403, detail="Job belongs to another service")
-    return serialize(job)
+    return serialize(_owned_job(db, job_id, principal))
 
 
 @router.get("", response_model=list[JobOut])
@@ -50,3 +77,72 @@ def list_jobs(
     if "*" not in principal.scopes:
         stmt = stmt.where(JobRecord.requested_by == principal.name)
     return [serialize(job) for job in db.scalars(stmt).all()]
+
+
+@router.post("/{job_id}/cancel", response_model=JobOut)
+def cancel_job(
+    job_id: str,
+    principal: Principal = Depends(require_scope("jobs:read")),
+    db: Session = Depends(get_db),
+):
+    job = _owned_job(db, job_id, principal)
+    if job.status not in {"queued", "running"}:
+        raise HTTPException(status_code=409, detail="Only queued or running jobs can be cancelled")
+    try:
+        if job.rq_job_id:
+            rq_job = RQJob.fetch(job.rq_job_id, connection=redis_conn)
+            if job.status == "running":
+                send_stop_job(redis_conn, rq_job.id)
+            else:
+                rq_job.cancel()
+    except Exception:
+        # The database remains authoritative even if the queue record has already disappeared.
+        pass
+    job.status = "cancelled"
+    job.progress = 100
+    job.error = "Cancelled by user"
+    job.finished_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(job)
+    audit_event("job.cancelled", principal.name, "job", job.id, {"operation": job.operation})
+    return serialize(job)
+
+
+@router.post("/{job_id}/retry", response_model=JobOut, status_code=202)
+def retry_job(
+    job_id: str,
+    principal: Principal = Depends(require_scope("jobs:read")),
+    db: Session = Depends(get_db),
+):
+    source = _owned_job(db, job_id, principal)
+    if source.status not in {"failed", "cancelled"}:
+        raise HTTPException(status_code=409, detail="Only failed or cancelled jobs can be retried")
+    _require_operation_scope(source, principal)
+    file_ids = json.loads(source.input_file_ids_json)
+    files = [db.get(FileRecord, file_id) for file_id in file_ids]
+    if any(file is None for file in files):
+        raise HTTPException(status_code=410, detail="One or more input files no longer exist")
+    if not principal.is_bootstrap_admin:
+        ensure_daily_job_quota(db, principal.name, principal.daily_job_limit)
+    job = JobRecord(
+        operation=source.operation,
+        input_file_ids_json=source.input_file_ids_json,
+        params_json=source.params_json,
+        requested_by=principal.name,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    try:
+        queued = pdf_queue.enqueue("app.worker_tasks.process_job", job.id, job_timeout=settings.rq_job_timeout_seconds, result_ttl=86400)
+        job.rq_job_id = queued.id
+        db.commit()
+    except Exception as exc:
+        job.status = "failed"
+        job.progress = 100
+        job.error = "Queue backend unavailable"
+        job.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        raise HTTPException(status_code=503, detail="Queue backend unavailable") from exc
+    audit_event("job.retried", principal.name, "job", job.id, {"source_job_id": source.id, "operation": job.operation})
+    return serialize(job)
