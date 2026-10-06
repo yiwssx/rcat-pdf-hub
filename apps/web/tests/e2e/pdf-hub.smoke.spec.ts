@@ -137,7 +137,7 @@ test("opens a Web Console session without exposing API-key login", async ({ page
   await page.goto("/");
 
   await expect(page.getByLabel("Service API Key")).toHaveCount(0);
-  await expect(page.getByText("Web Console")).toBeVisible();
+  await expect(page.getByLabel("เมนูบัญชี").getByText("Web Console")).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
   await expect(page.locator(".v3HomeTitle")).toContainText("จัดการเอกสารของคุณ");
   await expect(page.locator(".welcomeHero")).toHaveCount(0);
