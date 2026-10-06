@@ -155,7 +155,7 @@ up-security:
 	docker compose --profile security up -d clamav
 
 up-observability:
-	docker compose --profile observability up -d prometheus otel-collector
+	docker compose --profile observability up -d alertmanager prometheus otel-collector
 
 up-archive:
 	docker compose --profile archive up -d paperless-db paperless
