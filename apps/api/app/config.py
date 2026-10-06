@@ -111,12 +111,14 @@ class Settings(BaseSettings):
     clamav_timeout_seconds: int = 30
     clamav_fail_closed: bool = True
 
-    # Queue / horizontal worker tuning. Phase 6 routes operations by workload
-    # class while the transitional worker listens to all three queues.
+    # Queue / horizontal worker tuning. Queue names are distinct and each
+    # workload class has an explicit execution timeout.
     rq_interactive_queue: str = "pdf-interactive"
     rq_queue: str = "pdf"
     rq_heavy_queue: str = "pdf-heavy"
-    rq_job_timeout_seconds: int = 1800
+    rq_interactive_job_timeout_seconds: int = Field(default=600, ge=60, le=7200)
+    rq_job_timeout_seconds: int = Field(default=1800, ge=60, le=14400)
+    rq_heavy_job_timeout_seconds: int = Field(default=3600, ge=60, le=21600)
 
     # Observability.
     prometheus_enabled: bool = True

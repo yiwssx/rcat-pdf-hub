@@ -114,7 +114,9 @@ services:
       PDFHUB_RQ_INTERACTIVE_QUEUE: ${PDFHUB_RQ_INTERACTIVE_QUEUE:-pdf-interactive}
       PDFHUB_RQ_QUEUE: ${PDFHUB_RQ_QUEUE:-pdf}
       PDFHUB_RQ_HEAVY_QUEUE: ${PDFHUB_RQ_HEAVY_QUEUE:-pdf-heavy}
+      PDFHUB_RQ_INTERACTIVE_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_INTERACTIVE_JOB_TIMEOUT_SECONDS:-600}
       PDFHUB_RQ_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_JOB_TIMEOUT_SECONDS:-1800}
+      PDFHUB_RQ_HEAVY_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_HEAVY_JOB_TIMEOUT_SECONDS:-3600}
       PDFHUB_PROMETHEUS_ENABLED: ${PDFHUB_PROMETHEUS_ENABLED:-true}
       PDFHUB_OTEL_ENDPOINT: ${PDFHUB_OTEL_ENDPOINT:-}
       PDFHUB_OTEL_SERVICE_NAME: ${PDFHUB_OTEL_SERVICE_NAME:-rcat-pdf-hub-api}
@@ -139,9 +141,41 @@ services:
       retries: 10
     restart: unless-stopped
 
+  worker-interactive:
+    build: ./apps/api
+    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_INTERACTIVE_QUEUE\""]
+    environment: *api-env
+    volumes:
+      - pdf_data:/data
+      - ${PDFHUB_NAS_PATH:-./data/nas-placeholder}:/mnt/pdfhub-nas
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    restart: unless-stopped
+
   worker:
     build: ./apps/api
-    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_INTERACTIVE_QUEUE\" \"$$PDFHUB_RQ_QUEUE\" \"$$PDFHUB_RQ_HEAVY_QUEUE\""]
+    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_QUEUE\""]
+    environment: *api-env
+    volumes:
+      - pdf_data:/data
+      - ${PDFHUB_NAS_PATH:-./data/nas-placeholder}:/mnt/pdfhub-nas
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    restart: unless-stopped
+
+  worker-heavy:
+    build: ./apps/api
+    command: ["sh", "-c", "exec rq worker --url \"$$PDFHUB_REDIS_URL\" \"$$PDFHUB_RQ_HEAVY_QUEUE\""]
     environment: *api-env
     volumes:
       - pdf_data:/data

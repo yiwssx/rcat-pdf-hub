@@ -213,7 +213,7 @@ for marker in (
     "PDFHUB_PUBLIC_BIND_HOST:?set PDFHUB_PUBLIC_BIND_HOST",
 ):
     assert marker in prod_compose, f"Production hardening override missing: {marker}"
-for service in ("api:", "worker:", "cleanup:", "webhook:", "web:"):
+for service in ("api:", "worker-interactive:", "worker:", "worker-heavy:", "cleanup:", "webhook:", "web:"):
     assert service in prod_compose, f"Production hardening missing application service: {service}"
 assert "max-size: ${PDFHUB_LOG_MAX_SIZE:-10m}" in prod_compose
 assert 'max-file: "${PDFHUB_LOG_MAX_FILES:-5}"' in prod_compose
@@ -240,9 +240,12 @@ for marker in (
     "PDFHUB_RQ_INTERACTIVE_QUEUE: ${PDFHUB_RQ_INTERACTIVE_QUEUE:-pdf-interactive}",
     "PDFHUB_RQ_QUEUE: ${PDFHUB_RQ_QUEUE:-pdf}",
     "PDFHUB_RQ_HEAVY_QUEUE: ${PDFHUB_RQ_HEAVY_QUEUE:-pdf-heavy}",
-    '$$PDFHUB_RQ_INTERACTIVE_QUEUE',
-    '$$PDFHUB_RQ_QUEUE',
-    '$$PDFHUB_RQ_HEAVY_QUEUE',
+    "PDFHUB_RQ_INTERACTIVE_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_INTERACTIVE_JOB_TIMEOUT_SECONDS:-600}",
+    "PDFHUB_RQ_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_JOB_TIMEOUT_SECONDS:-1800}",
+    "PDFHUB_RQ_HEAVY_JOB_TIMEOUT_SECONDS: ${PDFHUB_RQ_HEAVY_JOB_TIMEOUT_SECONDS:-3600}",
+    '$PDFHUB_RQ_INTERACTIVE_QUEUE',
+    '$PDFHUB_RQ_QUEUE',
+    '$PDFHUB_RQ_HEAVY_QUEUE',
 ):
     assert marker in compose, f"Queue routing Compose baseline missing: {marker}"
 assert "PDFHUB_DOWNLOAD_SIGNING_SECRET" in compose
@@ -263,6 +266,9 @@ for marker in (
     "PDFHUB_RQ_INTERACTIVE_QUEUE=pdf-interactive",
     "PDFHUB_RQ_QUEUE=pdf",
     "PDFHUB_RQ_HEAVY_QUEUE=pdf-heavy",
+    "PDFHUB_RQ_INTERACTIVE_JOB_TIMEOUT_SECONDS=600",
+    "PDFHUB_RQ_JOB_TIMEOUT_SECONDS=1800",
+    "PDFHUB_RQ_HEAVY_JOB_TIMEOUT_SECONDS=3600",
 ):
     assert marker in env_example, f"Queue routing environment baseline missing: {marker}"
 
@@ -319,18 +325,30 @@ for marker in (
     "PDF_OPERATIONS",
     "HEAVY_OPERATIONS",
     "queue_class_for_operation",
+    "queue_timeout_for_operation",
     "enqueue_processing_job",
     "Unsupported PDF operation for queue routing",
 ):
     assert marker in queue_module, f"Queue routing module missing: {marker}"
 assert (ROOT / "apps/api/tests/test_queue_routing.py").exists(), "Missing queue routing regression tests"
 assert (ROOT / "docs/adr/0002-job-queue-classes.md").exists(), "Missing queue routing ADR"
+assert (ROOT / "docs/adr/0003-dedicated-worker-pools.md").exists(), "Missing dedicated worker-pool ADR"
 pdf_router = read("apps/api/app/routers/pdf.py")
 jobs_router = read("apps/api/app/routers/jobs.py")
 assert "enqueue_processing_job(operation, job.id)" in pdf_router
 assert "enqueue_processing_job(job.operation, job.id)" in jobs_router
 assert "pdf_queue.enqueue(" not in pdf_router
 assert "pdf_queue.enqueue(" not in jobs_router
+for service, queue_var in (
+    ("worker-interactive", "PDFHUB_RQ_INTERACTIVE_QUEUE"),
+    ("worker", "PDFHUB_RQ_QUEUE"),
+    ("worker-heavy", "PDFHUB_RQ_HEAVY_QUEUE"),
+):
+    assert f"  {service}:" in compose, f"Missing dedicated worker service: {service}"
+    assert f"${queue_var}" in compose, f"{service} queue variable missing from Compose"
+nas_compose = read("docker-compose.nas.yml")
+for service in ("worker-interactive:", "worker:", "worker-heavy:"):
+    assert service in nas_compose, f"NAS override missing worker pool: {service}"
 
 # Phase 4 feature components remain part of the production foundation.
 for required in (
@@ -368,6 +386,8 @@ assert "docker-compose.prod.yml" in backup
 assert "docker-compose.prod.yml" in restore
 assert "pg_dump" in backup and "SHA256SUMS" in backup and "PDFHUB_STORAGE_BACKEND" in backup
 assert "PDFHUB_RESTORE_CONFIRM" in restore and "pg_restore" in restore and "FLUSHDB" in restore
+for service in ("worker-interactive", "worker", "worker-heavy"):
+    assert service in restore, f"Restore lifecycle missing worker pool: {service}"
 assert "sha256sum -c SHA256SUMS" in verify_backup and "PGDMP" in verify_backup
 
 # Zero-cost validation must cover code, browser behavior, operations and the real Compose stack.
@@ -376,6 +396,7 @@ for required in (
     "scripts/check-python-security-dependency.py",
     "scripts/check-python-lock.py",
     "scripts/check-production-network.py",
+    "scripts/check-worker-pools.py",
     "scripts/compile-python-lock.sh",
     "scripts/supply-chain.sh",
     "scripts/validate-container-hardening.sh",
@@ -397,6 +418,7 @@ assert "PDFHUB_SESSION_COOKIE_SECURE=false" in validate_free
 assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true" in validate_free
 assert "validate-container-hardening.sh" in validate_free
 assert "check-production-network.py" in validate_free
+assert "check-worker-pools.py" in validate_free
 assert "PDFHUB_PUBLIC_BIND_HOST=127.0.0.1" in validate_free
 assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
@@ -407,8 +429,10 @@ assert "Pillow==" not in validate_free, "Dependency policy must not be duplicate
 
 makefile = read("Makefile")
 assert "lock-python:" in makefile and "scripts/compile-python-lock.sh" in makefile
-for target in ("up-prod:", "up-prod-nas:", "down-prod:", "prod-config:"):
-    assert target in makefile, f"Missing production Compose target: {target}"
+for target in ("up-prod:", "up-prod-nas:", "down-prod:", "prod-config:", "scale-workers:", "scale-prod-workers:"):
+    assert target in makefile, f"Missing production/worker Compose target: {target}"
+for marker in ("worker-interactive=$${INTERACTIVE_WORKERS:-2}", "worker=$${PDF_WORKERS:-2}", "worker-heavy=$${HEAVY_WORKERS:-1}"):
+    assert marker in makefile, f"Worker scaling policy missing: {marker}"
 for target in ("validate-supply-chain-source:", "validate-supply-chain-images:", "validate-supply-chain:"):
     assert target in makefile, f"Missing supply-chain Make target: {target}"
 
@@ -426,6 +450,17 @@ for marker in (
     assert marker in supply_chain, f"Supply-chain gate missing policy marker: {marker}"
 assert "artifacts/" in read(".gitignore"), "Generated supply-chain artifacts must stay untracked"
 assert (ROOT / "docs/security/supply-chain-policy.md").exists(), "Missing supply-chain policy documentation"
+
+worker_pool_check = read("scripts/check-worker-pools.py")
+for marker in (
+    "worker-interactive",
+    "worker-heavy",
+    "PDFHUB_RQ_INTERACTIVE_QUEUE",
+    "PDFHUB_RQ_QUEUE",
+    "PDFHUB_RQ_HEAVY_QUEUE",
+    "worker pool policy: PASS",
+):
+    assert marker in worker_pool_check, f"Worker-pool validator missing: {marker}"
 
 network_check = read("scripts/check-production-network.py")
 for marker in (

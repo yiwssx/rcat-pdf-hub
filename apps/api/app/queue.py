@@ -36,7 +36,7 @@ redis_conn = Redis.from_url(settings.redis_url)
 interactive_queue = Queue(
     settings.rq_interactive_queue,
     connection=redis_conn,
-    default_timeout=settings.rq_job_timeout_seconds,
+    default_timeout=settings.rq_interactive_job_timeout_seconds,
 )
 pdf_queue = Queue(
     settings.rq_queue,
@@ -46,7 +46,7 @@ pdf_queue = Queue(
 heavy_queue = Queue(
     settings.rq_heavy_queue,
     connection=redis_conn,
-    default_timeout=settings.rq_job_timeout_seconds,
+    default_timeout=settings.rq_heavy_job_timeout_seconds,
 )
 
 
@@ -69,6 +69,15 @@ def queue_name_for_operation(operation: str) -> str:
     }[queue_class]
 
 
+def queue_timeout_for_operation(operation: str) -> int:
+    queue_class = queue_class_for_operation(operation)
+    return {
+        "interactive": settings.rq_interactive_job_timeout_seconds,
+        "pdf": settings.rq_job_timeout_seconds,
+        "heavy": settings.rq_heavy_job_timeout_seconds,
+    }[queue_class]
+
+
 def queue_for_operation(operation: str) -> Queue:
     queue_name = queue_name_for_operation(operation)
     return {
@@ -87,7 +96,7 @@ def enqueue_processing_job(operation: str, job_id: str) -> tuple[Queue, RQJob]:
     queued = queue.enqueue(
         "app.worker_tasks.process_job",
         job_id,
-        job_timeout=settings.rq_job_timeout_seconds,
+        job_timeout=queue_timeout_for_operation(operation),
         result_ttl=86400,
     )
     return queue, queued

@@ -1,4 +1,4 @@
-.PHONY: up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -135,7 +135,18 @@ migrate:
 	docker compose run --rm api python -c 'from app.migrate import run_migrations; run_migrations()'
 
 scale-workers:
-	docker compose up -d --scale worker=$${WORKERS:-4} worker
+	docker compose up -d \
+		--scale worker-interactive=$${INTERACTIVE_WORKERS:-2} \
+		--scale worker=$${PDF_WORKERS:-2} \
+		--scale worker-heavy=$${HEAVY_WORKERS:-1} \
+		worker-interactive worker worker-heavy
+
+scale-prod-workers:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d \
+		--scale worker-interactive=$${INTERACTIVE_WORKERS:-2} \
+		--scale worker=$${PDF_WORKERS:-2} \
+		--scale worker-heavy=$${HEAVY_WORKERS:-1} \
+		worker-interactive worker worker-heavy
 
 up-s3:
 	docker compose --profile s3 up -d seaweedfs

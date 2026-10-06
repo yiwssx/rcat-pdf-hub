@@ -82,7 +82,9 @@ make validate-free
 
 Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.
 
-The base Compose worker is intentionally transitional during 6C.1 and listens to `PDFHUB_RQ_INTERACTIVE_QUEUE`, `PDFHUB_RQ_QUEUE`, and `PDFHUB_RQ_HEAVY_QUEUE`. Dedicated worker pools are introduced separately in 6C.2.
+Task 6C.2 runs three independent worker services. `scripts/check-worker-pools.py` validates rendered Compose JSON and fails unless each pool consumes exactly one queue. Runtime validation starts all pools and applies the same hardening/network checks to each.
+
+Queue execution timeouts are class-specific: interactive 600 seconds, standard PDF 1800 seconds, and heavy 3600 seconds by default. Scaling is independent through `make scale-workers` or `make scale-prod-workers`.
 
 ## Direct npm dependency validation
 

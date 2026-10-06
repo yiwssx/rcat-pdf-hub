@@ -5,6 +5,7 @@ from app.queue import (
     enqueue_processing_job,
     queue_class_for_operation,
     queue_name_for_operation,
+    queue_timeout_for_operation,
 )
 
 
@@ -45,6 +46,16 @@ def test_queue_name_uses_configured_class_queue(monkeypatch):
     assert queue_name_for_operation("ocr") == "heavy-test"
 
 
+def test_queue_timeouts_follow_workload_class(monkeypatch):
+    monkeypatch.setattr("app.queue.settings.rq_interactive_job_timeout_seconds", 300)
+    monkeypatch.setattr("app.queue.settings.rq_job_timeout_seconds", 1200)
+    monkeypatch.setattr("app.queue.settings.rq_heavy_job_timeout_seconds", 5400)
+
+    assert queue_timeout_for_operation("rotate") == 300
+    assert queue_timeout_for_operation("merge") == 1200
+    assert queue_timeout_for_operation("ocr") == 5400
+
+
 def test_enqueue_processing_job_uses_selected_queue(monkeypatch):
     calls: list[tuple[str, tuple, dict]] = []
 
@@ -57,6 +68,7 @@ def test_enqueue_processing_job_uses_selected_queue(monkeypatch):
 
     fake_queue = FakeQueue()
     monkeypatch.setattr("app.queue.queue_for_operation", lambda operation: fake_queue)
+    monkeypatch.setattr("app.queue.settings.rq_heavy_job_timeout_seconds", 3600)
 
     queue, queued = enqueue_processing_job("ocr", "job-123")
 
@@ -66,7 +78,7 @@ def test_enqueue_processing_job_uses_selected_queue(monkeypatch):
         (
             "app.worker_tasks.process_job",
             ("job-123",),
-            {"job_timeout": 1800, "result_ttl": 86400},
+            {"job_timeout": 3600, "result_ttl": 86400},
         )
     ]
 

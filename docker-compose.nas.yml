@@ -2,7 +2,13 @@ services:
   api:
     volumes:
       - ${PDFHUB_NAS_PATH:?set PDFHUB_NAS_PATH}:/data
+  worker-interactive:
+    volumes:
+      - ${PDFHUB_NAS_PATH:?set PDFHUB_NAS_PATH}:/data
   worker:
+    volumes:
+      - ${PDFHUB_NAS_PATH:?set PDFHUB_NAS_PATH}:/data
+  worker-heavy:
     volumes:
       - ${PDFHUB_NAS_PATH:?set PDFHUB_NAS_PATH}:/data
   cleanup:

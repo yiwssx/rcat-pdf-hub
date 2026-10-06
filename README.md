@@ -268,9 +268,17 @@ Phase 6 classifies asynchronous document work before dedicated worker pools are 
 - `pdf`: merge, compression, images-to-PDF
 - `pdf-heavy`: OCR, PDF/A, Office conversion, PDF-to-images
 
-The API routes new jobs and retries through the same central policy in `app.queue`. Unknown operation names fail closed. During Task 6C.1 the existing worker consumes all three queues so no job class is left unserved; Task 6C.2 separates these into dedicated worker pools.
+The API routes new jobs and retries through the same central policy in `app.queue`. Unknown operation names fail closed. Each workload queue now has a dedicated RQ worker pool, so heavy OCR/Office work cannot consume the worker process reserved for interactive jobs.
 
-See `docs/adr/0002-job-queue-classes.md`.
+Default execution timeouts are 10 minutes for interactive work, 30 minutes for standard PDF work, and 60 minutes for heavy work. Scale the pools independently:
+
+```bash
+INTERACTIVE_WORKERS=2 PDF_WORKERS=2 HEAVY_WORKERS=1 make scale-workers
+# Production overlay:
+INTERACTIVE_WORKERS=2 PDF_WORKERS=2 HEAVY_WORKERS=1 make scale-prod-workers
+```
+
+See `docs/adr/0002-job-queue-classes.md` and `docs/adr/0003-dedicated-worker-pools.md`.
 
 ## Optional self-hosted profiles
 
