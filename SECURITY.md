@@ -28,6 +28,15 @@ RCAT PDF Hub processes untrusted document uploads. Treat the processing plane as
 
 Webhook URLs are administrator-controlled and must match `PDFHUB_WEBHOOK_ALLOWED_HOSTS`. URLs containing credentials are rejected. Network-level egress filtering is still recommended because DNS can change after validation.
 
+## Software supply chain
+
+- Frontend dependencies are installed from the committed npm lockfile with `npm ci`.
+- Python runtime/test dependencies are installed from a committed hash-pinned lock with `pip --require-hashes`.
+- `scripts/supply-chain.sh` uses pinned Trivy `0.75.0` to generate CycloneDX SBOMs and vulnerability reports for source dependencies and production images.
+- Fixable CRITICAL dependency/image vulnerabilities block the supply-chain gate. HIGH and unfixed CRITICAL findings remain visible for operator review.
+- Generated SBOM/vulnerability artifacts are written under `artifacts/supply-chain/` and are not committed.
+- See `docs/security/supply-chain-policy.md` for the exact release policy and commands.
+
 ## Reporting
 
 For a private institutional deployment, report suspected vulnerabilities to the repository owner through a private channel rather than opening an issue containing secrets, exploit payloads or sensitive document samples.
