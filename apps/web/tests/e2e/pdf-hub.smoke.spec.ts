@@ -72,7 +72,7 @@ async function installApiMocks(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/files?limit=100", async (route) => {
+  await page.route("**/api/v1/files?limit=200&offset=0", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ json: [initialFile] });
   });
