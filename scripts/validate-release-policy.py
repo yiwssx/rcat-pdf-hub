@@ -192,6 +192,14 @@ assert "RUN npm ci --no-audit --no-fund" in web_dockerfile
 assert "/usr/local/lib/node_modules/npm" in web_dockerfile and "/usr/local/bin/npm" in web_dockerfile, "Web runtime must strip npm build tooling from the final image"
 
 compose = read("docker-compose.yml")
+prod_compose = read("docker-compose.prod.yml")
+assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-true}" in prod_compose
+assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-false}" in prod_compose
+assert "max-size: ${PDFHUB_LOG_MAX_SIZE:-10m}" in prod_compose
+assert 'max-file: "${PDFHUB_LOG_MAX_FILES:-5}"' in prod_compose
+assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-false}" in compose
+assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-true}" in compose
+
 expected_images = {
     "postgres:18.6-bookworm",
     "valkey/valkey:8.1.9-alpine3.24",
@@ -295,7 +303,12 @@ for required in phase5_ops:
 
 backup = read("scripts/backup.sh")
 restore = read("scripts/restore.sh")
+install_backup = read("scripts/install-backup-user.sh")
 verify_backup = read("scripts/verify-backup.sh")
+for operator_script in (backup, restore, install_backup):
+    assert "default|nas|prod|prod-nas" in operator_script, "Operator Compose modes must include production variants"
+assert "docker-compose.prod.yml" in backup
+assert "docker-compose.prod.yml" in restore
 assert "pg_dump" in backup and "SHA256SUMS" in backup and "PDFHUB_STORAGE_BACKEND" in backup
 assert "PDFHUB_RESTORE_CONFIRM" in restore and "pg_restore" in restore and "FLUSHDB" in restore
 assert "sha256sum -c SHA256SUMS" in verify_backup and "PGDMP" in verify_backup
@@ -320,6 +333,7 @@ validate_free = read("scripts/validate-free.sh")
 assert "python3 scripts/validate-release-policy.py" in validate_free
 assert "operations()" in validate_free
 assert "npm run test:e2e:stack" in validate_free
+assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
 assert "check-python-lock.py" in validate_free
@@ -328,6 +342,8 @@ assert "Pillow==" not in validate_free, "Dependency policy must not be duplicate
 
 makefile = read("Makefile")
 assert "lock-python:" in makefile and "scripts/compile-python-lock.sh" in makefile
+for target in ("up-prod:", "up-prod-nas:", "down-prod:", "prod-config:"):
+    assert target in makefile, f"Missing production Compose target: {target}"
 for target in ("validate-supply-chain-source:", "validate-supply-chain-images:", "validate-supply-chain:"):
     assert target in makefile, f"Missing supply-chain Make target: {target}"
 
@@ -369,7 +385,7 @@ assert "skipping local dependency auto-merge while current main is failing" in l
 assert "gh auth status" in local_ci_install
 
 # User-facing defaults must not recommend known paid cloud services.
-for path in ("README.md", "PHASE3.md", "PHASE4.md", "PHASE5.md", "CHANGELOG.md", "VALIDATION.md", ".env.example", "docker-compose.yml"):
+for path in ("README.md", "PHASE3.md", "PHASE4.md", "PHASE5.md", "CHANGELOG.md", "VALIDATION.md", ".env.example", "docker-compose.yml", "docker-compose.prod.yml"):
     text = read(path)
     for term in ("AWS S3", "Grafana Cloud", "Entra ID", "Google Workspace OIDC"):
         assert term not in text, f"Paid-cloud reference {term!r} remains in {path}"

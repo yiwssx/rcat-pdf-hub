@@ -74,7 +74,7 @@ make validate-free
 
 `validate-e2e` runs Playwright Chromium against the UI with mocked API responses. Protected mocks require the correct `X-API-Key`, so authentication propagation regressions cannot produce a false green result.
 
-`validate-compose` validates default, all-profile and NAS Compose configurations.
+`validate-compose` validates development, all-profile, NAS, production, production-all-profile, and production+NAS Compose configurations.
 
 `validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview.
 
@@ -187,6 +187,20 @@ The source gate generates `artifacts/supply-chain/source.cdx.json`, vulnerabilit
 The blocking policy is deliberately narrow at this stage: **fixable CRITICAL** dependency/image vulnerabilities fail the gate. HIGH and unfixed CRITICAL findings remain reportable and require review. Phase 6B may promote specific container/configuration findings to blocking once the hardening baseline is implemented.
 
 Generated supply-chain artifacts are ignored by Git and are intended to be retained with release evidence.
+
+## Production Compose validation
+
+Production deployment is an explicit Compose overlay rather than a fork of the development stack:
+
+```bash
+make prod-config
+make up-prod
+make up-prod-nas
+```
+
+`docker-compose.prod.yml` is always combined with the base file. It supplies production-mode authentication defaults and bounded Docker log retention while leaving runtime privilege/resource hardening and network segmentation to Tasks 6B.2 and 6B.3.
+
+Operator backup/restore scripts accept `PDFHUB_COMPOSE_MODE=prod` and `PDFHUB_COMPOSE_MODE=prod-nas` so backup metadata records the actual deployment shape.
 
 ## Phase 5 operational validation
 

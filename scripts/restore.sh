@@ -15,7 +15,7 @@ if [ "${PDFHUB_RESTORE_CONFIRM:-}" != "YES" ]; then
   echo "Restore is destructive. Set PDFHUB_RESTORE_CONFIRM=YES to continue." >&2
   exit 2
 fi
-case "${COMPOSE_MODE}" in default|nas) ;; *) echo "PDFHUB_COMPOSE_MODE must be default or nas" >&2; exit 2 ;; esac
+case "${COMPOSE_MODE}" in default|nas|prod|prod-nas) ;; *) echo "PDFHUB_COMPOSE_MODE must be default, nas, prod, or prod-nas" >&2; exit 2 ;; esac
 
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
@@ -25,7 +25,11 @@ need curl
 
 dc() {
   local args=()
-  if [ "${COMPOSE_MODE}" = "nas" ]; then args+=(-f docker-compose.yml -f docker-compose.nas.yml); fi
+  case "${COMPOSE_MODE}" in
+    nas) args+=(-f docker-compose.yml -f docker-compose.nas.yml) ;;
+    prod) args+=(-f docker-compose.yml -f docker-compose.prod.yml) ;;
+    prod-nas) args+=(-f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml) ;;
+  esac
   if [ -n "${PROJECT}" ]; then args+=(-p "${PROJECT}"); fi
   docker compose "${args[@]}" "$@"
 }
