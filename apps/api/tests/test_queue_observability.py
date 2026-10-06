@@ -8,10 +8,12 @@ from app.observability import (
     JOB_DURATION_SUM_KEY,
     JOB_EVENTS_CUMULATIVE,
     JOB_EVENTS_KEY,
+    STORAGE_BYTES,
     collect_queue_runtime_snapshot,
     record_job,
     record_job_duration,
     refresh_distributed_job_metrics,
+    refresh_storage_metrics,
 )
 
 
@@ -152,3 +154,28 @@ def test_refresh_distributed_job_metrics_clears_stale_redis_series(monkeypatch):
     assert JOB_EVENTS_CUMULATIVE.collect()[0].samples == []
     assert JOB_DURATION_SUM_CUMULATIVE.collect()[0].samples == []
     assert JOB_DURATION_COUNT_CUMULATIVE.collect()[0].samples == []
+
+
+def test_refresh_storage_metrics_reports_total_used_and_free(monkeypatch):
+    usage = SimpleNamespace(total=1_000_000, used=400_000, free=600_000)
+    monkeypatch.setattr("app.observability.shutil.disk_usage", lambda _path: usage)
+
+    snapshot = refresh_storage_metrics()
+
+    assert snapshot == {"total": 1_000_000, "used": 400_000, "free": 600_000}
+    samples = STORAGE_BYTES.collect()[0].samples
+    values = {sample.labels["kind"]: sample.value for sample in samples}
+    assert values == {
+        "total": 1_000_000.0,
+        "used": 400_000.0,
+        "free": 600_000.0,
+    }
+
+
+def test_refresh_storage_metrics_is_non_fatal_when_disk_usage_fails(monkeypatch):
+    def fail(_path):
+        raise OSError("storage unavailable")
+
+    monkeypatch.setattr("app.observability.shutil.disk_usage", fail)
+
+    assert refresh_storage_metrics() == {}
