@@ -136,16 +136,16 @@ migrate:
 
 scale-workers:
 	docker compose up -d \
-		--scale worker-interactive=${INTERACTIVE_WORKERS:-2} \
-		--scale worker=${PDF_WORKERS:-2} \
-		--scale worker-heavy=${HEAVY_WORKERS:-1} \
+		--scale worker-interactive=$${INTERACTIVE_WORKERS:-2} \
+		--scale worker=$${PDF_WORKERS:-2} \
+		--scale worker-heavy=$${HEAVY_WORKERS:-1} \
 		worker-interactive worker worker-heavy
 
 scale-prod-workers:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d \
-		--scale worker-interactive=${INTERACTIVE_WORKERS:-2} \
-		--scale worker=${PDF_WORKERS:-2} \
-		--scale worker-heavy=${HEAVY_WORKERS:-1} \
+		--scale worker-interactive=$${INTERACTIVE_WORKERS:-2} \
+		--scale worker=$${PDF_WORKERS:-2} \
+		--scale worker-heavy=$${HEAVY_WORKERS:-1} \
 		worker-interactive worker worker-heavy
 
 up-s3:
