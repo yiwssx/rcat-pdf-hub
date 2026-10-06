@@ -7,7 +7,7 @@ RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hos
 - Standard application PRs use full `make validate-free` on institution-owned/local Linux hardware.
 - GitHub-hosted Actions are limited to two guarded Dependabot workflows in this public repository: one npm patch lane and one Python security-validation lane.
 - The narrow Dependabot npm auto-merge lane requires `apps/web/package.json` and `apps/web/package-lock.json` to move together for a bot-only direct forward patch update, then revalidates the exact base/head before squash merge.
-- A Dependabot Python security PR that changes exactly one existing exact pin in `apps/api/requirements.txt` is validated by full `make validate-free` on a read-only hosted runner. The workflow materializes only the verified requirements manifest onto trusted base code and never auto-merges.
+- A Dependabot Python security PR may advance exactly one existing direct pin in `apps/api/requirements.txt`. The matching `apps/api/requirements.lock` must be regenerated and synchronized before the full zero-cost gate can pass; the hosted lane remains read-only and never auto-merges.
 - Any other nonstandard/security dependency PR remains owned by the local full-validation lane and is never auto-merged.
 - Direct npm dependency patches must pass typecheck, production build and Playwright browser smoke before merge.
 - `apps/web/package-lock.json` is committed as the reproducible frontend dependency graph; CI, Docker builds, local validation and dependency validation use `npm ci` and verify the manifest/lockfile are not mutated.
@@ -65,7 +65,7 @@ make validate-free
 
 `validate-ops` syntax-checks backup/restore/DR/local-CI scripts and compiles Python operator tooling.
 
-`validate-backend` creates a clean Python 3.12 environment, installs exact requirements, treats warnings as errors, runs pytest and validates fresh/adopted Alembic migration paths.
+`validate-backend` first validates the direct manifest against the committed transitive lock, installs `apps/api/requirements.lock` with `--require-hashes`, treats warnings as errors, runs pytest and validates fresh/adopted Alembic migration paths.
 
 `validate-frontend` performs a warning-free `npm ci` from the committed lockfile, TypeScript typecheck and production Next.js build while ensuring package metadata and the lockfile are not mutated.
 
@@ -92,18 +92,43 @@ The gate rejects:
 
 An eligible patch must keep the lockfile root manifest synchronized with `package.json` and still pass `npm ci`, typecheck, production build and browser smoke.
 
+## Python dependency lock
+
+The reviewed direct dependency manifest remains:
+
+```text
+apps/api/requirements.txt
+```
+
+The production/test installation graph is committed separately as:
+
+```text
+apps/api/requirements.lock
+```
+
+The lock is generated with Python 3.12.14 and pinned `pip-tools==7.5.2`, and every locked distribution must have SHA-256 hashes.
+
+Refresh it after an approved direct dependency change:
+
+```bash
+make lock-python
+python3 scripts/check-python-lock.py
+```
+
+Docker builds and backend validation install from the lock with `pip --require-hashes`. A direct-manifest change with a stale lock intentionally fails validation.
+
 ## Python security dependency validation
 
 The hosted Python security lane is intentionally narrower than a normal full PR workflow. Before any PR-supplied dependency is installed, it checks that:
 
 - the author is `dependabot[bot]`
 - the base branch is `main`
-- the only changed file is `apps/api/requirements.txt`
+- changed files are limited to `apps/api/requirements.txt` and, when regenerated, `apps/api/requirements.lock`
 - exactly one existing `name[extras]==x.y.z` pin advances
 - no dependency name or extras set changes
 - the raw manifest diff contains only the verified removed and added pin
 
-The workflow then checks out trusted base code, materializes only the verified `requirements.txt`, sets up Python 3.12 and Node 24, and runs `make validate-free`. It has `contents: read` only and contains no merge job.
+The workflow then checks out trusted base code, materializes only the verified requirements state, sets up Python 3.12 and Node 24, and runs `make validate-free`. If the lock is absent or stale, validation fails until it is regenerated. The workflow has `contents: read` only and contains no merge job.
 
 ## Local CI
 

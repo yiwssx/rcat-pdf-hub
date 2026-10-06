@@ -72,7 +72,7 @@ assert "pull-requests: write" not in web_ci_workflow
 assert "pull_request_target:" not in web_ci_workflow
 
 core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
-for required in ("pull_request:", "contents: read", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
+for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
     assert required in core_api_ci_workflow, f"Core API CI workflow missing guard: {required}"
 assert "contents: write" not in core_api_ci_workflow
 assert "pull-requests: write" not in core_api_ci_workflow
@@ -96,10 +96,11 @@ assert "pull_request_target:" not in dependency_workflow, "Dependabot npm workfl
 python_security_workflow = read(".github/workflows/dependabot-python-security.yml")
 for required in (
     "pull_request:",
-    "paths:\n      - 'apps/api/requirements.txt'",
+    "paths:\n      - 'apps/api/requirements.txt'\n      - 'apps/api/requirements.lock'",
     "github.event.pull_request.user.login == 'dependabot[bot]'",
     "contents: read",
     "check-python-security-dependency.py",
+    "apps/api/requirements.lock",
     "make validate-free",
 ):
     assert required in python_security_workflow, f"Dependabot Python security workflow missing guard: {required}"
@@ -164,6 +165,17 @@ for protected_flow in ("integrations/status", "files?limit=200&offset=0", "jobs?
 
 # Runtime/container baselines are intentionally frozen and changed only by explicit developer review.
 requirements = read("apps/api/requirements.txt")
+python_lock = read("apps/api/requirements.lock")
+assert "--hash=sha256:" in python_lock, "Python dependency lock must include SHA-256 hashes"
+for raw in requirements.splitlines():
+    line = raw.strip()
+    if not line or line.startswith("#"):
+        continue
+    assert "==" in line, f"Direct Python dependency must be exactly pinned: {line}"
+    requirement, version = line.split("==", 1)
+    name = requirement.split("[", 1)[0]
+    pattern = rf"(?mi)^{re.escape(name)}=={re.escape(version)}(?:\s+\\)?$"
+    assert re.search(pattern, python_lock), f"Python lock is missing direct pin {line}"
 pillow_version = pinned_requirement_version(requirements, "Pillow")
 assert PILLOW_MIN <= pillow_version < PILLOW_MAX_EXCLUSIVE, (
     f"Pillow must remain on the reviewed secure 12.x line >= {'.'.join(map(str, PILLOW_MIN))}; "
@@ -172,6 +184,8 @@ assert PILLOW_MIN <= pillow_version < PILLOW_MAX_EXCLUSIVE, (
 api_dockerfile = read("apps/api/Dockerfile")
 web_dockerfile = read("apps/web/Dockerfile")
 assert api_dockerfile.startswith("FROM python:3.12.14-slim-bookworm\n")
+assert "COPY requirements.txt requirements.lock ./" in api_dockerfile
+assert "pip install --no-cache-dir --require-hashes -r requirements.lock" in api_dockerfile
 assert web_dockerfile.count("FROM node:24.19.0-alpine3.24") == 3
 assert "COPY package.json package-lock.json ./" in web_dockerfile
 assert "RUN npm ci --no-audit --no-fund" in web_dockerfile
@@ -289,6 +303,8 @@ assert "sha256sum -c SHA256SUMS" in verify_backup and "PGDMP" in verify_backup
 for required in (
     "scripts/check-direct-dependency.py",
     "scripts/check-python-security-dependency.py",
+    "scripts/check-python-lock.py",
+    "scripts/compile-python-lock.sh",
     "scripts/validate-free.sh",
     "scripts/validate-direct-dependency.sh",
     "scripts/local-ci-cycle.sh",
@@ -304,7 +320,12 @@ assert "operations()" in validate_free
 assert "npm run test:e2e:stack" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
+assert "check-python-lock.py" in validate_free
+assert "--require-hashes -r apps/api/requirements.lock" in validate_free
 assert "Pillow==" not in validate_free, "Dependency policy must not be duplicated in validate-free.sh"
+
+makefile = read("Makefile")
+assert "lock-python:" in makefile and "scripts/compile-python-lock.sh" in makefile
 
 validate_direct = read("scripts/validate-direct-dependency.sh")
 assert 'python3 scripts/check-direct-dependency.py "${BASE_REF}" HEAD' in validate_direct

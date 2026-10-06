@@ -60,14 +60,16 @@ operations() {
     scripts/backup.sh scripts/verify-backup.sh scripts/restore.sh scripts/dr-drill.sh \
     scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
     scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
-    scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh; do
+    scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh \
+    scripts/compile-python-lock.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
     scripts/load-smoke.py \
     scripts/validate-release-policy.py \
     scripts/check-direct-dependency.py \
-    scripts/check-python-security-dependency.py
+    scripts/check-python-security-dependency.py \
+    scripts/check-python-lock.py
   echo 'operations: PASS'
 }
 
@@ -79,7 +81,8 @@ backend() {
   python3 -m venv "${venv}"
   # shellcheck disable=SC1090
   source "${venv}/bin/activate"
-  python -m pip install --disable-pip-version-check -r apps/api/requirements.txt 2>&1 | tee "${log}"
+  python3 scripts/check-python-lock.py
+  python -m pip install --disable-pip-version-check --require-hashes -r apps/api/requirements.lock 2>&1 | tee "${log}"
   check_clean_log "${log}"
   python -m pip check
   python -W error -c 'import ldap3, pyasn1, PIL'

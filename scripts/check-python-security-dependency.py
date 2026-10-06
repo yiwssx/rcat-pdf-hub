@@ -7,6 +7,7 @@ import sys
 from dataclasses import dataclass
 
 TARGET = "apps/api/requirements.txt"
+LOCK_TARGET = "apps/api/requirements.lock"
 PIN_RE = re.compile(
     r"^(?P<name>[A-Za-z0-9_.-]+)(?P<extras>\[[A-Za-z0-9_,.-]+\])?==(?P<version>\d+\.\d+\.\d+)$"
 )
@@ -52,9 +53,13 @@ def main() -> None:
         raise SystemExit(f"usage: {sys.argv[0]} BASE_REF HEAD_REF")
 
     base, head = sys.argv[1:]
-    changed = [line for line in git("diff", "--name-only", base, head).splitlines() if line]
-    if changed != [TARGET]:
-        fail(f"security lane accepts exactly {TARGET}; changed: {', '.join(changed) or '(none)'}")
+    changed = {line for line in git("diff", "--name-only", base, head).splitlines() if line}
+    allowed = ({TARGET}, {TARGET, LOCK_TARGET})
+    if changed not in allowed:
+        fail(
+            "security lane accepts the direct manifest, optionally accompanied by its generated lock; "
+            f"changed: {', '.join(sorted(changed)) or '(none)'}"
+        )
 
     base_text = git("show", f"{base}:{TARGET}")
     head_text = git("show", f"{head}:{TARGET}")
@@ -83,7 +88,8 @@ def main() -> None:
     if removed != [before.raw] or added != [after.raw]:
         fail("requirements diff contains changes beyond the single verified exact pin")
 
-    print(f"python security dependency policy: PASS — {before.raw} -> {after.raw}")
+    lock_state = "lock supplied" if LOCK_TARGET in changed else "lock regeneration required"
+    print(f"python security dependency policy: PASS — {before.raw} -> {after.raw} ({lock_state})")
 
 
 if __name__ == "__main__":
