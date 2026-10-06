@@ -23,6 +23,10 @@ docker compose -p "${project}" --profile observability run --rm --no-deps \
   --entrypoint /bin/promtool prometheus \
   check config /etc/prometheus/prometheus.yml
 
+docker compose -p "${project}" --profile observability run --rm --no-deps \
+  --entrypoint /bin/amtool alertmanager \
+  check-config /etc/alertmanager/alertmanager.yml
+
 cleanup
 trap - EXIT
-echo "prometheus validation: PASS"
+echo "prometheus + alertmanager validation: PASS"
