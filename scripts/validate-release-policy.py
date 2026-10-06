@@ -240,9 +240,9 @@ for marker in (
     "PDFHUB_RQ_INTERACTIVE_QUEUE: ${PDFHUB_RQ_INTERACTIVE_QUEUE:-pdf-interactive}",
     "PDFHUB_RQ_QUEUE: ${PDFHUB_RQ_QUEUE:-pdf}",
     "PDFHUB_RQ_HEAVY_QUEUE: ${PDFHUB_RQ_HEAVY_QUEUE:-pdf-heavy}",
-    '$PDFHUB_RQ_INTERACTIVE_QUEUE',
-    '$PDFHUB_RQ_QUEUE',
-    '$PDFHUB_RQ_HEAVY_QUEUE',
+    '$$PDFHUB_RQ_INTERACTIVE_QUEUE',
+    '$$PDFHUB_RQ_QUEUE',
+    '$$PDFHUB_RQ_HEAVY_QUEUE',
 ):
     assert marker in compose, f"Queue routing Compose baseline missing: {marker}"
 assert "PDFHUB_DOWNLOAD_SIGNING_SECRET" in compose
