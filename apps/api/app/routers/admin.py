@@ -20,9 +20,11 @@ from app.schemas import (
     ApiKeyOut,
     ServicePolicyOut,
     ServicePolicyUpdate,
+    StorageReconciliationOut,
     WebhookDeliveryOut,
 )
 from app.security import Principal, hash_api_key, new_api_key, require_scope
+from app.storage_reconciliation import reconcile_storage
 from app.webhooks import derive_webhook_secret, retry_dead_webhook, validate_webhook_url
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
@@ -164,6 +166,15 @@ def admin_status(
         },
         "principal": principal.name,
     }
+
+
+@router.get("/storage-reconciliation", response_model=StorageReconciliationOut)
+def storage_reconciliation(
+    detail_limit: int = Query(default=200, ge=1, le=2000),
+    _: Principal = Depends(require_scope("admin:keys")),
+    db: Session = Depends(get_db),
+):
+    return reconcile_storage(db, detail_limit=detail_limit)
 
 
 @router.get("/api-keys", response_model=list[ApiKeyOut])

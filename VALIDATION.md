@@ -94,6 +94,8 @@ The backend migration gate applies these indexes on a fresh SQLite database as a
 
 Phase 6F.3 moves the dedicated `/files` screen to this paged contract. Search, kind, expiry, sort and page changes now issue server-side queries instead of filtering a preloaded browser array. The mocked Playwright gate verifies the query parameters and the UI-regression suite checks the paged controls on a narrow viewport.
 
+Phase 6F.4 adds the administrator-only `/api/v1/admin/storage-reconciliation` report. Backend tests exercise local/NAS-style directories and self-hosted S3 listings for missing objects, orphan objects, size mismatches and duplicate local names. The response always declares `dry_run: true`; there is no repair or delete endpoint in this phase.
+
 ## Queue routing validation
 
 Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.

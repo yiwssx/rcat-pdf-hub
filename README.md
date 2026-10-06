@@ -240,12 +240,15 @@ The plaintext API key (`pdfh_...`) is returned only once. The database stores on
 | GET / PUT | `/api/v1/admin/service-policies...` | `admin:keys` |
 | GET / POST | `/api/v1/admin/webhook-deliveries...` | `admin:keys` |
 | GET | `/api/v1/admin/audit` | `admin:keys` |
+| GET | `/api/v1/admin/storage-reconciliation` | `admin:keys` |
 
 For the most accurate schema, use Swagger at `/docs`.
 
 ## Storage
 
 Local storage is the default. NAS storage is supported through `docker-compose.nas.yml`.
+
+Phase 6 includes a read-only storage reconciliation report at `GET /api/v1/admin/storage-reconciliation`. It compares database file metadata with managed local/NAS or self-hosted S3 objects and reports missing objects, orphan objects, size mismatches, backend mismatches, and ambiguous duplicate local names. The endpoint is deliberately dry-run/report-only: it never deletes, repairs, or rewrites storage.
 
 S3-compatible mode requires an explicit `PDFHUB_S3_ENDPOINT_URL` to prevent unintended fallback to a commercial endpoint. A bundled self-hosted target is available:
 
