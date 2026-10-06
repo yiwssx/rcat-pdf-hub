@@ -200,7 +200,9 @@ make up-prod
 make up-prod-nas
 ```
 
-`docker-compose.prod.yml` is always combined with the base file. It supplies production-mode authentication defaults, bounded Docker log retention, and the Task 6B.2 runtime-hardening baseline. Application containers are read-only, drop all Linux capabilities, use `no-new-privileges`, and receive explicit writable `tmpfs` space plus PID/CPU/memory ceilings. Network segmentation remains Task 6B.3.
+`docker-compose.prod.yml` is always combined with the base file. It supplies production-mode authentication defaults, bounded Docker log retention, the Task 6B.2 runtime-hardening baseline, and the Task 6B.3 network boundary. Application containers are read-only, drop all Linux capabilities, use `no-new-privileges`, and receive explicit writable `tmpfs` space plus PID/CPU/memory ceilings.
+
+Production networking is split into `edge`, `app`, `data`, `management`, and `egress`. The app/data/management networks are Docker-internal, normal database/queue/conversion/application services publish no host ports, and Caddy binds only to the explicit `PDFHUB_PUBLIC_BIND_HOST`. The network policy is machine-checked from rendered Compose JSON.
 
 Operator backup/restore scripts accept `PDFHUB_COMPOSE_MODE=prod` and `PDFHUB_COMPOSE_MODE=prod-nas` so backup metadata records the actual deployment shape.
 
