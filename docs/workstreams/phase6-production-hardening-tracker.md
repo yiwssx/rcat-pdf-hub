@@ -68,7 +68,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6B.3 | Production network-boundary hardening | COMPLETE | PR #90; segmented-stack CI run 37454223063 |
 | 6C.1 | Queue classification/routing | COMPLETE | PR #91; Core API CI run 37455785181 |
 | 6C.2 | Dedicated lightweight/heavy worker pools | COMPLETE | PR #92; Core API CI run 37457608698 |
-| 6C.3 | Per-queue observability and alerts | PENDING | — |
+| 6C.3 | Per-queue observability and alerts | COMPLETE | PR #93; Core API CI run 37460370481 |
 | 6D.1 | Self-hosted Alertmanager integration | PENDING | — |
 | 6D.2 | Persistent OpenTelemetry trace backend | PENDING | — |
 | 6D.3 | Self-hosted operations dashboard | PENDING | — |
@@ -225,12 +225,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-06 | 6B.3 | Segmented production traffic into explicit edge/app/data/management/egress networks, made internal networks Docker-internal, required an explicit trusted Caddy bind, and machine-validated that internal services publish no host ports. The segmented core stack was started successfully and served health traffic through Caddy. | PR #90; segmented-stack CI run 37454223063 | COMPLETE |
 | 2026-10-06 | 6C.1 | Added centralized operation-to-queue classification for interactive, standard PDF, and heavy workloads; retries use the same router, queue names must be distinct, admin diagnostics expose per-queue depth, and the transitional worker listens to all three queues. | PR #91; Core API CI run 37455785181 | COMPLETE |
 | 2026-10-06 | 6C.2 | Replaced the transitional worker with dedicated interactive/standard/heavy RQ pools, added class-specific timeouts and asymmetric production resource ceilings, preserved NAS/restore lifecycle, and added independent scaling plus rendered-Compose pool validation. | PR #92; Core API CI run 37457608698 | COMPLETE |
+| 2026-10-06 | 6C.3 | Added workload-class queue depth, oldest-job age and worker-pool metrics plus Redis-backed cross-process job event/duration telemetry; added starvation, backlog, missing-pool, collection-health and queue-class failure alerts. Prometheus rule validation was added to the Core API gate. | PR #93; Core API CI run 37460370481 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6C.3 — Per-queue observability and alerts.**
+**Start Task 6D.1 — Self-hosted Alertmanager integration.**
 
-Expose queue depth, oldest-job age, worker availability, and job duration/failure metrics by workload class. Update Prometheus alert rules so interactive starvation, heavy backlog, missing worker pools, and repeated queue-specific failures are diagnosable without reading raw Redis/RQ state.
+Add a real self-hosted Alertmanager delivery path for the existing Prometheus alert rules, keep management endpoints private by default, and document/validate the operator configuration without introducing a paid-cloud dependency.
 
 ## Status update convention
 

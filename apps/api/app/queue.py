@@ -69,6 +69,18 @@ def queue_name_for_operation(operation: str) -> str:
     }[queue_class]
 
 
+def queue_class_for_name(queue_name: str) -> QueueClass:
+    mapping = {
+        settings.rq_interactive_queue: "interactive",
+        settings.rq_queue: "pdf",
+        settings.rq_heavy_queue: "heavy",
+    }
+    try:
+        return mapping[queue_name]
+    except KeyError as exc:
+        raise ValueError(f"Unknown processing queue: {queue_name}") from exc
+
+
 def queue_timeout_for_operation(operation: str) -> int:
     queue_class = queue_class_for_operation(operation)
     return {

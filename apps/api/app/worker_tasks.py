@@ -1,5 +1,6 @@
 import hashlib
 import json
+import time
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -11,7 +12,7 @@ from app.db import SessionLocal
 from app.integrations.paperless import archive_to_paperless
 from app.malware import MalwareDetected, scan_file
 from app.models import ArchiveRecord, FileRecord, JobRecord
-from app.observability import record_archive, record_job, record_malware
+from app.observability import record_archive, record_job, record_job_duration, record_malware
 from app.policy import effective_policy, ensure_storage_quota
 from app.services import pdf_tools
 from app.storage import (
@@ -112,6 +113,8 @@ def process_job(job_id: str) -> str:
     output = new_output_path(job.id, suffix=suffix)
     record_created = False
     stored_name: str | None = None
+    started_monotonic = time.perf_counter()
+    terminal_state: str | None = None
     try:
         _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
         record_job(job.operation, "running")
@@ -204,6 +207,8 @@ def process_job(job_id: str) -> str:
         db.refresh(job)
         if job.status == "cancelled":
             output.unlink(missing_ok=True)
+            terminal_state = "cancelled"
+            record_job(job.operation, "cancelled")
             audit_event("job.cancelled_before_commit", job.requested_by, "job", job.id, {"operation": job.operation})
             return ""
 
@@ -255,9 +260,11 @@ def process_job(job_id: str) -> str:
         except Exception:
             db.rollback()
         if job.status == "cancelled":
+            terminal_state = "cancelled"
             record_job(job.operation, "cancelled")
             audit_event("job.cancelled_worker_stop", job.requested_by, "job", job.id, {"operation": job.operation})
             return ""
+        terminal_state = "failed"
         record_job(job.operation, "failed")
         audit_event(
             "job.failed",
@@ -269,6 +276,7 @@ def process_job(job_id: str) -> str:
         _notify_job(db, job)
         raise
     else:
+        terminal_state = "completed"
         record_job(job.operation, "completed")
         audit_event(
             "job.completed",
@@ -287,4 +295,6 @@ def process_job(job_id: str) -> str:
         _notify_job(db, job)
         return record.id
     finally:
+        if terminal_state is not None:
+            record_job_duration(job.operation, terminal_state, time.perf_counter() - started_monotonic)
         db.close()

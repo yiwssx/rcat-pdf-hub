@@ -7,6 +7,7 @@ on:
       - "docker-compose*.yml"
       - ".env.example"
       - "scripts/**"
+      - "ops/prometheus/**"
       - "Makefile"
       - ".github/workflows/core-api-ci.yml"
   workflow_dispatch:
@@ -26,6 +27,8 @@ jobs:
         run: python3 scripts/check-python-lock.py
       - name: Validate Compose configurations
         run: make validate-compose
+      - name: Validate Prometheus configuration
+        run: make validate-observability
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
       - name: Run API tests

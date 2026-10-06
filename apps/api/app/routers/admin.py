@@ -11,8 +11,9 @@ from app.audit import audit_event, read_audit_events
 from app.config import get_settings
 from app.db import get_db
 from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy, WebhookDelivery
+from app.observability import collect_queue_runtime_snapshot
 from app.policy import effective_policy
-from app.queue import all_processing_queues, redis_conn
+from app.queue import redis_conn
 from app.schemas import (
     ApiKeyCreate,
     ApiKeyCreated,
@@ -23,7 +24,6 @@ from app.schemas import (
 )
 from app.security import Principal, hash_api_key, new_api_key, require_scope
 from app.webhooks import derive_webhook_secret, retry_dead_webhook, validate_webhook_url
-from rq import Worker
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 settings = get_settings()
@@ -112,18 +112,21 @@ def admin_status(
     except OSError:
         disk_data = {"total": 0, "used": 0, "free": 0}
 
-    try:
-        workers = len(Worker.all(connection=redis_conn))
-    except Exception:
-        workers = 0
     queue_depths: dict[str, int] = {}
+    worker_pools: dict[str, dict] = {}
     try:
-        for queue in all_processing_queues():
-            queue_depths[queue.name] = len(queue)
+        worker_pools = collect_queue_runtime_snapshot()
+        queue_depths = {
+            queue_name: int(values["depth"])
+            for queue_name, values in worker_pools.items()
+        }
         queue_depth = sum(queue_depths.values())
+        workers = sum(int(values["workers"]) for values in worker_pools.values())
     except Exception:
+        worker_pools = {}
         queue_depths = {}
         queue_depth = -1
+        workers = 0
 
     job_counts = {
         status: int(db.scalar(select(func.count()).select_from(JobRecord).where(JobRecord.status == status)) or 0)
@@ -139,6 +142,7 @@ def admin_status(
         "workers": workers,
         "queue_depth": queue_depth,
         "queue_depths": queue_depths,
+        "worker_pools": worker_pools,
         "storage_backend": settings.storage_backend,
         "storage_write_ok": storage_write_ok,
         "gotenberg_ok": gotenberg_ok,
