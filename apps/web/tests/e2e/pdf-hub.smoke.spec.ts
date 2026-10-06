@@ -186,7 +186,7 @@ test("propagates the session through preview, job drawer, download and upload", 
   await page.getByRole("button", { name: /กลับ/ }).click();
   await page.locator("#files").setInputFiles({ name: "scan.png", mimeType: "image/png", buffer: Buffer.from([1, 2, 3]) });
   await expect(page.locator("#workspace-target")).toBeVisible();
-  await expect(page.getByText("scan.png", { exact: true })).toBeVisible();
+  await expect(page.locator("#workspace-target strong")).toHaveText("scan.png");
 });
 
 test("files is a dedicated route instead of a section in the home page", async ({ page }) => {
