@@ -46,7 +46,7 @@ def test_cookie_session_authentication(monkeypatch):
         "name": "user:teacher",
         "subject": "teacher-1",
         "display_name": "Teacher",
-        "groups": ["teachers"],
+        "groups": ["pdfhub-users"],
         "roles": ["operator"],
         "scopes": ["files:read"],
         "source": "oidc",

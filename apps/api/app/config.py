@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     session_ttl_minutes: int = 480
     session_cookie_secure: bool = False
     human_scopes: str = DEFAULT_HUMAN_SCOPES
+    viewer_groups: str = "pdfhub-viewers"
+    operator_groups: str = "pdfhub-users"
     admin_groups: str = "pdfhub-admins"
     local_admin_username: str = "admin"
     local_admin_password_hash: str = ""
@@ -145,6 +147,22 @@ class Settings(BaseSettings):
                 raise ValueError(f"OIDC enabled but missing: {', '.join(missing)}")
         if self.ldap_enabled and not (self.ldap_user_dn_template or self.ldap_base_dn):
             raise ValueError("LDAP enabled but neither LDAP_USER_DN_TEMPLATE nor LDAP_BASE_DN is configured")
+        role_groups = {
+            "viewer": self.viewer_group_set,
+            "operator": self.operator_group_set,
+            "admin": self.admin_group_set,
+        }
+        seen: dict[str, str] = {}
+        for role, groups in role_groups.items():
+            for group in groups:
+                normalized = group.casefold()
+                if normalized in seen:
+                    raise ValueError(
+                        f"Human group {group!r} is mapped to both {seen[normalized]!r} and {role!r}"
+                    )
+                seen[normalized] = role
+        if (self.oidc_enabled or self.ldap_enabled) and not seen:
+            raise ValueError("OIDC/LDAP enabled but no human role groups are configured")
         if self.storage_backend == "s3":
             missing = [
                 name for name, value in (
@@ -183,8 +201,24 @@ class Settings(BaseSettings):
         return {x.strip() for x in self.human_scopes.split(",") if x.strip()}
 
     @property
+    def viewer_group_set(self) -> set[str]:
+        return {x.strip() for x in self.viewer_groups.split(",") if x.strip()}
+
+    @property
+    def operator_group_set(self) -> set[str]:
+        return {x.strip() for x in self.operator_groups.split(",") if x.strip()}
+
+    @property
     def admin_group_set(self) -> set[str]:
         return {x.strip() for x in self.admin_groups.split(",") if x.strip()}
+
+    @property
+    def human_role_group_map(self) -> dict[str, set[str]]:
+        return {
+            "viewer": self.viewer_group_set,
+            "operator": self.operator_group_set,
+            "admin": self.admin_group_set,
+        }
 
     @property
     def web_console_auto_login_enabled(self) -> bool:

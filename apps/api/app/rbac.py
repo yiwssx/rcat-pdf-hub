@@ -4,6 +4,7 @@ ROLE_VIEWER = "viewer"
 ROLE_OPERATOR = "operator"
 ROLE_ADMIN = "admin"
 HUMAN_ROLES = (ROLE_VIEWER, ROLE_OPERATOR, ROLE_ADMIN)
+ROLE_PRECEDENCE = (ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER)
 
 VIEWER_SCOPES = frozenset({"files:read", "jobs:read"})
 
@@ -31,3 +32,12 @@ def scopes_for_roles(roles: Iterable[str], operator_scopes: Iterable[str]) -> se
 
 def is_admin_role(roles: Iterable[str]) -> bool:
     return ROLE_ADMIN in set(normalize_roles(roles))
+
+
+def role_for_groups(groups: Iterable[str], role_groups: dict[str, set[str]]) -> str:
+    normalized_groups = {str(group).strip().casefold() for group in groups if str(group).strip()}
+    for role in ROLE_PRECEDENCE:
+        configured = {str(group).strip().casefold() for group in role_groups.get(role, set()) if str(group).strip()}
+        if normalized_groups & configured:
+            return role
+    raise ValueError("Authenticated identity has no mapped PDF Hub role")

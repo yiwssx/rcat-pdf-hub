@@ -14,7 +14,7 @@ def test_session_token_round_trip():
         "name": "user:teacher@example.org",
         "subject": "oidc-subject-123",
         "display_name": "Teacher",
-        "groups": ["teachers"],
+        "groups": ["pdfhub-users"],
         "roles": [ROLE_OPERATOR],
         "scopes": ["files:read", "pdf:ocr"],
         "source": "oidc",
@@ -23,13 +23,41 @@ def test_session_token_round_trip():
     decoded = decode_session_token(create_session_token(identity))
     assert decoded["name"] == identity["name"]
     assert decoded["subject"] == identity["subject"]
-    assert decoded["groups"] == ["teachers"]
+    assert decoded["groups"] == ["pdfhub-users"]
     assert decoded["roles"] == [ROLE_OPERATOR]
     assert {"files:read", "pdf:ocr"} <= set(decoded["scopes"])
     assert decoded["source"] == "oidc"
 
 
+def test_identity_group_mapping_is_explicit_and_fail_closed(monkeypatch):
+    monkeypatch.setattr("app.identity.settings.viewer_groups", "pdfhub-viewers")
+    monkeypatch.setattr("app.identity.settings.operator_groups", "pdfhub-users")
+    monkeypatch.setattr("app.identity.settings.admin_groups", "pdfhub-admins")
+
+    viewer = identity_from_claims(
+        {"sub": "viewer-1", "preferred_username": "viewer", "groups": ["pdfhub-viewers"]},
+        "oidc",
+    )
+    assert viewer["roles"] == [ROLE_VIEWER]
+    assert set(viewer["scopes"]) == {"files:read", "jobs:read"}
+
+    operator = identity_from_claims(
+        {"sub": "operator-1", "preferred_username": "operator", "groups": ["pdfhub-users"]},
+        "oidc",
+    )
+    assert operator["roles"] == [ROLE_OPERATOR]
+    assert "files:write" in operator["scopes"]
+
+    with pytest.raises(ValueError, match="no mapped PDF Hub role"):
+        identity_from_claims(
+            {"sub": "unknown-1", "preferred_username": "unknown", "groups": ["other-group"]},
+            "oidc",
+        )
+
+
 def test_identity_admin_group_receives_wildcard(monkeypatch):
+    monkeypatch.setattr("app.identity.settings.viewer_groups", "pdfhub-viewers")
+    monkeypatch.setattr("app.identity.settings.operator_groups", "pdfhub-users")
     monkeypatch.setattr("app.identity.settings.admin_groups", "pdfhub-admins,system-admins")
     identity = identity_from_claims(
         {"sub": "42", "preferred_username": "admin", "groups": ["pdfhub-admins"]},
@@ -133,3 +161,21 @@ def test_paperless_archive_returns_task_id(monkeypatch, tmp_path: Path):
 
     monkeypatch.setattr(paperless.httpx, "post", lambda *args, **kwargs: Response())
     assert paperless.archive_to_paperless(record, document) == "task-123"
+
+
+def test_institutional_session_rechecks_current_group_mapping(monkeypatch):
+    monkeypatch.setattr("app.identity.settings.viewer_groups", "pdfhub-viewers")
+    monkeypatch.setattr("app.identity.settings.operator_groups", "pdfhub-users")
+    monkeypatch.setattr("app.identity.settings.admin_groups", "pdfhub-admins")
+    identity = {
+        "name": "user:former-admin",
+        "subject": "former-admin",
+        "display_name": "Former Admin",
+        "groups": ["unknown-group"],
+        "roles": [ROLE_ADMIN],
+        "scopes": ["*"],
+        "source": "oidc",
+        "is_identity_admin": True,
+    }
+    with pytest.raises(ValueError, match="no mapped PDF Hub role"):
+        decode_session_token(create_session_token(identity))
