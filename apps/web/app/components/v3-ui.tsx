@@ -326,7 +326,7 @@ export function JobDrawer({
           {jobs.length === 0 && <div className="v3DrawerEmpty"><span>◷</span><p>ยังไม่มีงานประมวลผล</p></div>}
           {jobs.map((job) => <article className="job v3JobItem" key={job.id}>
             <span className={`v3JobDot ${job.status}`}/>
-            <div className="jobInfo"><strong>{job.operation}</strong><small>{job.status === "running" ? `กำลังประมวลผล ${job.progress}%` : job.status === "completed" ? "เสร็จแล้ว" : job.status === "failed" ? "ไม่สำเร็จ" : "รอประมวลผล"}</small>{job.error && <em>{job.error}</em>}</div>
+            <div className="jobInfo"><strong>{job.operation}</strong><small>{job.status === "running" ? `กำลังประมวลผล ${job.progress}%` : job.status === "completed" ? "เสร็จแล้ว" : job.status === "failed" ? "ไม่สำเร็จ" : job.status === "cancelled" ? "ยกเลิกแล้ว" : "รอประมวลผล"}</small>{job.error && <em>{job.error}</em>}</div>
             <span className={`v3JobBadge ${job.status}`}>{job.status === "cancelled" ? "ยกเลิก" : `${job.progress}%`}</span>
             <div className="v3JobActions">
               {(job.status === "queued" || job.status === "running") && <button type="button" className="danger" onClick={() => onCancel(job.id)}>ยกเลิก</button>}
