@@ -31,6 +31,7 @@ import {
   uploadFile,
   UploadedFile,
 } from "../../lib/api";
+import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import {
   AppHeader,
   DocumentWorkspace,
@@ -93,6 +94,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const [ldapPassword, setLdapPassword] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
+  const [toolSettings, setToolSettings] = useState(createToolWorkspaceSettings);
 
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
   const pdfFiles = useMemo(() => files.filter((file) => isPdf(file)), [files]);
@@ -447,6 +449,8 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       targetIsPdf={targetIsPdf}
       busy={busy}
       integrations={integrations}
+      settings={toolSettings}
+      onSettingsChange={setToolSettings}
       onSubmit={submit}
       onCreateSignedLink={createSignedLink}
       onArchive={archive}
