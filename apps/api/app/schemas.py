@@ -26,6 +26,14 @@ class FileOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class FileLibraryPageOut(BaseModel):
+    items: list[FileOut]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class FileRetentionUpdate(BaseModel):
     keep: bool
 
