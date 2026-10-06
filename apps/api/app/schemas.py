@@ -178,7 +178,7 @@ class ApiKeyOut(BaseModel):
 
 
 class LocalLoginRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=120, pattern=r"^[^\\x00\\r\\n]+$")
+    username: str = Field(min_length=1, max_length=120, pattern=r"^[^\x00\r\n]+$")
     password: str = Field(min_length=1, max_length=1024)
 
 
