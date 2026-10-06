@@ -345,7 +345,7 @@ for service, queue_var in (
     ("worker-heavy", "PDFHUB_RQ_HEAVY_QUEUE"),
 ):
     assert f"  {service}:" in compose, f"Missing dedicated worker service: {service}"
-    assert f'"$${queue_var}"' in compose, f"{service} queue variable missing from Compose"
+    assert f"${queue_var}" in compose, f"{service} queue variable missing from Compose"
 nas_compose = read("docker-compose.nas.yml")
 for service in ("worker-interactive:", "worker:", "worker-heavy:"):
     assert service in nas_compose, f"NAS override missing worker pool: {service}"
