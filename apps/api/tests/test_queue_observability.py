@@ -2,12 +2,16 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from app.observability import (
+    JOB_DURATION_COUNT_CUMULATIVE,
     JOB_DURATION_COUNT_KEY,
+    JOB_DURATION_SUM_CUMULATIVE,
     JOB_DURATION_SUM_KEY,
+    JOB_EVENTS_CUMULATIVE,
     JOB_EVENTS_KEY,
     collect_queue_runtime_snapshot,
     record_job,
     record_job_duration,
+    refresh_distributed_job_metrics,
 )
 
 
@@ -30,10 +34,7 @@ class FakeQueue:
 
 class FakeWorker:
     def __init__(self, *queues: str):
-        self._queues = list(queues)
-
-    def queue_names(self) -> list[str]:
-        return self._queues
+        self.queues = [SimpleNamespace(name=name) for name in queues]
 
 
 def test_queue_runtime_snapshot_reports_depth_age_and_reserved_workers():
@@ -114,3 +115,40 @@ def test_record_job_telemetry_failure_is_non_fatal(monkeypatch):
     monkeypatch.setattr("app.observability.redis_conn", BrokenRedis())
 
     record_job("merge", "queued")
+
+
+def test_refresh_distributed_job_metrics_clears_stale_redis_series(monkeypatch):
+    rows = {
+        JOB_EVENTS_KEY: {b"heavy|ocr|failed": b"4"},
+        JOB_DURATION_SUM_KEY: {b"heavy|ocr|failed": b"12.5"},
+        JOB_DURATION_COUNT_KEY: {b"heavy|ocr|failed": b"4"},
+    }
+
+    class FakeRedis:
+        def hgetall(self, key):
+            return rows[key]
+
+    monkeypatch.setattr("app.observability.redis_conn", FakeRedis())
+    JOB_EVENTS_CUMULATIVE.clear()
+    JOB_DURATION_SUM_CUMULATIVE.clear()
+    JOB_DURATION_COUNT_CUMULATIVE.clear()
+
+    refresh_distributed_job_metrics()
+
+    event_samples = JOB_EVENTS_CUMULATIVE.collect()[0].samples
+    assert len(event_samples) == 1
+    assert event_samples[0].labels == {
+        "queue_class": "heavy",
+        "operation": "ocr",
+        "state": "failed",
+    }
+    assert event_samples[0].value == 4.0
+
+    rows[JOB_EVENTS_KEY] = {}
+    rows[JOB_DURATION_SUM_KEY] = {}
+    rows[JOB_DURATION_COUNT_KEY] = {}
+    refresh_distributed_job_metrics()
+
+    assert JOB_EVENTS_CUMULATIVE.collect()[0].samples == []
+    assert JOB_DURATION_SUM_CUMULATIVE.collect()[0].samples == []
+    assert JOB_DURATION_COUNT_CUMULATIVE.collect()[0].samples == []
