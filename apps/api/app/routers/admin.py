@@ -29,7 +29,7 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 settings = get_settings()
 
 ALLOWED_SCOPES = {
-    "files:read", "files:write", "jobs:read",
+    "files:read", "files:write", "jobs:read", "jobs:manage",
     "pdf:merge", "pdf:split", "pdf:rotate", "pdf:compress",
     "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
     "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image",

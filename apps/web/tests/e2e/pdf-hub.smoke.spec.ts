@@ -49,7 +49,7 @@ async function installApiMocks(page: Page) {
         name: "web-console:smoke-test",
         display_name: "Web Console",
         subject: "smoke-test",
-        scopes: ["files:read", "files:write", "jobs:read", "pdf:compress"],
+        scopes: ["files:read", "files:write", "jobs:read", "jobs:manage", "pdf:compress"],
         groups: [],
         auth_source: "web-console",
         is_admin: false,
@@ -72,7 +72,7 @@ async function installApiMocks(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/files?limit=100", async (route) => {
+  await page.route("**/api/v1/files?limit=200&offset=0", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ json: [initialFile] });
   });
@@ -113,6 +113,16 @@ async function installApiMocks(page: Page) {
   await page.route("**/api/v1/files/file-output-1/download", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
+  });
+
+  await page.route("**/api/v1/files/file-pdf-1/download", async (route) => {
+    if (!(await requireSession(route))) return;
+    await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" });
+  });
+
+  await page.route("**/api/v1/jobs/terminal", async (route) => {
+    if (!(await requireSession(route))) return;
+    await route.fulfill({ json: { deleted: 1 } });
   });
 
   await page.route("**/api/v1/files", async (route) => {
@@ -219,4 +229,28 @@ test("admin login is a dedicated route and never requests a Service API Key", as
   await expect(page.getByLabel("Service API Key")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "ผู้ดูแล RCAT PDF Hub" })).toBeVisible();
   await expect(page.getByText(/Local Admin ยังไม่ได้เปิดใช้/)).toBeVisible();
+});
+
+
+test("completed jobs expose file context and can clear terminal history", async ({ page }) => {
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto("/");
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /ลดขนาด PDF/ }).click();
+  await page.getByRole("button", { name: "บีบอัด PDF" }).click();
+
+  const drawer = page.locator(".v3JobDrawer");
+  await expect(drawer).toContainText("example.pdf");
+  await expect(drawer.getByRole("button", { name: "ล้างประวัติ" })).toBeVisible();
+  await drawer.getByRole("button", { name: "ล้างประวัติ" }).click();
+  await expect(drawer).toContainText("ยังไม่มีงานประมวลผล");
+});
+
+test("files route provides direct download action", async ({ page }) => {
+  await page.goto("/files");
+  const row = page.locator(".v3LibraryRow").filter({ hasText: "example.pdf" });
+  const downloadPromise = page.waitForEvent("download");
+  await row.getByRole("button", { name: "ดาวน์โหลด" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain("example.pdf");
 });

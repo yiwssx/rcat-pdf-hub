@@ -2,13 +2,13 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import desc, select
+from sqlalchemy import delete, desc, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.audit import audit_event
 from app.config import get_settings
-from app.models import FileRecord, JobRecord
+from app.models import FileRecord, JobRecord, WebhookDelivery
 from app.policy import ensure_daily_job_quota
 from app.queue import pdf_queue, redis_conn
 from app.schemas import JobOut
@@ -82,7 +82,7 @@ def list_jobs(
 @router.post("/{job_id}/cancel", response_model=JobOut)
 def cancel_job(
     job_id: str,
-    principal: Principal = Depends(require_scope("jobs:read")),
+    principal: Principal = Depends(require_scope("jobs:manage")),
     db: Session = Depends(get_db),
 ):
     job = _owned_job(db, job_id, principal)
@@ -111,7 +111,7 @@ def cancel_job(
 @router.post("/{job_id}/retry", response_model=JobOut, status_code=202)
 def retry_job(
     job_id: str,
-    principal: Principal = Depends(require_scope("jobs:read")),
+    principal: Principal = Depends(require_scope("jobs:manage")),
     db: Session = Depends(get_db),
 ):
     source = _owned_job(db, job_id, principal)
@@ -146,3 +146,23 @@ def retry_job(
         raise HTTPException(status_code=503, detail="Queue backend unavailable") from exc
     audit_event("job.retried", principal.name, "job", job.id, {"source_job_id": source.id, "operation": job.operation})
     return serialize(job)
+
+
+@router.delete("/terminal")
+def clear_terminal_jobs(
+    principal: Principal = Depends(require_scope("jobs:manage")),
+    db: Session = Depends(get_db),
+):
+    statuses = ("completed", "failed", "cancelled")
+    stmt = select(JobRecord).where(JobRecord.status.in_(statuses))
+    if "*" not in principal.scopes:
+        stmt = stmt.where(JobRecord.requested_by == principal.name)
+    rows = db.scalars(stmt).all()
+    job_ids = [job.id for job in rows]
+    if job_ids:
+        db.execute(delete(WebhookDelivery).where(WebhookDelivery.job_id.in_(job_ids)))
+        for job in rows:
+            db.delete(job)
+        db.commit()
+    audit_event("job.history_cleared", principal.name, "job", None, {"count": len(job_ids)})
+    return {"deleted": len(job_ids)}

@@ -100,10 +100,12 @@ export function ToolPanel(props: Props) {
   const [pagesLoading, setPagesLoading] = useState(false);
   const mergeFiles = useMemo(() => {
     const byId = new Map(props.pdfFiles.map((file) => [file.id, file]));
-    const ordered = props.mergeOrder.map((id) => byId.get(id)).filter((file): file is UploadedFile => Boolean(file));
-    const missing = props.pdfFiles.filter((file) => !props.mergeOrder.includes(file.id));
-    return [...ordered, ...missing];
+    return props.mergeOrder.map((id) => byId.get(id)).filter((file): file is UploadedFile => Boolean(file));
   }, [props.pdfFiles, props.mergeOrder]);
+  const availableMergeFiles = useMemo(
+    () => props.pdfFiles.filter((file) => !props.mergeOrder.includes(file.id)),
+    [props.pdfFiles, props.mergeOrder],
+  );
 
   useEffect(() => {
     if (props.tool !== "split-rotate" || !props.targetIsPdf) return;
@@ -165,14 +167,15 @@ export function ToolPanel(props: Props) {
         </>}
 
         {tool === "merge-pdf" && <>
-          <div className="v3FieldNote">ลากเพื่อจัดลำดับ PDF {mergeFiles.length} ไฟล์ก่อนรวม</div>
+          <div className="v3FieldNote">เลือกเฉพาะไฟล์ที่ต้องการ แล้วลากเพื่อจัดลำดับก่อนรวม</div>
           <div className="v3MergeList">{mergeFiles.map((file, index) => <div
             key={file.id}
             draggable
             onDragStart={(event) => event.dataTransfer.setData("text/plain", file.id)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => { event.preventDefault(); moveMerge(event.dataTransfer.getData("text/plain"), file.id); }}
-          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b></div>)}</div>
+          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b><button type="button" aria-label={`เอา ${file.original_name} ออกจากชุดรวม`} disabled={mergeFiles.length <= 2} onClick={() => props.setMergeOrder(props.mergeOrder.filter((id) => id !== file.id))}>×</button></div>)}</div>
+          {availableMergeFiles.length > 0 && <div className="v3MergeAvailable"><small>ไฟล์อื่นใน Workspace</small><div>{availableMergeFiles.map((file) => <button type="button" key={file.id} onClick={() => props.setMergeOrder([...props.mergeOrder, file.id])}>＋ {file.original_name}</button>)}</div></div>}
           <button className="v3PrimaryAction" onClick={() => props.onRun("merge")} disabled={busy || mergeFiles.length < 2}>รวม PDF {mergeFiles.length} ไฟล์</button>
         </>}
 

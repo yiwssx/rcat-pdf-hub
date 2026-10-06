@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 DEFAULT_HUMAN_SCOPES = (
-    "files:read,files:write,jobs:read,"
+    "files:read,files:write,jobs:read,jobs:manage,"
     "pdf:merge,pdf:split,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,"
     "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,archive:paperless"
 )

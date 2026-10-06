@@ -18,11 +18,13 @@ import {
 } from "../../lib/api";
 
 const scopeOptions = [
-  "files:read", "files:write", "jobs:read",
+  "files:read", "files:write", "jobs:read", "jobs:manage",
   "pdf:merge", "pdf:split", "pdf:rotate", "pdf:compress",
   "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
   "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image",
 ];
+
+const defaultServiceScopes = scopeOptions.filter((scope) => scope !== "jobs:manage");
 
 export function AdminPanel({ apiKey }: { apiKey: string }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -31,10 +33,10 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
   const [name, setName] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [scopes, setScopes] = useState<string[]>(scopeOptions);
+  const [scopes, setScopes] = useState<string[]>(defaultServiceScopes);
   const [created, setCreated] = useState<ApiKeyCreated | null>(null);
   const [editing, setEditing] = useState<ServicePolicy | null>(null);
-  const [message, setMessage] = useState("ใช้ Bootstrap Admin Key หรือ identity ที่ระบบรับรองว่าเป็นผู้ดูแล");
+  const [message, setMessage] = useState("ใช้ session ของผู้ดูแลที่ระบบรับรองเพื่อจัดการ Service Keys และนโยบายระบบ");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {

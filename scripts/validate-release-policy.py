@@ -33,9 +33,9 @@ def semver_version(value: str, label: str) -> tuple[int, int, int]:
     return tuple(int(part) for part in match.groups())
 
 
-# Zero-cost CI policy: this public repository may use two guarded GitHub-hosted
-# Dependabot workflows. The npm lane may auto-merge only one verified web patch;
-# the Python security lane performs full validation read-only and never merges.
+# Zero-cost CI policy: all GitHub-hosted workflows must be explicitly reviewed.
+# Dependabot automation is tightly scoped; normal PR validation remains read-only
+# apart from CodeQL security-event publishing.
 workflow_dir = ROOT / ".github" / "workflows"
 workflow_files: list[str] = []
 if workflow_dir.exists():
@@ -45,9 +45,38 @@ if workflow_dir.exists():
         if p.suffix in {".yml", ".yaml"}
     )
 assert workflow_files == [
+    ".github/workflows/codeql.yml",
+    ".github/workflows/core-api-ci.yml",
     ".github/workflows/dependabot-patch-automerge.yml",
     ".github/workflows/dependabot-python-security.yml",
-], f"Only the reviewed Dependabot workflows are allowed: {workflow_files}"
+    ".github/workflows/dependency-review.yml",
+    ".github/workflows/web-ci.yml",
+], f"Only explicitly reviewed workflows are allowed: {workflow_files}"
+
+codeql_workflow = read(".github/workflows/codeql.yml")
+for required in ("pull_request:", "contents: read", "security-events: write", "github/codeql-action/init@v4", "github/codeql-action/analyze@v4"):
+    assert required in codeql_workflow, f"CodeQL workflow missing guard: {required}"
+assert "pull_request_target:" not in codeql_workflow
+
+dependency_review_workflow = read(".github/workflows/dependency-review.yml")
+for required in ("pull_request:", "contents: read", "actions/dependency-review-action@v4", "fail-on-severity: high"):
+    assert required in dependency_review_workflow, f"Dependency Review workflow missing guard: {required}"
+assert "contents: write" not in dependency_review_workflow
+assert "pull_request_target:" not in dependency_review_workflow
+
+web_ci_workflow = read(".github/workflows/web-ci.yml")
+for required in ("pull_request:", "contents: read", "npm run typecheck", "npm run build", "npm run test:e2e"):
+    assert required in web_ci_workflow, f"Web CI workflow missing guard: {required}"
+assert "contents: write" not in web_ci_workflow
+assert "pull-requests: write" not in web_ci_workflow
+assert "pull_request_target:" not in web_ci_workflow
+
+core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
+for required in ("pull_request:", "contents: read", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
+    assert required in core_api_ci_workflow, f"Core API CI workflow missing guard: {required}"
+assert "contents: write" not in core_api_ci_workflow
+assert "pull-requests: write" not in core_api_ci_workflow
+assert "pull_request_target:" not in core_api_ci_workflow
 
 dependency_workflow = read(".github/workflows/dependabot-patch-automerge.yml")
 for required in (
@@ -119,7 +148,7 @@ smoke = read("apps/web/tests/e2e/pdf-hub.smoke.spec.ts")
 assert "requireSession" in smoke
 assert "/web-auth/session" in smoke
 assert 'getByLabel("Service API Key")' in smoke and "toHaveCount(0)" in smoke
-for protected_flow in ("integrations/status", "files?limit=100", "jobs?limit=50", "/preview", "/pdf/compress", "/download"):
+for protected_flow in ("integrations/status", "files?limit=200&offset=0", "jobs?limit=50", "/preview", "/pdf/compress", "/download"):
     assert protected_flow in smoke, f"Mocked browser smoke is missing protected flow: {protected_flow}"
 
 # Runtime/container baselines are intentionally frozen and changed only by explicit developer review.

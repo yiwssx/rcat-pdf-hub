@@ -84,11 +84,12 @@ def _delete_file_record(db: Session, record: FileRecord, principal: Principal) -
 @router.get("", response_model=list[FileOut])
 def list_files(
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0, le=1000000),
     include_expired: bool = Query(default=False),
     principal: Principal = Depends(require_scope("files:read")),
     db: Session = Depends(get_db),
 ):
-    stmt = select(FileRecord).order_by(desc(FileRecord.created_at)).limit(limit)
+    stmt = select(FileRecord).order_by(desc(FileRecord.created_at)).offset(offset).limit(limit)
     if not include_expired:
         now = datetime.now(timezone.utc)
         stmt = stmt.where(or_(FileRecord.expires_at.is_(None), FileRecord.expires_at > now))

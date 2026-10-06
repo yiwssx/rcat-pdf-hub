@@ -114,13 +114,18 @@ def decode_session_token(token: str) -> dict:
         audience="pdfhub-web",
         options={"require": ["exp", "iat", "sub"]},
     )
+    source = str(claims.get("pdfhub_source") or "session")
+    if source == "web-console":
+        if not settings.web_console_auto_login_enabled:
+            raise jwt.InvalidTokenError("Web Console sessions are disabled while institutional authentication is active")
+        return create_web_console_identity()
     return {
         "name": str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120],
         "subject": str(claims["sub"]),
         "display_name": str(claims.get("pdfhub_display_name") or claims["sub"]),
         "groups": _claim_list(claims.get("pdfhub_groups")),
         "scopes": _claim_list(claims.get("pdfhub_scopes")),
-        "source": str(claims.get("pdfhub_source") or "session"),
+        "source": source,
         "is_identity_admin": bool(claims.get("pdfhub_identity_admin", False)),
     }
 

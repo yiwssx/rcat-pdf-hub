@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 
 from app import security
 from app.filetypes import validate_uploaded_file
-from app.identity import create_web_console_identity
+from app.identity import create_session_token, create_web_console_identity, decode_session_token
 from app.db import SessionLocal
 from app.main import app, migrate_legacy_web_console_ownership
 from app.models import FileRecord, JobRecord
@@ -122,3 +122,83 @@ def test_legacy_web_console_ownership_is_migrated(monkeypatch):
     db.delete(db.get(JobRecord, job_id))
     db.commit()
     db.close()
+
+
+def test_job_history_cleanup_requires_manage_scope_and_preserves_active_jobs(monkeypatch):
+    monkeypatch.setattr(security, "ensure_rate_limit", lambda *args, **kwargs: None)
+    actor = "user:workflow-tester"
+    db = SessionLocal()
+    completed = JobRecord(
+        operation="compress",
+        status="completed",
+        progress=100,
+        input_file_ids_json="[]",
+        params_json="{}",
+        requested_by=actor,
+    )
+    queued = JobRecord(
+        operation="compress",
+        status="queued",
+        progress=0,
+        input_file_ids_json="[]",
+        params_json="{}",
+        requested_by=actor,
+    )
+    other = JobRecord(
+        operation="compress",
+        status="completed",
+        progress=100,
+        input_file_ids_json="[]",
+        params_json="{}",
+        requested_by="user:other",
+    )
+    db.add_all([completed, queued, other])
+    db.commit()
+    completed_id, queued_id, other_id = completed.id, queued.id, other.id
+    db.close()
+
+    client = TestClient(app)
+    read_only = {
+        "name": actor,
+        "subject": "workflow-read-only",
+        "display_name": "Workflow Tester",
+        "groups": [],
+        "scopes": ["jobs:read"],
+        "source": "session",
+        "is_identity_admin": False,
+    }
+    client.cookies.set("pdfhub_session", create_session_token(read_only))
+    denied = client.delete("/api/v1/jobs/terminal")
+    assert denied.status_code == 403
+
+    manager = {**read_only, "scopes": ["jobs:read", "jobs:manage"]}
+    client.cookies.set("pdfhub_session", create_session_token(manager))
+    response = client.delete("/api/v1/jobs/terminal")
+    assert response.status_code == 200
+    assert response.json()["deleted"] == 1
+
+    db = SessionLocal()
+    assert db.get(JobRecord, completed_id) is None
+    assert db.get(JobRecord, queued_id) is not None
+    assert db.get(JobRecord, other_id) is not None
+    db.close()
+
+
+def test_legacy_web_console_cookie_is_normalized_to_stable_workspace(monkeypatch):
+    monkeypatch.setattr("app.identity.settings.web_console_auto_login", True)
+    monkeypatch.setattr("app.identity.settings.oidc_enabled", False)
+    monkeypatch.setattr("app.identity.settings.ldap_enabled", False)
+    monkeypatch.setattr("app.identity.settings.web_console_workspace_id", "rcat-stable")
+    legacy = {
+        "name": "web-console:old-random-cookie",
+        "subject": "old-random-cookie",
+        "display_name": "Web Console",
+        "groups": [],
+        "scopes": ["files:read"],
+        "source": "web-console",
+        "is_identity_admin": False,
+    }
+    decoded = decode_session_token(create_session_token(legacy))
+    assert decoded["name"] == "web-console:rcat-stable"
+    assert decoded["subject"] == "workspace:rcat-stable"
+    assert "jobs:manage" in decoded["scopes"]

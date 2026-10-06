@@ -6,6 +6,7 @@ import {
   AdminStatus,
   bulkDeleteFiles,
   cancelJob,
+  clearTerminalJobs,
   AuthConfig,
   AuthMe,
   createJob,
@@ -180,7 +181,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setMergeOrder((old) => {
       const available = pdfFiles.map((file) => file.id);
       const kept = old.filter((id) => available.includes(id));
-      return [...kept, ...available.filter((id) => !kept.includes(id))];
+      return kept.length > 0 ? kept : available;
     });
   }, [pdfFiles]);
 
@@ -422,6 +423,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
 
   async function deleteFiles(fileIds: string[]) {
     if (!auth || fileIds.length < 1) return;
+    if (!window.confirm(`ยืนยันลบ ${fileIds.length} ไฟล์? การลบนี้ย้อนกลับไม่ได้`)) return;
     setBusy(true);
     try {
       if (fileIds.length === 1) await deleteFile(fileIds[0], auth);
@@ -451,6 +453,18 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       setMessage(error instanceof Error ? error.message : "แก้ retention ไม่สำเร็จ");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function clearJobHistory() {
+    if (!auth) return;
+    if (!window.confirm("ล้างประวัติงานที่เสร็จแล้ว/ล้มเหลว/ยกเลิกทั้งหมด? ไฟล์ผลลัพธ์จะไม่ถูกลบ")) return;
+    try {
+      const result = await clearTerminalJobs(auth);
+      setJobs((old) => old.filter((job) => !["completed", "failed", "cancelled"].includes(job.status)));
+      setMessage(`ล้างประวัติงานแล้ว ${result.deleted} รายการ`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ล้างประวัติงานไม่สำเร็จ");
     }
   }
 
@@ -596,12 +610,12 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
           onPreviewPage={setPreviewPage}
         />
       ) : initialView === "files" ? (
-        <FilesScreen files={files} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onDelete={(ids) => void deleteFiles(ids)} onRetention={(id, keep) => void updateRetention(id, keep)}/>
+        <FilesScreen files={files} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onDownload={(id) => void download(id)} onDelete={(ids) => void deleteFiles(ids)} onRetention={(id, keep) => void updateRetention(id, keep)}/>
       ) : (
         <HomeScreen files={files} tools={tools} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
       )}
 
-      <JobDrawer open={jobsOpen} jobs={jobs} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)} onCancel={(jobId) => void controlJob(jobId, "cancel")} onRetry={(jobId) => void controlJob(jobId, "retry")}/>
+      <JobDrawer open={jobsOpen} jobs={jobs} files={files} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)} onCancel={(jobId) => void controlJob(jobId, "cancel")} onRetry={(jobId) => void controlJob(jobId, "retry")} onClear={() => void clearJobHistory()}/>
     </div>
   );
 }
