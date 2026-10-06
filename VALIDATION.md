@@ -6,11 +6,11 @@ RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hos
 
 - Standard application PRs use full `make validate-free` on institution-owned/local Linux hardware.
 - GitHub-hosted Actions are limited to two guarded Dependabot workflows in this public repository: one npm patch lane and one Python security-validation lane.
-- The narrow Dependabot npm auto-merge lane runs only when `apps/web/package.json` changes, accepts only bot-only direct forward patch updates, and revalidates the exact base/head before squash merge.
+- The narrow Dependabot npm auto-merge lane requires `apps/web/package.json` and `apps/web/package-lock.json` to move together for a bot-only direct forward patch update, then revalidates the exact base/head before squash merge.
 - A Dependabot Python security PR that changes exactly one existing exact pin in `apps/api/requirements.txt` is validated by full `make validate-free` on a read-only hosted runner. The workflow materializes only the verified requirements manifest onto trusted base code and never auto-merges.
 - Any other nonstandard/security dependency PR remains owned by the local full-validation lane and is never auto-merged.
 - Direct npm dependency patches must pass typecheck, production build and Playwright browser smoke before merge.
-- `package-lock.json` remains untracked; validation uses `npm install --package-lock=false` and confirms package metadata is not mutated.
+- `apps/web/package-lock.json` is committed as the reproducible frontend dependency graph; CI, Docker builds, local validation and dependency validation use `npm ci` and verify the manifest/lockfile are not mutated.
 - Python/Node/container images and security baselines are explicit. Phase 5 uses the reviewed Next.js `16.3.x` security line and the reviewed Pillow 12.x floor `>=12.3.0,<13.0.0`.
 - S3 mode requires an explicit self-hosted `PDFHUB_S3_ENDPOINT_URL`.
 - Optional management services bind to loopback by default.
@@ -31,7 +31,7 @@ Fresh Debian/Ubuntu Playwright bootstrap, after installing frontend dependencies
 
 ```bash
 cd apps/web
-npm install --package-lock=false --no-audit --no-fund
+npm ci --no-audit --no-fund
 npx playwright install-deps chromium
 ```
 
@@ -67,7 +67,7 @@ make validate-free
 
 `validate-backend` creates a clean Python 3.12 environment, installs exact requirements, treats warnings as errors, runs pytest and validates fresh/adopted Alembic migration paths.
 
-`validate-frontend` performs warning-free npm install, TypeScript typecheck and production Next.js build while ensuring no lockfile/package mutation.
+`validate-frontend` performs a warning-free `npm ci` from the committed lockfile, TypeScript typecheck and production Next.js build while ensuring package metadata and the lockfile are not mutated.
 
 `validate-e2e` runs Playwright Chromium against the UI with mocked API responses. Protected mocks require the correct `X-API-Key`, so authentication propagation regressions cannot produce a false green result.
 
@@ -86,11 +86,11 @@ The gate rejects:
 - minor/major version changes
 - added/removed dependency names
 - multiple dependency changes
-- non-`apps/web/package.json` changes
+- changes outside `apps/web/package.json` and `apps/web/package-lock.json`
 - package script/metadata drift
 - non-forward patches
 
-An eligible patch must still pass install, typecheck, production build and browser smoke.
+An eligible patch must keep the lockfile root manifest synchronized with `package.json` and still pass `npm ci`, typecheck, production build and browser smoke.
 
 ## Python security dependency validation
 

@@ -103,33 +103,34 @@ PY
 
 frontend() {
   require_tool_versions
-  local install_log build_log pkg_before
+  local install_log build_log pkg_before lock_before
   install_log="$(mktemp)"
   build_log="$(mktemp)"
   pkg_before="$(sha256sum apps/web/package.json | awk '{print $1}')"
+  lock_before="$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
   (
     cd apps/web
-    rm -f package-lock.json
     NEXT_TELEMETRY_DISABLED=1 NPM_CONFIG_UPDATE_NOTIFIER=false \
-      npm install --package-lock=false --no-audit --no-fund 2>&1 | tee "${install_log}"
+      npm ci --no-audit --no-fund 2>&1 | tee "${install_log}"
     npm run typecheck
     mkdir -p .next/cache
     NEXT_TELEMETRY_DISABLED=1 npm run build 2>&1 | tee "${build_log}"
   )
   check_clean_log "${install_log}"
   check_clean_log "${build_log}"
-  test ! -e apps/web/package-lock.json
   test "${pkg_before}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
-  git diff --exit-code -- apps/web/package.json apps/web/tsconfig.json
+  test "${lock_before}" = "$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
+  git diff --exit-code -- apps/web/package.json apps/web/package-lock.json apps/web/tsconfig.json
   echo 'frontend: PASS'
 }
 
 e2e() {
   require_tool_versions
-  local browser_log e2e_log pkg_before browsers_path
+  local browser_log e2e_log pkg_before lock_before browsers_path
   browser_log="$(mktemp)"
   e2e_log="$(mktemp)"
   pkg_before="$(sha256sum apps/web/package.json | awk '{print $1}')"
+  lock_before="$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
   browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
   (
     cd apps/web
@@ -138,8 +139,8 @@ e2e() {
   )
   check_clean_log "${browser_log}"
   check_clean_log "${e2e_log}"
-  test ! -e apps/web/package-lock.json
   test "${pkg_before}" = "$(sha256sum apps/web/package.json | awk '{print $1}')"
+  test "${lock_before}" = "$(sha256sum apps/web/package-lock.json | awk '{print $1}')"
   echo 'e2e: PASS'
 }
 

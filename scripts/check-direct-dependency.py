@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 PACKAGE_PATH = "apps/web/package.json"
+LOCK_PATH = "apps/web/package-lock.json"
 SECTIONS = ("dependencies", "devDependencies")
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -20,13 +21,38 @@ def package_at(ref: str) -> dict:
     return json.loads(git("show", f"{ref}:{PACKAGE_PATH}"))
 
 
+def lock_at(ref: str) -> dict:
+    return json.loads(git("show", f"{ref}:{LOCK_PATH}"))
+
+
+def validate_lock(package: dict, lock: dict, label: str) -> None:
+    if lock.get("lockfileVersion") != 3:
+        raise ValueError(f"{label} package-lock.json must use lockfileVersion 3")
+    root = lock.get("packages", {}).get("")
+    if not isinstance(root, dict):
+        raise ValueError(f"{label} package-lock.json is missing the root package entry")
+    for key in ("name", "version"):
+        if root.get(key) != package.get(key):
+            raise ValueError(f"{label} package-lock root {key} does not match package.json")
+    for section in SECTIONS:
+        if root.get(section, {}) != package.get(section, {}):
+            raise ValueError(f"{label} package-lock root {section} does not match package.json")
+
+
 def validate(base_ref: str, head_ref: str) -> tuple[str, str, str, str]:
-    changed = git("diff", "--name-only", f"{base_ref}...{head_ref}")
-    if changed != PACKAGE_PATH:
-        raise ValueError(f"dependency patch lane accepts exactly {PACKAGE_PATH}; changed: {changed or '<none>'}")
+    changed = set(filter(None, git("diff", "--name-only", f"{base_ref}...{head_ref}").splitlines()))
+    expected = {PACKAGE_PATH, LOCK_PATH}
+    if changed != expected:
+        raise ValueError(
+            f"dependency patch lane accepts exactly {sorted(expected)}; changed: {sorted(changed) or '<none>'}"
+        )
 
     before = package_at(base_ref)
     after = package_at(head_ref)
+    before_lock = lock_at(base_ref)
+    after_lock = lock_at(head_ref)
+    validate_lock(before, before_lock, "base")
+    validate_lock(after, after_lock, "head")
 
     before_static = copy.deepcopy(before)
     after_static = copy.deepcopy(after)
