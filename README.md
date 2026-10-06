@@ -22,7 +22,7 @@ A **self-hosted, API-first** PDF processing hub that lets multiple systems share
 - Multi-page PDF → PNG/JPEG ZIP archive
 - Thumbnail page organizer with reorder / rotate / remove-page workflow
 - File library with manual delete, bulk delete, and permanent-retention controls
-- Job cancel/retry controls in the Web Console
+- Job cancel/retry controls in the Web Console, with a separate `jobs:manage` scope and terminal-history cleanup
 
 ### Platform / security
 
@@ -125,7 +125,7 @@ make logs
 **Human Web Console authentication is session based.** The Web Console does not display a Service API Key input and does not store service credentials in React state or browser storage.
 
 - If OIDC or LDAP is enabled, users authenticate with the configured institutional identity provider.
-- If neither OIDC nor LDAP is enabled, Next.js requests an isolated, non-admin Web Console session through `/internal/web-console/session` over the private Docker network. Each new browser session receives its own principal and the normal human scope set.
+- If neither OIDC nor LDAP is enabled, Next.js requests an isolated, non-admin Web Console session through `/internal/web-console/session` over the private Docker network. Sessions reuse the configured stable internal workspace principal so files and job history remain available after session renewal.
 - Direct calls to `/api/v1/*` still require a valid session, bearer identity, or service API key. The internal session endpoint is intentionally not exposed by Caddy's public API matcher.
 
 Admin authorization, scopes, quotas, and service isolation remain enforced at the API layer, which is the authoritative authorization boundary. Automatic Web Console sessions are never administrators; admin access must come from an authorized institutional identity or operator-side break-glass credential.
