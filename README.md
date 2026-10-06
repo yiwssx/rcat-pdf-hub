@@ -210,6 +210,7 @@ The plaintext API key (`pdfh_...`) is returned only once. The database stores on
 | Method | Endpoint | Scope |
 |---|---|---|
 | GET / POST | `/api/v1/files` | `files:read` / `files:write` |
+| GET | `/api/v1/files/library` | `files:read` — server-side search/filter/sort/pagination with `total` |
 | GET | `/api/v1/files/{id}/download` | `files:read` |
 | POST | `/api/v1/files/{id}/signed-download` | `files:read` |
 | GET | `/api/v1/files/{id}/preview` | `files:read` |
