@@ -73,7 +73,8 @@ operations() {
     scripts/check-direct-dependency.py \
     scripts/check-python-security-dependency.py \
     scripts/check-python-lock.py \
-    scripts/check-production-network.py
+    scripts/check-production-network.py \
+    scripts/check-worker-pools.py
   echo 'operations: PASS'
 }
 
@@ -173,6 +174,7 @@ compose_config() {
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive config --format json >/tmp/pdfhub-compose-prod-all.json
   python3 scripts/check-production-network.py /tmp/pdfhub-compose-prod-all.json "${PDFHUB_PUBLIC_BIND_HOST}" "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}"
+  python3 scripts/check-worker-pools.py /tmp/pdfhub-compose-prod-all.json
   : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-prod-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
@@ -205,7 +207,7 @@ runtime() {
   }
   trap cleanup_runtime EXIT
 
-  dc build --pull api worker cleanup webhook web 2>&1 | tee "${build_log}"
+  dc build --pull api worker-interactive worker worker-heavy cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
   dc up -d --no-build --wait --wait-timeout 240 postgres valkey gotenberg api 2>&1 | tee "${up_log}"
   check_clean_log "${up_log}"
@@ -218,6 +220,7 @@ runtime() {
   PDFHUB_COMPOSE_PROJECT="${project}" bash scripts/validate-container-hardening.sh
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive config --format json >/tmp/pdfhub-runtime-prod.json
   python3 scripts/check-production-network.py /tmp/pdfhub-runtime-prod.json "${PDFHUB_PUBLIC_BIND_HOST}" "${PDFHUB_MANAGEMENT_BIND_HOST:-127.0.0.1}"
+  python3 scripts/check-worker-pools.py /tmp/pdfhub-runtime-prod.json
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
   dc exec -T \
