@@ -62,6 +62,7 @@ export type AuthConfig = {
   oidc: { enabled: boolean; issuer: string | null; login_url: string | null };
   ldap: { enabled: boolean };
   web_console: { auto_login: boolean };
+  local_admin: { enabled: boolean };
 };
 
 export type AuthMe = {
@@ -144,6 +145,14 @@ export async function getMe(auth = SESSION_AUTH): Promise<AuthMe> {
     }
   }
   return expectJson<AuthMe>(response);
+}
+
+export async function localAdminLogin(username: string, password: string): Promise<AuthMe> {
+  return expectJson<AuthMe>(await request("/api/v1/auth/local/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  }));
 }
 
 export async function ldapLogin(username: string, password: string): Promise<AuthMe> {
