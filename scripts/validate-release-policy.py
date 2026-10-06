@@ -334,6 +334,7 @@ for required in (
     "scripts/check-python-lock.py",
     "scripts/compile-python-lock.sh",
     "scripts/supply-chain.sh",
+    "scripts/validate-container-hardening.sh",
     "scripts/validate-free.sh",
     "scripts/validate-direct-dependency.sh",
     "scripts/local-ci-cycle.sh",
@@ -350,6 +351,7 @@ assert "npm run test:e2e:stack" in validate_free
 assert 'docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml' in validate_free
 assert "PDFHUB_SESSION_COOKIE_SECURE=false" in validate_free
 assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true" in validate_free
+assert "validate-container-hardening.sh" in validate_free
 assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
@@ -378,6 +380,18 @@ for marker in (
     assert marker in supply_chain, f"Supply-chain gate missing policy marker: {marker}"
 assert "artifacts/" in read(".gitignore"), "Generated supply-chain artifacts must stay untracked"
 assert (ROOT / "docs/security/supply-chain-policy.md").exists(), "Missing supply-chain policy documentation"
+
+hardening_check = read("scripts/validate-container-hardening.sh")
+for marker in (
+    "ReadonlyRootfs",
+    "PidsLimit",
+    "HostConfig.Memory",
+    "HostConfig.NanoCpus",
+    "HostConfig.CapDrop",
+    "HostConfig.SecurityOpt",
+    "container hardening: PASS",
+):
+    assert marker in hardening_check, f"Container hardening validator missing: {marker}"
 
 release_readiness = read("scripts/release-readiness.sh")
 assert "make validate-supply-chain-source" in release_readiness
