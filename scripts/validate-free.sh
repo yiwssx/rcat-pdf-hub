@@ -44,7 +44,9 @@ validation_compose_env() {
   export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
-  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
+  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$"
+  export PDFHUB_SESSION_COOKIE_SECURE=false
+  export PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true
   export NEXT_TELEMETRY_DISABLED=1
 }
 
@@ -190,7 +192,7 @@ runtime() {
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
 
   dc() {
-    docker compose -p "${project}" "$@"
+    docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml "$@"
   }
 
   cleanup_runtime() {
