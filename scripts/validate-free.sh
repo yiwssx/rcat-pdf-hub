@@ -161,6 +161,15 @@ compose_config() {
   : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  : >"${err}"
+  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml config >/tmp/pdfhub-compose-prod.out 2>"${err}"
+  test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  : >"${err}"
+  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive config >/tmp/pdfhub-compose-prod-all.out 2>"${err}"
+  test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  : >"${err}"
+  docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-prod-nas.out 2>"${err}"
+  test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
   echo 'compose: PASS'
 }
 
