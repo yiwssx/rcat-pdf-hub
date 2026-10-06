@@ -115,6 +115,12 @@ Phase 6G.2 runs the complete pytest suite under the repository-owned `scripts/ba
 
 The accepted baseline was measured by Core API CI run `37519020885` at **61.36% (1,869 / 3,046 statement lines)**. `quality/backend-coverage-baseline.json` enforces the same 61.36% floor. Backend changes that reduce the measured percentage fail both Core API CI and the zero-cost backend gate. The detailed report is emitted to `artifacts/quality/backend-coverage.json` during local validation.
 
+## Automated accessibility regression gate
+
+Phase 6G.3 extends the existing Playwright UI regression lane with a repository-owned DOM accessibility audit. The primary Workspace and dedicated Files route fail validation when the audit reports a **critical** or **serious** finding.
+
+Blocking rules cover missing image alternatives, unnamed interactive controls, focusable content hidden from assistive technology, missing document language, duplicate IDs and positive tabindex. The implementation uses the existing browser runtime and introduces no hosted accessibility service or additional npm dependency.
+
 ## Queue routing validation
 
 Task 6C.1 centralizes operation routing in `app.queue`. The backend test suite verifies the complete operation matrix, rejects unknown operations, checks configured queue selection, and requires the three queue names to remain distinct.
