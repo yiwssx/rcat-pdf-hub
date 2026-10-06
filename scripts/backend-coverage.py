@@ -18,7 +18,7 @@ def executable_lines(path: Path) -> set[int]:
     for node in ast.walk(tree):
         if not isinstance(node, ast.stmt):
             continue
-        if isinstance(node, ast.Expr) and isinstance(getattr(node, "value", None), (ast.Str, ast.Constant)):
+        if isinstance(node, ast.Expr) and isinstance(getattr(node, "value", None), ast.Constant):
             value = getattr(node.value, "value", None)
             if isinstance(value, str):
                 continue
@@ -53,7 +53,7 @@ import pytest  # noqa: E402
 
 sys.settrace(global_trace)
 try:
-    exit_code = pytest.main(["-q"])
+    exit_code = pytest.main(["-q", "-p", "no:cacheprovider"])
 finally:
     sys.settrace(None)
 
