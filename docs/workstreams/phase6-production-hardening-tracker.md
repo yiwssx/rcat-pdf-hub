@@ -62,7 +62,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6.0 | Baseline verification / clean starting state | COMPLETE | Starting main `d3965ac4f0ec7fed8af01d9f4649109532334c87`; PR #84 |
 | 6A.1 | Frontend reproducible install: committed npm lockfile + `npm ci` | COMPLETE | PR #85 |
 | 6A.2 | Python reproducible dependency lock with transitive pins/hashes | COMPLETE | PR #86 |
-| 6A.3 | Supply-chain scan + SBOM generation | PENDING | — |
+| 6A.3 | Supply-chain scan + SBOM generation | IN PROGRESS | PR #87 |
 | 6B.1 | Production Compose override/profile | PENDING | — |
 | 6B.2 | Container runtime hardening | PENDING | — |
 | 6B.3 | Production network-boundary hardening | PENDING | — |
