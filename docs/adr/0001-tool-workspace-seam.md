@@ -36,6 +36,7 @@ Heavy admin and tool modules are loaded dynamically because they are not require
 - Job payload rules live next to the tool configuration that produces them.
 - The application shell becomes easier to understand and test.
 - Tool settings are stored as one opaque snapshot by the application shell so reopening a tool preserves the existing user experience without exposing individual fields to the shell.
+- Generated signed-download URLs remain ephemeral and are cleared on file/tool reselection, matching the previous behavior.
 - The internal `ToolPanel` interface is still broad, but it is no longer an application-wide seam. It can be simplified later without touching the shell.
 
 ## Validation
