@@ -16,6 +16,9 @@ esac
 printf 'release-readiness: running full repository validation\n'
 make validate-free
 
+printf 'release-readiness: running source supply-chain gate\n'
+make validate-supply-chain-source
+
 if [ "${MODE}" = "code" ]; then
   printf 'release-readiness: PASS (code gate)\n'
   exit 0
@@ -23,6 +26,9 @@ fi
 
 printf 'release-readiness: checking local CI enforcement\n'
 make local-ci-doctor
+
+printf 'release-readiness: running production image supply-chain gate\n'
+make validate-supply-chain-images
 
 if [ -z "${BACKUP_DIR}" ]; then
   echo "Production readiness requires BACKUP=/path/to/verified-backup" >&2
