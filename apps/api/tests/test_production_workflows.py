@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 
 from app import security
 from app.filetypes import validate_uploaded_file
-from app.identity import create_session_token, create_web_console_identity
+from app.identity import create_session_token, create_web_console_identity, decode_session_token
 from app.db import SessionLocal
 from app.main import app, migrate_legacy_web_console_ownership
 from app.models import FileRecord, JobRecord
@@ -198,7 +198,7 @@ def test_legacy_web_console_cookie_is_normalized_to_stable_workspace(monkeypatch
         "source": "web-console",
         "is_identity_admin": False,
     }
-    decoded = __import__("app.identity", fromlist=["decode_session_token"]).decode_session_token(create_session_token(legacy))
+    decoded = decode_session_token(create_session_token(legacy))
     assert decoded["name"] == "web-console:rcat-stable"
     assert decoded["subject"] == "workspace:rcat-stable"
     assert "jobs:manage" in decoded["scopes"]
