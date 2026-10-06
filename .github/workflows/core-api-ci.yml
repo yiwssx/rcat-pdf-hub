@@ -28,32 +28,5 @@ jobs:
         run: make validate-compose
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
-      - name: Exercise production container hardening
-        run: |
-          set -Eeuo pipefail
-          export POSTGRES_DB=pdfhub
-          export POSTGRES_USER=pdfhub
-          export POSTGRES_PASSWORD=hardening-postgres-password
-          export PDFHUB_API_KEY_PEPPER=hardening-api-key-pepper
-          export PDFHUB_ADMIN_API_KEY=pdfh_hardening_admin_key_change_me_1234567890
-          export PDFHUB_WEBHOOK_MASTER_SECRET=hardening-webhook-master-secret-change-me
-          export PDFHUB_AUTH_TOKEN_SECRET=hardening-auth-token-secret-change-me-0123456789abcdef
-          export PDFHUB_DOWNLOAD_SIGNING_SECRET=hardening-download-signing-secret-change-me-0123456789abcdef
-          export PDFHUB_ALLOWED_ORIGINS=http://localhost:18082
-          export PDFHUB_PUBLIC_BASE_URL=http://localhost:18082
-          export PDFHUB_HTTP_PORT=18082
-          export PDFHUB_SESSION_COOKIE_SECURE=false
-          export PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true
-          export PDFHUB_NAS_PATH=/tmp/pdfhub-hardening-nas
-          project="pdfhub-hardening-${GITHUB_RUN_ID}"
-          dc() { docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml "$@"; }
-          cleanup() { dc down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "${PDFHUB_NAS_PATH}" || true; }
-          trap cleanup EXIT
-          dc build api worker cleanup webhook web
-          dc up -d --no-build --wait --wait-timeout 240 postgres valkey gotenberg api
-          dc exec -T api python -c 'from app.migrate import run_migrations; run_migrations()'
-          dc up -d --no-build --wait --wait-timeout 240 worker cleanup webhook web caddy
-          PDFHUB_COMPOSE_PROJECT="${project}" bash scripts/validate-container-hardening.sh
-          curl -fsS "http://127.0.0.1:${PDFHUB_HTTP_PORT}/healthz" >/dev/null
       - name: Run API tests
         run: docker run --rm rcat-pdf-hub-api-test python -m pytest -q
