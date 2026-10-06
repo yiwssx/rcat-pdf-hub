@@ -42,6 +42,7 @@ validation_compose_env() {
   export PDFHUB_WEBHOOK_MASTER_SECRET=free-ci-webhook-master-secret-change-me
   export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
   export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
+  export PDFHUB_GRAFANA_ADMIN_PASSWORD=free-ci-grafana-admin-password-change-me
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
   export PDFHUB_PUBLIC_BIND_HOST=127.0.0.1
