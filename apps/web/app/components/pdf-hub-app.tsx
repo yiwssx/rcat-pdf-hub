@@ -234,7 +234,6 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
         if (pendingTool) setActiveTool(pendingTool);
       }
       setPendingTool("");
-      setSignedUrl(null);
       setMessage(`อัปโหลดแล้ว ${uploaded.length} ไฟล์`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
@@ -248,7 +247,6 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setActiveTool("");
     setPreviewUrl(null);
     setPreviewPage(1);
-    setSignedUrl(null);
   }
 
   function chooseTool(tool: ToolDefinition) {
@@ -287,7 +285,6 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setTargetId(candidate.id);
     setActiveTool(tool.id);
     setPreviewUrl(null);
-    setSignedUrl(null);
   }
 
   async function submit(operation: string, payload: object) {
