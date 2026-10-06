@@ -45,7 +45,7 @@ validation_compose_env() {
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
   export PDFHUB_PUBLIC_BIND_HOST=127.0.0.1
-  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$"
+  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
   export PDFHUB_SESSION_COOKIE_SECURE=false
   export PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true
   export NEXT_TELEMETRY_DISABLED=1
