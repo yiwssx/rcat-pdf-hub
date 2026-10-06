@@ -1,3 +1,4 @@
+import shutil
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -75,6 +76,15 @@ JOB_DURATION_COUNT_CUMULATIVE = Gauge(
 JOB_METRICS_COLLECTION_OK = Gauge(
     "pdfhub_job_metrics_collection_ok",
     "Whether Redis-backed cross-process job metrics were collected successfully",
+)
+STORAGE_BYTES = Gauge(
+    "pdfhub_storage_bytes",
+    "Filesystem capacity for the configured PDF Hub data directory",
+    ["kind"],
+)
+STORAGE_METRICS_COLLECTION_OK = Gauge(
+    "pdfhub_storage_metrics_collection_ok",
+    "Whether filesystem capacity metrics were collected successfully",
 )
 
 JOB_EVENTS_KEY = "pdfhub:metrics:job-events"
@@ -246,6 +256,24 @@ def refresh_distributed_job_metrics() -> None:
         JOB_METRICS_COLLECTION_OK.set(0)
 
 
+def refresh_storage_metrics() -> dict[str, int]:
+    try:
+        usage = shutil.disk_usage(settings.data_dir)
+        snapshot = {
+            "total": int(usage.total),
+            "used": int(usage.used),
+            "free": int(usage.free),
+        }
+        STORAGE_BYTES.clear()
+        for kind, value in snapshot.items():
+            STORAGE_BYTES.labels(kind=kind).set(value)
+        STORAGE_METRICS_COLLECTION_OK.set(1)
+        return snapshot
+    except OSError:
+        STORAGE_METRICS_COLLECTION_OK.set(0)
+        return {}
+
+
 def _setup_otel(app: FastAPI) -> None:
     if not settings.otel_endpoint:
         return
@@ -277,6 +305,7 @@ def install_observability(app: FastAPI) -> None:
         def metrics():
             refresh_queue_runtime_metrics()
             refresh_distributed_job_metrics()
+            refresh_storage_metrics()
             return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     _setup_otel(app)

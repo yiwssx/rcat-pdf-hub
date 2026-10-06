@@ -11,6 +11,7 @@ on:
       - "ops/alertmanager/**"
       - "ops/otel/**"
       - "ops/tempo/**"
+      - "ops/grafana/**"
       - "Makefile"
       - ".github/workflows/core-api-ci.yml"
   workflow_dispatch:

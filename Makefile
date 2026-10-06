@@ -155,7 +155,7 @@ up-security:
 	docker compose --profile security up -d clamav
 
 up-observability:
-	docker compose --profile observability up -d alertmanager prometheus tempo otel-collector
+	docker compose --profile observability up -d alertmanager prometheus tempo otel-collector grafana
 
 up-archive:
 	docker compose --profile archive up -d paperless-db paperless
@@ -169,7 +169,8 @@ secrets:
 	@echo "PDFHUB_ADMIN_API_KEY=pdfh_admin_$$(openssl rand -hex 32)"
 	@echo "PDFHUB_WEBHOOK_MASTER_SECRET=$$(openssl rand -hex 32)"
 	@echo "PDFHUB_AUTH_TOKEN_SECRET=$$(openssl rand -hex 48)"
-	@echo "PDFHUB_DOWNLOAD_SIGNING_SECRET=$$(openssl rand -hex 48)"
+	@echo "PDFHUB_DOWNLOAD_SIGNING_SECRET=$(openssl rand -hex 48)"
+	@echo "PDFHUB_GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 32)"
 	@echo "PDFHUB_S3_ACCESS_KEY=pdfhub_$$(openssl rand -hex 12)"
 	@echo "PDFHUB_S3_SECRET_KEY=$$(openssl rand -hex 32)"
 	@echo "PAPERLESS_DB_PASSWORD=$$(openssl rand -hex 24)"

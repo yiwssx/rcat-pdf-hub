@@ -48,6 +48,7 @@ expected_membership = {
     "alertmanager": {"management"},
     "tempo": {"management"},
     "otel-collector": {"management"},
+    "grafana": {"management"},
     "paperless-db": {"data"},
     "paperless": {"data", "management", "egress"},
 }
@@ -93,7 +94,7 @@ if caddy_hosts != {public_bind}:
         f"production network policy: caddy host bind {sorted(caddy_hosts)} != [{public_bind!r}]"
     )
 
-for service in ("prometheus", "alertmanager", "tempo", "otel-collector", "paperless"):
+for service in ("prometheus", "alertmanager", "tempo", "otel-collector", "grafana", "paperless"):
     ports = services[service].get("ports", [])
     if ports and host_ips(service) != {management_bind}:
         raise SystemExit(
