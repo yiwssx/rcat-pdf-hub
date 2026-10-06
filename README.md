@@ -284,14 +284,14 @@ See `docs/adr/0002-job-queue-classes.md` and `docs/adr/0003-dedicated-worker-poo
 
 ```bash
 make up-security        # ClamAV
-make up-observability   # Prometheus + OpenTelemetry Collector
+make up-observability   # Alertmanager + Prometheus + OpenTelemetry Collector
 make up-archive         # Paperless-ngx
 make up-s3              # SeaweedFS
 ```
 
-Prometheus, OTLP, and Paperless management ports bind to `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` by default. If another management network needs access, change this value deliberately to a trusted interface/IP.
+Alertmanager, Prometheus, OTLP, and Paperless management ports bind to `PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1` by default. If another management network needs access, change this value deliberately to a trusted interface/IP.
 
-Prometheus loads rules from `ops/prometheus/alerts.yml`. Rule routing and notification destinations are infrastructure-level settings controlled by the operator and should point to the institution's chosen internal alerting system.
+Prometheus loads rules from `ops/prometheus/alerts.yml` and routes firing alerts to the bundled Alertmanager at `alertmanager:9093`. Alertmanager persists state in the `alertmanager_data` volume and exposes its operator UI on `PDFHUB_ALERTMANAGER_PORT` (default `9093`, loopback-only by default). The committed receiver intentionally keeps notification delivery self-hosted and operator-visible; institution-specific SMTP/webhook integrations can be added to `ops/alertmanager/alertmanager.yml` without changing application code.
 
 ## Validation / local CI
 

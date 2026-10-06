@@ -148,6 +148,15 @@ services:
     mem_limit: ${PDFHUB_PROMETHEUS_MEMORY_LIMIT:-2g}
     cpus: ${PDFHUB_PROMETHEUS_CPUS:-2.0}
 
+  alertmanager:
+    networks: [management]
+    logging: *production-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: ${PDFHUB_OPTIONAL_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_ALERTMANAGER_MEMORY_LIMIT:-512m}
+    cpus: ${PDFHUB_ALERTMANAGER_CPUS:-0.5}
+
   otel-collector:
     networks: [management, egress]
     logging: *production-logging
