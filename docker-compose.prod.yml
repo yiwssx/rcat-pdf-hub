@@ -50,15 +50,35 @@ services:
       PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-false}
     logging: *production-logging
 
+  worker-interactive:
+    networks: [data, management, egress]
+    <<: *app-hardening
+    logging: *production-logging
+    pids_limit: ${PDFHUB_INTERACTIVE_WORKER_PIDS_LIMIT:-256}
+    mem_limit: ${PDFHUB_INTERACTIVE_WORKER_MEMORY_LIMIT:-1g}
+    cpus: ${PDFHUB_INTERACTIVE_WORKER_CPUS:-1.5}
+    tmpfs:
+      - /tmp:size=${PDFHUB_INTERACTIVE_WORKER_TMPFS_SIZE:-512m},mode=1777
+
   worker:
     networks: [data, management, egress]
     <<: *app-hardening
     logging: *production-logging
-    pids_limit: ${PDFHUB_WORKER_PIDS_LIMIT:-512}
-    mem_limit: ${PDFHUB_WORKER_MEMORY_LIMIT:-3g}
-    cpus: ${PDFHUB_WORKER_CPUS:-4.0}
+    pids_limit: ${PDFHUB_WORKER_PIDS_LIMIT:-384}
+    mem_limit: ${PDFHUB_WORKER_MEMORY_LIMIT:-2g}
+    cpus: ${PDFHUB_WORKER_CPUS:-2.0}
     tmpfs:
-      - /tmp:size=${PDFHUB_WORKER_TMPFS_SIZE:-2g},mode=1777
+      - /tmp:size=${PDFHUB_WORKER_TMPFS_SIZE:-1g},mode=1777
+
+  worker-heavy:
+    networks: [data, management, egress]
+    <<: *app-hardening
+    logging: *production-logging
+    pids_limit: ${PDFHUB_HEAVY_WORKER_PIDS_LIMIT:-512}
+    mem_limit: ${PDFHUB_HEAVY_WORKER_MEMORY_LIMIT:-3g}
+    cpus: ${PDFHUB_HEAVY_WORKER_CPUS:-3.0}
+    tmpfs:
+      - /tmp:size=${PDFHUB_HEAVY_WORKER_TMPFS_SIZE:-2g},mode=1777
 
   cleanup:
     networks: [data, management, egress]
