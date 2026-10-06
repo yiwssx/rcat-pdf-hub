@@ -64,6 +64,78 @@ async function installWorkspaceMocks(page: Page) {
   });
 }
 
+type AccessibilityFinding = {
+  severity: "critical" | "serious";
+  rule: string;
+  target: string;
+  message: string;
+};
+
+async function automatedAccessibilityFindings(page: Page): Promise<AccessibilityFinding[]> {
+  return page.evaluate(() => {
+    const findings: AccessibilityFinding[] = [];
+    const target = (element: Element) => {
+      const id = element.getAttribute("id");
+      const cls = element.getAttribute("class")?.trim().split(/\s+/).slice(0, 2).join(".");
+      return `${element.tagName.toLowerCase()}${id ? `#${id}` : cls ? `.${cls}` : ""}`;
+    };
+    const named = (element: HTMLElement) => {
+      const ariaLabel = element.getAttribute("aria-label")?.trim();
+      const labelledBy = element.getAttribute("aria-labelledby");
+      const labelledText = labelledBy
+        ? labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent?.trim() || "").join(" ").trim()
+        : "";
+      const nativeLabels = "labels" in element
+        ? Array.from((element as HTMLInputElement).labels || []).map((label) => label.textContent?.trim() || "").join(" ").trim()
+        : "";
+      return Boolean(ariaLabel || labelledText || nativeLabels || element.textContent?.trim() || element.getAttribute("title")?.trim());
+    };
+
+    if (!document.documentElement.lang.trim()) {
+      findings.push({ severity: "serious", rule: "html-lang", target: "html", message: "Document language is missing." });
+    }
+
+    document.querySelectorAll("img").forEach((element) => {
+      if (!element.hasAttribute("alt")) {
+        findings.push({ severity: "critical", rule: "image-alt", target: target(element), message: "Image has no alt attribute." });
+      }
+    });
+
+    document.querySelectorAll<HTMLElement>("button, a[href], [role='button'], input, select, textarea").forEach((element) => {
+      if (element instanceof HTMLInputElement && element.type === "hidden") return;
+      if (!named(element)) {
+        findings.push({ severity: "critical", rule: "accessible-name", target: target(element), message: "Interactive control has no accessible name." });
+      }
+    });
+
+    document.querySelectorAll<HTMLElement>("[aria-hidden='true']").forEach((element) => {
+      if (element.matches("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])")) {
+        findings.push({ severity: "critical", rule: "aria-hidden-focus", target: target(element), message: "Focusable content is hidden from assistive technology." });
+      }
+    });
+
+    const ids = new Map<string, number>();
+    document.querySelectorAll<HTMLElement>("[id]").forEach((element) => {
+      const id = element.id;
+      ids.set(id, (ids.get(id) || 0) + 1);
+    });
+    ids.forEach((count, id) => {
+      if (count > 1) {
+        findings.push({ severity: "serious", rule: "duplicate-id", target: `#${id}`, message: `ID appears ${count} times.` });
+      }
+    });
+
+    document.querySelectorAll<HTMLElement>("[tabindex]").forEach((element) => {
+      const value = Number(element.getAttribute("tabindex"));
+      if (value > 0) {
+        findings.push({ severity: "serious", rule: "positive-tabindex", target: target(element), message: "Positive tabindex overrides natural focus order." });
+      }
+    });
+
+    return findings;
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await installWorkspaceMocks(page);
 });
@@ -141,4 +213,16 @@ test("keeps the paged file-library controls usable on mobile", async ({ page }) 
       .slice(0, 12),
   }));
   expect(layout.overflow, JSON.stringify(layout.offenders)).toBeLessThanOrEqual(1);
+});
+
+test("has no critical or serious automated accessibility findings", async ({ page }) => {
+  for (const path of ["/", "/files"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    const findings = await automatedAccessibilityFindings(page);
+    expect(
+      findings.filter((finding) => finding.severity === "critical" || finding.severity === "serious"),
+      `${path}: ${JSON.stringify(findings, null, 2)}`,
+    ).toEqual([]);
+  }
 });
