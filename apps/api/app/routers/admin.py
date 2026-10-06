@@ -1,6 +1,8 @@
 import shutil
 import json
 
+import httpx
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select, text
 from sqlalchemy.orm import Session
@@ -87,6 +89,23 @@ def admin_status(
     except Exception:
         redis_ok = False
 
+    storage_write_ok = False
+    try:
+        probe = settings.data_dir / "temporary" / ".diagnostic-write"
+        probe.parent.mkdir(parents=True, exist_ok=True)
+        probe.write_bytes(b"ok")
+        probe.unlink(missing_ok=True)
+        storage_write_ok = True
+    except OSError:
+        storage_write_ok = False
+
+    gotenberg_ok = False
+    try:
+        response = httpx.get(settings.gotenberg_url.rstrip("/") + "/health", timeout=2.0)
+        gotenberg_ok = response.status_code < 500
+    except httpx.HTTPError:
+        gotenberg_ok = False
+
     try:
         disk = shutil.disk_usage(settings.data_dir)
         disk_data = {"total": disk.total, "used": disk.used, "free": disk.free}
@@ -116,6 +135,8 @@ def admin_status(
         "workers": workers,
         "queue_depth": queue_depth,
         "storage_backend": settings.storage_backend,
+        "storage_write_ok": storage_write_ok,
+        "gotenberg_ok": gotenberg_ok,
         "data_dir": str(settings.data_dir),
         "disk": disk_data,
         "pdfhub_bytes": pdfhub_bytes,
