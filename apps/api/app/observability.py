@@ -147,17 +147,21 @@ def collect_queue_runtime_snapshot(
         current = current.replace(tzinfo=timezone.utc)
 
     queue_list = list(queues if queues is not None else all_processing_queues())
-    worker_list = list(workers if workers is not None else Worker.all(connection=redis_conn))
-    worker_counts = {queue.name: 0 for queue in queue_list}
-
-    for worker in worker_list:
-        try:
-            queue_names = worker.queue_names()
-        except Exception:
-            continue
-        for queue_name in queue_names:
-            if queue_name in worker_counts:
-                worker_counts[queue_name] += 1
+    if workers is None:
+        # RQ documents Worker.count(queue=...) as the efficient monitoring seam.
+        # Using it also avoids depending on private worker serialization details.
+        worker_counts = {queue.name: Worker.count(queue=queue) for queue in queue_list}
+    else:
+        worker_counts = {queue.name: 0 for queue in queue_list}
+        for worker in workers:
+            try:
+                worker_queues = worker.queues
+            except Exception:
+                continue
+            for worker_queue in worker_queues:
+                queue_name = getattr(worker_queue, "name", str(worker_queue))
+                if queue_name in worker_counts:
+                    worker_counts[queue_name] += 1
 
     snapshot: dict[str, dict[str, float | int | str]] = {}
     for queue in queue_list:
@@ -184,6 +188,9 @@ def collect_queue_runtime_snapshot(
 def refresh_queue_runtime_metrics() -> dict[str, dict[str, float | int | str]]:
     try:
         snapshot = collect_queue_runtime_snapshot()
+        QUEUE_DEPTH.clear()
+        QUEUE_OLDEST_AGE.clear()
+        QUEUE_WORKERS.clear()
         for queue_name, values in snapshot.items():
             queue_class = str(values["queue_class"])
             QUEUE_DEPTH.labels(queue=queue_name, queue_class=queue_class).set(int(values["depth"]))
@@ -203,6 +210,13 @@ def refresh_distributed_job_metrics() -> None:
         event_rows = redis_conn.hgetall(JOB_EVENTS_KEY)
         duration_sum_rows = redis_conn.hgetall(JOB_DURATION_SUM_KEY)
         duration_count_rows = redis_conn.hgetall(JOB_DURATION_COUNT_KEY)
+
+        # Redis can be restarted/restored independently of the API process.
+        # Clear previously exported label sets so vanished Redis fields cannot
+        # remain as stale in-process Gauge samples indefinitely.
+        JOB_EVENTS_CUMULATIVE.clear()
+        JOB_DURATION_SUM_CUMULATIVE.clear()
+        JOB_DURATION_COUNT_CUMULATIVE.clear()
 
         for field, value in event_rows.items():
             queue_class, operation, state = _parse_metric_field(field)
