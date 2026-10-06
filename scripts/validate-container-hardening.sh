@@ -55,7 +55,7 @@ check_app_sandbox() {
   check_no_new_privileges "${service}"
 }
 
-for service in postgres valkey gotenberg api worker cleanup webhook web caddy; do
+for service in postgres valkey gotenberg api worker-interactive worker worker-heavy cleanup webhook web caddy; do
   check_resource_bounds "${service}"
 done
 
@@ -63,7 +63,7 @@ for service in valkey gotenberg caddy; do
   check_no_new_privileges "${service}"
 done
 
-for service in api worker cleanup webhook web; do
+for service in api worker-interactive worker worker-heavy cleanup webhook web; do
   check_app_sandbox "${service}"
 done
 
