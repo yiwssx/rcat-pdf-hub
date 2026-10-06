@@ -45,11 +45,65 @@ groups:
           summary: PDF Hub processing queue is backing up
           description: More than 25 jobs have remained queued for ten minutes.
 
+      - alert: PdfHubInteractiveQueueStarved
+        expr: |
+          pdfhub_queue_depth{queue_class="interactive"} > 0
+          and on (queue, queue_class)
+          pdfhub_queue_workers{queue_class="interactive"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PDF Hub interactive queue has no worker capacity
+          description: Interactive jobs are waiting but no interactive RQ worker is registered.
+
+      - alert: PdfHubHeavyQueueBacklog
+        expr: |
+          pdfhub_queue_depth{queue_class="heavy"} > 0
+          and on (queue, queue_class)
+          pdfhub_queue_oldest_job_age_seconds{queue_class="heavy"} > 900
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub heavy queue has an old backlog
+          description: The oldest heavy job has waited more than 15 minutes while the queue remains non-empty.
+
+      - alert: PdfHubWorkerPoolMissing
+        expr: pdfhub_queue_workers < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: PDF Hub worker pool is missing
+          description: A configured processing queue has no registered RQ worker.
+
+      - alert: PdfHubQueueMetricsUnavailable
+        expr: pdfhub_queue_metrics_collection_ok < 1 or pdfhub_job_metrics_collection_ok < 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub queue telemetry collection is unavailable
+          description: Queue/worker or cross-process job telemetry could not be refreshed for five minutes.
+
       - alert: PdfHubRepeatedJobFailures
-        expr: sum(increase(pdfhub_jobs_total{state="failed"}[15m])) > 5
+        expr: sum(increase(pdfhub_job_events_cumulative{state=~"failed|queue_failed"}[15m])) > 5
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: PDF Hub jobs are repeatedly failing
-          description: More than five PDF jobs failed during the last fifteen minutes.
+          description: More than five PDF job or queue failures occurred during the last fifteen minutes.
+
+      - alert: PdfHubQueueClassRepeatedFailures
+        expr: |
+          sum by (queue_class) (
+            increase(pdfhub_job_events_cumulative{state=~"failed|queue_failed"}[15m])
+          ) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: PDF Hub workload class is repeatedly failing
+          description: A single workload class recorded more than three failures during the last fifteen minutes.
