@@ -34,6 +34,33 @@ class FileLibraryPageOut(BaseModel):
     has_more: bool
 
 
+class StorageReconciliationIssueOut(BaseModel):
+    category: Literal[
+        "backend_mismatch",
+        "invalid_stored_name",
+        "missing_object",
+        "orphan_object",
+        "size_mismatch",
+        "duplicate_storage_name",
+    ]
+    file_id: str | None
+    stored_name: str
+    expected_size: int | None
+    actual_size: int | None
+    locations: list[str]
+
+
+class StorageReconciliationOut(BaseModel):
+    dry_run: bool
+    backend: Literal["local", "s3"]
+    database_records: int
+    storage_objects: int
+    issue_count: int
+    healthy: bool
+    truncated: bool
+    issues: list[StorageReconciliationIssueOut]
+
+
 class FileRetentionUpdate(BaseModel):
     keep: bool
 
