@@ -1,0 +1,26 @@
+name: Core API CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "docker-compose*.yml"
+      - ".env.example"
+      - "scripts/**"
+      - "Makefile"
+      - ".github/workflows/core-api-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build API test image
+        run: docker build -t rcat-pdf-hub-api-test apps/api
+      - name: Run API tests
+        run: docker run --rm rcat-pdf-hub-api-test python -m pytest -q
