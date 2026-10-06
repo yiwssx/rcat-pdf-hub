@@ -260,6 +260,7 @@ export function FilesScreen({
   busy,
   onFiles,
   onSelectFile,
+  onDownload,
   onDelete,
   onRetention,
 }: {
@@ -267,6 +268,7 @@ export function FilesScreen({
   busy: boolean;
   onFiles: (files: FileList | null) => void;
   onSelectFile: (id: string) => void;
+  onDownload: (id: string) => void;
   onDelete: (ids: string[]) => void;
   onRetention: (id: string, keep: boolean) => void;
 }) {
@@ -292,6 +294,7 @@ export function FilesScreen({
           </button>
           <span>{sizeLabel(file.size)}</span>
           <div className="v3FileRowActions">
+            <button type="button" onClick={() => onDownload(file.id)}>ดาวน์โหลด</button>
             <button type="button" onClick={() => onRetention(file.id, Boolean(file.expires_at))}>{file.expires_at ? "เก็บถาวร" : "ใช้ retention"}</button>
             <button type="button" className="danger" onClick={() => onDelete([file.id])}>ลบ</button>
           </div>
@@ -305,28 +308,32 @@ export function FilesScreen({
 export function JobDrawer({
   open,
   jobs,
+  files,
   onClose,
   onDownload,
   onCancel,
   onRetry,
+  onClear,
 }: {
   open: boolean;
   jobs: Job[];
+  files: UploadedFile[];
   onClose: () => void;
   onDownload: (fileId: string) => void;
   onCancel: (jobId: string) => void;
   onRetry: (jobId: string) => void;
+  onClear: () => void;
 }) {
   if (!open) return null;
   return (
     <div className="v3DrawerLayer" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
       <aside className="v3JobDrawer" aria-label="งานล่าสุด">
-        <header><div><span className="v3Kicker">RECENT JOBS</span><h2>งานล่าสุด</h2></div><button type="button" onClick={onClose}>×</button></header>
+        <header><div><span className="v3Kicker">RECENT JOBS</span><h2>งานล่าสุด</h2></div><div className="v3JobHeaderActions">{jobs.some((job) => ["completed", "failed", "cancelled"].includes(job.status)) && <button type="button" className="clear" onClick={onClear}>ล้างประวัติ</button>}<button type="button" onClick={onClose}>×</button></div></header>
         <div className="v3JobList">
           {jobs.length === 0 && <div className="v3DrawerEmpty"><span>◷</span><p>ยังไม่มีงานประมวลผล</p></div>}
           {jobs.map((job) => <article className="job v3JobItem" key={job.id}>
             <span className={`v3JobDot ${job.status}`}/>
-            <div className="jobInfo"><strong>{job.operation}</strong><small>{job.status === "running" ? `กำลังประมวลผล ${job.progress}%` : job.status === "completed" ? "เสร็จแล้ว" : job.status === "failed" ? "ไม่สำเร็จ" : job.status === "cancelled" ? "ยกเลิกแล้ว" : "รอประมวลผล"}</small>{job.error && <em>{job.error}</em>}</div>
+            <div className="jobInfo"><strong>{job.operation}</strong><small>{job.input_file_ids.map((id) => files.find((file) => file.id === id)?.original_name || id.slice(0, 8)).join(" + ")}</small><small>{job.status === "running" ? `กำลังประมวลผล ${job.progress}%` : job.status === "completed" ? `เสร็จแล้ว${job.output_file_id ? ` • ${files.find((file) => file.id === job.output_file_id)?.original_name || "มีไฟล์ผลลัพธ์"}` : ""}` : job.status === "failed" ? "ไม่สำเร็จ" : job.status === "cancelled" ? "ยกเลิกแล้ว" : "รอประมวลผล"}</small>{job.error && <em>{job.error}</em>}</div>
             <span className={`v3JobBadge ${job.status}`}>{job.status === "cancelled" ? "ยกเลิก" : `${job.progress}%`}</span>
             <div className="v3JobActions">
               {(job.status === "queued" || job.status === "running") && <button type="button" className="danger" onClick={() => onCancel(job.id)}>ยกเลิก</button>}
