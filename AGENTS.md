@@ -31,6 +31,13 @@ Use the smallest set of skills that fits the task. Do not activate every skill f
 - For non-trivial changes, run `.agents/skills/code-review/SKILL.md` after implementation and tests, before merge.
 - Keep review findings separate from automated CI/security results. A green CI run does not replace code review.
 
+## Active workstream continuity
+
+- For Phase 6 work, read `docs/workstreams/phase6-production-hardening-tracker.md` before implementation.
+- Treat its task table and activity log as the canonical continuation state across sessions.
+- Update the tracker in the same PR when a Phase 6 task changes status, scope, acceptance evidence, or next action.
+- Never repeat a task marked `COMPLETE` solely because conversational context is missing; verify repository evidence first.
+
 ## Project execution rules
 
 - Preserve existing product behavior unless the task explicitly changes it.
