@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.audit import audit_event
-from app.config import get_settings
 from app.models import FileRecord, JobRecord, WebhookDelivery
 from app.policy import ensure_daily_job_quota
 from app.queue import enqueue_processing_job, redis_conn
@@ -15,8 +14,6 @@ from app.schemas import JobOut
 from app.security import Principal, require_scope
 from rq.command import send_stop_job_command
 from rq.job import Job as RQJob
-
-settings = get_settings()
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
