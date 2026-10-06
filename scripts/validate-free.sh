@@ -44,7 +44,9 @@ validation_compose_env() {
   export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
   export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
-  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
+  export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$"
+  export PDFHUB_SESSION_COOKIE_SECURE=false
+  export PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true
   export NEXT_TELEMETRY_DISABLED=1
 }
 
@@ -61,7 +63,7 @@ operations() {
     scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
     scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
     scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh \
-    scripts/compile-python-lock.sh; do
+    scripts/compile-python-lock.sh scripts/validate-container-hardening.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
@@ -190,7 +192,7 @@ runtime() {
   export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
 
   dc() {
-    docker compose -p "${project}" "$@"
+    docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml "$@"
   }
 
   cleanup_runtime() {
@@ -209,6 +211,7 @@ runtime() {
   check_clean_log "${up_log}"
   dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee -a "${up_log}"
   check_clean_log "${up_log}"
+  PDFHUB_COMPOSE_PROJECT="${project}" bash scripts/validate-container-hardening.sh
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
   dc exec -T \

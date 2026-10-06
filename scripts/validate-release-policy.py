@@ -72,7 +72,7 @@ assert "pull-requests: write" not in web_ci_workflow
 assert "pull_request_target:" not in web_ci_workflow
 
 core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
-for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
+for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "make validate-compose", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
     assert required in core_api_ci_workflow, f"Core API CI workflow missing guard: {required}"
 assert "contents: write" not in core_api_ci_workflow
 assert "pull-requests: write" not in core_api_ci_workflow
@@ -195,6 +195,20 @@ compose = read("docker-compose.yml")
 prod_compose = read("docker-compose.prod.yml")
 assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-true}" in prod_compose
 assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-false}" in prod_compose
+for marker in (
+    "x-app-hardening: &app-hardening",
+    "no-new-privileges:true",
+    "cap_drop:",
+    "- ALL",
+    "read_only: true",
+    "pids_limit:",
+    "mem_limit:",
+    "cpus:",
+    "/tmp:size=",
+):
+    assert marker in prod_compose, f"Production hardening override missing: {marker}"
+for service in ("api:", "worker:", "cleanup:", "webhook:", "web:"):
+    assert service in prod_compose, f"Production hardening missing application service: {service}"
 assert "max-size: ${PDFHUB_LOG_MAX_SIZE:-10m}" in prod_compose
 assert 'max-file: "${PDFHUB_LOG_MAX_FILES:-5}"' in prod_compose
 assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-false}" in compose
@@ -320,6 +334,7 @@ for required in (
     "scripts/check-python-lock.py",
     "scripts/compile-python-lock.sh",
     "scripts/supply-chain.sh",
+    "scripts/validate-container-hardening.sh",
     "scripts/validate-free.sh",
     "scripts/validate-direct-dependency.sh",
     "scripts/local-ci-cycle.sh",
@@ -333,6 +348,10 @@ validate_free = read("scripts/validate-free.sh")
 assert "python3 scripts/validate-release-policy.py" in validate_free
 assert "operations()" in validate_free
 assert "npm run test:e2e:stack" in validate_free
+assert 'docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml' in validate_free
+assert "PDFHUB_SESSION_COOKIE_SECURE=false" in validate_free
+assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true" in validate_free
+assert "validate-container-hardening.sh" in validate_free
 assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
@@ -361,6 +380,18 @@ for marker in (
     assert marker in supply_chain, f"Supply-chain gate missing policy marker: {marker}"
 assert "artifacts/" in read(".gitignore"), "Generated supply-chain artifacts must stay untracked"
 assert (ROOT / "docs/security/supply-chain-policy.md").exists(), "Missing supply-chain policy documentation"
+
+hardening_check = read("scripts/validate-container-hardening.sh")
+for marker in (
+    "ReadonlyRootfs",
+    "PidsLimit",
+    "HostConfig.Memory",
+    "HostConfig.NanoCpus",
+    "HostConfig.CapDrop",
+    "HostConfig.SecurityOpt",
+    "container hardening: PASS",
+):
+    assert marker in hardening_check, f"Container hardening validator missing: {marker}"
 
 release_readiness = read("scripts/release-readiness.sh")
 assert "make validate-supply-chain-source" in release_readiness
