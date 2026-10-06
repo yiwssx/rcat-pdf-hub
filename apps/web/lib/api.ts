@@ -77,8 +77,6 @@ export type AuthMe = {
 
 export type IntegrationStatus = {
   storage_backend: "local" | "s3";
-  storage_write_ok: boolean;
-  gotenberg_ok: boolean;
   clamav_enabled: boolean;
   paperless_enabled: boolean;
   oidc_enabled: boolean;
@@ -110,6 +108,8 @@ export type AdminStatus = {
   workers: number;
   queue_depth: number;
   storage_backend: "local" | "s3";
+  storage_write_ok: boolean;
+  gotenberg_ok: boolean;
   data_dir: string;
   disk: { total: number; used: number; free: number };
   pdfhub_bytes: number;
