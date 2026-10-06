@@ -35,7 +35,7 @@ Heavy admin and tool modules are loaded dynamically because they are not require
 - Adding a new tool option no longer requires adding state and setter props to `PdfHubApp`.
 - Job payload rules live next to the tool configuration that produces them.
 - The application shell becomes easier to understand and test.
-- Tool state is scoped to an active Tool Workspace session; reopening a tool starts from documented defaults.
+- Tool settings are stored as one opaque snapshot by the application shell so reopening a tool preserves the existing user experience without exposing individual fields to the shell.
 - The internal `ToolPanel` interface is still broad, but it is no longer an application-wide seam. It can be simplified later without touching the shell.
 
 ## Validation
