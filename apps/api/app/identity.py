@@ -14,7 +14,7 @@ from ldap3.utils.conv import escape_filter_chars
 from redis import Redis
 
 from app.config import get_settings
-from app.rbac import ROLE_ADMIN, ROLE_OPERATOR, is_admin_role, normalize_roles, scopes_for_roles
+from app.rbac import ROLE_ADMIN, ROLE_OPERATOR, is_admin_role, normalize_roles, role_for_groups, scopes_for_roles
 
 settings = get_settings()
 OIDC_STATE_PREFIX = "pdfhub:oidc:state:"
@@ -47,7 +47,7 @@ def identity_from_claims(claims: dict, source: str) -> dict:
         or subject
     )
     groups = _claim_list(claims.get(settings.oidc_group_claim) or claims.get("groups"))
-    roles = (ROLE_ADMIN,) if set(groups) & settings.admin_group_set else (ROLE_OPERATOR,)
+    roles = (role_for_groups(groups, settings.human_role_group_map),)
     scopes = scopes_for_roles(roles, settings.human_scope_set)
     safe_display = display[:110]
     return {
@@ -124,12 +124,18 @@ def decode_session_token(token: str) -> dict:
         if not settings.web_console_auto_login_enabled:
             raise jwt.InvalidTokenError("Web Console sessions are disabled while institutional authentication is active")
         return create_web_console_identity()
+    groups = _claim_list(claims.get("pdfhub_groups"))
     roles_claim = _claim_list(claims.get("pdfhub_roles"))
-    if roles_claim:
+    if source in {"oidc", "ldap"}:
+        # Re-evaluate institutional groups on every session decode so a mapping
+        # change or group removal cannot leave stale privileges in a cookie.
+        roles = (role_for_groups(groups, settings.human_role_group_map),)
+        scopes = scopes_for_roles(roles, settings.human_scope_set)
+    elif roles_claim:
         roles = normalize_roles(roles_claim)
         scopes = scopes_for_roles(roles, settings.human_scope_set)
-    elif source in {"oidc", "ldap", "local-admin"}:
-        roles = (ROLE_ADMIN,) if bool(claims.get("pdfhub_identity_admin", False)) or source == "local-admin" else (ROLE_OPERATOR,)
+    elif source == "local-admin":
+        roles = (ROLE_ADMIN,)
         scopes = scopes_for_roles(roles, settings.human_scope_set)
     else:
         # Backward compatibility for legacy/custom signed sessions that predate
@@ -141,7 +147,7 @@ def decode_session_token(token: str) -> dict:
         "name": str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120],
         "subject": str(claims["sub"]),
         "display_name": str(claims.get("pdfhub_display_name") or claims["sub"]),
-        "groups": _claim_list(claims.get("pdfhub_groups")),
+        "groups": groups,
         "roles": list(roles),
         "scopes": sorted(scopes),
         "source": source,
