@@ -5,7 +5,6 @@ Revises: 0003_phase4_webhook_deliveries
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 revision = "0004_phase6_file_library_indexes"
 down_revision = "0003_phase4_webhook_deliveries"
