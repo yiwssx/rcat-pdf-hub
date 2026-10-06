@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
+      - name: Validate repository release policy
+        run: python3 scripts/validate-release-policy.py
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
       - name: Run API tests
