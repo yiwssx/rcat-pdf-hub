@@ -909,3 +909,124 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
   .v3LibraryRow > span:not(.v3FileBadge) { display:none; }
   .v3SystemStrip { grid-template-columns:1fr; }
 }
+
+
+/* Production workflow additions */
+.v3Dropzone.isDragging {
+  border-color: rgba(217,58,157,.62);
+  box-shadow: 0 0 0 6px rgba(217,58,157,.07), var(--v3-shadow-soft);
+}
+.v3AdminLoginCard code { overflow-wrap:anywhere; color:#5c62bd; font-size:9px; }
+.v3AdminLoginLinks { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.v3AdminLoginLinks a,.v3AdminLoginLinks button { border:0;background:transparent;color:#6871c9;font-size:9px;font-weight:850;text-decoration:none;cursor:pointer; }
+
+.v3MergeList > div { grid-template-columns:26px minmax(0,1fr) 20px; cursor:grab; }
+.v3MergeList > div:active { cursor:grabbing; }
+.v3MergeList > div > b { color:#a5aabb;font-size:15px; }
+
+.v3PageOrganizer {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  max-height:430px;
+  overflow:auto;
+  padding:2px;
+}
+.v3PageThumb {
+  position:relative;
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:5px;
+  padding:7px;
+  border:1px solid #e8eaf2;
+  border-radius:13px;
+  background:#fafbfe;
+  cursor:grab;
+}
+.v3PageThumb:active { cursor:grabbing; }
+.v3PageImage {
+  grid-column:1/-1;
+  aspect-ratio:3/4;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:8px;
+  background:#e9ebf1;
+  transition:transform .14s ease;
+}
+.v3PageImage img { width:100%;height:100%;object-fit:contain;background:white; }
+.v3PageThumb > div:nth-of-type(2) { min-width:0;display:flex;align-items:center;gap:4px; }
+.v3PageThumb > div:nth-of-type(2) strong { font-size:9px; }
+.v3PageThumb > div:nth-of-type(2) small { color:var(--v3-muted);font-size:7px; }
+.v3PageThumb > button {
+  width:27px;height:27px;padding:0;border:1px solid #e0e3ed;border-radius:8px;color:#626b88;background:white;cursor:pointer;
+}
+.v3PageThumb > button.danger { color:#cf4656;border-color:#f3d8dd;background:#fff7f8; }
+.v3OrganizerLoading { min-height:160px;display:grid;place-items:center;color:var(--v3-muted);font-size:10px; }
+.v3AdvancedDetails { padding:10px;border:1px solid #eceef5;border-radius:12px;background:#fafbfe; }
+.v3AdvancedDetails summary { color:#626b84;font-size:9px;font-weight:850;cursor:pointer; }
+.v3AdvancedDetails[open] summary { margin-bottom:10px; }
+
+.v3FilesActions { display:flex;align-items:center;gap:8px; }
+.v3FilesActions > span { color:var(--v3-muted);font-size:9px;font-weight:800; }
+.v3DangerButton {
+  min-height:40px;padding:8px 11px;border:1px solid #f2d7dc;border-radius:11px;color:#cb4354;background:#fff5f6;font-size:9px;font-weight:900;cursor:pointer;
+}
+.v3LibraryRow {
+  grid-template-columns:28px minmax(0,1fr) 90px 190px;
+}
+.v3FileCheck { display:grid;place-items:center; }
+.v3FileCheck input { width:15px;height:15px;min-height:0;margin:0;accent-color:#6366f1; }
+.v3FileOpen {
+  min-width:0;display:grid;grid-template-columns:42px minmax(0,1fr);align-items:center;gap:10px;padding:0;border:0;color:inherit;background:transparent;text-align:left;cursor:pointer;
+}
+.v3FileOpen > div { min-width:0;display:grid;gap:2px; }
+.v3FileOpen strong,.v3FileOpen small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.v3FileOpen strong { font-size:11px; }
+.v3FileOpen small { color:var(--v3-muted);font-size:8.5px; }
+.v3FileRowActions { display:flex;justify-content:flex-end;gap:5px; }
+.v3FileRowActions button {
+  min-height:30px;padding:6px 8px;border:1px solid #e4e6ef;border-radius:8px;color:#616a84;background:#fff;font-size:8px;font-weight:850;cursor:pointer;
+}
+.v3FileRowActions button.danger { color:#ca4052;border-color:#f3d5da;background:#fff7f8; }
+
+.v3JobDot.cancelled { background:#94a3b8; }
+.v3JobBadge.cancelled { color:#64748b;background:#f1f5f9; }
+.v3JobActions { grid-column:2/-1;display:flex;justify-content:flex-end;gap:5px; }
+.v3JobActions button {
+  min-height:30px;padding:6px 8px;border:1px solid #e1e4ed;border-radius:8px;color:#596481;background:#fff;font-size:8.5px;font-weight:900;cursor:pointer;
+}
+.v3JobActions button.danger { color:#c74352;border-color:#f3d6db;background:#fff6f7; }
+.v3JobActions .downloadButton { grid-column:auto; }
+
+.v3AdminOverview { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:10px; }
+.v3AdminMetric { min-width:0;padding:14px;border:1px solid var(--v3-line);border-radius:16px;background:#fff;box-shadow:var(--v3-shadow-soft); }
+.v3AdminMetric span { color:#737be0;font-size:8px;font-weight:950;letter-spacing:.12em; }
+.v3AdminMetric strong { display:block;margin-top:4px;font-size:23px;letter-spacing:-.04em; }
+.v3AdminMetric small { display:block;margin-top:2px;overflow:hidden;color:var(--v3-muted);font-size:8px;text-overflow:ellipsis;white-space:nowrap; }
+.v3Diagnostics { margin-bottom:10px;padding:15px;border:1px solid var(--v3-line);border-radius:17px;background:#fff; }
+.v3Diagnostics .v3SectionHead { margin-bottom:9px; }
+.v3Diagnostics h2 { font-size:16px; }
+.v3MiniButton { min-height:32px;padding:6px 9px;border:1px solid #e2e4ef;border-radius:9px;color:#6069c7;background:#f8f8ff;font-size:8px;font-weight:900;cursor:pointer; }
+.v3DiagnosticGrid { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px; }
+.v3DiagnosticGrid > div { display:flex;align-items:center;gap:7px;padding:9px;border-radius:10px;background:#f8f9fc; }
+.v3DiagnosticGrid span { width:22px;height:22px;display:grid;place-items:center;border-radius:7px;font-size:9px;font-weight:950; }
+.v3DiagnosticGrid .ok span { color:#138146;background:#eaf9ef; }
+.v3DiagnosticGrid .bad span { color:#c94555;background:#fff0f1; }
+.v3DiagnosticGrid strong { font-size:8.5px; }
+
+@media (max-width:900px) {
+  .v3AdminOverview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .v3DiagnosticGrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .v3LibraryRow { grid-template-columns:28px minmax(0,1fr) 150px; }
+  .v3LibraryRow > span:not(.v3FileBadge) { display:none; }
+}
+@media (max-width:620px) {
+  .v3PageOrganizer { grid-template-columns:1fr 1fr; }
+  .v3FilesActions { width:100%;flex-wrap:wrap; }
+  .v3LibraryRow { grid-template-columns:25px minmax(0,1fr);gap:8px; }
+  .v3FileRowActions { grid-column:1/-1;justify-content:flex-end; }
+  .v3AdminOverview { grid-template-columns:1fr 1fr; }
+  .v3DiagnosticGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build config secrets cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: up up-nas down logs ps test build config secrets local-admin-hash cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -124,6 +124,9 @@ up-observability:
 
 up-archive:
 	docker compose --profile archive up -d paperless-db paperless
+
+local-admin-hash:
+	@python3 scripts/hash-admin-password.py
 
 secrets:
 	@echo "POSTGRES_PASSWORD=$$(openssl rand -hex 24)"

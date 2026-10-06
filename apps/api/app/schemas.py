@@ -26,6 +26,29 @@ class FileOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class FileRetentionUpdate(BaseModel):
+    keep: bool
+
+
+class FileBulkDeleteRequest(BaseModel):
+    file_ids: list[str] = Field(min_length=1, max_length=200)
+
+
+class PageInfoOut(BaseModel):
+    file_id: str
+    pages: int
+
+
+class OrganizePage(BaseModel):
+    page: int = Field(ge=1, le=100000)
+    rotation: int = Field(default=0)
+
+
+class OrganizeRequest(BaseModel):
+    file_id: str
+    pages: list[OrganizePage] = Field(min_length=1, max_length=1000)
+
+
 class JobOut(BaseModel):
     id: str
     operation: str
@@ -152,6 +175,11 @@ class ApiKeyOut(BaseModel):
     scopes: list[str]
     active: bool
     policy: ServicePolicyOut
+
+
+class LocalLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=120, pattern=r"^[^\x00\r\n]+$")
+    password: str = Field(min_length=1, max_length=1024)
 
 
 class LdapLoginRequest(BaseModel):

@@ -104,6 +104,9 @@ def process_job(job_id: str) -> str:
     if not job:
         db.close()
         raise RuntimeError(f"Unknown job {job_id}")
+    if job.status == "cancelled":
+        db.close()
+        return ""
 
     suffix, content_type = _output_spec(job.operation)
     output = new_output_path(job.id, suffix=suffix)
@@ -141,6 +144,8 @@ def process_job(job_id: str) -> str:
                 first_page=int(params.get("first_page", 1)),
                 last_page=params.get("last_page"),
             )
+        elif job.operation == "organize":
+            pdf_tools.organize(inputs[0], params["pages"], output)
         elif job.operation == "split":
             pdf_tools.split(inputs[0], params["pages"], output)
         elif job.operation == "rotate":
@@ -196,6 +201,12 @@ def process_job(job_id: str) -> str:
             raise RuntimeError("Processed output was rejected by malware scanning") from exc
         record_malware(scan_status)
 
+        db.refresh(job)
+        if job.status == "cancelled":
+            output.unlink(missing_ok=True)
+            audit_event("job.cancelled_before_commit", job.requested_by, "job", job.id, {"operation": job.operation})
+            return ""
+
         digest = _output_hash(output)
         output_size = output.stat().st_size
         if job.requested_by != "bootstrap-admin":
@@ -238,9 +249,15 @@ def process_job(job_id: str) -> str:
                 # Cleanup is best-effort and must not mask the original job-processing exception.
                 pass
         try:
-            _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
+            db.refresh(job)
+            if job.status != "cancelled":
+                _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
         except Exception:
             db.rollback()
+        if job.status == "cancelled":
+            record_job(job.operation, "cancelled")
+            audit_event("job.cancelled_worker_stop", job.requested_by, "job", job.id, {"operation": job.operation})
+            return ""
         record_job(job.operation, "failed")
         audit_event(
             "job.failed",

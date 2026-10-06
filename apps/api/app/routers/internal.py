@@ -36,7 +36,7 @@ def web_console_session(response: Response):
         display_name=identity["display_name"],
         subject=identity["subject"],
         scopes=sorted(identity["scopes"]),
-        groups=[],
+        groups=sorted(identity["groups"]),
         auth_source="web-console",
         is_admin=False,
     )

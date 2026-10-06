@@ -146,7 +146,7 @@ export function HomeScreen({
       </section>
 
       <section className="v3StartGrid">
-        <div className="v3Dropzone">
+        <div className="v3Dropzone" onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add("isDragging"); }} onDragLeave={(event) => event.currentTarget.classList.remove("isDragging")} onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove("isDragging"); onFiles(event.dataTransfer.files); }}>
           <input id="files" type="file" multiple disabled={busy} onChange={(e) => onFiles(e.target.files)}/>
           <label htmlFor="files">
             <span className="v3DropIcon">＋</span>
@@ -260,29 +260,42 @@ export function FilesScreen({
   busy,
   onFiles,
   onSelectFile,
+  onDelete,
+  onRetention,
 }: {
   files: UploadedFile[];
   busy: boolean;
   onFiles: (files: FileList | null) => void;
   onSelectFile: (id: string) => void;
+  onDelete: (ids: string[]) => void;
+  onRetention: (id: string, keep: boolean) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
   const shown = useMemo(() => files.filter((file) => file.original_name.toLowerCase().includes(query.trim().toLowerCase())), [files, query]);
   return (
     <main className="v3Main">
       <section className="v3FilesHead">
         <div><span className="v3Kicker">FILES</span><h1>ไฟล์ทั้งหมด</h1><p>{files.length} ไฟล์ใน Workspace</p></div>
-        <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(e) => onFiles(e.target.files)}/>＋ เพิ่มไฟล์</label>
+        <div className="v3FilesActions">
+          {selected.length > 0 && <><span>{selected.length} รายการ</span><button type="button" className="v3DangerButton" disabled={busy} onClick={() => { onDelete(selected); setSelected([]); }}>ลบที่เลือก</button></>}
+          <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(e) => onFiles(e.target.files)}/>＋ เพิ่มไฟล์</label>
+        </div>
       </section>
       <div className="v3Search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ค้นหาชื่อไฟล์…"/></div>
       <section className="v3FileLibrary">
-        {shown.map((file) => <button type="button" key={file.id} className="v3LibraryRow" onClick={() => onSelectFile(file.id)}>
-          <span className={`v3FileBadge ${fileKind(file).toLowerCase()}`}>{fileKind(file)}</span>
-          <div><strong>{file.original_name}</strong><small>{file.content_type}</small></div>
+        {shown.map((file) => <div key={file.id} className="v3LibraryRow">
+          <label className="v3FileCheck" onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.includes(file.id)} onChange={(event) => setSelected((old) => event.target.checked ? [...old, file.id] : old.filter((id) => id !== file.id))}/></label>
+          <button type="button" className="v3FileOpen" onClick={() => onSelectFile(file.id)}>
+            <span className={`v3FileBadge ${fileKind(file).toLowerCase()}`}>{fileKind(file)}</span>
+            <div><strong>{file.original_name}</strong><small>{file.content_type} • {file.expires_at ? `หมดอายุ ${new Date(file.expires_at).toLocaleString("th-TH")}` : "เก็บถาวร"}</small></div>
+          </button>
           <span>{sizeLabel(file.size)}</span>
-          <span>{new Date(file.created_at).toLocaleString("th-TH")}</span>
-          <b>›</b>
-        </button>)}
+          <div className="v3FileRowActions">
+            <button type="button" onClick={() => onRetention(file.id, Boolean(file.expires_at))}>{file.expires_at ? "เก็บถาวร" : "ใช้ retention"}</button>
+            <button type="button" className="danger" onClick={() => onDelete([file.id])}>ลบ</button>
+          </div>
+        </div>)}
         {shown.length === 0 && <div className="v3LibraryEmpty"><span>◫</span><h2>ไม่พบไฟล์</h2><p>{query ? "ลองค้นหาด้วยคำอื่น" : "เพิ่มไฟล์เพื่อเริ่มใช้งาน"}</p></div>}
       </section>
     </main>
@@ -294,11 +307,15 @@ export function JobDrawer({
   jobs,
   onClose,
   onDownload,
+  onCancel,
+  onRetry,
 }: {
   open: boolean;
   jobs: Job[];
   onClose: () => void;
   onDownload: (fileId: string) => void;
+  onCancel: (jobId: string) => void;
+  onRetry: (jobId: string) => void;
 }) {
   if (!open) return null;
   return (
@@ -309,9 +326,13 @@ export function JobDrawer({
           {jobs.length === 0 && <div className="v3DrawerEmpty"><span>◷</span><p>ยังไม่มีงานประมวลผล</p></div>}
           {jobs.map((job) => <article className="job v3JobItem" key={job.id}>
             <span className={`v3JobDot ${job.status}`}/>
-            <div className="jobInfo"><strong>{job.operation}</strong><small>{job.status === "running" ? `กำลังประมวลผล ${job.progress}%` : job.status === "completed" ? "เสร็จแล้ว" : job.status === "failed" ? "ไม่สำเร็จ" : "รอประมวลผล"}</small>{job.error && <em>{job.error}</em>}</div>
-            <span className={`v3JobBadge ${job.status}`}>{job.progress}%</span>
-            {job.output_file_id && <button type="button" className="downloadButton" onClick={() => onDownload(job.output_file_id!)}>ดาวน์โหลด</button>}
+            <div className="jobInfo"><strong>{job.operation}</strong><small>{job.status === "running" ? `กำลังประมวลผล ${job.progress}%` : job.status === "completed" ? "เสร็จแล้ว" : job.status === "failed" ? "ไม่สำเร็จ" : job.status === "cancelled" ? "ยกเลิกแล้ว" : "รอประมวลผล"}</small>{job.error && <em>{job.error}</em>}</div>
+            <span className={`v3JobBadge ${job.status}`}>{job.status === "cancelled" ? "ยกเลิก" : `${job.progress}%`}</span>
+            <div className="v3JobActions">
+              {(job.status === "queued" || job.status === "running") && <button type="button" className="danger" onClick={() => onCancel(job.id)}>ยกเลิก</button>}
+              {(job.status === "failed" || job.status === "cancelled") && <button type="button" onClick={() => onRetry(job.id)}>ลองใหม่</button>}
+              {job.output_file_id && <button type="button" className="downloadButton" onClick={() => onDownload(job.output_file_id!)}>ดาวน์โหลด</button>}
+            </div>
           </article>)}
         </div>
       </aside>

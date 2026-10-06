@@ -17,6 +17,7 @@ from app.schemas import (
     JobOut,
     MergeRequest,
     OcrRequest,
+    OrganizeRequest,
     PageNumberRequest,
     PdfToImagesRequest,
     RotateRequest,
@@ -134,6 +135,14 @@ def pdf_to_images(
     params = req.model_dump(exclude={"file_id"})
     params["last_page"] = requested_last
     return _create_job(db, principal, "pdf-to-images", [req.file_id], params)
+
+
+@router.post("/organize", response_model=JobOut, status_code=202)
+def organize(req: OrganizeRequest, principal: Principal = Depends(require_scope("pdf:split")), db: Session = Depends(get_db)):
+    rotations = {0, 90, 180, 270}
+    if any((item.rotation % 360) not in rotations for item in req.pages):
+        raise HTTPException(status_code=422, detail="rotation must be 0, 90, 180, or 270")
+    return _create_job(db, principal, "organize", [req.file_id], {"pages": [item.model_dump() for item in req.pages]})
 
 
 @router.post("/split", response_model=JobOut, status_code=202)

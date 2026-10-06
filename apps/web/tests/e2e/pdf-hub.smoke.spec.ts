@@ -32,6 +32,7 @@ async function installApiMocks(page: Page) {
         oidc: { enabled: false, issuer: null, login_url: null },
         ldap: { enabled: false },
         web_console: { auto_login: true },
+        local_admin: { enabled: false },
       },
     });
   });
@@ -79,6 +80,12 @@ async function installApiMocks(page: Page) {
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ json: [] });
+  });
+
+
+  await page.route("**/api/v1/files/file-pdf-1/pages", async (route) => {
+    if (!(await requireSession(route))) return;
+    await route.fulfill({ json: { file_id: initialFile.id, pages: 3 } });
   });
 
   await page.route("**/api/v1/files/file-pdf-1/preview**", async (route) => {
@@ -194,4 +201,22 @@ test("files is a dedicated route instead of a section in the home page", async (
   await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
   await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
   await expect(page.locator(".v3FileLibrary")).toBeVisible();
+});
+
+
+test("page organizer uses thumbnails instead of the old form wall", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /จัดหน้า PDF/ }).click();
+  await expect(page.locator(".v3PageOrganizer")).toBeVisible();
+  await expect(page.locator(".v3PageThumb")).toHaveCount(3);
+  await page.getByRole("button", { name: "หมุนหน้า 1" }).click();
+  await expect(page.getByRole("button", { name: "บันทึกการจัดหน้า 3 หน้า" })).toBeVisible();
+});
+
+test("admin login is a dedicated route and never requests a Service API Key", async ({ page }) => {
+  await page.goto("/admin/login");
+  await expect(page.getByLabel("Service API Key")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "ผู้ดูแล RCAT PDF Hub" })).toBeVisible();
+  await expect(page.getByText(/Local Admin ยังไม่ได้เปิดใช้/)).toBeVisible();
 });

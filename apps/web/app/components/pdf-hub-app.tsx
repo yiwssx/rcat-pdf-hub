@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   archiveToPaperless,
+  AdminStatus,
+  bulkDeleteFiles,
+  cancelJob,
   AuthConfig,
   AuthMe,
   createJob,
   createSignedDownload,
+  deleteFile,
   fetchDownload,
   fetchPreview,
+  getAdminStatus,
   getAuthConfig,
   getIntegrationStatus,
   getMe,
@@ -17,8 +22,10 @@ import {
   ldapLogin,
   listFiles,
   listJobs,
+  retryJob,
   logoutSession,
   SESSION_AUTH,
+  setFileRetention,
   uploadFile,
   UploadedFile,
 } from "../../lib/api";
@@ -71,6 +78,8 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const [activeTool, setActiveTool] = useState("");
   const [pendingTool, setPendingTool] = useState("");
   const [jobsOpen, setJobsOpen] = useState(false);
+  const [mergeOrder, setMergeOrder] = useState<string[]>([]);
+  const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
 
   const [ldapUser, setLdapUser] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
@@ -166,6 +175,19 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setMergeOrder((old) => {
+      const available = pdfFiles.map((file) => file.id);
+      const kept = old.filter((id) => available.includes(id));
+      return [...kept, ...available.filter((id) => !kept.includes(id))];
+    });
+  }, [pdfFiles]);
+
+  useEffect(() => {
+    if (initialView !== "admin" || !auth || !identity?.is_admin) return;
+    void getAdminStatus(auth).then(setAdminStatus).catch(() => setAdminStatus(null));
+  }, [initialView, auth, identity?.is_admin]);
 
   useEffect(() => {
     if (!auth || !activeJobs) return;
@@ -313,7 +335,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     switch (operation) {
       case "merge":
         if (pdfFiles.length < 2) return setMessage("Merge ต้องมี PDF อย่างน้อย 2 ไฟล์");
-        return submit("merge", { file_ids: pdfFiles.map((file) => file.id) });
+        return submit("merge", { file_ids: mergeOrder.length ? mergeOrder : pdfFiles.map((file) => file.id) });
       case "images-to-pdf":
         if (imageFiles.length < 1) return setMessage("ต้องมีไฟล์ภาพอย่างน้อย 1 ไฟล์");
         return submit("images-to-pdf", { file_ids: imageFiles.map((file) => file.id), page_size: imagePageSize, fit: imageFit, margin: 18, dpi: imageDpi });
@@ -398,6 +420,51 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     }
   }
 
+  async function deleteFiles(fileIds: string[]) {
+    if (!auth || fileIds.length < 1) return;
+    setBusy(true);
+    try {
+      if (fileIds.length === 1) await deleteFile(fileIds[0], auth);
+      else await bulkDeleteFiles(fileIds, auth);
+      setFiles((old) => old.filter((file) => !fileIds.includes(file.id)));
+      if (fileIds.includes(targetId)) {
+        setTargetId("");
+        setActiveTool("");
+        setPreviewUrl(null);
+      }
+      setMessage(`ลบไฟล์แล้ว ${fileIds.length} ไฟล์`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ลบไฟล์ไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateRetention(fileId: string, keep: boolean) {
+    if (!auth) return;
+    setBusy(true);
+    try {
+      const updated = await setFileRetention(fileId, keep, auth);
+      setFiles((old) => old.map((file) => file.id === updated.id ? updated : file));
+      setMessage(keep ? "ตั้งไฟล์เป็นเก็บถาวรแล้ว" : "คืนไฟล์เข้าสู่ retention ปกติแล้ว");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "แก้ retention ไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function controlJob(jobId: string, action: "cancel" | "retry") {
+    if (!auth) return;
+    try {
+      const updated = action === "cancel" ? await cancelJob(jobId, auth) : await retryJob(jobId, auth);
+      setJobs((old) => [updated, ...old.filter((job) => job.id !== updated.id && (action !== "cancel" || job.id !== jobId))]);
+      setMessage(action === "cancel" ? "ยกเลิกงานแล้ว" : "ส่งงานใหม่เข้าคิวแล้ว");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "จัดการงานไม่สำเร็จ");
+    }
+  }
+
   async function archive() {
     if (!auth || !targetId) return;
     setBusy(true);
@@ -430,6 +497,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
 
   const toolPanel = target ? <ToolPanel
     tool={activeTool}
+    auth={auth}
     target={target}
     pdfFiles={pdfFiles}
     imageFiles={imageFiles}
@@ -459,6 +527,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     rasterDpi={rasterDpi}
     rasterFirstPage={rasterFirstPage}
     rasterLastPage={rasterLastPage}
+    mergeOrder={mergeOrder}
     setSignedTtl={setSignedTtl}
     setSplitPages={setSplitPages}
     setRotateDegrees={setRotateDegrees}
@@ -481,10 +550,12 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     setRasterDpi={setRasterDpi}
     setRasterFirstPage={setRasterFirstPage}
     setRasterLastPage={setRasterLastPage}
+    setMergeOrder={setMergeOrder}
     onRun={(operation) => void run(operation)}
     onSignedLink={() => void makeSignedLink()}
     onCopySignedLink={() => void copySignedLink()}
     onArchive={() => void archive()}
+    onOrganize={(pages) => void submit("organize", { file_id: targetId, pages })}
     onClose={() => setActiveTool("")}
   /> : null;
 
@@ -499,6 +570,8 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
             <a className="v3TextLink" href="/">← กลับ Workspace</a>
           </section>
           {identity.is_admin ? <>
+            {adminStatus && <section className="v3AdminOverview"><div className="v3AdminMetric"><span>FILES</span><strong>{adminStatus.files}</strong><small>{(adminStatus.pdfhub_bytes / 1024 / 1024).toFixed(1)} MB ใน PDF Hub</small></div><div className="v3AdminMetric"><span>QUEUE</span><strong>{adminStatus.queue_depth}</strong><small>{adminStatus.workers} worker</small></div><div className="v3AdminMetric"><span>DISK FREE</span><strong>{(adminStatus.disk.free / 1024 / 1024 / 1024).toFixed(1)} GB</strong><small>{adminStatus.data_dir}</small></div><div className="v3AdminMetric"><span>SERVICES</span><strong>{adminStatus.database_ok && adminStatus.redis_ok ? "OK" : "WARN"}</strong><small>DB {adminStatus.database_ok ? "✓" : "×"} • Redis {adminStatus.redis_ok ? "✓" : "×"}</small></div></section>}
+            {adminStatus && <section className="v3Diagnostics"><div className="v3SectionHead"><div><span className="v3Kicker">DIAGNOSTICS</span><h2>เครื่องมือประมวลผล</h2></div><button className="v3MiniButton" onClick={() => void getAdminStatus(auth).then(setAdminStatus)}>รีเฟรช</button></div><div className="v3DiagnosticGrid">{Object.entries({ ...adminStatus.tools, gotenberg: adminStatus.gotenberg_ok, storage: adminStatus.storage_write_ok }).map(([name, ok]) => <div key={name} className={ok ? "ok" : "bad"}><span>{ok ? "✓" : "×"}</span><strong>{name}</strong></div>)}</div></section>}
             {integrations && <section className="v3SystemStrip">
               <div><span>▰</span><p><strong>Storage</strong><small>{integrations.storage_backend.toUpperCase()}</small></p></div>
               <div><span>✓</span><p><strong>Malware scan</strong><small>{integrations.clamav_enabled ? "พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div>
@@ -506,7 +579,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
               <div><span>▣</span><p><strong>Archive</strong><small>{integrations.paperless_enabled ? "Paperless พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div>
             </section>}
             <AdminPanel apiKey={auth}/>
-          </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/">กลับ Workspace</a></section>}
+          </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/admin/login">เข้าสู่ระบบผู้ดูแล</a><a href="/">กลับ Workspace</a></section>}
         </main>
       ) : target ? (
         <DocumentWorkspace
@@ -523,12 +596,12 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
           onPreviewPage={setPreviewPage}
         />
       ) : initialView === "files" ? (
-        <FilesScreen files={files} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile}/>
+        <FilesScreen files={files} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onDelete={(ids) => void deleteFiles(ids)} onRetention={(id, keep) => void updateRetention(id, keep)}/>
       ) : (
         <HomeScreen files={files} tools={tools} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
       )}
 
-      <JobDrawer open={jobsOpen} jobs={jobs} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)}/>
+      <JobDrawer open={jobsOpen} jobs={jobs} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)} onCancel={(jobId) => void controlJob(jobId, "cancel")} onRetry={(jobId) => void controlJob(jobId, "retry")}/>
     </div>
   );
 }

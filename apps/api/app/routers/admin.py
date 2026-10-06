@@ -1,14 +1,18 @@
+import shutil
 import json
 
+import httpx
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select, text
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event, read_audit_events
 from app.config import get_settings
 from app.db import get_db
-from app.models import ApiKey, ServicePolicy, WebhookDelivery
-from app.policy import effective_policy
+from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy, WebhookDelivery
+from app.policy import active_storage_bytes, effective_policy
+from app.queue import pdf_queue, redis_conn
 from app.schemas import (
     ApiKeyCreate,
     ApiKeyCreated,
@@ -19,6 +23,7 @@ from app.schemas import (
 )
 from app.security import Principal, hash_api_key, new_api_key, require_scope
 from app.webhooks import derive_webhook_secret, retry_dead_webhook, validate_webhook_url
+from rq import Worker
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 settings = get_settings()
@@ -65,6 +70,91 @@ def _validated_webhook(url: str | None) -> str | None:
 def _require_bootstrap_admin(principal: Principal) -> None:
     if not principal.is_bootstrap_admin:
         raise HTTPException(status_code=403, detail="Bootstrap admin required")
+
+
+@router.get("/status")
+def admin_status(
+    principal: Principal = Depends(require_scope("admin:keys")),
+    db: Session = Depends(get_db),
+):
+    database_ok = True
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        database_ok = False
+
+    redis_ok = True
+    try:
+        redis_ok = bool(redis_conn.ping())
+    except Exception:
+        redis_ok = False
+
+    storage_write_ok = False
+    try:
+        probe = settings.data_dir / "temporary" / ".diagnostic-write"
+        probe.parent.mkdir(parents=True, exist_ok=True)
+        probe.write_bytes(b"ok")
+        probe.unlink(missing_ok=True)
+        storage_write_ok = True
+    except OSError:
+        storage_write_ok = False
+
+    gotenberg_ok = False
+    try:
+        response = httpx.get(settings.gotenberg_url.rstrip("/") + "/health", timeout=2.0)
+        gotenberg_ok = response.status_code < 500
+    except httpx.HTTPError:
+        gotenberg_ok = False
+
+    try:
+        disk = shutil.disk_usage(settings.data_dir)
+        disk_data = {"total": disk.total, "used": disk.used, "free": disk.free}
+    except OSError:
+        disk_data = {"total": 0, "used": 0, "free": 0}
+
+    try:
+        workers = len(Worker.all(connection=redis_conn))
+    except Exception:
+        workers = 0
+    try:
+        queue_depth = len(pdf_queue)
+    except Exception:
+        queue_depth = -1
+
+    job_counts = {
+        status: int(db.scalar(select(func.count()).select_from(JobRecord).where(JobRecord.status == status)) or 0)
+        for status in ("queued", "running", "completed", "failed", "cancelled")
+    }
+    total_files = int(db.scalar(select(func.count()).select_from(FileRecord)) or 0)
+    pdfhub_bytes = int(db.scalar(select(func.coalesce(func.sum(FileRecord.size), 0))) or 0)
+    tools = {name: bool(shutil.which(name)) for name in ("qpdf", "gs", "ocrmypdf", "tesseract", "pdftoppm")}
+
+    return {
+        "database_ok": database_ok,
+        "redis_ok": redis_ok,
+        "workers": workers,
+        "queue_depth": queue_depth,
+        "storage_backend": settings.storage_backend,
+        "storage_write_ok": storage_write_ok,
+        "gotenberg_ok": gotenberg_ok,
+        "data_dir": str(settings.data_dir),
+        "disk": disk_data,
+        "pdfhub_bytes": pdfhub_bytes,
+        "files": total_files,
+        "jobs": job_counts,
+        "retention_hours": settings.retention_hours,
+        "cleanup_temporary_hours": settings.cleanup_temporary_hours,
+        "clamav_enabled": settings.clamav_enabled,
+        "paperless_enabled": settings.paperless_enabled,
+        "tools": tools,
+        "auth": {
+            "local_admin": settings.local_admin_enabled,
+            "oidc": settings.oidc_enabled,
+            "ldap": settings.ldap_enabled,
+            "web_console_auto_login": settings.web_console_auto_login_enabled,
+        },
+        "principal": principal.name,
+    }
 
 
 @router.get("/api-keys", response_model=list[ApiKeyOut])
