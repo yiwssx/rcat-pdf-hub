@@ -1,4 +1,4 @@
-.PHONY: up up-nas down logs ps test build lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -6,8 +6,17 @@ up:
 up-nas:
 	docker compose -f docker-compose.yml -f docker-compose.nas.yml up -d --build
 
+up-prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+up-prod-nas:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml up -d --build
+
 down:
 	docker compose --profile s3 --profile security --profile observability --profile archive down
+
+down-prod:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile s3 --profile security --profile observability --profile archive down
 
 logs:
 	docker compose logs -f --tail=200
@@ -32,6 +41,9 @@ validate-supply-chain:
 
 config:
 	docker compose config
+
+prod-config:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 
 test:
 	docker compose run --rm api python -m pytest -q
