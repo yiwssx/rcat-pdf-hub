@@ -63,7 +63,7 @@ operations() {
     scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
     scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
     scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh \
-    scripts/compile-python-lock.sh; do
+    scripts/compile-python-lock.sh scripts/validate-container-hardening.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
@@ -211,6 +211,7 @@ runtime() {
   check_clean_log "${up_log}"
   dc up -d --no-build --wait --wait-timeout 240 2>&1 | tee -a "${up_log}"
   check_clean_log "${up_log}"
+  PDFHUB_COMPOSE_PROJECT="${project}" bash scripts/validate-container-hardening.sh
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/healthz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["status"]=="ok" and p["services"]["database"] and p["services"]["redis"]'
   curl -fsS "http://localhost:${PDFHUB_HTTP_PORT}/readyz" >/dev/null
   dc exec -T \
