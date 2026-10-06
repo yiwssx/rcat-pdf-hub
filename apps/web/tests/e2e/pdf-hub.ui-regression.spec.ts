@@ -21,6 +21,7 @@ async function installWorkspaceMocks(page: Page) {
         subject: "ui-regression",
         scopes: ["files:read", "files:write", "jobs:read", "jobs:manage", "pdf:compress"],
         groups: [],
+        roles: ["operator"],
         auth_source: "web-console",
         is_admin: false,
       },
