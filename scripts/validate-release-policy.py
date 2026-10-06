@@ -205,6 +205,12 @@ for marker in (
     "mem_limit:",
     "cpus:",
     "/tmp:size=",
+    "networks: [edge, app]",
+    "networks: [app, data, management, egress]",
+    "networks: [data, management, egress]",
+    "internal: true",
+    "ports: !override",
+    "PDFHUB_PUBLIC_BIND_HOST:?set PDFHUB_PUBLIC_BIND_HOST",
 ):
     assert marker in prod_compose, f"Production hardening override missing: {marker}"
 for service in ("api:", "worker:", "cleanup:", "webhook:", "web:"):
@@ -241,6 +247,7 @@ for mapping in (
     f'{management_bind}:${{PAPERLESS_HTTP_PORT:-8001}}:8000',
 ):
     assert mapping in compose, f"Management port is not loopback-bound by default: {mapping}"
+assert "PDFHUB_PUBLIC_BIND_HOST=127.0.0.1" in read(".env.example")
 assert "PDFHUB_MANAGEMENT_BIND_HOST=127.0.0.1" in read(".env.example")
 
 # The internal session-minting endpoint must stay off Caddy's public API matcher.
@@ -332,6 +339,7 @@ for required in (
     "scripts/check-direct-dependency.py",
     "scripts/check-python-security-dependency.py",
     "scripts/check-python-lock.py",
+    "scripts/check-production-network.py",
     "scripts/compile-python-lock.sh",
     "scripts/supply-chain.sh",
     "scripts/validate-container-hardening.sh",
@@ -352,6 +360,8 @@ assert 'docker compose -p "${project}" -f docker-compose.yml -f docker-compose.p
 assert "PDFHUB_SESSION_COOKIE_SECURE=false" in validate_free
 assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true" in validate_free
 assert "validate-container-hardening.sh" in validate_free
+assert "check-production-network.py" in validate_free
+assert "PDFHUB_PUBLIC_BIND_HOST=127.0.0.1" in validate_free
 assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
@@ -380,6 +390,18 @@ for marker in (
     assert marker in supply_chain, f"Supply-chain gate missing policy marker: {marker}"
 assert "artifacts/" in read(".gitignore"), "Generated supply-chain artifacts must stay untracked"
 assert (ROOT / "docs/security/supply-chain-policy.md").exists(), "Missing supply-chain policy documentation"
+
+network_check = read("scripts/check-production-network.py")
+for marker in (
+    '"edge"',
+    '"app"',
+    '"data"',
+    '"management"',
+    '"egress"',
+    "must not publish host ports",
+    "production network policy: PASS",
+):
+    assert marker in network_check, f"Production network validator missing: {marker}"
 
 hardening_check = read("scripts/validate-container-hardening.sh")
 for marker in (
