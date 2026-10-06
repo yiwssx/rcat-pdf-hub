@@ -216,6 +216,9 @@ test("tool workspace owns settings and submits the configured watermark payload"
     margin: 36,
   });
   await expect(page.locator(".v3JobDrawer")).toBeVisible();
+  await page.locator(".v3JobDrawer").getByRole("button", { name: "×" }).click();
+  await page.getByRole("button", { name: /ลายน้ำ/ }).click();
+  await expect(page.getByLabel("ข้อความ")).toHaveValue("เอกสารทดสอบ");
 });
 
 test("propagates the session through preview, job drawer, download and upload", async ({ page }) => {
