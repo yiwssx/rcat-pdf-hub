@@ -72,7 +72,7 @@ assert "pull-requests: write" not in web_ci_workflow
 assert "pull_request_target:" not in web_ci_workflow
 
 core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
-for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
+for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "make validate-compose", "docker build -t rcat-pdf-hub-api-test apps/api", "python -m pytest -q"):
     assert required in core_api_ci_workflow, f"Core API CI workflow missing guard: {required}"
 assert "contents: write" not in core_api_ci_workflow
 assert "pull-requests: write" not in core_api_ci_workflow
@@ -195,6 +195,20 @@ compose = read("docker-compose.yml")
 prod_compose = read("docker-compose.prod.yml")
 assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-true}" in prod_compose
 assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-false}" in prod_compose
+for marker in (
+    "x-app-hardening: &app-hardening",
+    "no-new-privileges:true",
+    "cap_drop:",
+    "- ALL",
+    "read_only: true",
+    "pids_limit:",
+    "mem_limit:",
+    "cpus:",
+    "/tmp:size=",
+):
+    assert marker in prod_compose, f"Production hardening override missing: {marker}"
+for service in ("api:", "worker:", "cleanup:", "webhook:", "web:"):
+    assert service in prod_compose, f"Production hardening missing application service: {service}"
 assert "max-size: ${PDFHUB_LOG_MAX_SIZE:-10m}" in prod_compose
 assert 'max-file: "${PDFHUB_LOG_MAX_FILES:-5}"' in prod_compose
 assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-false}" in compose
@@ -333,6 +347,9 @@ validate_free = read("scripts/validate-free.sh")
 assert "python3 scripts/validate-release-policy.py" in validate_free
 assert "operations()" in validate_free
 assert "npm run test:e2e:stack" in validate_free
+assert 'docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml' in validate_free
+assert "PDFHUB_SESSION_COOKIE_SECURE=false" in validate_free
+assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN=true" in validate_free
 assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
