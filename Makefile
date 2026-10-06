@@ -1,4 +1,4 @@
-.PHONY: up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-contract validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 up:
 	docker compose up -d --build
@@ -62,6 +62,9 @@ validate-ops:
 
 validate-backend:
 	bash scripts/validate-free.sh backend
+
+validate-contract:
+	python3 scripts/validate-api-contract.py
 
 validate-frontend:
 	bash scripts/validate-free.sh frontend
