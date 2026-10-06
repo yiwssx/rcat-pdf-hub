@@ -338,8 +338,8 @@ for marker in (
     "--ignore-unfixed",
     "--exit-code 1",
     "source.cdx.json",
-    "api-image.cdx.json",
-    "web-image.cdx.json",
+    "${label}-image.cdx.json",
+    "scan_one_image",
 ):
     assert marker in supply_chain, f"Supply-chain gate missing policy marker: {marker}"
 assert "artifacts/" in read(".gitignore"), "Generated supply-chain artifacts must stay untracked"
