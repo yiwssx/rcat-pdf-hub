@@ -35,5 +35,7 @@ jobs:
         run: make validate-observability
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
+      - name: Validate OpenAPI frontend contract
+        run: docker run --rm -v "$PWD:/repo" -w /repo rcat-pdf-hub-api-test python scripts/validate-api-contract.py
       - name: Run API tests
         run: docker run --rm rcat-pdf-hub-api-test python -m pytest -q
