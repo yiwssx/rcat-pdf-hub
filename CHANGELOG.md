@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased — Phase 6 release candidate
+
+### Added
+- Reproducible frontend/Python dependency locks, pinned Trivy scans and CycloneDX SBOM generation.
+- Production Compose hardening, segmented networks and dedicated interactive/standard/heavy worker pools.
+- Self-hosted Alertmanager, Tempo trace retention and provisioned Grafana operations dashboard.
+- Explicit human `viewer` / `operator` / `admin` RBAC with fail-closed OIDC/LDAP group mappings.
+- Server-side scalable file-library queries, measured database indexes and dry-run DB ↔ storage reconciliation.
+- OpenAPI/frontend contract drift gate, 61.36% backend coverage floor, automated accessibility gate and measured browser-performance budgets.
+
+### Changed
+- Admin Console exposes effective identity, role, groups and scopes without exposing credentials.
+- File Library now searches, filters, sorts and paginates server-side instead of preloading the full library.
+- Browser regression fixtures share one contract fixture seam to reduce duplicated test/API payload drift.
+
+### Security
+- Production containers drop capabilities, use read-only roots and `no-new-privileges` with explicit resource ceilings.
+- Production application/data/management networks are private and normal internal services publish no host ports.
+- Institutional identities with unknown role mappings fail closed.
 ## 0.5.0 — 2026-08-31
 
 ### Security

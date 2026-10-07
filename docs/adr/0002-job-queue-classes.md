@@ -27,7 +27,7 @@ The configured queue names are:
 
 Queue names must be non-empty and distinct. Unknown operations fail closed instead of silently falling back to a queue.
 
-During Task 6C.1 the existing worker listens to all three queues so routing can be introduced without creating unserved jobs or changing the API contract. Task 6C.2 will replace this transitional worker arrangement with dedicated worker pools.
+Task 6C.1 introduced routing with a transitional worker that listened to all three queues. Task 6C.2 subsequently replaced that transitional arrangement with the dedicated worker pools defined by ADR-0003 without changing the public API contract.
 
 Retries use the same routing function as newly created jobs, so a retried heavy job cannot accidentally move to the standard queue.
 
@@ -37,10 +37,10 @@ Retries use the same routing function as newly created jobs, so a retried heavy 
 - The public API and persisted `JobRecord.operation` values remain unchanged.
 - Queue depth can be observed per configured queue while the existing aggregate admin field remains available.
 - Lightweight jobs are explicitly identifiable before worker-pool isolation is introduced.
-- The transitional worker still permits head-of-line blocking inside one worker process; dedicated pools are intentionally deferred to Task 6C.2.
+- Dedicated worker pools now enforce execution-capacity isolation while retaining this routing policy as the single source of truth.
 
 ## Validation
 
 Backend tests must cover the complete operation-to-class matrix, unknown-operation fail-closed behavior, configured queue-name selection, enqueue delegation, and distinct queue-name validation.
 
-Compose validation must verify the transitional worker consumes all three configured queues.
+Compose validation must verify the dedicated worker services consume exactly their configured queue classes, as defined by ADR-0003.

@@ -41,7 +41,7 @@ NAS mounts, restore stop/start logic, runtime hardening checks, and production n
 - Heavy concurrency can be kept deliberately low to protect the host while interactive capacity is scaled independently.
 - Worker scaling becomes slightly more explicit operationally, but no new broker or orchestration platform is introduced.
 - Job/API contracts and persisted operation names remain unchanged.
-- Queue depth/worker observability can be refined per class in Task 6C.3.
+- Queue depth, oldest-job age, worker capacity and job event/duration telemetry are observed per class; Phase 6C.3 added the corresponding alerts and metrics.
 
 ## Validation
 

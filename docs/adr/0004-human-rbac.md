@@ -19,7 +19,7 @@ Role-to-scope expansion is centralized in the RBAC module. Human session tokens 
 
 Service API keys remain scope-based machine identities and are not converted to human roles.
 
-Task 6E.2 will make OIDC/LDAP groups select these roles through explicit fail-closed mappings.
+OIDC/LDAP groups select these roles through explicit fail-closed mappings. Identities without a recognized configured role group are rejected, and institutional sessions are remapped from current groups on decode so stale privilege is not retained.
 
 ## Consequences
 
@@ -28,6 +28,7 @@ Task 6E.2 will make OIDC/LDAP groups select these roles through explicit fail-cl
 - Existing human scope configuration remains the operator-role scope set.
 - Service integrations keep their existing API-key scope model.
 - Session authorization can be tightened centrally without changing every route.
+- The Admin Console exposes effective identity, role, groups and resolved scopes for troubleshooting without exposing credentials.
 
 ## Validation
 

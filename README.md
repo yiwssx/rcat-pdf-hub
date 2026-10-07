@@ -62,7 +62,18 @@ A **self-hosted, API-first** PDF processing hub that lets multiple systems share
 - Dependency-free load/latency smoke test reporting p50/p95/p99
 - Unified `make release-readiness` production gate
 
-See `PHASE3.md`, `PHASE4.md`, and `PHASE5.md` for milestone details.
+### Phase 6 production hardening & scale
+
+- Reproducible npm/Python dependency graphs plus source/image SBOM and vulnerability gates
+- Hardened production Compose runtime and segmented production networks
+- Dedicated interactive / standard / heavy RQ worker pools with per-queue observability
+- Self-hosted Alertmanager, persistent Tempo traces and provisioned Grafana operations dashboard
+- Explicit human `viewer` / `operator` / `admin` RBAC with fail-closed OIDC/LDAP group mapping
+- Server-side file-library search/filter/sort/pagination with measured query indexes
+- Dry-run DB ↔ storage reconciliation for local/NAS/self-hosted S3
+- OpenAPI/frontend contract drift detection, backend coverage floor, accessibility gate and measured browser performance budgets
+
+See `PHASE3.md`, `PHASE4.md`, `PHASE5.md`, and `PHASE6.md` for milestone details.
 
 ## Architecture
 

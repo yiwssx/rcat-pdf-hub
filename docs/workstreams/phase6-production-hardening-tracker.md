@@ -84,7 +84,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6G.3 | Automated accessibility regression gate | COMPLETE | PR #106 |
 | 6G.4 | Frontend/browser performance regression baseline | COMPLETE | PR #107; Web CI run 37517934071 |
 | 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |
-| 6H.2 | Documentation / operational runbook reconciliation | PENDING | — |
+| 6H.2 | Documentation / operational runbook reconciliation | COMPLETE | PR #109 |
 | 6H.3 | Release baseline and `v0.6.0` release | PENDING | — |
 
 ## Execution order
@@ -241,12 +241,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-07 | 6G.3 | Added a dependency-free Playwright accessibility audit that blocks critical/serious findings on the Workspace and Files routes, including accessible-name, image-alt, hidden-focus, duplicate-ID and tabindex rules. | PR #106 | COMPLETE |
 | 2026-10-07 | 6G.4 | Measured Workspace/Files browser resource, DOM and navigation baselines in Web CI, committed route-specific budgets derived from those measurements and added an enforced Playwright performance regression gate. | PR #107; Web CI run 37517934071 | COMPLETE |
 | 2026-10-07 | 6H.1 | Consolidated duplicated Playwright API fixture payloads introduced across smoke/UI quality gates into one shared test seam, preserving route-specific behavior while reducing contract drift risk. | PR #108 | COMPLETE |
+| 2026-10-07 | 6H.2 | Reconciled README, SECURITY, VALIDATION, CHANGELOG, GLOSSARY, Phase 6 runbook and ADR outcome language with the implemented Phase 6 production system, without changing runtime behavior or release version metadata. | PR #109 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6H.2 — Documentation / operational runbook reconciliation.**
+**Start Task 6H.3 — Release baseline and v0.6.0 release.**
 
-Reconcile README, SECURITY, VALIDATION, CHANGELOG, GLOSSARY and ADR references with the Phase 6 system that is actually implemented. Keep this documentation-only and do not introduce new runtime behavior.
+Align all release/version metadata to 0.6.0, run the required code and production release-readiness evidence, and only then create the v0.6.0 tag and GitHub Release.
 
 ## Status update convention
 

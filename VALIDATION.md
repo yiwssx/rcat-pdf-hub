@@ -1,6 +1,6 @@
-# Validation — Phase 5 zero-cost production gate
+# Validation — zero-cost production and release gate
 
-RCAT PDF Hub 0.5.0 must remain **100% free of paid CI/CD, paid runners, paid hosted build minutes and paid cloud-service requirements**.
+RCAT PDF Hub validation must remain **100% free of paid CI/CD, paid runners, paid hosted build minutes and paid cloud-service requirements**.
 
 ## Policy
 
@@ -64,7 +64,7 @@ make validate-free
 
 ### What each gate proves
 
-`validate-policy` checks release metadata, frozen/security dependency baselines, zero-cost policy, Phase 5 components, management binding, monitoring rules and CI architecture.
+`validate-policy` checks release metadata, frozen/security dependency baselines, zero-cost policy, completed Phase 5/6 controls, management binding, monitoring rules and CI architecture.
 
 `validate-ops` syntax-checks backup/restore/DR/local-CI scripts and compiles Python operator tooling.
 
