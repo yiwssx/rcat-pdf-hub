@@ -479,6 +479,8 @@ assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
 assert "check-python-lock.py" in validate_free
 assert "--require-hashes -r apps/api/requirements.lock" in validate_free
+assert 'cd "${ROOT}"' in validate_free, "Backend validation must return to the exact repository root"
+assert "python scripts/validate-api-contract.py\n    python scripts/backend-coverage.py" in validate_free, "Contract and coverage gates must run from the same repository root"
 assert "Pillow==" not in validate_free, "Dependency policy must not be duplicated in validate-free.sh"
 
 makefile = read("Makefile")

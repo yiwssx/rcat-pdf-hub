@@ -98,9 +98,8 @@ backend() {
   (
     cd apps/api
     python -m compileall -q app tests alembic
-    cd ../..
+    cd "${ROOT}"
     python scripts/validate-api-contract.py
-    cd ../..
     python scripts/backend-coverage.py
     cd apps/api
     rm -f /tmp/pdfhub-migrate-fresh.db /tmp/pdfhub-migrate-adopt.db
