@@ -1,4 +1,5 @@
 import { expect, Page, Route, test } from "@playwright/test";
+import { authConfigFixture, integrationStatusFixture, operatorIdentityFixture } from "./api-fixtures";
 
 const pngPixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -26,15 +27,7 @@ async function installApiMocks(page: Page) {
   }
 
   await page.route("**/api/v1/auth/config", async (route) => {
-    await route.fulfill({
-      json: {
-        session_cookie: "pdfhub_session",
-        oidc: { enabled: false, issuer: null, login_url: null },
-        ldap: { enabled: false },
-        web_console: { auto_login: true },
-        local_admin: { enabled: false },
-      },
-    });
+    await route.fulfill({ json: authConfigFixture });
   });
 
   await page.route("**/web-auth/session", async (route) => {
@@ -62,16 +55,10 @@ async function installApiMocks(page: Page) {
     }
     if (!(await requireSession(route))) return;
     await route.fulfill({
-      json: {
+      json: operatorIdentityFixture({
         name: "web-console:smoke-test",
-        display_name: "Web Console",
         subject: "smoke-test",
-        scopes: ["files:read", "files:write", "jobs:read", "jobs:manage", "pdf:compress"],
-        groups: [],
-        roles: ["operator"],
-        auth_source: "web-console",
-        is_admin: false,
-      },
+      }),
     });
   });
 
@@ -103,17 +90,7 @@ async function installApiMocks(page: Page) {
 
   await page.route("**/api/v1/integrations/status", async (route) => {
     if (!(await requireSession(route))) return;
-    await route.fulfill({
-      json: {
-        storage_backend: "local",
-        clamav_enabled: true,
-        paperless_enabled: false,
-        oidc_enabled: false,
-        ldap_enabled: false,
-        otel_enabled: false,
-        prometheus_enabled: true,
-      },
-    });
+    await route.fulfill({ json: integrationStatusFixture });
   });
 
   await page.route("**/api/v1/files?limit=200&offset=0", async (route) => {
