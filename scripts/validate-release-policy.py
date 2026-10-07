@@ -496,6 +496,14 @@ for marker in (
     "api python -m pytest -q -p no:cacheprovider",
 ):
     assert marker in validate_free, f"Runtime pytest must use isolated deterministic test environment: {marker}"
+for marker in (
+    "pick_validation_http_port()",
+    'sock.bind(("127.0.0.1", 0))',
+    'PDFHUB_HTTP_PORT="${PDFHUB_VALIDATION_HTTP_PORT:-$(pick_validation_http_port)}"',
+    "runtime validation HTTP port:",
+):
+    assert marker in validate_free, f"Runtime validation must allocate an isolated host port: {marker}"
+assert "export PDFHUB_HTTP_PORT=18080" not in validate_free, "Runtime validation must not hardcode port 18080"
 assert "Pillow==" not in validate_free, "Dependency policy must not be duplicated in validate-free.sh"
 
 makefile = read("Makefile")
