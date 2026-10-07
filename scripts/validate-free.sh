@@ -11,6 +11,15 @@ need() {
   command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }
 }
 
+pick_validation_http_port() {
+  python3 - <<'PY'
+import socket
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    sock.bind(("127.0.0.1", 0))
+    print(sock.getsockname()[1])
+PY
+}
+
 check_clean_log() {
   local file="$1"
   if grep -Eqi "${WARN_RE}" "${file}"; then
@@ -43,8 +52,9 @@ validation_compose_env() {
   export PDFHUB_AUTH_TOKEN_SECRET=free-ci-auth-token-secret-change-me-0123456789abcdef
   export PDFHUB_DOWNLOAD_SIGNING_SECRET=free-ci-download-signing-secret-change-me-0123456789abcdef
   export PDFHUB_GRAFANA_ADMIN_PASSWORD=free-ci-grafana-admin-password-change-me
-  export PDFHUB_ALLOWED_ORIGINS=http://localhost:18080
-  export PDFHUB_PUBLIC_BASE_URL=http://localhost:18080
+  local validation_port="${PDFHUB_VALIDATION_HTTP_PORT:-18080}"
+  export PDFHUB_ALLOWED_ORIGINS="http://localhost:${validation_port}"
+  export PDFHUB_PUBLIC_BASE_URL="http://localhost:${validation_port}"
   export PDFHUB_PUBLIC_BIND_HOST=127.0.0.1
   export PDFHUB_NAS_PATH="/tmp/pdfhub-validation-nas-$$"
   export PDFHUB_SESSION_COOKIE_SECURE=false
@@ -217,11 +227,12 @@ runtime() {
   up_log="$(mktemp)"
   service_log="$(mktemp)"
   stack_e2e_log="$(mktemp)"
-  project="pdfhub-validation-$$"
+  project="pdfhub-validation-$"
   browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
-  export PDFHUB_HTTP_PORT=18080
-  export PDFHUB_ALLOWED_ORIGINS=http://localhost:${PDFHUB_HTTP_PORT}
-  export PDFHUB_PUBLIC_BASE_URL=http://localhost:${PDFHUB_HTTP_PORT}
+  export PDFHUB_HTTP_PORT="${PDFHUB_VALIDATION_HTTP_PORT:-$(pick_validation_http_port)}"
+  export PDFHUB_ALLOWED_ORIGINS="http://localhost:${PDFHUB_HTTP_PORT}"
+  export PDFHUB_PUBLIC_BASE_URL="http://localhost:${PDFHUB_HTTP_PORT}"
+  printf 'runtime validation HTTP port: %s\n' "${PDFHUB_HTTP_PORT}"
 
   dc() {
     docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml "$@"
