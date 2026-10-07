@@ -84,7 +84,8 @@ operations() {
 
 backend() {
   require_tool_versions
-  local venv log
+  need docker
+  local venv log coverage_image coverage_evidence
   venv="$(mktemp -d)/venv"
   log="$(mktemp)"
   python3 -m venv "${venv}"
@@ -100,7 +101,6 @@ backend() {
     python -m compileall -q app tests alembic
     cd "${ROOT}"
     python scripts/validate-api-contract.py
-    python scripts/backend-coverage.py
     cd apps/api
     rm -f /tmp/pdfhub-migrate-fresh.db /tmp/pdfhub-migrate-adopt.db
     PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db python -c 'from app.migrate import run_migrations; run_migrations()'
@@ -113,6 +113,25 @@ PY
     PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python -c 'from app.migrate import run_migrations; run_migrations()'
   )
   deactivate
+
+  # Coverage is compared with the Phase 6G.2 baseline measured in the API image.
+  # Run the local gate in that same image so host packages/system tools cannot
+  # change which tests execute or which application lines are observed.
+  coverage_image="rcat-pdf-hub-api-coverage:local"
+  coverage_evidence="$(mktemp -d)"
+  chmod 0777 "${coverage_evidence}"
+  docker build -t "${coverage_image}" apps/api
+  docker run --rm \
+    -e PDFHUB_COVERAGE_ARTIFACT=/coverage/backend-coverage.json \
+    -v "${ROOT}:/repo:ro" \
+    -v "${coverage_evidence}:/coverage" \
+    -w /repo \
+    "${coverage_image}" \
+    python scripts/backend-coverage.py
+  mkdir -p artifacts/quality
+  cp "${coverage_evidence}/backend-coverage.json" artifacts/quality/backend-coverage.json
+  chmod 0644 artifacts/quality/backend-coverage.json
+  rm -rf "${coverage_evidence}"
   echo 'backend: PASS'
 }
 
