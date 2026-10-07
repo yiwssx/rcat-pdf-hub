@@ -30,6 +30,14 @@ RCAT PDF Hub processes untrusted document uploads. Treat the processing plane as
 
 Webhook URLs are administrator-controlled and must match `PDFHUB_WEBHOOK_ALLOWED_HOSTS`. URLs containing credentials are rejected. Network-level egress filtering is still recommended because DNS can change after validation.
 
+## Phase 6 authorization and production boundary
+
+- Human authorization is role-based (`viewer`, `operator`, `admin`) and effective scopes are recomputed centrally from the role matrix.
+- OIDC/LDAP identities without a recognized configured role-group mapping are denied; unknown mappings never inherit operator/admin access.
+- Production application containers use read-only roots, dropped Linux capabilities and `no-new-privileges` with explicit writable tmpfs and resource ceilings.
+- Production networking separates edge, application, data, management and egress planes; internal services must not publish host ports.
+- Storage reconciliation is report-only. It must not be converted into an automatic repair/delete path without a separate reviewed workstream.
+- Contract, coverage, accessibility and browser-performance gates are release controls and must not be bypassed to make a release pass.
 ## Software supply chain
 
 - Frontend dependencies are installed from the committed npm lockfile with `npm ci`.
