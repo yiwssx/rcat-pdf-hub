@@ -76,7 +76,7 @@ make validate-free
 
 `validate-compose` validates development, all-profile, NAS, production, production-all-profile, and production+NAS Compose configurations.
 
-`validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview.
+`validate-runtime` uses an isolated `pdfhub-validation-<pid>` Compose project, builds production containers, checks `/healthz` and `/readyz`, runs API tests in the container, verifies the webhook dispatcher, then runs a real browser flow through **Caddy → production Next.js → real FastAPI → RQ worker/storage**: API-key login → upload → image-to-PDF job → download → preview. The validation stack allocates an available loopback HTTP port automatically instead of reusing the production port or a fixed host port. `PDFHUB_VALIDATION_HTTP_PORT` may be set only when an operator explicitly needs a fixed validation port.
 
 ## File-library query/index validation
 
