@@ -253,7 +253,11 @@ runtime() {
     -e PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-runtime-tests.db \
     -e PDFHUB_REDIS_URL=redis://valkey:6379/15 \
     -e PDFHUB_DATA_DIR=/tmp/pdfhub-runtime-test-data \
-    api python -m pytest -q
+    -e PDFHUB_API_KEY_PEPPER=ci-test-pepper-change-me \
+    -e PDFHUB_ADMIN_API_KEY=pdfh_ci_admin_key_change_me \
+    -e PDFHUB_WEBHOOK_MASTER_SECRET=ci-webhook-master-secret-change-me \
+    -e PDFHUB_DOWNLOAD_SIGNING_SECRET=ci-download-signing-secret-change-me-at-least-32 \
+    api python -m pytest -q -p no:cacheprovider
   test "$(dc ps --status running webhook --format json | wc -l)" -ge 1
 
   if ! (
