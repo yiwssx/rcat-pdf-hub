@@ -113,7 +113,9 @@ The validator writes `artifacts/contracts/openapi.json` for inspection/release e
 
 Phase 6G.2 runs the complete pytest suite under the repository-owned `scripts/backend-coverage.py` tracer. The metric covers Python statement lines in `apps/api/app/**/*.py` (excluding `__init__.py`) without adding a coverage-service or package dependency.
 
-The accepted baseline was measured by Core API CI run `37519020885` at **61.36% (1,869 / 3,046 statement lines)**. `quality/backend-coverage-baseline.json` enforces the same 61.36% floor. Backend changes that reduce the measured percentage fail both Core API CI and the zero-cost backend gate. The detailed report is emitted to `artifacts/quality/backend-coverage.json` during local validation.
+The accepted baseline was measured by Core API CI run `37519020885` at **61.36% (1,869 / 3,046 statement lines)**. `quality/backend-coverage-baseline.json` enforces the same 61.36% floor. Backend changes that reduce the measured percentage fail both Core API CI and the zero-cost backend gate.
+
+Coverage enforcement is executed inside the canonical API image built from `apps/api/Dockerfile` in both hosted Core API CI and local/operator validation. Host Python packages and optional system binaries therefore cannot change the measured test set or statement execution. Local validation still performs lock/import/migration checks in the host Python 3.12 environment, then writes the container-measured report to `artifacts/quality/backend-coverage.json`.
 
 ## Automated accessibility regression gate
 
