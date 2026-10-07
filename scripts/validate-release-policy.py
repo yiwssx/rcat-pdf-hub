@@ -504,6 +504,8 @@ for marker in (
 ):
     assert marker in validate_free, f"Runtime validation must allocate an isolated host port: {marker}"
 assert "export PDFHUB_HTTP_PORT=18080" not in validate_free, "Runtime validation must not hardcode port 18080"
+assert 'project="pdfhub-validation-${BASHPID}"' in validate_free, "Runtime validation must use a valid unique Compose project name"
+assert 'project="pdfhub-validation-$"' not in validate_free, "Broken literal-dollar Compose project name is forbidden"
 assert "Pillow==" not in validate_free, "Dependency policy must not be duplicated in validate-free.sh"
 
 makefile = read("Makefile")
