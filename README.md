@@ -2,7 +2,7 @@
 
 A **self-hosted, API-first** PDF processing hub that lets multiple systems share a single PDF infrastructure stack without installing duplicate PDF engines in every project.
 
-> Status: **0.5.0 — Phase 5 production maturity**  
+> Status: **0.6.0 — Phase 6 production hardening & scale**  
 > Deployment target: Docker Compose on institution-owned hardware with local volumes, NAS, or self-hosted S3-compatible storage  
 > Cost policy: **zero-cost software/CI/CD** — no paid runners, paid CI/CD, or paid cloud services are required
 
@@ -433,7 +433,8 @@ make release-readiness
 - Phase 2 — advanced PDF, quota, audit, administration
 - Phase 3 — production / enterprise foundation (`0.3.0`)
 - Phase 4 — image conversion, signed delivery, durable webhook (`0.4.0`; `0.4.1` maintenance)
-- **Phase 5 — production maturity (`0.5.0`) — A/B/C implementation baseline complete**
+- Phase 5 — production maturity (`0.5.0`) — A/B/C implementation baseline complete
+- **Phase 6 — production hardening & scale (`0.6.0`) — implementation baseline prepared for release**
 
 ## License
 
