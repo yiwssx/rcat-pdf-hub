@@ -117,6 +117,8 @@ The accepted baseline was measured by Core API CI run `37519020885` at **61.36% 
 
 Coverage enforcement is executed inside the canonical API image built from `apps/api/Dockerfile` in both hosted Core API CI and local/operator validation. Host Python packages and optional system binaries therefore cannot change the measured test set or statement execution. Local validation still performs lock/import/migration checks in the host Python 3.12 environment, then writes the container-measured report to `artifacts/quality/backend-coverage.json`.
 
+The production-runtime pytest pass runs inside the hardened Compose API container with explicit test-only database, Redis, API-key, webhook, and download-signing settings. These overrides prevent operator `.env` credentials from changing test behavior, and pytest's cache provider is disabled because the production application filesystem is intentionally read-only.
+
 ## Automated accessibility regression gate
 
 Phase 6G.3 extends the existing Playwright UI regression lane with a repository-owned DOM accessibility audit. The primary Workspace and dedicated Files route fail validation when the audit reports a **critical** or **serious** finding.
