@@ -488,6 +488,14 @@ for marker in (
     'python scripts/backend-coverage.py',
 ):
     assert marker in validate_free, f"Local backend coverage must use the canonical API image: {marker}"
+for marker in (
+    "-e PDFHUB_API_KEY_PEPPER=ci-test-pepper-change-me",
+    "-e PDFHUB_ADMIN_API_KEY=pdfh_ci_admin_key_change_me",
+    "-e PDFHUB_WEBHOOK_MASTER_SECRET=ci-webhook-master-secret-change-me",
+    "-e PDFHUB_DOWNLOAD_SIGNING_SECRET=ci-download-signing-secret-change-me-at-least-32",
+    "api python -m pytest -q -p no:cacheprovider",
+):
+    assert marker in validate_free, f"Runtime pytest must use isolated deterministic test environment: {marker}"
 assert "Pillow==" not in validate_free, "Dependency policy must not be duplicated in validate-free.sh"
 
 makefile = read("Makefile")
