@@ -85,7 +85,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6G.4 | Frontend/browser performance regression baseline | COMPLETE | PR #107; Web CI run 37517934071 |
 | 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |
 | 6H.2 | Documentation / operational runbook reconciliation | COMPLETE | PR #109 |
-| 6H.3 | Release baseline and `v0.6.0` release | IN PROGRESS | PR #110; production release gate pending |
+| 6H.3 | Release baseline and `v0.6.0` release | BLOCKED | PR #110; production release gate requires operator-host evidence |
 
 ## Execution order
 
@@ -242,13 +242,26 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-07 | 6G.4 | Measured Workspace/Files browser resource, DOM and navigation baselines in Web CI, committed route-specific budgets derived from those measurements and added an enforced Playwright performance regression gate. | PR #107; Web CI run 37517934071 | COMPLETE |
 | 2026-10-07 | 6H.1 | Consolidated duplicated Playwright API fixture payloads introduced across smoke/UI quality gates into one shared test seam, preserving route-specific behavior while reducing contract drift risk. | PR #108 | COMPLETE |
 | 2026-10-07 | 6H.2 | Reconciled README, SECURITY, VALIDATION, CHANGELOG, GLOSSARY, Phase 6 runbook and ADR outcome language with the implemented Phase 6 production system, without changing runtime behavior or release version metadata. | PR #109 | COMPLETE |
-| 2026-10-07 | 6H.3 | Aligned API/Web/release-policy/documentation metadata to 0.6.0 and prepared the release candidate. Production backup verification, isolated DR drill, deployment-target load smoke, tag and GitHub Release remain gating evidence. | PR #110 | IN PROGRESS |
+| 2026-10-07 | 6H.3 | Aligned API/Web/release-policy/documentation metadata to 0.6.0 and prepared the release candidate. Production backup verification, isolated DR drill, deployment-target load smoke, tag and GitHub Release remain gating evidence. | PR #110; main `202a7b459ce02b064620cc95d405b4bbbd3dfa36` | BLOCKED |
 
 ## Current next action
 
-**Complete the production release gate for Task 6H.3.**
+**Unblock Task 6H.3 on the operator-controlled Ubuntu production host.**
 
-Run `make release-readiness` in production mode on the intended deployment with a real verified `BACKUP` path and production `URL`. Only after that gate passes may `v0.6.0` be tagged and published.
+The repository release candidate is merged on `main` at `202a7b459ce02b064620cc95d405b4bbbd3dfa36`, but GitHub exposes no `local-ci/validate-free` status for that release candidate and no production backup/DR/load evidence is available from repository state.
+
+On the intended production host, run the production release gate with the real backup directory and deployment URL:
+
+```bash
+git fetch origin
+git checkout main
+git pull --ff-only
+BACKUP=/path/to/verified-backup \
+URL=https://intended-pdf-hub-endpoint \
+make release-readiness
+```
+
+Do not set `PDFHUB_RELEASE_SKIP_DR=true` for the normal Phase 6 release. After the production gate passes, record the backup verification, isolated DR drill and load-smoke evidence, then create the `v0.6.0` tag and GitHub Release and change 6H.3 to `COMPLETE`.
 
 ## Status update convention
 
