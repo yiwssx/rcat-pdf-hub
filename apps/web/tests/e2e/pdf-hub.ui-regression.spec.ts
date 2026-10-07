@@ -1,4 +1,6 @@
 import { expect, Page, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 async function installWorkspaceMocks(page: Page) {
   await page.route("**/api/v1/auth/config", async (route) => {
@@ -224,5 +226,58 @@ test("has no critical or serious automated accessibility findings", async ({ pag
       findings.filter((finding) => finding.severity === "critical" || finding.severity === "serious"),
       `${path}: ${JSON.stringify(findings, null, 2)}`,
     ).toEqual([]);
+  }
+});
+
+type BrowserPerformanceMetrics = {
+  domNodes: number;
+  resources: number;
+  scriptResources: number;
+  encodedBytes: number;
+  domContentLoadedMs: number;
+};
+
+type BrowserPerformanceBaseline = {
+  ready: boolean;
+  routes: Record<string, {
+    measured?: BrowserPerformanceMetrics;
+    maximum?: BrowserPerformanceMetrics;
+  }>;
+};
+
+test("keeps browser performance within the measured Phase 6 baseline", async ({ page }) => {
+  const baseline = JSON.parse(
+    readFileSync(resolve(process.cwd(), "../../quality/browser-performance-baseline.json"), "utf8"),
+  ) as BrowserPerformanceBaseline;
+  const measured: Record<string, BrowserPerformanceMetrics> = {};
+
+  for (const path of ["/", "/files"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    measured[path] = await page.evaluate(() => {
+      const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+      const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      return {
+        domNodes: document.querySelectorAll("*").length,
+        resources: resources.length,
+        scriptResources: resources.filter((entry) => entry.initiatorType === "script").length,
+        encodedBytes: Math.round(resources.reduce((total, entry) => total + (entry.encodedBodySize || 0), 0)),
+        domContentLoadedMs: Math.round(navigation?.domContentLoadedEventEnd || 0),
+      };
+    });
+  }
+
+  console.log("PERF_BASELINE_CANDIDATE " + JSON.stringify(measured));
+
+  if (!baseline.ready) return;
+  for (const [path, metrics] of Object.entries(measured)) {
+    const maximum = baseline.routes[path]?.maximum;
+    expect(maximum, `Missing performance baseline for ${path}`).toBeTruthy();
+    for (const key of ["domNodes", "resources", "scriptResources", "encodedBytes", "domContentLoadedMs"] as const) {
+      expect(
+        metrics[key],
+        `${path} ${key}: measured ${metrics[key]}, max ${maximum![key]}`,
+      ).toBeLessThanOrEqual(maximum![key]);
+    }
   }
 });
