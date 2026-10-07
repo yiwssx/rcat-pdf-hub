@@ -1,47 +1,25 @@
 import { expect, Page, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { authConfigFixture, emptyLibraryPage, integrationStatusFixture, operatorIdentityFixture } from "./api-fixtures";
 
 async function installWorkspaceMocks(page: Page) {
   await page.route("**/api/v1/auth/config", async (route) => {
-    await route.fulfill({
-      json: {
-        session_cookie: "pdfhub_session",
-        oidc: { enabled: false, issuer: null, login_url: null },
-        ldap: { enabled: false },
-        web_console: { auto_login: true },
-        local_admin: { enabled: false },
-      },
-    });
+    await route.fulfill({ json: authConfigFixture });
   });
 
   await page.route("**/api/v1/auth/me", async (route) => {
     await route.fulfill({
-      json: {
+      json: operatorIdentityFixture({
         name: "ui-regression",
         display_name: "UI Regression",
         subject: "ui-regression",
-        scopes: ["files:read", "files:write", "jobs:read", "jobs:manage", "pdf:compress"],
-        groups: [],
-        roles: ["operator"],
-        auth_source: "web-console",
-        is_admin: false,
-      },
+      }),
     });
   });
 
   await page.route("**/api/v1/integrations/status", async (route) => {
-    await route.fulfill({
-      json: {
-        storage_backend: "local",
-        clamav_enabled: true,
-        paperless_enabled: false,
-        oidc_enabled: false,
-        ldap_enabled: false,
-        otel_enabled: false,
-        prometheus_enabled: true,
-      },
-    });
+    await route.fulfill({ json: integrationStatusFixture });
   });
 
   await page.route("**/api/v1/files?limit=200&offset=0", async (route) => {
@@ -49,16 +27,7 @@ async function installWorkspaceMocks(page: Page) {
   });
 
   await page.route("**/api/v1/files/library**", async (route) => {
-    const url = new URL(route.request().url());
-    await route.fulfill({
-      json: {
-        items: [],
-        total: 0,
-        limit: Number(url.searchParams.get("limit") || "50"),
-        offset: Number(url.searchParams.get("offset") || "0"),
-        has_more: false,
-      },
-    });
+    await route.fulfill({ json: emptyLibraryPage(route.request().url()) });
   });
 
   await page.route("**/api/v1/jobs?limit=50", async (route) => {
