@@ -349,12 +349,14 @@ make release-readiness
 
 Code mode additionally runs the source dependency/SBOM gate. Production mode also scans the production API/Web images and generates image SBOMs before backup verification, isolated DR drill and target load smoke. `PDFHUB_RELEASE_SKIP_DR=true` exists only for an explicit operator exception; a normal production release should not skip the DR drill.
 
-## Release 0.5.0 acceptance baseline
+## Release 0.6.0 acceptance baseline
 
-- Phase 5A frontend/auth/management hardening implemented
-- Phase 5B local-CI/status/dependency security hardening implemented
-- Phase 5C backup/restore/DR/alerts/load/release tooling implemented
-- Web Console and FastAPI report `0.5.0`
+- Phase 5A frontend/auth/management hardening retained
+- Phase 5B local-CI/status/dependency security hardening retained
+- Phase 5C backup/restore/DR/alerts/load/release tooling retained
+- Phase 6 reproducibility/supply-chain, production runtime, queue isolation, operations visibility, RBAC, file-library scale and quality gates implemented
+- Backend coverage floor remains 61.36%; OpenAPI/frontend, accessibility and measured browser-performance gates are enforced
+- Web Console and FastAPI report `0.6.0`
 - Next.js remains on the reviewed `16.3.x` security line
 - prior Phase 3/4 feature baselines retained
 - GitHub-hosted execution is restricted to the two guarded Dependabot workflows described above
