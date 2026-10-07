@@ -56,8 +56,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="PDF Hub API",
-    version="0.5.0",
-    description="Centralized self-hosted PDF processing, secure delivery and production-maturity integration API",
+    version="0.6.0",
+    description="Centralized self-hosted PDF processing, production hardening, secure delivery and integration API",
     lifespan=lifespan,
 )
 app.add_middleware(

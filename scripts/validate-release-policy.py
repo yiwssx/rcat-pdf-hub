@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_RELEASE = "0.5.0"
+CURRENT_RELEASE = "0.6.0"
 NEXT_SECURITY_MIN = (16, 3, 3)
 NEXT_SECURITY_MAX_EXCLUSIVE = (16, 4, 0)
 PILLOW_MIN = (12, 3, 0)
@@ -356,11 +356,20 @@ for marker in (
 
 # Release metadata must agree while retaining prior completed baselines.
 assert f'version="{CURRENT_RELEASE}"' in read("apps/api/app/main.py")
-assert f"{CURRENT_RELEASE} — Phase 5 production maturity" in read("README.md")
+assert f"{CURRENT_RELEASE} — Phase 6 production hardening & scale" in read("README.md")
 assert "completed Phase 4 feature baseline" in read("PHASE4.md")
 phase5 = read("PHASE5.md")
 for section in ("Phase 5A", "Phase 5B", "Phase 5C"):
     assert section in phase5, f"Missing {section} completion documentation"
+phase6 = read("PHASE6.md")
+for marker in (
+    "Phase 6 — Production Hardening & Scale",
+    "0.6.0 release candidate pending production release gate",
+    "backend statement-line coverage floor of **61.36%**",
+):
+    assert marker in phase6, f"Missing Phase 6 release documentation marker: {marker}"
+assert "| 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |" in phase6_tracker
+assert "| 6H.2 | Documentation / operational runbook reconciliation | COMPLETE | PR #109 |" in phase6_tracker
 assert f"## {CURRENT_RELEASE}" in read("CHANGELOG.md")
 
 # Phase 6 queue routing must remain centralized and fully classified.

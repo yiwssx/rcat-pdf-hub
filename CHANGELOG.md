@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — Phase 6 release candidate
+## 0.6.0 — 2026-10-07
 
 ### Added
 - Reproducible frontend/Python dependency locks, pinned Trivy scans and CycloneDX SBOM generation.
