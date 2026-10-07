@@ -83,7 +83,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6G.2 | Backend coverage baseline and non-regression gate | COMPLETE | PR #105; Core API CI run 37519020885 |
 | 6G.3 | Automated accessibility regression gate | COMPLETE | PR #106 |
 | 6G.4 | Frontend/browser performance regression baseline | COMPLETE | PR #107; Web CI run 37517934071 |
-| 6H.1 | Targeted architecture cleanup | PENDING | — |
+| 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |
 | 6H.2 | Documentation / operational runbook reconciliation | PENDING | — |
 | 6H.3 | Release baseline and `v0.6.0` release | PENDING | — |
 
@@ -240,12 +240,13 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-07 | 6G.2 | Added repository-owned backend statement-line coverage measurement around the complete pytest suite and locked the measured 61.36% baseline as a non-regression floor. | PR #105; Core API CI run 37519020885 | COMPLETE |
 | 2026-10-07 | 6G.3 | Added a dependency-free Playwright accessibility audit that blocks critical/serious findings on the Workspace and Files routes, including accessible-name, image-alt, hidden-focus, duplicate-ID and tabindex rules. | PR #106 | COMPLETE |
 | 2026-10-07 | 6G.4 | Measured Workspace/Files browser resource, DOM and navigation baselines in Web CI, committed route-specific budgets derived from those measurements and added an enforced Playwright performance regression gate. | PR #107; Web CI run 37517934071 | COMPLETE |
+| 2026-10-07 | 6H.1 | Consolidated duplicated Playwright API fixture payloads introduced across smoke/UI quality gates into one shared test seam, preserving route-specific behavior while reducing contract drift risk. | PR #108 | COMPLETE |
 
 ## Current next action
 
-**Start Task 6H.1 — Targeted architecture cleanup.**
+**Start Task 6H.2 — Documentation / operational runbook reconciliation.**
 
-Phase 6G quality gates are complete. Use the accumulated Phase 6 evidence to perform only targeted architecture cleanup at demonstrated seams or duplication; do not broaden the release workstream into speculative refactoring.
+Reconcile README, SECURITY, VALIDATION, CHANGELOG, GLOSSARY and ADR references with the Phase 6 system that is actually implemented. Keep this documentation-only and do not introduce new runtime behavior.
 
 ## Status update convention
 
