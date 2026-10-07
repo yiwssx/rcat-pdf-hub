@@ -227,7 +227,7 @@ runtime() {
   up_log="$(mktemp)"
   service_log="$(mktemp)"
   stack_e2e_log="$(mktemp)"
-  project="pdfhub-validation-$"
+  project="pdfhub-validation-${BASHPID}"
   browsers_path="${PLAYWRIGHT_BROWSERS_PATH:-${HOME}/.cache/ms-playwright}"
   export PDFHUB_HTTP_PORT="${PDFHUB_VALIDATION_HTTP_PORT:-$(pick_validation_http_port)}"
   export PDFHUB_ALLOWED_ORIGINS="http://localhost:${PDFHUB_HTTP_PORT}"
