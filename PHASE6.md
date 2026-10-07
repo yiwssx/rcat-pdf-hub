@@ -1,6 +1,6 @@
 # Phase 6 — Production Hardening & Scale
 
-Status: **implementation complete; release candidate pending v0.6.0 release gate**
+Status: **implementation complete; 0.6.0 release candidate pending production release gate**
 
 Phase 6 hardens RCAT PDF Hub for long-term self-hosted production operation while preserving the zero-paid-cloud policy and Docker Compose deployment model.
 
