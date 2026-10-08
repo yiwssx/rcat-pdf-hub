@@ -104,7 +104,7 @@ EOF
   sha256sum -c SHA256SUMS >/dev/null
 )
 
-if [[ "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] && [ "${RETENTION_DAYS}" -gt 0 ] && [ "${BACKUP_DIR}" = "${BACKUP_ROOT}/"* ]; then
+if [[ "${RETENTION_DAYS}" =~ ^[0-9]+$ && "${RETENTION_DAYS}" -gt 0 && "${BACKUP_DIR}" == "${BACKUP_ROOT}/"* ]]; then
   find "${BACKUP_ROOT}" -mindepth 1 -maxdepth 1 -type d -mtime "+${RETENTION_DAYS}" -exec rm -rf -- {} +
 fi
 
