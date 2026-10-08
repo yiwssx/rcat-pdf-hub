@@ -23,6 +23,16 @@ fi
 if docker compose version >/dev/null 2>&1; then ok "Docker Compose plugin"; else fail "Docker Compose plugin unavailable"; fi
 if docker info >/dev/null 2>&1; then ok "Docker daemon reachable"; else fail "Docker daemon not reachable"; fi
 
+if command -v sysctl >/dev/null 2>&1; then
+  if [ "$(sysctl -n vm.overcommit_memory 2>/dev/null || true)" = "1" ]; then
+    ok "vm.overcommit_memory=1 for Valkey"
+  else
+    fail "vm.overcommit_memory must be 1 for Valkey runtime validation (current: $(sysctl -n vm.overcommit_memory 2>/dev/null || printf unknown))"
+  fi
+else
+  fail "missing command sysctl"
+fi
+
 repo=""
 if gh auth status >/dev/null 2>&1; then
   ok "GitHub CLI authenticated"
