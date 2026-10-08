@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 const port = Number(process.env.PDFHUB_E2E_PORT || 3100);
 const baseURL = process.env.PDFHUB_E2E_BASE_URL || `http://127.0.0.1:${port}`;
+const validationServer = process.env.PDFHUB_E2E_SERVER_MODE === "production"
+  ? `npm run start -- --hostname 127.0.0.1 --port ${port}`
+  : `npm run dev -- --hostname 127.0.0.1 --port ${port}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -18,7 +21,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: process.env.PDFHUB_E2E_BASE_URL ? undefined : {
-    command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    command: validationServer,
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,
