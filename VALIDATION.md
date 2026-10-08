@@ -27,6 +27,7 @@ RCAT PDF Hub validation must remain **100% free of paid CI/CD, paid runners, pai
 - Playwright-compatible Chromium runtime libraries
 - Git, curl, flock
 - GitHub CLI (`gh`) authenticated to the repository for local CI status reporting
+- Linux kernel `vm.overcommit_memory=1` so Valkey can safely perform background save/replication operations without emitting a blocking runtime warning
 
 Fresh Debian/Ubuntu Playwright bootstrap, after installing frontend dependencies:
 
@@ -236,7 +237,7 @@ make local-ci-doctor
 journalctl --user -u rcat-pdf-hub-local-ci.service
 ```
 
-`local-ci-doctor` checks tool versions, Docker/Compose, GitHub authentication/repository access, timer state, latest validated main and local-CI commit-status presence on current PR heads.
+`local-ci-doctor` checks tool versions, Docker/Compose, `vm.overcommit_memory=1` for Valkey, GitHub authentication/repository access, timer state, latest validated main and local-CI commit-status presence on current PR heads.
 
 ## Supply-chain validation
 
