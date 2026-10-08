@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const port = Number(process.env.PDFHUB_E2E_PORT || 3100);
 const baseURL = process.env.PDFHUB_E2E_BASE_URL || `http://127.0.0.1:${port}`;
 const validationServer = process.env.PDFHUB_E2E_SERVER_MODE === "production"
-  ? `npm run start -- --hostname 127.0.0.1 --port ${port}`
+  ? `rm -rf .next/standalone/public .next/standalone/.next/static && cp -R public .next/standalone/public && mkdir -p .next/standalone/.next && cp -R .next/static .next/standalone/.next/static && HOSTNAME=127.0.0.1 PORT=${port} node .next/standalone/server.js`
   : `npm run dev -- --hostname 127.0.0.1 --port ${port}`;
 
 export default defineConfig({

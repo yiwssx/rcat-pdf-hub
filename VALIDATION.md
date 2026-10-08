@@ -73,7 +73,7 @@ make validate-free
 
 `validate-frontend` performs a warning-free `npm ci` from the committed lockfile, TypeScript typecheck and production Next.js build while ensuring package metadata and the lockfile are not mutated.
 
-`validate-e2e` runs Playwright Chromium against the UI with mocked API responses. Protected mocks require the correct `X-API-Key`, so authentication propagation regressions cannot produce a false green result. Validation starts the already-built Next.js production server (`next start`) rather than the development server, avoiding dev-only filesystem heuristics in detached Local CI worktrees while exercising the same production build artifact checked by `validate-frontend`.
+`validate-e2e` runs Playwright Chromium against the UI with mocked API responses. Protected mocks require the correct `X-API-Key`, so authentication propagation regressions cannot produce a false green result. Validation stages the already-built Next.js standalone artifact the same way as the production Web image (`public` plus `.next/static`) and launches `.next/standalone/server.js` directly. This avoids dev-only filesystem heuristics in detached Local CI worktrees and does not invoke `next start`, which is incompatible with `output: "standalone"`.
 
 `validate-compose` validates development, all-profile, NAS, production, production-all-profile, and production+NAS Compose configurations.
 
