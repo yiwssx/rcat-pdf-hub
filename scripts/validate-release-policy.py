@@ -455,6 +455,7 @@ assert "docker-compose.prod.yml" in backup
 assert "docker-compose.prod.yml" in restore
 assert "pg_dump" in backup and "SHA256SUMS" in backup and "PDFHUB_STORAGE_BACKEND" in backup
 assert 'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_dump' in backup, "Backup must authenticate pg_dump non-interactively"
+assert '[[ "${RETENTION_DAYS}" =~ ^[0-9]+$ && "${RETENTION_DAYS}" -gt 0 && "${BACKUP_DIR}" == "${BACKUP_ROOT}/"* ]]' in backup, "Backup retention guard must use non-expanding [[ ]] pattern matching"
 assert "PDFHUB_RESTORE_CONFIRM" in restore and "pg_restore" in restore and "FLUSHDB" in restore
 assert 'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_restore' in restore, "Restore must authenticate pg_restore non-interactively"
 for service in ("worker-interactive", "worker", "worker-heavy"):
