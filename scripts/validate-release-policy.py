@@ -65,7 +65,7 @@ assert "contents: write" not in dependency_review_workflow
 assert "pull_request_target:" not in dependency_review_workflow
 
 web_ci_workflow = read(".github/workflows/web-ci.yml")
-for required in ("pull_request:", "contents: read", "cache-dependency-path: apps/web/package-lock.json", "npm ci --no-audit --no-fund", "npm run typecheck", "npm run build", "npm run test:e2e"):
+for required in ("pull_request:", "contents: read", "cache-dependency-path: apps/web/package-lock.json", "npm ci --no-audit --no-fund", "npm run typecheck", "npm run build", "npm run test:e2e", "PDFHUB_E2E_SERVER_MODE: production"):
     assert required in web_ci_workflow, f"Web CI workflow missing guard: {required}"
 assert "contents: write" not in web_ci_workflow
 assert "pull-requests: write" not in web_ci_workflow
@@ -151,6 +151,17 @@ assert NEXT_SECURITY_MIN <= next_version < NEXT_SECURITY_MAX_EXCLUSIVE, (
 assert "@playwright/test" in package.get("devDependencies", {}), "Playwright smoke coverage is required"
 assert package.get("scripts", {}).get("test:e2e") == "playwright test tests/e2e/pdf-hub.smoke.spec.ts tests/e2e/pdf-hub.ui-regression.spec.ts"
 assert package.get("scripts", {}).get("test:e2e:stack") == "playwright test tests/e2e/pdf-hub.stack.spec.ts"
+playwright_config = read("apps/web/playwright.config.ts")
+for marker in (
+    'process.env.PDFHUB_E2E_SERVER_MODE === "production"',
+    'npm run start -- --hostname 127.0.0.1 --port',
+    'npm run dev -- --hostname 127.0.0.1 --port',
+):
+    assert marker in playwright_config, f"Playwright server-mode guard missing: {marker}"
+validate_free = read("scripts/validate-free.sh")
+validate_dependency = read("scripts/validate-direct-dependency.sh")
+assert "PDFHUB_E2E_SERVER_MODE=production" in validate_free, "Full local validation must use the production-built Next.js server for mocked E2E"
+assert "PDFHUB_E2E_SERVER_MODE=production" in validate_dependency, "Dependency validation must use the production-built Next.js server for mocked E2E"
 for required in (
     "apps/web/playwright.config.ts",
     "apps/web/tests/e2e/pdf-hub.smoke.spec.ts",
