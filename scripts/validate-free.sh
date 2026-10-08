@@ -179,6 +179,7 @@ e2e() {
   (
     cd apps/web
     PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" npx playwright install --only-shell chromium 2>&1 | tee "${browser_log}"
+    PDFHUB_E2E_SERVER_MODE=production \
     PLAYWRIGHT_BROWSERS_PATH="${browsers_path}" NEXT_TELEMETRY_DISABLED=1 npm run test:e2e 2>&1 | tee "${e2e_log}"
   )
   check_clean_log "${browser_log}"
