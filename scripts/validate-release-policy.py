@@ -154,10 +154,14 @@ assert package.get("scripts", {}).get("test:e2e:stack") == "playwright test test
 playwright_config = read("apps/web/playwright.config.ts")
 for marker in (
     'process.env.PDFHUB_E2E_SERVER_MODE === "production"',
-    'npm run start -- --hostname 127.0.0.1 --port',
+    'cp -R public .next/standalone/public',
+    'cp -R .next/static .next/standalone/.next/static',
+    'HOSTNAME=127.0.0.1 PORT=${port} node .next/standalone/server.js',
     'npm run dev -- --hostname 127.0.0.1 --port',
 ):
     assert marker in playwright_config, f"Playwright server-mode guard missing: {marker}"
+assert 'output: "standalone"' in read("apps/web/next.config.ts"), "Web validation expects the standalone Next.js output artifact"
+assert 'CMD ["node", "server.js"]' in read("apps/web/Dockerfile"), "Production Web image must run the standalone server artifact"
 validate_free = read("scripts/validate-free.sh")
 validate_dependency = read("scripts/validate-direct-dependency.sh")
 assert "PDFHUB_E2E_SERVER_MODE=production" in validate_free, "Full local validation must use the production-built Next.js server for mocked E2E"
