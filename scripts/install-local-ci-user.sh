@@ -6,12 +6,16 @@ UNIT_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
 SERVICE="rcat-pdf-hub-local-ci.service"
 TIMER="rcat-pdf-hub-local-ci.timer"
 
-for cmd in systemctl bash git make python3 node npm npx docker flock curl gh; do
+for cmd in systemctl bash git make python3 node npm npx docker flock curl gh sysctl; do
   command -v "${cmd}" >/dev/null 2>&1 || { echo "Missing required command: ${cmd}" >&2; exit 1; }
 done
 
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose plugin is required" >&2; exit 1; }
 docker info >/dev/null 2>&1 || { echo "Docker daemon must be reachable by this user" >&2; exit 1; }
+[ "$(sysctl -n vm.overcommit_memory 2>/dev/null || true)" = "1" ] || {
+  echo "vm.overcommit_memory=1 is required for Valkey runtime validation; configure it on the host before installing Local CI" >&2
+  exit 1
+}
 git -C "${ROOT}" remote get-url origin >/dev/null 2>&1 || { echo "Repository must have an origin remote" >&2; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "GitHub CLI must be authenticated before installing local CI: gh auth login" >&2; exit 1; }
 (
