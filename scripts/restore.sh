@@ -50,7 +50,7 @@ dc stop caddy web worker-interactive worker worker-heavy cleanup webhook api >/d
 
 dc up -d --wait --wait-timeout 120 postgres valkey gotenberg >/dev/null
 printf 'restore: replacing PostgreSQL database\n'
-dc exec -T postgres sh -lc 'exec pg_restore --clean --if-exists --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <"${BACKUP_DIR}/postgres.dump"
+dc exec -T postgres sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_restore --clean --if-exists --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <"${BACKUP_DIR}/postgres.dump"
 
 # RQ entries are ephemeral coordination state. Flush only DB 0 so old queued jobs cannot run against restored metadata.
 dc exec -T valkey valkey-cli -n 0 FLUSHDB >/dev/null

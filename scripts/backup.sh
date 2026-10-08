@@ -51,7 +51,7 @@ release="$(dc exec -T api python -c 'from app.main import app; print(app.version
 git_sha="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
 
 printf 'backup: dumping PostgreSQL\n'
-dc exec -T postgres sh -lc 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' >"${BACKUP_DIR}/postgres.dump"
+dc exec -T postgres sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' >"${BACKUP_DIR}/postgres.dump"
 
 case "${storage_backend}" in
   local)

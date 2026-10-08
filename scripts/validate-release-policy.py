@@ -454,7 +454,9 @@ for operator_script in (backup, restore, install_backup):
 assert "docker-compose.prod.yml" in backup
 assert "docker-compose.prod.yml" in restore
 assert "pg_dump" in backup and "SHA256SUMS" in backup and "PDFHUB_STORAGE_BACKEND" in backup
+assert 'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_dump' in backup, "Backup must authenticate pg_dump non-interactively"
 assert "PDFHUB_RESTORE_CONFIRM" in restore and "pg_restore" in restore and "FLUSHDB" in restore
+assert 'PGPASSWORD="$POSTGRES_PASSWORD" exec pg_restore' in restore, "Restore must authenticate pg_restore non-interactively"
 for service in ("worker-interactive", "worker", "worker-heavy"):
     assert service in restore, f"Restore lifecycle missing worker pool: {service}"
 assert "sha256sum -c SHA256SUMS" in verify_backup and "PGDMP" in verify_backup
