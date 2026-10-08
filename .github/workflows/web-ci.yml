@@ -29,3 +29,5 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
