@@ -41,7 +41,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7E.1 | Admin information architecture: Overview, Jobs, Access, Storage, Diagnostics, Integrations | COMPLETE | 7.0 | PR #139 merged `5262ad3006d9707437bbe03940a560118bbce739`; Web CI #37901082307, CodeQL #37901082288, Dependency Review #37901082306 PASS |
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | COMPLETE | 7E.1 | PR #140 merged `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 PASS |
 | 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | COMPLETE | 7E.2 | PR #142 merged `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 PASS |
-| 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | IN PROGRESS | 7F.1 | `fix/p7f2-human-admin-job-ownership`: permission matrix and owner-scope hardening; action approval pending |
+| 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | IN PROGRESS | 7F.1 | PR #143 merged `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; Core API CI #37903849520, CodeQL #37903849543, Dependency Review #37903849917 PASS; `feat/p7f2-confirm-audited-own-actions` active |
 | 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | PENDING | 7E.1 | — |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | PENDING | 7E.2, 7F.2 | — |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
@@ -160,11 +160,12 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7E.1 | Six deep-link Admin areas with isolated panels and non-admin denial merged | PR #139, merge `5262ad3006d9707437bbe03940a560118bbce739`; Web CI #37901082307, CodeQL #37901082288, Dependency Review #37901082306 | COMPLETE |
 | 2026-10-09 | 7E.2 | Operational status-to-diagnostic links and safe retry validated with browser regressions; merged | PR #140, merge `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 | COMPLETE |
 | 2026-10-09 | 7F.1 | Minimized human Admin triage with bounded filters, audit gate, negative tests and UI merged | PR #142, merge `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 | COMPLETE |
-| 2026-10-09 | 7F.2 | Start ownership-bound general job APIs and documented action matrix; cross-account mutations remain gated | `fix/p7f2-human-admin-job-ownership`; PR/CI pending | IN PROGRESS |
+| 2026-10-09 | 7F.2 | Human/session wildcard owner isolation and security action matrix merged | PR #143, merge `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; Core API CI #37903849520, CodeQL #37903849543, Dependency Review #37903849917 | IN PROGRESS |
+| 2026-10-09 | 7F.2 | Start confirmation and fail-closed intent auditing for existing owner-scoped job actions | `feat/p7f2-confirm-audited-own-actions`; PR/CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7F.2 execution:** Secure general jobs API ownership for all identity/session callers (including human Admin and legacy wildcard) without altering bootstrap API compatibility. Record reviewed role/action matrix in `docs/workstreams/phase7-f2-permission-matrix.md`. Cross-account mutations require separately approved authorization, stable status preconditions and fail-closed audit; do not label 7F.2 complete yet. Run Core API, Web, CodeQL and Dependency Review on final commit; no deploy/tag before P7H.
+**P7F.2 execution:** Owner isolation merged PR #143. Validate existing owner-scoped Cancel/Retry/terminal-clear with audit intent persistence *before* mutation, explicit frontend confirmation, synchronous duplicate-action guard, HTTP and Playwright negative tests. Cross-account mutations and generic repair remain unavailable pending separate review. Do not label P7F.2 complete until current-head Core API/Web/CodeQL/Dependency gates pass and approved action scope is documented; no deploy/tag before P7H.
 
 ## Tracker state protocol
 
