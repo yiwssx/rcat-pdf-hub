@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7C.1 DURABLE JOB STATUS**
+Status: **IN PROGRESS — P7C.2 RESULT/DOWNLOAD**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -33,8 +33,8 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7A.2 | Tool-first file intake: upload/My Files, type/count validation, explicit selection and merge ordering | COMPLETE | 7A.1 | PR #130 merged `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 PASS |
 | 7B.1 | Unified client journey state transitions, back/cancel, duplicate-submit guard, per-tool capability metadata | COMPLETE | 7A.2 | PR #131 merged as `b97c9ad62699bbbdf8d7cf21678c58d10c6909ef`; Web CI #37895653343, CodeQL #37895653364, Dependency Review #37895653338 PASS |
 | 7B.2 | Configure/preview/submit contract using current ToolWorkspace and one primary action | COMPLETE | 7B.1 | PR #132 merged `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 PASS |
-| 7C.1 | Job detail/progress surface for queued/running/completed/failed/cancelled; polling and error recovery | IN PROGRESS | 7B.2 | `feat/p7c1-durable-job-status`; PR / CI pending |
-| 7C.2 | Durable authenticated result route; correct output/expiry handling; primary download action | PENDING | 7C.1 | — |
+| 7C.1 | Job detail/progress surface for queued/running/completed/failed/cancelled; polling and error recovery | COMPLETE | 7B.2 | PR #134 merged `04382a1f763abf900f9cf3520eba2383fb06b05c`; Web CI #37897501924, CodeQL #37897501993, Dependency Review #37897501952 PASS |
+| 7C.2 | Durable authenticated result route; correct output/expiry handling; primary download action | IN PROGRESS | 7C.1 | `feat/p7c2-durable-result-download`; PR / CI pending |
 | 7C.3 | Continue with eligible tool via `output_file_id` without downloading/reuploading | PENDING | 7C.2 | — |
 | 7D.1 | User-scoped My Jobs history/status filtering; reopen active or prior jobs | PENDING | 7C.2 | — |
 | 7D.2 | My Files ↔ tools ↔ result navigation; refresh recovery and expired/missing file states | PENDING | 7D.1 | — |
@@ -47,7 +47,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A and P7B `COMPLETE`; P7C `IN PROGRESS` (7C.1 active); P7D–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
+**Roll-up:** P7A and P7B `COMPLETE`; P7C `IN PROGRESS` (7C.1 complete; 7C.2 active); P7D–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
 
 ## User flow contract
 
@@ -132,11 +132,12 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | 2026-10-09 | 7A.2 | Validated upload/library picker, exact merge and image order and unsupported file recovery; merged after all required checks | PR #130, merge `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 | COMPLETE |
 | 2026-10-09 | 7B.1 | Added accessible journey steps, capability metadata, guarded concurrent submits; merged with Playwright validation | PR #131, merge `b97c9ad62699bbbdf8d7cf21678c58d10c6909ef`; Web CI #37895653343, CodeQL #37895653364, Dependency Review #37895653338 | COMPLETE |
 | 2026-10-09 | 7B.2 | Validated single/multi-file configuration and preview/submit contract; merged after Playwright, CodeQL and dependency gates | PR #132, merge `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 | COMPLETE |
-| 2026-10-09 | 7C.1 | Start authenticated durable job status route, backend-authoritative polling and retry/recovery, negative ownership browser tests | `feat/p7c1-durable-job-status`; CI pending | IN PROGRESS |
+| 2026-10-09 | 7C.1 | Durable job status, polling, scoped denial/error recovery and retry tested; merged after full CI | PR #134, merge `04382a1f763abf900f9cf3520eba2383fb06b05c`; Web CI #37897501924, CodeQL #37897501993, Dependency Review #37897501952 | COMPLETE |
+| 2026-10-09 | 7C.2 | Start refresh-safe result route, scoped job/file metadata reads, download, expiry and missing-output recovery | `feat/p7c2-durable-result-download`; CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7C.1 execution:** add session-scoped `/jobs/[id]` using existing backend GET job ownership guard, render state/polling and retry/error recovery, then validate Web CI, CodeQL and Dependency Review before merging. P7C.2 will add download/output routes and expiration handling. Parallel Admin path starts with 7E.1. No deploy/tag before P7H.
+**P7C.2 execution:** verify authenticated `/jobs/[id]/result` with completed-job ownership, output-file ownership, missing/expired/410 cases, download filename and refresh, then merge only when current-head Web CI, CodeQL and Dependency Review pass. Next P7C.3 eligible-tool chaining. Admin path P7E remains pending. No deploy/tag before P7H.
 
 ## Tracker state protocol
 
