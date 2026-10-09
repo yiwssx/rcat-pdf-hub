@@ -19,6 +19,7 @@ import {
   getAuthConfig,
   getIntegrationStatus,
   getMe,
+  getFile,
   IntegrationStatus,
   Job,
   ldapLogin,
@@ -35,6 +36,7 @@ import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import { JobDetailScreen } from "./job-detail-screen";
 import { JobResultScreen } from "./job-result-screen";
 import { MyJobsScreen } from "./my-jobs-screen";
+import { FileDetailScreen } from "./file-detail-screen";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -50,7 +52,7 @@ import {
   ToolDefinition,
 } from "./v3-ui";
 
-export type PdfHubView = "workspace" | "files" | "admin" | "job" | "result" | "jobs";
+export type PdfHubView = "workspace" | "files" | "admin" | "job" | "result" | "jobs" | "file";
 
 const AdminPanel = dynamic(
   () => import("./admin-panel").then((module) => module.AdminPanel),
@@ -133,15 +135,23 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     if (!authValue) return;
     setBusy(true);
     try {
-      const [fileRows, jobRows, status] = await Promise.all([
+      const [fileRows, jobRows, status, requestedFile] = await Promise.all([
         initialView === "workspace" ? listFiles(authValue) : Promise.resolve([]),
         initialView === "jobs" ? listJobs(authValue, { mine: true }) : listJobs(authValue),
         getIntegrationStatus(authValue),
+        // A selected file may be outside the first 2,000 library rows.
+        initialView === "workspace" && initialFileId
+          ? getFile(initialFileId, authValue).catch(() => null)
+          : Promise.resolve(null),
       ]);
-      setFiles(fileRows);
+      setFiles(requestedFile
+        ? [requestedFile, ...fileRows.filter((row) => row.id !== requestedFile.id)]
+        : fileRows);
       setJobs(jobRows);
       setIntegrations(status);
-      setMessage("เชื่อมต่อ PDF Hub แล้ว");
+      setMessage(initialView === "workspace" && initialFileId && !requestedFile && !fileRows.some((row) => row.id === initialFileId)
+        ? "ไม่พบไฟล์ที่เลือกหรือไม่มีสิทธิ์ใช้งาน กรุณาเลือกไฟล์ใหม่"
+        : "เชื่อมต่อ PDF Hub แล้ว");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "โหลด Workspace ไม่สำเร็จ");
     } finally {
@@ -265,6 +275,10 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
         setActiveTool(initialTool);
         setPreviewUrl(null);
       } else if (uploaded[0]) {
+        if (initialView === "files") {
+          window.location.assign(`/files/${encodeURIComponent(uploaded[0].id)}`);
+          return;
+        }
         setTargetId(uploaded[0].id);
         setPreviewUrl(null);
       }
@@ -286,8 +300,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   }
 
   function selectLibraryFile(file: UploadedFile) {
-    setFiles((old) => [file, ...old.filter((item) => item.id !== file.id)]);
-    selectFile(file.id);
+    window.location.assign(`/files/${encodeURIComponent(file.id)}`);
   }
 
   function confirmToolInputs(ids: string[]) {
@@ -484,7 +497,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
       oidcUrl={authConfig?.oidc.login_url}
-      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : initialView === "jobs" ? "/jobs" : "/"}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : initialView === "file" && initialFileId ? `/files/${encodeURIComponent(initialFileId)}` : initialView === "jobs" ? "/jobs" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
@@ -521,7 +534,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     <div className="v3App">
       <AppHeader identity={identity} message={message} jobs={jobs} onOpenJobs={() => setJobsOpen(true)} onRefresh={() => void loadWorkspace()} onLogout={() => void logout()}/>
 
-      {initialView === "jobs" ? (
+      {initialView === "file" && initialFileId ? (
+        <FileDetailScreen fileId={initialFileId} auth={auth} />
+      ) : initialView === "jobs" ? (
         <MyJobsScreen auth={auth} />
       ) : initialView === "result" && initialJobId ? (
         <JobResultScreen jobId={initialJobId} auth={auth} />
