@@ -1,10 +1,10 @@
 # Phase 6 Production Hardening & Scale — Workstream Tracker
 
-Status: **PRODUCTION GATE OPERATOR-REPORTED PASS / GITHUB RELEASE PENDING**
+Status: **COMPLETE — Phase 6 v0.6.0 released 2026-10-09**
 
 Default branch: `main`
 
-Current release baseline: `0.6.0 — Phase 6 release candidate`
+Current release baseline: `v0.6.0 — published production release`
 
 Phase 6 target release: `0.6.0`
 
@@ -85,7 +85,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6G.4 | Frontend/browser performance regression baseline | COMPLETE | PR #107; Web CI run 37517934071 |
 | 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |
 | 6H.2 | Documentation / operational runbook reconciliation | COMPLETE | PR #109 |
-| 6H.3 | Release baseline and `v0.6.0` release | IN PROGRESS | PR #110; Ubuntu operator reports full production gate PASS on 2026-10-09; tag and GitHub Release not yet published |
+| 6H.3 | Release baseline and `v0.6.0` release | COMPLETE | PR #110 and #125; Ubuntu production gate PASS attested by operator (2026-10-09); `v0.6.0` tag -> `73f1eee26ffaf594740a5af222cb885f2b8f82db`; [published GitHub Release](https://github.com/yiwssx/rcat-pdf-hub/releases/tag/v0.6.0) |
 
 ## Execution order
 
@@ -247,13 +247,19 @@ Update this table whenever a Phase 6 task changes state or is merged.
 
 | 2026-10-09 | 6H.3 production gate | Ubuntu production operator confirmed that the full `make release-readiness` production gate passed. Accept this as operator attestation; raw log, exact tested SHA and backup/DR/load artifacts have not been uploaded to GitHub. Do not rerun the completed production validation solely for repository bookkeeping. Publication must still pin the operator-verified SHA. | Operator confirmation in RCAT PDF Hub project conversation; expected local `~/p6h3-release-gate.log` | PRODUCTION GATE REPORTED PASS / RELEASE PENDING |
 
+| 2026-10-09 | 6H.3 / Phase 6 closure | Verified published non-draft, non-prerelease GitHub Release `v0.6.0` and matching lightweight tag pointing to `73f1eee26ffaf594740a5af222cb885f2b8f82db` (then-current `main`); accepted the operator's earlier Ubuntu full production gate PASS attestation. Host log and exact tested SHA were not uploaded for independent review. This documentation reconciliation completes Phase 6 without re-running deployment, backup or DR. | [GitHub Release v0.6.0](https://github.com/yiwssx/rcat-pdf-hub/releases/tag/v0.6.0); tag ref `refs/tags/v0.6.0`; PR #125 | COMPLETE |
+
 ## Current next action
 
-**Publish the Phase 6 `v0.6.0` Git tag and GitHub Release to complete 6H.3.**
+**None — Phase 6 is closed at the published `v0.6.0` release.**
 
-On 2026-10-09, the production operator explicitly confirmed the Ubuntu `make release-readiness` gate **PASS**. This is an operator-reported outcome, not a GitHub-hosted run; the raw `~/p6h3-release-gate.log`, exact deployed/validated commit SHA, backup verification, isolated DR drill and load-smoke artifacts are not attached to this repository. Do not claim those logs were independently inspected.
+The published release is [RCAT PDF Hub v0.6.0](https://github.com/yiwssx/rcat-pdf-hub/releases/tag/v0.6.0), published on 2026-10-09. GitHub's `refs/tags/v0.6.0` resolves to `73f1eee26ffaf594740a5af222cb885f2b8f82db`, matching the release-time `main` commit. The tag is retained at its original release SHA; subsequent tracker-only documentation changes must not move it.
 
-Before publishing, match `git rev-parse HEAD` from the operator's validated Ubuntu checkout to the intended release commit. The repository `main` snapshot at this handoff was `5ee49cbf4923e894d65e78b22df58fc4568ef262`, a tracker-documentation-only merge (#124) after branding #123. If a different commit was validated, use that verified commit as the release target. Do not create a tag by guessing from conversation timestamps, and do not rerun backup, restore, DR or full release gate merely to update tracking.
+The Ubuntu operator confirmed that `make release-readiness` passed in production mode before release publication. This is an operator attestation, **not** independent inspection of host evidence. Raw `~/p6h3-release-gate.log`, exact tested Ubuntu checkout SHA, backup, DR and load-smoke artifacts remain operator-held/unattached. Treat that provenance transparently in later audits; do not conflate it with a GitHub-hosted production validation run.
+
+No further Phase 6 implementation, retagging, redeployment, backup, restore, DR drill or production gate rerun is necessary merely to reconcile closure. Any later enhancement, defect or follow-up audit should be tracked separately.
+
+ after branding #123. If a different commit was validated, use that verified commit as the release target. Do not create a tag by guessing from conversation timestamps, and do not rerun backup, restore, DR or full release gate merely to update tracking.
 
 After confirming the SHA, create the `v0.6.0` tag and corresponding GitHub Release, confirm the tag resolves to the verified commit, and record the release URL and operator evidence reference. Then set 6H.3 and the Phase 6 headline to `COMPLETE` in a final documentation-only reconciliation PR. Preserve the source-level security and CI gates.
 

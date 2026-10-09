@@ -1,6 +1,6 @@
 # Phase 6 — Production Hardening & Scale
 
-Status: **implementation complete; 0.6.0 release candidate pending production release gate**
+Status: **Phase 6 production release completed (v0.6.0)**
 
 Phase 6 hardens RCAT PDF Hub for long-term self-hosted production operation while preserving the zero-paid-cloud policy and Docker Compose deployment model.
 
@@ -68,7 +68,7 @@ make release-readiness
 
 The production gate runs full zero-cost validation, source/image supply-chain checks, local-CI enforcement checks, backup verification, an isolated DR drill, and deployment-target load/latency smoke.
 
-`v0.6.0` must not be tagged until the production gate succeeds for the intended deployment target.
+The Ubuntu production operator confirmed the complete release-readiness gate passed on 2026-10-09. The [published `v0.6.0` GitHub Release](https://github.com/yiwssx/rcat-pdf-hub/releases/tag/v0.6.0) and `refs/tags/v0.6.0` point to commit `73f1eee26ffaf594740a5af222cb885f2b8f82db` (the release-time `main` SHA). This completes Phase 6 / Task 6H.3. The operator-host log and exact tested SHA were not uploaded to GitHub for independent verification; the production gate result is recorded as operator-attested.
 
 ## Architecture decisions
 
