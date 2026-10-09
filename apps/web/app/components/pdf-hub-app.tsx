@@ -32,6 +32,7 @@ import {
   UploadedFile,
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
+import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import {
   AdminIdentityPanel,
   AppHeader,
@@ -57,27 +58,13 @@ const ToolWorkspace = dynamic(
 
 const imageContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
 
-const tools: ToolDefinition[] = [
-  { id: "ocr", title: "สแกน / OCR", description: "อ่านข้อความไทย + อังกฤษจากเอกสาร", icon: "scan", tone: "rose", badge: "ยอดนิยม" },
-  { id: "merge-pdf", title: "รวม PDF", description: "รวมหลายไฟล์เป็นเอกสารเดียว", icon: "merge", tone: "blue" },
-  { id: "split-rotate", title: "จัดหน้า PDF", description: "เลือก แยก และหมุนหน้า", icon: "organize", tone: "violet" },
-  { id: "compress", title: "ลดขนาด PDF", description: "บีบอัดไฟล์สำหรับส่งและจัดเก็บ", icon: "compress", tone: "amber" },
-  { id: "pdf-to-images", title: "PDF → รูปภาพ", description: "ส่งออกหน้าเอกสารเป็น PNG/JPEG", icon: "image", tone: "red" },
-  { id: "images-to-pdf", title: "รูปภาพ → PDF", description: "รวมรูปภาพหลายไฟล์เป็น PDF", icon: "imagePdf", tone: "cyan" },
-  { id: "watermark", title: "ลายน้ำ", description: "เพิ่มข้อความลายน้ำภาษาไทย", icon: "watermark", tone: "pink" },
-  { id: "page-numbers", title: "เลขหน้า", description: "ใส่เลขหน้าและกำหนดตำแหน่ง", icon: "numbers", tone: "indigo" },
-  { id: "pdfa", title: "PDF/A-2", description: "แปลงเพื่อจัดเก็บระยะยาว", icon: "pdfa", tone: "green" },
-  { id: "office-to-pdf", title: "Office → PDF", description: "แปลง Word, Excel และ PowerPoint", icon: "office", tone: "orange" },
-  { id: "pdf-stamp", title: "ประทับ PDF", description: "วางตราประทับจาก PDF อีกไฟล์", icon: "stamp", tone: "purple" },
-  { id: "signed-link", title: "ลิงก์ดาวน์โหลด", description: "สร้างลิงก์ชั่วคราวเพื่อแชร์ไฟล์", icon: "link", tone: "sky" },
-  { id: "archive", title: "คลังเอกสาร", description: "ส่งเอกสารเข้า Paperless", icon: "archive", tone: "teal" },
-];
+const tools: ToolDefinition[] = [...PDF_TOOLS];
 
 function isPdf(file: UploadedFile | null) {
   return Boolean(file && (file.content_type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf")));
 }
 
-export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubView }) {
+export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string }) {
   const [auth, setAuth] = useState("");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [identity, setIdentity] = useState<AuthMe | null>(null);
@@ -86,9 +73,8 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("พร้อมใช้งาน");
-  const [targetId, setTargetId] = useState("");
-  const [activeTool, setActiveTool] = useState("");
-  const [pendingTool, setPendingTool] = useState("");
+  const [targetId, setTargetId] = useState(initialFileId ?? "");
+  const [activeTool, setActiveTool] = useState(initialTool ?? "");
   const [jobsOpen, setJobsOpen] = useState(false);
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
   const [ldapUser, setLdapUser] = useState("");
@@ -97,9 +83,18 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   const [previewPage, setPreviewPage] = useState(1);
   const [toolSettings, setToolSettings] = useState(createToolWorkspaceSettings);
 
+  const routeTool = initialTool ? findPdfTool(initialTool) : undefined;
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
-  const pdfFiles = useMemo(() => files.filter((file) => isPdf(file)), [files]);
-  const imageFiles = useMemo(() => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase())), [files]);
+  // A routed task may only see explicitly selected inputs. P7A.2 extends
+  // this to reviewed multi-selection; do not submit unrelated library files.
+  const pdfFiles = useMemo(
+    () => files.filter((file) => isPdf(file) && (!initialTool || file.id === targetId)),
+    [files, initialTool, targetId],
+  );
+  const imageFiles = useMemo(
+    () => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase()) && (!initialTool || file.id === targetId)),
+    [files, initialTool, targetId],
+  );
   const targetIsPdf = isPdf(target);
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
   const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
@@ -240,12 +235,15 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       const uploaded: UploadedFile[] = [];
       for (const file of Array.from(list)) uploaded.push(await uploadFile(file, auth));
       setFiles((old) => [...uploaded, ...old.filter((item) => !uploaded.some((fresh) => fresh.id === item.id))]);
-      if (uploaded[0]) {
+      if (initialTool && uploaded.length > 1) {
+        // Multi-file inputs must be reviewed as an explicit ordered set in P7A.2.
+        setTargetId("");
+        setActiveTool(initialTool);
+      } else if (uploaded[0]) {
         setTargetId(uploaded[0].id);
         setPreviewUrl(null);
-        if (pendingTool) setActiveTool(pendingTool);
+        if (initialTool) setActiveTool(initialTool);
       }
-      setPendingTool("");
       clearSignedToolResult();
       setMessage(`อัปโหลดแล้ว ${uploaded.length} ไฟล์`);
     } catch (error) {
@@ -257,7 +255,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
 
   function selectFile(id: string) {
     setTargetId(id);
-    setActiveTool("");
+    setActiveTool(initialTool ?? "");
     setPreviewUrl(null);
     setPreviewPage(1);
     clearSignedToolResult();
@@ -269,42 +267,14 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
   }
 
   function chooseTool(tool: ToolDefinition) {
-    let candidate = target;
-    const requiresPdf = !["images-to-pdf", "office-to-pdf", "signed-link"].includes(tool.id);
-
-    if (tool.id === "merge-pdf") {
-      candidate = candidate && isPdf(candidate) ? candidate : pdfFiles[0] || null;
-      if (pdfFiles.length < 2) {
-        setPendingTool(tool.id);
-        setMessage("รวม PDF ต้องมี PDF อย่างน้อย 2 ไฟล์ — เพิ่มไฟล์ได้เลย");
-        document.getElementById("files")?.click();
-        return;
-      }
-    } else if (tool.id === "images-to-pdf") {
-      candidate = candidate && imageContentTypes.has(candidate.content_type.toLowerCase()) ? candidate : imageFiles[0] || null;
-      if (!candidate) {
-        setPendingTool(tool.id);
-        setMessage("เพิ่มรูปภาพอย่างน้อย 1 ไฟล์ก่อน");
-        document.getElementById("files")?.click();
-        return;
-      }
-    } else if (requiresPdf) {
-      candidate = candidate && isPdf(candidate) ? candidate : pdfFiles[0] || null;
-    } else {
-      candidate = candidate || files[0] || null;
-    }
-
-    if (!candidate) {
-      setPendingTool(tool.id);
-      setMessage("เพิ่มหรือเลือกไฟล์ก่อนใช้เครื่องมือนี้");
-      document.getElementById("files")?.click();
+    if (routeTool?.id === tool.id) {
+      setActiveTool(tool.id);
       return;
     }
-
-    setTargetId(candidate.id);
-    setActiveTool(tool.id);
-    setPreviewUrl(null);
-    clearSignedToolResult();
+    // Route intent is explicit and survives navigation. The optional file ID
+    // comes only from a user-selected workspace file, never a fallback.
+    const selectedFile = targetId ? `?file=${encodeURIComponent(targetId)}` : "";
+    window.location.assign(`/tools/${encodeURIComponent(tool.id)}${selectedFile}`);
   }
 
   async function submit(operation: string, payload: object) {
@@ -444,6 +414,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
       oidcUrl={authConfig?.oidc.login_url}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
@@ -472,7 +443,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
       onCreateSignedLink={createSignedLink}
       onArchive={archive}
       onMessage={setMessage}
-      onClose={() => setActiveTool("")}
+      onClose={() => routeTool ? window.location.assign("/") : setActiveTool("")}
     />
   ) : null;
 
@@ -499,6 +470,44 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
             <AdminPanel apiKey={auth}/>
           </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/admin/login">เข้าสู่ระบบผู้ดูแล</a><a href="/">กลับ Workspace</a></section>}
         </main>
+      ) : routeTool && !target ? (
+        <main className="v3Main" id="workspace">
+          <section className="v3HomeTitle">
+            <div>
+              <span className="v3Kicker">เลือกเครื่องมือ → เลือกไฟล์ → ตั้งค่า</span>
+              <h1>{routeTool.title}</h1>
+              <p>{routeTool.description} — เลือกไฟล์ที่ต้องการโดยตรง ระบบจะไม่เลือกไฟล์เดิมให้อัตโนมัติ</p>
+            </div>
+            <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
+          </section>
+          <section className="v3StartGrid" aria-label="เลือกไฟล์สำหรับเครื่องมือ">
+            <div className="v3Dropzone">
+              <input id="files" type="file" multiple disabled={busy} onChange={(event) => void onFiles(event.target.files)}/>
+              <label htmlFor="files">
+                <span className="v3DropIcon">＋</span>
+                <strong>อัปโหลดไฟล์สำหรับ {routeTool.title}</strong>
+                <p>เลือกไฟล์จากเครื่องเพื่อเริ่มงานนี้</p>
+                <span className="v3UploadButton">เลือกไฟล์</span>
+              </label>
+            </div>
+            <div className="v3RecentCard">
+              <div className="v3SectionHead">
+                <div><span className="v3Kicker">MY FILES</span><h2>เลือกไฟล์ที่มีอยู่</h2></div>
+                <a href="/files">ดูคลังไฟล์</a>
+              </div>
+              <div className="v3RecentList">
+                {files.length === 0 && <p className="v3EmptyMini">ยังไม่มีไฟล์ใน Workspace</p>}
+                {files.map((file) => (
+                  <button className="v3RecentFile" key={file.id} type="button" onClick={() => { setTargetId(file.id); setActiveTool(routeTool.id); }}>
+                    <span className="v3FileBadge">{isPdf(file) ? "PDF" : "FILE"}</span>
+                    <span><strong>{file.original_name}</strong><small>{file.content_type}</small></span>
+                    <b>›</b>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        </main>
       ) : target ? (
         <DocumentWorkspace
           target={target}
@@ -508,7 +517,7 @@ export function PdfHubApp({ initialView = "workspace" }: { initialView?: PdfHubV
           previewPage={previewPage}
           busy={busy}
           toolPanel={toolPanel}
-          onBack={() => { setTargetId(""); setActiveTool(""); setPreviewUrl(null); }}
+          onBack={() => { setTargetId(""); setActiveTool(initialTool ?? ""); setPreviewUrl(null); }}
           onTool={chooseTool}
           onPreview={() => void preview()}
           onPreviewPage={setPreviewPage}

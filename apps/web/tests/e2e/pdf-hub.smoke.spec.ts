@@ -224,6 +224,9 @@ test("V3 switches from home into a focused tool workspace without long-page sect
 
   await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /ลายน้ำ/ }).first().click();
+  await expect(page).toHaveURL(/\/tools\/watermark$/);
+  await expect(page.locator("#workspace-target")).toHaveCount(0);
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
 
   await expect(page.locator("#workspace-target")).toBeVisible();
   await expect(page.locator(".v3ToolPanel")).toBeVisible();
@@ -232,8 +235,9 @@ test("V3 switches from home into a focused tool workspace without long-page sect
   await expect(page.locator(".advancedSection")).toHaveCount(0);
 
   await page.getByRole("button", { name: "กลับไปเลือกเครื่องมือ" }).click();
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.locator(".v3ToolPanel")).toHaveCount(0);
-  await expect(page.getByText("ทำอะไรกับไฟล์นี้?")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "จัดการเอกสารของคุณ" })).toBeVisible();
 });
 
 test("tool workspace owns settings and submits the configured watermark payload", async ({ page }) => {
@@ -374,4 +378,50 @@ test("files route provides direct download action", async ({ page }) => {
   await row.getByRole("button", { name: "ดาวน์โหลด" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain("example.pdf");
+});
+
+test("P7A.1 deep links keep tool intent across navigation, reload, and reject unknown slugs", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /ลดขนาด PDF/ }).first().click();
+  await expect(page).toHaveURL(/\/tools\/compress$/);
+  await expect(page.getByRole("heading", { name: "ลดขนาด PDF" })).toBeVisible();
+  await expect(page.locator("#workspace-target")).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "ลดขนาด PDF" })).toBeVisible();
+  await expect(page.locator("#workspace-target")).toHaveCount(0);
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "จัดการเอกสารของคุณ" })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "ลดขนาด PDF" })).toBeVisible();
+
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await expect(page.locator("#workspace-target")).toContainText("example.pdf");
+  await expect(page.locator(".v3ToolPanel")).toContainText("ลดขนาด PDF");
+
+  await page.goto("/tools/unknown-tool");
+  await expect(page.getByText("404")).toBeVisible();
+});
+
+test("P7A.1 file-selected deep links respect the authorized library", async ({ page }) => {
+  await page.goto("/tools/compress?file=file-pdf-1");
+  await expect(page.locator("#workspace-target")).toContainText("example.pdf");
+  await page.reload();
+  await expect(page.locator("#workspace-target")).toContainText("example.pdf");
+
+  await page.goto("/tools/compress?file=unowned-file-id");
+  await expect(page.locator("#workspace-target")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "เลือกไฟล์ที่มีอยู่" })).toBeVisible();
+});
+
+test("P7A.1 routed merge never adds an unrelated library PDF implicitly", async ({ page }) => {
+  const otherPdf = { ...initialFile, id: "file-pdf-2", original_name: "unrelated.pdf" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, otherPdf] }));
+  await page.goto("/tools/merge-pdf?file=file-pdf-1");
+
+  await expect(page.locator(".v3ToolPanel")).toBeVisible();
+  await expect(page.locator(".v3MergeList")).toContainText("example.pdf");
+  await expect(page.locator(".v3MergeList")).not.toContainText("unrelated.pdf");
+  await expect(page.getByRole("button", { name: /รวม PDF/ }).last()).toBeDisabled();
 });

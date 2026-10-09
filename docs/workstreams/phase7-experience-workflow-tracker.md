@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **PLANNED — IMPLEMENTATION PAUSED**
+Status: **IN PROGRESS — P7A.1 TOOL ROUTING**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -29,7 +29,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | ID | Deliverable / work package | Status | Dependencies | Evidence |
 | --- | --- | --- | --- | --- |
 | 7.0 | Planning: PHASE7, canonical Master Tracker, proposed ADR-0005, glossary and routing/policy guard | COMPLETE | Phase 6 baseline | PR #128 (planning-only) |
-| 7A.1 | Stable tool catalog and `/tools/[slug]` navigation; invalid slug, direct URL, back/forward/refresh | PENDING | 7.0 | — |
+| 7A.1 | Stable tool catalog and `/tools/[slug]` navigation; invalid slug, direct URL, back/forward/refresh | IN PROGRESS | 7.0 | PR #129; Web CI [37894167408](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/37894167408) PASS; CodeQL [37894167411](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/37894167411) PASS; Dependency Review [37894167486](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/37894167486) PASS; merge pending |
 | 7A.2 | Tool-first file intake: upload/My Files, type/count validation, explicit selection and merge ordering | PENDING | 7A.1 | — |
 | 7B.1 | Unified client journey state transitions, back/cancel, duplicate-submit guard, per-tool capability metadata | PENDING | 7A.2 | — |
 | 7B.2 | Configure/preview/submit contract using current ToolWorkspace and one primary action | PENDING | 7B.1 | — |
@@ -128,10 +128,11 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | Date | Task | Action / decision | Evidence | Result |
 | --- | --- | --- | --- | --- |
 | 2026-10-09 | 7.0 | Baseline identified, two user paths + admin path defined; create master tracker and proposed ADR; pause P7 implementation until requested | Pre-plan `main` `4f808fd3d8e094e1d37b361ff171a021f5e02ace`; PR #128 | PLAN READY |
+| 2026-10-09 | 7A.1 | Stable slug catalog, owned-file URL checks, routing persistence and no implicit multi-file submission; Playwright E2E, typecheck and build passed | PR #129, Web CI #37894167408, CodeQL #37894167411, Dependency Review #37894167486 | VALIDATED — MERGE PENDING |
 
 ## Current next action
 
-**Stop at planning gate after the documentation PR merges into `main`.** Do not start P7A or deploy based solely on this plan. After explicit authorization, read this tracker and ADRs, verify current `main`, mark 7A.1 `IN PROGRESS`, and implement/validate the tool-route slice in a focused PR.
+**7A.1 validation passed on PR #129.** Core API CI is not triggered by this web-only change; existing API code and contract were not modified. Merge the PR after confirming current-head CodeQL/Dependency Review/Web CI, then record the merge SHA and mark COMPLETE in the first post-merge tracker update. Next: 7A.2 explicit type/count and ordered multi-file intake. Do not deploy until P7H.
 
 ## Tracker state protocol
 
