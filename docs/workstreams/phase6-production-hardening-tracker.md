@@ -1,6 +1,6 @@
 # Phase 6 Production Hardening & Scale — Workstream Tracker
 
-Status: **RELEASE CANDIDATE / PRODUCTION GATE PENDING**
+Status: **PRODUCTION GATE OPERATOR-REPORTED PASS / GITHUB RELEASE PENDING**
 
 Default branch: `main`
 
@@ -85,7 +85,7 @@ Recent pre-Phase-6 hardening/refactor work:
 | 6G.4 | Frontend/browser performance regression baseline | COMPLETE | PR #107; Web CI run 37517934071 |
 | 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |
 | 6H.2 | Documentation / operational runbook reconciliation | COMPLETE | PR #109 |
-| 6H.3 | Release baseline and `v0.6.0` release | BLOCKED | PR #110; production release gate requires operator-host evidence |
+| 6H.3 | Release baseline and `v0.6.0` release | IN PROGRESS | PR #110; Ubuntu operator reports full production gate PASS on 2026-10-09; tag and GitHub Release not yet published |
 
 ## Execution order
 
@@ -245,29 +245,17 @@ Update this table whenever a Phase 6 task changes state or is merged.
 | 2026-10-07 | 6H.3 | Aligned API/Web/release-policy/documentation metadata to 0.6.0 and prepared the release candidate. Production backup verification, isolated DR drill, deployment-target load smoke, tag and GitHub Release remain gating evidence. | PR #110; main `202a7b459ce02b064620cc95d405b4bbbd3dfa36` | BLOCKED |
 | 2026-10-09 | Phase 6 release reconciliation | Rechecked current `main` after Phase 6 stabilization fixes #111–#122 and RCAT branding #123. Branding Web CI, Dependency Review and CodeQL passed; push CodeQL on current `main` passed. No `local-ci/*` status exists on current `main`, and no operator-host backup/DR/load evidence or `v0.6.0` tag/release is recorded. Preserve 6H.3 as BLOCKED until verified. | main `f9b41fa94ac63f2cf8c1b4199faedeb913d0846d`; PR #123; runs 37874501316, 37874501303, 37874501372, 37874641360 | BLOCKED |
 
+| 2026-10-09 | 6H.3 production gate | Ubuntu production operator confirmed that the full `make release-readiness` production gate passed. Accept this as operator attestation; raw log, exact tested SHA and backup/DR/load artifacts have not been uploaded to GitHub. Do not rerun the completed production validation solely for repository bookkeeping. Publication must still pin the operator-verified SHA. | Operator confirmation in RCAT PDF Hub project conversation; expected local `~/p6h3-release-gate.log` | PRODUCTION GATE REPORTED PASS / RELEASE PENDING |
+
 ## Current next action
 
-**Task 6H.3 remains BLOCKED by the Ubuntu production release gate.** The code/branding changes are merged to `main`; this is not evidence of a running production deployment. The most recently verified `main` commit before this tracker-only reconciliation is `f9b41fa94ac63f2cf8c1b4199faedeb913d0846d` (PR #123). GitHub's PR CI passed, but there is no `local-ci/validate-free` status on that commit and no production backup verification, isolated DR drill, deployment-target load smoke, `v0.6.0` tag or GitHub Release.
+**Publish the Phase 6 `v0.6.0` Git tag and GitHub Release to complete 6H.3.**
 
-### Ubuntu operator handoff (run from the existing production checkout)
+On 2026-10-09, the production operator explicitly confirmed the Ubuntu `make release-readiness` gate **PASS**. This is an operator-reported outcome, not a GitHub-hosted run; the raw `~/p6h3-release-gate.log`, exact deployed/validated commit SHA, backup verification, isolated DR drill and load-smoke artifacts are not attached to this repository. Do not claim those logs were independently inspected.
 
-1. Confirm the real repository path, existing `.env`, storage mode (`prod` vs. `prod-nas`), trusted `PDFHUB_PUBLIC_BIND_HOST`, upstream reverse-proxy URL and current deployment health. **Do not assume** a host address, backup directory, or external URL from repo metadata. Do not recreate secrets or data volumes.
-2. In that checkout, synchronize `main` with `git fetch origin && git checkout main && git pull --ff-only`, capture `git rev-parse HEAD`, and ensure `git status --porcelain` shows no uncommitted changes. Verify `make prod-config` and inspect the resulting bind/network configuration before any production mutation.
-3. Before modifying a running production stack, take a verified backup in its *actual* Compose mode. For example, if it currently uses the production Compose overlay: `PDFHUB_COMPOSE_MODE=prod make backup`. If NAS is used, set `PDFHUB_COMPOSE_MODE=prod-nas` instead. Save the exact backup path printed by the command, then run `BACKUP=/actual/backup/path make backup-verify`.
-4. Deploy only the correctly configured production stack (`make up-prod` or `make up-prod-nas`), using the existing port and trusted reverse proxy. Verify health/readiness through the intended endpoint and confirm the new college emblem appears. Never expose internal services or bypass the reviewed proxy.
-5. Ensure the local CI timer has completed validation of the **current** `main` SHA and `make local-ci-doctor` passes. Run the *full*, non-skipped production gate with the verified backup and actual URL:
+Before publishing, match `git rev-parse HEAD` from the operator's validated Ubuntu checkout to the intended release commit. The repository `main` snapshot at this handoff was `5ee49cbf4923e894d65e78b22df58fc4568ef262`, a tracker-documentation-only merge (#124) after branding #123. If a different commit was validated, use that verified commit as the release target. Do not create a tag by guessing from conversation timestamps, and do not rerun backup, restore, DR or full release gate merely to update tracking.
 
-   ```bash
-   PDFHUB_COMPOSE_MODE=prod \
-   BACKUP=/actual/backup/path \
-   URL=https://actual-deployment-endpoint \
-   make release-readiness
-   ```
-
-   Use `PDFHUB_COMPOSE_MODE=prod-nas` for NAS deployments. Do **not** set `PDFHUB_RELEASE_SKIP_DR=true`. Capture the complete output showing `validate-free`, supply-chain gates, `local-ci-doctor`, backup verification, isolated DR drill and load/latency smoke, culminating in `release-readiness: PASS (production gate)`. A PR's green Web CI/CodeQL is insufficient.
-6. Only after the full gate passes, record the verified release SHA, backup/DR/load evidence in this tracker, change 6H.3 to `COMPLETE` by reviewed PR, then create the immutable `v0.6.0` tag and GitHub Release anchored to the **verified** release SHA. Confirm both exist before declaring Phase 6 closed.
-
-**Current blocker:** No remote Ubuntu shell or authenticated production deployment channel has been provided in this GitHub-connected workflow. Do not claim deployment, backup, DR or release completion based on repository inspection alone.
+After confirming the SHA, create the `v0.6.0` tag and corresponding GitHub Release, confirm the tag resolves to the verified commit, and record the release URL and operator evidence reference. Then set 6H.3 and the Phase 6 headline to `COMPLETE` in a final documentation-only reconciliation PR. Preserve the source-level security and CI gates.
 
 ## Status update convention
 
