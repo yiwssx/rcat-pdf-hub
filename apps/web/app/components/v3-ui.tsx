@@ -503,6 +503,7 @@ export function JobDrawer({
             <div className="v3JobActions">
               {(job.status === "queued" || job.status === "running") && <button type="button" className="danger" onClick={() => onCancel(job.id)}>ยกเลิก</button>}
               {(job.status === "failed" || job.status === "cancelled") && <button type="button" onClick={() => onRetry(job.id)}>ลองใหม่</button>}
+              <a href={`/jobs/${encodeURIComponent(job.id)}`} aria-label={`ดูสถานะงาน ${job.id}`}>ดูสถานะ</a>
               {job.output_file_id && <button type="button" className="downloadButton" onClick={() => onDownload(job.output_file_id!)}>ดาวน์โหลด</button>}
             </div>
           </article>)}
