@@ -41,11 +41,21 @@ OPERATION_SCOPES = {
 }
 
 
+def _human_admin_owns_generic_jobs(principal: Principal) -> bool:
+    # The minimal, audited Admin triage API is the only human-admin-wide
+    # browsing seam. A wildcard role does NOT grant owner bypass here.
+    return principal.is_identity_admin and principal.auth_source in {"oidc", "ldap", "local-admin"}
+
+
+def _must_filter_job_owner(principal: Principal) -> bool:
+    return "*" not in principal.scopes or _human_admin_owns_generic_jobs(principal)
+
+
 def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
     job = db.get(JobRecord, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    if "*" not in principal.scopes and job.requested_by != principal.name:
+    if _must_filter_job_owner(principal) and job.requested_by != principal.name:
         raise HTTPException(status_code=403, detail="Job belongs to another service")
     return job
 
@@ -77,7 +87,7 @@ def list_jobs(
     # Explicit "mine" is required for a human My Jobs view, including admins.
     # Existing API clients retain their current default scope semantics.
     stmt = select(JobRecord)
-    if mine or "*" not in principal.scopes:
+    if mine or _must_filter_job_owner(principal):
         stmt = stmt.where(JobRecord.requested_by == principal.name)
     if status is not None:
         stmt = stmt.where(JobRecord.status == status)
@@ -167,7 +177,7 @@ def clear_terminal_jobs(
 ):
     statuses = ("completed", "failed", "cancelled")
     stmt = select(JobRecord).where(JobRecord.status.in_(statuses))
-    if "*" not in principal.scopes:
+    if _must_filter_job_owner(principal):
         stmt = stmt.where(JobRecord.requested_by == principal.name)
     rows = db.scalars(stmt).all()
     job_ids = [job.id for job in rows]
