@@ -226,7 +226,8 @@ test("V3 switches from home into a focused tool workspace without long-page sect
   await page.getByRole("button", { name: /ลายน้ำ/ }).first().click();
   await expect(page).toHaveURL(/\/tools\/watermark$/);
   await expect(page.locator("#workspace-target")).toHaveCount(0);
-  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("radio", { name: "example.pdf" }).check();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
 
   await expect(page.locator("#workspace-target")).toBeVisible();
   await expect(page.locator(".v3ToolPanel")).toBeVisible();
@@ -288,7 +289,7 @@ test("propagates the session through preview, job drawer, download and upload", 
   expect(download.suggestedFilename()).toContain("pdfhub-file-output-1");
 
   await page.locator(".v3JobDrawer").getByRole("button", { name: "×" }).click();
-  await page.getByRole("button", { name: /กลับ/ }).click();
+  await page.goto("/");
   await page.locator("#files").setInputFiles({ name: "scan.png", mimeType: "image/png", buffer: Buffer.from([1, 2, 3]) });
   await expect(page.locator("#workspace-target")).toBeVisible();
   await expect(page.locator("#workspace-target strong")).toHaveText("scan.png");
@@ -396,7 +397,8 @@ test("P7A.1 deep links keep tool intent across navigation, reload, and reject un
   await page.goForward();
   await expect(page.getByRole("heading", { name: "ลดขนาด PDF" })).toBeVisible();
 
-  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("radio", { name: "example.pdf" }).check();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
   await expect(page.locator("#workspace-target")).toContainText("example.pdf");
   await expect(page.locator(".v3ToolPanel")).toContainText("ลดขนาด PDF");
 
@@ -412,7 +414,8 @@ test("P7A.1 file-selected deep links respect the authorized library", async ({ p
 
   await page.goto("/tools/compress?file=unowned-file-id");
   await expect(page.locator("#workspace-target")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "เลือกไฟล์ที่มีอยู่" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "เลือกจากคลังไฟล์" })).toBeVisible();
+  await expect(page.getByText("ไฟล์บางรายการไม่อยู่ในคลังไฟล์ที่คุณเข้าถึงได้")).toBeVisible();
 });
 
 test("P7A.1 routed merge never adds an unrelated library PDF implicitly", async ({ page }) => {
@@ -424,4 +427,72 @@ test("P7A.1 routed merge never adds an unrelated library PDF implicitly", async 
   await expect(page.locator(".v3MergeList")).toContainText("example.pdf");
   await expect(page.locator(".v3MergeList")).not.toContainText("unrelated.pdf");
   await expect(page.getByRole("button", { name: /รวม PDF/ }).last()).toBeDisabled();
+});
+
+test("P7A.2 validates kind and count, reviews exact ordered merge inputs", async ({ page }) => {
+  const secondPdf = { ...initialFile, id: "file-pdf-2", original_name: "second.pdf" };
+  const image = { ...initialFile, id: "file-image-1", original_name: "scan.png", content_type: "image/png" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, secondPdf, image] }));
+  await page.route("**/api/v1/pdf/merge", (route) => route.fulfill({
+    json: {
+      id: "job-merge-1", operation: "merge", status: "queued", progress: 0,
+      input_file_ids: ["file-pdf-2", "file-pdf-1"], output_file_id: null,
+      params: {}, error: null, requested_by: "web-console:smoke-test",
+    },
+  }));
+
+  await page.goto("/tools/merge-pdf");
+  await expect(page.getByRole("heading", { name: "รวม PDF" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "scan.png" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
+
+  await page.getByRole("checkbox", { name: "example.pdf" }).check();
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
+  await page.getByRole("checkbox", { name: "second.pdf" }).check();
+  await page.getByRole("button", { name: "เลื่อน second.pdf ขึ้น" }).click();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+
+  await expect(page.locator(".v3MergeList")).toContainText("second.pdf");
+  await expect(page.locator(".v3MergeList")).toContainText("example.pdf");
+  await expect(page.locator(".v3MergeList")).not.toContainText("scan.png");
+
+  const request = page.waitForRequest("**/api/v1/pdf/merge");
+  await page.getByRole("button", { name: /รวม PDF 2 ไฟล์/ }).click();
+  expect((await request).postDataJSON()).toEqual({ file_ids: ["file-pdf-2", "file-pdf-1"] });
+});
+
+test("P7A.2 single-file intake requires explicit choice and rejects other file types", async ({ page }) => {
+  const image = { ...initialFile, id: "file-image-2", original_name: "photo.png", content_type: "image/png" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [image, initialFile] }));
+  await page.goto("/tools/compress");
+
+  await expect(page.locator("#workspace-target")).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "photo.png" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
+  await page.getByRole("radio", { name: "example.pdf" }).check();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+  await expect(page.locator("#workspace-target")).toContainText("example.pdf");
+});
+
+test("P7A.2 image-to-PDF payload retains reviewed image sequence", async ({ page }) => {
+  const first = { ...initialFile, id: "img-1", original_name: "first.png", content_type: "image/png" };
+  const second = { ...initialFile, id: "img-2", original_name: "second.png", content_type: "image/png" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [first, second] }));
+  await page.route("**/api/v1/pdf/images-to-pdf", (route) => route.fulfill({
+    json: {
+      id: "job-img-1", operation: "images-to-pdf", status: "queued", progress: 0,
+      input_file_ids: ["img-2", "img-1"], output_file_id: null, params: {},
+      error: null, requested_by: "web-console:smoke-test",
+    },
+  }));
+
+  await page.goto("/tools/images-to-pdf");
+  await page.getByRole("checkbox", { name: "first.png" }).check();
+  await page.getByRole("checkbox", { name: "second.png" }).check();
+  await page.getByRole("button", { name: "เลื่อน second.png ขึ้น" }).click();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+
+  const request = page.waitForRequest("**/api/v1/pdf/images-to-pdf");
+  await page.getByRole("button", { name: "สร้าง PDF จากภาพ" }).click();
+  expect((await request).postDataJSON()).toMatchObject({ file_ids: ["img-2", "img-1"] });
 });
