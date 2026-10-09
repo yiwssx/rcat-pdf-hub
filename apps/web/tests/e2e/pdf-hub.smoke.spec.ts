@@ -1200,3 +1200,33 @@ test("P7G.2 webhook replay requires consent and never displays raw delivery erro
   await expect(page.getByText("QUEUED", { exact: true })).toBeVisible();
   expect(replays).toBe(1);
 });
+
+test("P7G.2 updating a service policy is not submitted before confirmation", async ({ page }) => {
+  let updates = 0;
+  let perMinute = 10;
+  const record = () => ({
+    id: "service-key-2", name: "quota-service", active: true,
+    scopes: ["files:read"],
+    policy: { service_name: "quota-service", rate_limit_per_minute: perMinute,
+      daily_job_limit: 20, max_storage_mb: 300, webhook_url: null },
+  });
+  await page.route("**/api/v1/admin/api-keys", (route) => route.fulfill({ json: [record()] }));
+  await page.route("**/api/v1/admin/audit?limit=100", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/admin/webhook-deliveries?limit=100", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/admin/service-policies/quota-service", (route) => {
+    updates += 1;
+    perMinute = 50;
+    return route.fulfill({ json: record().policy });
+  });
+  await page.goto("/admin?section=access");
+  await page.getByRole("button", { name: "โหลดข้อมูล Admin" }).click();
+  await page.getByRole("button", { name: "Policy" }).click();
+  await page.getByRole("main").getByLabel("Requests/min").fill("50");
+  page.once("dialog", (dialog) => void dialog.dismiss());
+  await page.getByRole("button", { name: "บันทึก Policy" }).click();
+  expect(updates).toBe(0);
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "บันทึก Policy" }).click();
+  await expect(page.getByRole("main")).toContainText("บันทึก policy ของ quota-service แล้ว");
+  expect(updates).toBe(1);
+});
