@@ -32,6 +32,7 @@ import {
   UploadedFile,
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
+import { JobDetailScreen } from "./job-detail-screen";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -47,7 +48,7 @@ import {
   ToolDefinition,
 } from "./v3-ui";
 
-export type PdfHubView = "workspace" | "files" | "admin";
+export type PdfHubView = "workspace" | "files" | "admin" | "job";
 
 const AdminPanel = dynamic(
   () => import("./admin-panel").then((module) => module.AdminPanel),
@@ -67,7 +68,7 @@ function isPdf(file: UploadedFile | null) {
   return Boolean(file && (file.content_type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf")));
 }
 
-export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string }) {
+export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId, initialJobId }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string; initialJobId?: string }) {
   const [auth, setAuth] = useState("");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [identity, setIdentity] = useState<AuthMe | null>(null);
@@ -345,7 +346,11 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       setJobs((old) => [job, ...old.filter((item) => item.id !== job.id)]);
       setLastSubmittedJobId(job.id);
       setActiveTool("");
-      setJobsOpen(true);
+      if (routeTool) {
+        window.location.assign(`/jobs/${encodeURIComponent(job.id)}`);
+      } else {
+        setJobsOpen(true);
+      }
       setMessage(`ส่งงาน ${operation} แล้ว`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ");
@@ -477,7 +482,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
       oidcUrl={authConfig?.oidc.login_url}
-      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : "/"}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : initialView === "job" && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
@@ -514,7 +519,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     <div className="v3App">
       <AppHeader identity={identity} message={message} jobs={jobs} onOpenJobs={() => setJobsOpen(true)} onRefresh={() => void loadWorkspace()} onLogout={() => void logout()}/>
 
-      {initialView === "admin" ? (
+      {initialView === "job" && initialJobId ? (
+        <JobDetailScreen jobId={initialJobId} auth={auth} />
+      ) : initialView === "admin" ? (
         <main className="v3Main v3AdminMain">
           <section className="v3HomeTitle">
             <div><span className="v3Kicker">ADMIN CONSOLE</span><h1>จัดการระบบ</h1><p>การตั้งค่าระบบถูกแยกจาก Workspace ของผู้ใช้แล้ว</p></div>
