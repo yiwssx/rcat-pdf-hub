@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7F.1 READ-ONLY ADMIN TRIAGE**
+Status: **IN PROGRESS — P7F.2 PERMISSIONS / AUDITED ACTIONS**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -40,14 +40,14 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7D.2 | My Files ↔ tools ↔ result navigation; refresh recovery and expired/missing file states | COMPLETE | 7D.1 | PR #138 merged `925e37703e74b6a9e90f4c613d4345061730664b`; Web CI #37900286145, CodeQL #37900286158, Dependency Review #37900286173 PASS |
 | 7E.1 | Admin information architecture: Overview, Jobs, Access, Storage, Diagnostics, Integrations | COMPLETE | 7.0 | PR #139 merged `5262ad3006d9707437bbe03940a560118bbce739`; Web CI #37901082307, CodeQL #37901082288, Dependency Review #37901082306 PASS |
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | COMPLETE | 7E.1 | PR #140 merged `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 PASS |
-| 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | IN PROGRESS | 7E.2 | `feat/p7f1-safe-admin-job-triage`; PR / Core API & Web CI pending |
-| 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | PENDING | 7F.1 | — |
+| 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | COMPLETE | 7E.2 | PR #142 merged `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 PASS |
+| 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | IN PROGRESS | 7F.1 | `fix/p7f2-human-admin-job-ownership`: permission matrix and owner-scope hardening; action approval pending |
 | 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | PENDING | 7E.1 | — |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | PENDING | 7E.2, 7F.2 | — |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A–P7E `COMPLETE`; P7F `IN PROGRESS` (7F.1 active); P7G–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
+**Roll-up:** P7A–P7E COMPLETE; P7F IN PROGRESS (7F.1 merged; 7F.2 permission hardening active); P7G–P7H PENDING. No Phase 7 deploy or release.
 
 ## User flow contract
 
@@ -159,11 +159,12 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7D.2 | File-first route, deep-link recovery beyond listing limit and expiry/denial paths merged after regressions | PR #138, merge `925e37703e74b6a9e90f4c613d4345061730664b`; Web CI #37900286145, CodeQL #37900286158, Dependency Review #37900286173 | COMPLETE |
 | 2026-10-09 | 7E.1 | Six deep-link Admin areas with isolated panels and non-admin denial merged | PR #139, merge `5262ad3006d9707437bbe03940a560118bbce739`; Web CI #37901082307, CodeQL #37901082288, Dependency Review #37901082306 | COMPLETE |
 | 2026-10-09 | 7E.2 | Operational status-to-diagnostic links and safe retry validated with browser regressions; merged | PR #140, merge `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 | COMPLETE |
-| 2026-10-09 | 7F.1 | Implement explicit human Admin triage boundary with minimized paginated read, fail-closed audit, negative HTTP tests and E2E | `feat/p7f1-safe-admin-job-triage`; tests/PR CI pending | IN PROGRESS |
+| 2026-10-09 | 7F.1 | Minimized human Admin triage with bounded filters, audit gate, negative tests and UI merged | PR #142, merge `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 | COMPLETE |
+| 2026-10-09 | 7F.2 | Start ownership-bound general job APIs and documented action matrix; cross-account mutations remain gated | `fix/p7f2-human-admin-job-ownership`; PR/CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7F.1 execution:** Use a dedicated human-Admin-only, audited GET route. Minimize response to status/operation/progress/timestamps/job identifier and generic failure presence; page size ≤100 with status/operation filters. Fail closed when Audit persistence fails. Deny service/bootstrap and non-admin principals even with wildcard scopes. Validate API contract, Core API coverage, Web E2E, CodeQL and Dependency Review before merging. 7F.2 mutations remain pending; no deploy/tag before P7H.
+**P7F.2 execution:** Secure general jobs API ownership for all identity/session callers (including human Admin and legacy wildcard) without altering bootstrap API compatibility. Record reviewed role/action matrix in `docs/workstreams/phase7-f2-permission-matrix.md`. Cross-account mutations require separately approved authorization, stable status preconditions and fail-closed audit; do not label 7F.2 complete yet. Run Core API, Web, CodeQL and Dependency Review on final commit; no deploy/tag before P7H.
 
 ## Tracker state protocol
 
