@@ -123,6 +123,7 @@ export function AdminIdentityPanel({ identity }: { identity: AuthMe }) {
 export function LoginScreen({
   enterprise,
   oidcUrl,
+  returnTo = "/",
   ldapEnabled,
   ldapUser,
   ldapPassword,
@@ -135,6 +136,7 @@ export function LoginScreen({
 }: {
   enterprise: boolean;
   oidcUrl: string | null | undefined;
+  returnTo?: string;
   ldapEnabled: boolean;
   ldapUser: string;
   ldapPassword: string;
@@ -150,7 +152,7 @@ export function LoginScreen({
       <section className="v3LoginCard">
         <span className="v3BrandMark large"><BrandGlyph/></span>
         <div><span className="v3Kicker">RCAT PDF HUB</span><h1>เข้าสู่ Document Workspace</h1><p>{enterprise ? "ใช้บัญชีองค์กรของคุณเพื่อเข้าใช้งาน" : "ระบบนี้ใช้ session ภายใน ไม่ต้องกรอก API Key"}</p></div>
-        {oidcUrl && <button className="v3PrimaryAction" onClick={() => { window.location.href = `${oidcUrl}?return_to=/`; }}>เข้าสู่ระบบด้วย SSO</button>}
+        {oidcUrl && <button className="v3PrimaryAction" onClick={() => { window.location.href = `${oidcUrl}?return_to=${encodeURIComponent(returnTo)}`; }}>เข้าสู่ระบบด้วย SSO</button>}
         {ldapEnabled && <div className="v3LoginFields">
           <label className="v3Field">ชื่อผู้ใช้<input value={ldapUser} onChange={(e) => setLdapUser(e.target.value)} autoComplete="username"/></label>
           <label className="v3Field">รหัสผ่าน<input type="password" value={ldapPassword} onChange={(e) => setLdapPassword(e.target.value)} autoComplete="current-password"/></label>
