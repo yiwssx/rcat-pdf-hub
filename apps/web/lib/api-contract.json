@@ -182,6 +182,12 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/storage/health",
+      "response": "AdminStorageHealthOut",
+      "client_marker": "\"/api/v1/admin/storage/health\""
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/jobs/triage",
       "response": "AdminJobTriagePageOut",
       "client_marker": "`/api/v1/admin/jobs/triage?${params.toString()}`"

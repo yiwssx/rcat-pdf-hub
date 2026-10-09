@@ -40,6 +40,7 @@ import { FileDetailScreen } from "./file-detail-screen";
 import { AdminAreaNav, type AdminArea } from "./admin-area-nav";
 import { AdminOverviewScreen } from "./admin-overview-screen";
 import { AdminJobTriagePanel } from "./admin-job-triage-panel";
+import { AdminStorageHealthPanel } from "./admin-storage-health-panel";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -616,7 +617,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
                 </div>
                 <p>Storage backend: {adminStatus.storage_backend} · การเขียนข้อมูล: {adminStatus.storage_write_ok ? "พร้อม" : "มีปัญหา"}</p>
               </> : <p role="status">กำลังโหลดสถานะพื้นที่จัดเก็บ…</p>}
-              <p>ยังไม่เปิดคำสั่งซ่อม ลบ หรือ Reconcile แบบอัตโนมัติจนกว่าจะผ่าน Security Review ใน P7G</p>
+              <AdminStorageHealthPanel auth={auth} />
+              <p>การตรวจความสอดคล้องเป็น Dry-run เท่านั้น ระบบยังไม่เปิดคำสั่งซ่อม ย้าย หรือลบข้อมูลข้ามบัญชีโดยอัตโนมัติ</p>
             </section>}
             {initialAdminArea === "diagnostics" && <>
               {adminStatus ? <section className="v3Diagnostics">

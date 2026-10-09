@@ -1509,3 +1509,10 @@ summary {
 .v3AdminTriageRow small { font-size: 12px; color: var(--v3-muted); overflow-wrap: anywhere; }
 .v3AdminTriageNote { color: var(--v3-muted); font-size: 12px; }
 @media (max-width: 700px) { .v3AdminTriageRow { grid-template-columns: minmax(0,1fr) auto; } .v3AdminTriageRow > div:last-child { grid-column: 1 / -1; } }
+
+
+/* P7G.2: admin-safe, manually initiated storage health summary */
+.v3AdminStorageCategories { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 7px; }
+.v3AdminStorageCategories li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--v3-line); background: var(--v3-surface-soft); }
+.v3AdminStorageCategories li span { overflow-wrap: anywhere; }
+.v3AdminStorageCategories li strong { font-variant-numeric: tabular-nums; }

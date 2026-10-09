@@ -45,6 +45,16 @@ export type Job = {
   requested_by: string;
 };
 
+export type AdminStorageHealth = {
+  dry_run: true;
+  backend: "local" | "s3";
+  database_records: number;
+  storage_objects: number;
+  issue_count: number;
+  healthy: boolean;
+  category_counts: Record<string, number>;
+};
+
 export type AdminJobTriageItem = {
   id: string;
   operation: string;
@@ -464,6 +474,12 @@ export async function listAdminJobTriage(auth: string, query: AdminJobTriageQuer
   if (query.status) params.set("status", query.status);
   if (query.operation) params.set("operation", query.operation);
   return expectJson<AdminJobTriagePage>(await request(`/api/v1/admin/jobs/triage?${params.toString()}`, {
+    headers: headers(auth), cache: "no-store",
+  }));
+}
+
+export async function getAdminStorageHealth(auth: string): Promise<AdminStorageHealth> {
+  return expectJson<AdminStorageHealth>(await request("/api/v1/admin/storage/health", {
     headers: headers(auth), cache: "no-store",
   }));
 }
