@@ -414,7 +414,8 @@ test("P7A.1 file-selected deep links respect the authorized library", async ({ p
 
   await page.goto("/tools/compress?file=unowned-file-id");
   await expect(page.locator("#workspace-target")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "เลือกไฟล์ที่มีอยู่" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "เลือกจากคลังไฟล์" })).toBeVisible();
+  await expect(page.getByText("ไฟล์บางรายการไม่อยู่ในคลังไฟล์ที่คุณเข้าถึงได้")).toBeVisible();
 });
 
 test("P7A.1 routed merge never adds an unrelated library PDF implicitly", async ({ page }) => {
