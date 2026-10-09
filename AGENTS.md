@@ -38,6 +38,13 @@ Use the smallest set of skills that fits the task. Do not activate every skill f
 - Update the tracker in the same PR when a Phase 6 task changes status, scope, acceptance evidence, or next action.
 - Never repeat a task marked `COMPLETE` solely because conversational context is missing; verify repository evidence first.
 
+### Phase 7 — Experience & Workflow
+
+- Read `PHASE7.md`, `docs/workstreams/phase7-experience-workflow-tracker.md` and ADR-0005 before implementing User or Admin journeys.
+- Treat the Phase 7 Master Tracker as the canonical state; update its task table and activity log with exact PR/CI evidence in every P7 implementation PR.
+- A merged P7 planning PR is **not** authorization to begin code implementation. Stop at the planning gate until the project owner explicitly instructs execution.
+- Preserve ADR-0001 ToolWorkspace ownership, ADR-0004 RBAC, Phase 6 production safeguards and the published `v0.6.0` tag.
+
 ## Project execution rules
 
 - Preserve existing product behavior unless the task explicitly changes it.

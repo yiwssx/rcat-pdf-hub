@@ -369,6 +369,20 @@ for marker in (
 ):
     assert marker in phase6_tracker, f"Phase 6 tracker missing governance marker: {marker}"
 
+# Phase 7 planning remains repository-owned, resumable and paused until approved.
+phase7_tracker_path = "docs/workstreams/phase7-experience-workflow-tracker.md"
+assert (ROOT / phase7_tracker_path).exists(), f"Missing Phase 7 tracker: {phase7_tracker_path}"
+phase7_tracker = read(phase7_tracker_path)
+for marker in (
+    "Tracker role: **canonical source of truth for Phase 7 execution status**",
+    "## Task register",
+    "## Activity log",
+    "## Current next action",
+):
+    assert marker in phase7_tracker, f"Phase 7 tracker missing governance marker: {marker}"
+assert (ROOT / "PHASE7.md").exists(), "Missing Phase 7 plan"
+assert (ROOT / "docs/adr/0005-task-first-journey.md").exists(), "Missing Phase 7 ADR"
+
 # Release metadata must agree while retaining prior completed baselines.
 assert f'version="{CURRENT_RELEASE}"' in read("apps/api/app/main.py")
 assert f"{CURRENT_RELEASE} — Phase 6 production hardening & scale" in read("README.md")

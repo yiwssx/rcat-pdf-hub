@@ -29,3 +29,19 @@ A read-only comparison between database file metadata and managed local/NAS or s
 
 ## Release Readiness
 The repository release gate. Code mode validates repository state and source supply chain; production mode additionally requires local-CI enforcement, production image scanning, verified backup, isolated DR drill and target load/latency smoke.
+
+## Task Journey
+
+The user-visible, task-first path from selecting a document tool to explicit input selection, configuration, asynchronous job tracking and result/recovery. Its presentation state is distinct from persisted backend `Job` statuses.
+
+## Result View
+
+An authenticated, durable destination for a completed processing output or an error/missing/expired result; supports download, safe return and compatible next-tool actions without granting new file access.
+
+## My Jobs
+
+A user-scoped processing history and job recovery surface. It does not imply global administrator job visibility.
+
+## Operations Console
+
+An Admin-oriented triage journey for health, queues, storage, access policies and integration issues, with explicitly authorized actions and audit. Dashboard visibility does not imply permission to read all users' files.
