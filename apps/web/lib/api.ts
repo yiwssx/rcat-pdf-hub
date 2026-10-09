@@ -259,6 +259,21 @@ export async function queryFileLibrary(auth: string, query: FileLibraryQuery = {
 }
 
 
+export class FileLookupError extends Error {
+  constructor(public readonly status: number) {
+    super("File access rejected");
+  }
+}
+
+export async function getFile(fileId: string, auth: string): Promise<UploadedFile> {
+  const res = await request(`/api/v1/files/${encodeURIComponent(fileId)}`, {
+    headers: headers(auth),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new FileLookupError(res.status);
+  return res.json() as Promise<UploadedFile>;
+}
+
 export async function getPageInfo(fileId: string, auth: string): Promise<PageInfo> {
   return expectJson<PageInfo>(await request(`/api/v1/files/${fileId}/pages`, { headers: headers(auth), cache: "no-store" }));
 }
@@ -333,7 +348,7 @@ export async function fetchPreview(fileId: string, auth: string, page = 1, width
 
 export async function fetchDownload(fileId: string, auth: string): Promise<Blob> {
   const res = await request(`/api/v1/files/${fileId}/download`, { headers: headers(auth) });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new FileLookupError(res.status);
   return res.blob();
 }
 

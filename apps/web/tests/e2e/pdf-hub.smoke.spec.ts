@@ -635,3 +635,83 @@ test("P7C.1 transient job fetch error offers manual retry", async ({ page }) => 
   await page.getByRole("button", { name: "รีเฟรชสถานะ" }).click();
   await expect(page.getByRole("main")).toContainText("ยกเลิกงานแล้ว");
 });
+
+test("P7C.2 completed owned output opens durable result and downloads original file name", async ({ page }) => {
+  const output = { ...initialFile, id: "file-output-1", original_name: "processed.pdf", size: 7216 };
+  await page.route("**/api/v1/jobs/job-result-1", (route) => route.fulfill({ json: {
+    id: "job-result-1", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/file-output-1", (route) => route.fulfill({ json: output }));
+  await page.goto("/jobs/job-result-1");
+  await page.getByRole("link", { name: /ดูผลลัพธ์และดาวน์โหลด/ }).click();
+  await expect(page).toHaveURL(/\/jobs\/job-result-1\/result$/);
+  await expect(page.getByText("processed.pdf")).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe("processed.pdf");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" })).toBeEnabled();
+});
+
+test("P7C.2 unfinished jobs never expose output metadata or download", async ({ page }) => {
+  let fileReads = 0;
+  await page.route("**/api/v1/jobs/job-queued-2", (route) => route.fulfill({ json: {
+    id: "job-queued-2", operation: "compress", status: "queued", progress: 0,
+    input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/file-output-1", (route) => { fileReads += 1; return route.fulfill({ json: initialFile }); });
+  await page.goto("/jobs/job-queued-2/result");
+  await expect(page.getByText(/งานนี้ยังไม่เสร็จ/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" })).toHaveCount(0);
+  expect(fileReads).toBe(0);
+});
+
+test("P7C.2 expired output hides download and identifies retention state", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-expired-2", (route) => route.fulfill({ json: {
+    id: "job-expired-2", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/file-output-1", (route) => route.fulfill({ json: {
+    ...initialFile, id: "file-output-1", expires_at: "2020-01-01T00:00:00Z",
+  } }));
+  await page.goto("/jobs/job-expired-2/result");
+  await expect(page.getByText(/ไฟล์ผลลัพธ์หมดอายุแล้ว/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" })).toHaveCount(0);
+});
+
+test("P7C.2 denied job or missing output never leaks backend details", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-denied-2", (route) => route.fulfill({ status: 403, json: { detail: "secret principal owner" } }));
+  await page.goto("/jobs/job-denied-2/result");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("ไม่มีสิทธิ์");
+  await expect(page.getByRole("main")).not.toContainText("secret principal owner");
+
+  await page.route("**/api/v1/jobs/job-no-file-2", (route) => route.fulfill({ json: {
+    id: "job-no-file-2", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/file-output-1", (route) => route.fulfill({ status: 404, json: { detail: "internal storage path" } }));
+  await page.goto("/jobs/job-no-file-2/result");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("ไม่พบงานหรือไฟล์");
+  await expect(page.getByRole("main")).not.toContainText("internal storage path");
+});
+
+test("P7C.2 expired-on-download responds to backend 410 without false success", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-download-410", (route) => route.fulfill({ json: {
+    id: "job-download-410", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/file-output-1", (route) => route.fulfill({ json: {
+    ...initialFile, id: "file-output-1", original_name: "processed.pdf", expires_at: null,
+  } }));
+  await page.route("**/api/v1/files/file-output-1/download", (route) => route.fulfill({ status: 410, json: { detail: "storage not found" } }));
+  await page.goto("/jobs/job-download-410/result");
+  await page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" }).click();
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("หมดอายุหรือไม่พร้อมใช้งาน");
+  await expect(page.getByRole("main")).not.toContainText("storage not found");
+});

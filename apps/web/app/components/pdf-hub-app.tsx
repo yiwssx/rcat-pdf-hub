@@ -33,6 +33,7 @@ import {
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import { JobDetailScreen } from "./job-detail-screen";
+import { JobResultScreen } from "./job-result-screen";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -48,7 +49,7 @@ import {
   ToolDefinition,
 } from "./v3-ui";
 
-export type PdfHubView = "workspace" | "files" | "admin" | "job";
+export type PdfHubView = "workspace" | "files" | "admin" | "job" | "result";
 
 const AdminPanel = dynamic(
   () => import("./admin-panel").then((module) => module.AdminPanel),
@@ -482,7 +483,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
       oidcUrl={authConfig?.oidc.login_url}
-      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : initialView === "job" && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : "/"}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
@@ -519,7 +520,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     <div className="v3App">
       <AppHeader identity={identity} message={message} jobs={jobs} onOpenJobs={() => setJobsOpen(true)} onRefresh={() => void loadWorkspace()} onLogout={() => void logout()}/>
 
-      {initialView === "job" && initialJobId ? (
+      {initialView === "result" && initialJobId ? (
+        <JobResultScreen jobId={initialJobId} auth={auth} />
+      ) : initialView === "job" && initialJobId ? (
         <JobDetailScreen jobId={initialJobId} auth={auth} />
       ) : initialView === "admin" ? (
         <main className="v3Main v3AdminMain">
