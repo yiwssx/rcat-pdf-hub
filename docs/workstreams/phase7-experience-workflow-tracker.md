@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **P7E COMPLETE — P7F NEXT (SECURITY REVIEW FIRST)**
+Status: **IN PROGRESS — P7F.1 READ-ONLY ADMIN TRIAGE**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -40,14 +40,14 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7D.2 | My Files ↔ tools ↔ result navigation; refresh recovery and expired/missing file states | COMPLETE | 7D.1 | PR #138 merged `925e37703e74b6a9e90f4c613d4345061730664b`; Web CI #37900286145, CodeQL #37900286158, Dependency Review #37900286173 PASS |
 | 7E.1 | Admin information architecture: Overview, Jobs, Access, Storage, Diagnostics, Integrations | COMPLETE | 7.0 | PR #139 merged `5262ad3006d9707437bbe03940a560118bbce739`; Web CI #37901082307, CodeQL #37901082288, Dependency Review #37901082306 PASS |
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | COMPLETE | 7E.1 | PR #140 merged `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 PASS |
-| 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | PENDING | 7E.2 | — |
+| 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | IN PROGRESS | 7E.2 | `feat/p7f1-safe-admin-job-triage`; PR / Core API & Web CI pending |
 | 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | PENDING | 7F.1 | — |
 | 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | PENDING | 7E.1 | — |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | PENDING | 7E.2, 7F.2 | — |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A–P7E `COMPLETE` (PRs #129–#140); P7F–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
+**Roll-up:** P7A–P7E `COMPLETE`; P7F `IN PROGRESS` (7F.1 active); P7G–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
 
 ## User flow contract
 
@@ -111,6 +111,15 @@ P7F.1 is not yet implemented or authorized for cross-user document access. A pur
 
 This handoff is a proposed review boundary, not permission to deploy or a claim that P7F.1 is complete.
 
+## P7F.1 implementation contract (2026-10-09)
+
+- Route: `GET /api/v1/admin/jobs/triage`, separate from user/job detail APIs; no new mutations.
+- Identity: server-side authenticated human Admin role from OIDC, LDAP or local-admin session; bootstrap/service/API-key and legacy-scope identities denied. Existing `/api/v1/jobs` semantics remain unchanged.
+- Query: optional validated `status` and `operation`; `limit` 1–100, `offset` 0–100000; deterministic descending created_at + ID pagination.
+- Data minimization: job ID, operation, status, progress, created/started/finished timestamp, boolean failure presence. No raw error, owner, file IDs, params, queue IDs, or storage locations.
+- Audit: privileged read logs only filter metadata and actor; if persistence fails return HTTP 503 (fail closed). Admin UI never offers job mutations in 7F.1.
+- Acceptance: negative service/legacy/operator access, contract drift, direct handler coverage, filter bounds, E2E paged read and denial. `PENDING` until PR merge and verified CI.
+
 ## Risks and mitigation
 
 - **Lost UI state after refresh:** store durable result identity as job ID; rehydrate from authorized backend state. Unsaved pre-submit settings can remain ephemeral with clear discard warning.
@@ -150,10 +159,11 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7D.2 | File-first route, deep-link recovery beyond listing limit and expiry/denial paths merged after regressions | PR #138, merge `925e37703e74b6a9e90f4c613d4345061730664b`; Web CI #37900286145, CodeQL #37900286158, Dependency Review #37900286173 | COMPLETE |
 | 2026-10-09 | 7E.1 | Six deep-link Admin areas with isolated panels and non-admin denial merged | PR #139, merge `5262ad3006d9707437bbe03940a560118bbce739`; Web CI #37901082307, CodeQL #37901082288, Dependency Review #37901082306 | COMPLETE |
 | 2026-10-09 | 7E.2 | Operational status-to-diagnostic links and safe retry validated with browser regressions; merged | PR #140, merge `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 | COMPLETE |
+| 2026-10-09 | 7F.1 | Implement explicit human Admin triage boundary with minimized paginated read, fail-closed audit, negative HTTP tests and E2E | `feat/p7f1-safe-admin-job-triage`; tests/PR CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7E closed on `main`.** Next: P7F.1 scoped, read-only Admin triage (security-review boundary below), then 7F.2 audited state-changing actions. P7G access/integration hardening follows dependencies. No deployment or tagging until P7H.
+**P7F.1 execution:** Use a dedicated human-Admin-only, audited GET route. Minimize response to status/operation/progress/timestamps/job identifier and generic failure presence; page size ≤100 with status/operation filters. Fail closed when Audit persistence fails. Deny service/bootstrap and non-admin principals even with wildcard scopes. Validate API contract, Core API coverage, Web E2E, CodeQL and Dependency Review before merging. 7F.2 mutations remain pending; no deploy/tag before P7H.
 
 ## Tracker state protocol
 
