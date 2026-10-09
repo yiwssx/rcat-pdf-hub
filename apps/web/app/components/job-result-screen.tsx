@@ -75,7 +75,7 @@ export function JobResultScreen({ jobId, auth }: Props) {
         <div><span className="v3Kicker">DOCUMENT RESULT</span><h1>ผลลัพธ์งาน PDF</h1><p>เข้าถึงผลลัพธ์ผ่าน Job ID ที่ตรวจสิทธิ์กับระบบแล้ว</p></div>
         <a className="v3TextLink" href={`/jobs/${encodeURIComponent(jobId)}`}>← สถานะงาน</a>
       </section>
-      <TaskJourneyNav stage="result" kind="processing" />
+      <TaskJourneyNav stage={data?.job.status === "completed" ? "result" : "processing"} kind="processing" />
       <section className="v3JobDetailCard" aria-live="polite">
         {!data && !error && <p role="status">กำลังตรวจสอบไฟล์ผลลัพธ์…</p>}
         {error && <div className="v3InfoBox" role="alert">{error}</div>}
