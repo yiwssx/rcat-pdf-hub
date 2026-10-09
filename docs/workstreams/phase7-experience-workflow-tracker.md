@@ -131,7 +131,7 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | 2026-10-09 | 7A.1 | Tool deep links merged after full checks passed; 404, navigation/reload and authorized optional file query covered by Playwright | PR #129, merge `cf266d25d26bae9af450ece58f4fd1b374afaa08`; Web CI #37894340265, CodeQL #37894340305, Dependency Review #37894340179 | COMPLETE |
 | 2026-10-09 | 7A.2 | Validated upload/library picker, exact merge and image order and unsupported file recovery; merged after all required checks | PR #130, merge `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 | COMPLETE |
 | 2026-10-09 | 7B.1 | Added accessible journey steps, capability metadata, guarded concurrent submits; merged with Playwright validation | PR #131, merge `b97c9ad62699bbbdf8d7cf21678c58d10c6909ef`; Web CI #37895653343, CodeQL #37895653364, Dependency Review #37895653338 | COMPLETE |
-| 2026-10-09 | 7B.2 | Validated single/multi-file configuration and preview/submit contract; merged after 26+ Playwright, CodeQL and dependency gates | PR #132, merge `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 | COMPLETE |
+| 2026-10-09 | 7B.2 | Validated single/multi-file configuration and preview/submit contract; merged after Playwright, CodeQL and dependency gates | PR #132, merge `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 | COMPLETE |
 
 ## Current next action
 
