@@ -19,6 +19,13 @@ Status: **IN PROGRESS — OWNERSHIP HARDENING**. This matrix records implemented
 - Service and bootstrap credentials are excluded from the dedicated human Admin triage endpoint. Existing bootstrap API compatibility is retained until a separate review; do not expand its UI exposure.
 - Existing operation-state preconditions and backend scope checks remain in force. A client confirmation dialog is **not** an authorization mechanism.
 
+## Owner-scoped action safeguards (implementation in progress)
+
+- Existing job Cancel, Retry and terminal-history deletion now require an `audit_event` intent record **before** queue/state mutation. If Audit persistence fails, the endpoint responds HTTP 503 and does not perform the action.
+- Job detail asks explicit confirmation before Cancel or Retry; declining means no request is sent. A synchronous in-flight guard prevents double-activation before React re-renders.
+- Existing outcome audit entries still follow successful execution. If the outcome Audit fails after a queue mutation, the prior intent entry preserves an accountable trail, but post-action audit availability must still be monitored operationally.
+- These controls apply only to jobs the current signed identity owns. Admin triage remains read-only and does not expose cross-account action buttons.
+
 ## Work still required to close 7F.2
 
 1. Decide which cross-account Admin actions are permissible and which should be prohibited. A retry can affect file ownership, quota attribution and job requester identity; it must not silently reassign a user's job to Admin.
