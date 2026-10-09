@@ -1103,3 +1103,40 @@ test("P7G.1 bootstrap exemption is explicitly distinguished from a zero-valued l
   await expect(region.getByText("ไม่จำกัด")).toHaveCount(3);
   await expect(region).toContainText("ยกเว้นข้อจำกัดสำหรับ Bootstrap");
 });
+
+test("P7G.2 Storage health is manually initiated and never displays paths or file identities", async ({ page }) => {
+  let scans = 0;
+  await page.route("**/api/v1/admin/storage/health", async (route) => {
+    scans += 1;
+    await route.fulfill({ json: {
+      dry_run: true, backend: "local", database_records: 12, storage_objects: 11,
+      issue_count: 4, healthy: false,
+      category_counts: { missing_object: 3, orphan_object: 1 },
+      // Response must never include object paths. The API type excludes them.
+    } });
+  });
+  await page.goto("/admin?section=storage");
+  const section = page.getByRole("region", { name: "ตรวจสอบความสอดคล้องของ Storage" });
+  await expect(section).toBeVisible();
+  expect(scans).toBe(0);
+  await section.getByRole("button", { name: "ตรวจสอบความสอดคล้อง" }).click();
+  await expect(section).toContainText("พบรายการผิดปกติ 4 รายการ");
+  await expect(section).toContainText("ไฟล์ใน Metadata");
+  await expect(section).toContainText("มี Metadata แต่หาไฟล์ไม่พบ");
+  await expect(section).toContainText("3");
+  expect(scans).toBe(1);
+  await expect(section).not.toContainText("/data/");
+  await expect(section).not.toContainText("stored_name");
+  await expect(section.getByRole("button", { name: /Repair|Delete|Fix/ })).toHaveCount(0);
+});
+
+test("P7G.2 Storage health denial and audit outages are presented without raw internals", async ({ page }) => {
+  await page.route("**/api/v1/admin/storage/health", async (route) => {
+    await route.fulfill({ status: 503, json: { detail: "sensitive audit path /data/private" } });
+  });
+  await page.goto("/admin?section=storage");
+  const section = page.getByRole("region", { name: "ตรวจสอบความสอดคล้องของ Storage" });
+  await section.getByRole("button", { name: "ตรวจสอบความสอดคล้อง" }).click();
+  await expect(section.getByRole("alert")).toContainText("ตรวจสอบ Storage ไม่สำเร็จ");
+  await expect(section).not.toContainText("/data/private");
+});
