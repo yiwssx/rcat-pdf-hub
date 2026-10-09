@@ -249,6 +249,10 @@ class AuthMeOut(BaseModel):
     roles: list[str]
     auth_source: str
     is_admin: bool
+    rate_limit_per_minute: int | None = None
+    daily_job_limit: int | None = None
+    max_storage_mb: int | None = None
+    quota_exempt: bool = False
 
 
 class ArchiveOut(BaseModel):
