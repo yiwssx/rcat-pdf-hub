@@ -28,7 +28,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 
 | ID | Deliverable / work package | Status | Dependencies | Evidence |
 | --- | --- | --- | --- | --- |
-| 7.0 | Planning: PHASE7, canonical Master Tracker, proposed ADR-0005, glossary and routing/policy guard | COMPLETE | Phase 6 baseline | Planning PR; finalized during planning merge |
+| 7.0 | Planning: PHASE7, canonical Master Tracker, proposed ADR-0005, glossary and routing/policy guard | COMPLETE | Phase 6 baseline | PR #128 (planning-only) |
 | 7A.1 | Stable tool catalog and `/tools/[slug]` navigation; invalid slug, direct URL, back/forward/refresh | PENDING | 7.0 | — |
 | 7A.2 | Tool-first file intake: upload/My Files, type/count validation, explicit selection and merge ordering | PENDING | 7A.1 | — |
 | 7B.1 | Unified client journey state transitions, back/cancel, duplicate-submit guard, per-tool capability metadata | PENDING | 7A.2 | — |
@@ -127,7 +127,7 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 
 | Date | Task | Action / decision | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| 2026-10-09 | 7.0 | Baseline identified, two user paths + admin path defined; create master tracker and proposed ADR; pause P7 implementation until requested | Pre-plan `main` `4f808fd3d8e094e1d37b361ff171a021f5e02ace`; planning PR | PLAN READY |
+| 2026-10-09 | 7.0 | Baseline identified, two user paths + admin path defined; create master tracker and proposed ADR; pause P7 implementation until requested | Pre-plan `main` `4f808fd3d8e094e1d37b361ff171a021f5e02ace`; PR #128 | PLAN READY |
 
 ## Current next action
 
