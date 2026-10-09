@@ -291,6 +291,21 @@ export async function createJob(path: string, payload: object, auth: string): Pr
   }));
 }
 
+export class JobLookupError extends Error {
+  constructor(public readonly status: number) {
+    super("Job lookup rejected");
+  }
+}
+
+export async function getJob(jobId: string, auth: string): Promise<Job> {
+  const res = await request(`/api/v1/jobs/${encodeURIComponent(jobId)}`, {
+    headers: headers(auth),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new JobLookupError(res.status);
+  return res.json() as Promise<Job>;
+}
+
 export async function listJobs(auth: string): Promise<Job[]> {
   return expectJson<Job[]>(await request("/api/v1/jobs?limit=50", { headers: headers(auth), cache: "no-store" }));
 }
