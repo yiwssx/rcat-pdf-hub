@@ -398,6 +398,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
       oidcUrl={authConfig?.oidc.login_url}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
