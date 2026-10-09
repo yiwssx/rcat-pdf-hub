@@ -4,6 +4,8 @@ type Kind = "pdf" | "image" | "office" | "any";
 
 export type ToolInputRule = {
   kind: Kind;
+  flow: "processing" | "sharing" | "archiving";
+  pdfPreview: boolean;
   min: number;
   max?: number;
   accept?: string;
@@ -14,21 +16,20 @@ const IMAGE = ".jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,image/jpeg,image/png,image/
 const OFFICE = ".doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf";
 
 export const TOOL_INPUT_RULES: Readonly<Record<string, ToolInputRule>> = {
-  "ocr": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "merge-pdf": { kind: "pdf", min: 2, accept: PDF },
-  "split-rotate": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "compress": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "pdf-to-images": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "images-to-pdf": { kind: "image", min: 1, accept: IMAGE },
-  "watermark": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "page-numbers": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "pdfa": { kind: "pdf", min: 1, max: 1, accept: PDF },
-  "office-to-pdf": { kind: "office", min: 1, max: 1, accept: OFFICE },
-  "pdf-stamp": { kind: "pdf", min: 2, max: 2, accept: PDF },
-  "signed-link": { kind: "any", min: 1, max: 1 },
-  "archive": { kind: "any", min: 1, max: 1 },
+  "ocr": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "merge-pdf": { kind: "pdf", flow: "processing", pdfPreview: true, min: 2, accept: PDF },
+  "split-rotate": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "compress": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "pdf-to-images": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "images-to-pdf": { kind: "image", flow: "processing", pdfPreview: false, min: 1, accept: IMAGE },
+  "watermark": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "page-numbers": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "pdfa": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "office-to-pdf": { kind: "office", flow: "processing", pdfPreview: false, min: 1, max: 1, accept: OFFICE },
+  "pdf-stamp": { kind: "pdf", flow: "processing", pdfPreview: true, min: 2, max: 2, accept: PDF },
+  "signed-link": { kind: "any", flow: "sharing", pdfPreview: false, min: 1, max: 1 },
+  "archive": { kind: "any", flow: "archiving", pdfPreview: false, min: 1, max: 1 },
 };
-
 const images = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
 const officeExtensions = /\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp|rtf)$/i;
 
