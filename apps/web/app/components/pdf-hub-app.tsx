@@ -38,6 +38,7 @@ import { JobResultScreen } from "./job-result-screen";
 import { MyJobsScreen } from "./my-jobs-screen";
 import { FileDetailScreen } from "./file-detail-screen";
 import { AdminAreaNav, type AdminArea } from "./admin-area-nav";
+import { AdminOverviewScreen } from "./admin-overview-screen";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -90,6 +91,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   const [submitting, setSubmitting] = useState(false);
   const [lastSubmittedJobId, setLastSubmittedJobId] = useState<string | null>(null);
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
+  const [adminStatusError, setAdminStatusError] = useState("");
+  const [adminStatusLoading, setAdminStatusLoading] = useState(false);
   const [ldapUser, setLdapUser] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -202,8 +205,33 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
 
   useEffect(() => {
     if (initialView !== "admin" || !auth || !identity?.is_admin) return;
-    void getAdminStatus(auth).then(setAdminStatus).catch(() => setAdminStatus(null));
+    let live = true;
+    setAdminStatusLoading(true);
+    void getAdminStatus(auth).then((result) => {
+      if (!live) return;
+      setAdminStatus(result);
+      setAdminStatusError("");
+    }).catch(() => {
+      if (!live) return;
+      setAdminStatus(null);
+      setAdminStatusError("อ่านสถานะระบบไม่ได้ กรุณาตรวจสอบการเชื่อมต่อและสิทธิ์เข้าถึง");
+    }).finally(() => { if (live) setAdminStatusLoading(false); });
+    return () => { live = false; };
   }, [initialView, auth, identity?.is_admin]);
+
+  async function refreshAdminStatus() {
+    if (!auth || !identity?.is_admin || adminStatusLoading) return;
+    setAdminStatusLoading(true);
+    try {
+      setAdminStatus(await getAdminStatus(auth));
+      setAdminStatusError("");
+    } catch {
+      setAdminStatus(null);
+      setAdminStatusError("อ่านสถานะระบบไม่ได้ กรุณาตรวจสอบการเชื่อมต่อและสิทธิ์เข้าถึง");
+    } finally {
+      setAdminStatusLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!auth || !activeJobs) return;
@@ -553,13 +581,12 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
             <AdminAreaNav active={initialAdminArea} />
             {initialAdminArea === "overview" && <>
               <AdminIdentityPanel identity={identity}/>
-              {adminStatus ? <section className="v3AdminOverview">
-                <div className="v3AdminMetric"><span>FILES</span><strong>{adminStatus.files}</strong><small>{(adminStatus.pdfhub_bytes / 1024 / 1024).toFixed(1)} MB ใน PDF Hub</small></div>
-                <div className="v3AdminMetric"><span>QUEUE</span><strong>{adminStatus.queue_depth}</strong><small>{adminStatus.workers} worker</small></div>
-                <div className="v3AdminMetric"><span>DISK FREE</span><strong>{(adminStatus.disk.free / 1024 / 1024 / 1024).toFixed(1)} GB</strong><small>{adminStatus.data_dir}</small></div>
-                <div className="v3AdminMetric"><span>SERVICES</span><strong>{adminStatus.database_ok && adminStatus.redis_ok ? "OK" : "WARN"}</strong><small>DB {adminStatus.database_ok ? "✓" : "×"} • Redis {adminStatus.redis_ok ? "✓" : "×"}</small></div>
-              </section> : <div className="v3InfoBox" role="status">กำลังโหลดสถานะระบบ…</div>}
-              <section className="v3AdminSection"><h2>เริ่มตรวจจากภาพรวม</h2><p>เลือกพื้นที่ด้านบนเพื่อดูข้อมูลหรือดำเนินงานเฉพาะประเภทโดยไม่ปะปนกัน</p></section>
+              <AdminOverviewScreen
+                status={adminStatus}
+                loading={adminStatusLoading}
+                error={adminStatusError}
+                onRefresh={() => void refreshAdminStatus()}
+              />
             </>}
             {initialAdminArea === "jobs" && <section className="v3AdminSection" aria-label="ข้อมูลคิวงานของระบบ">
               <h2>คิวและงานประมวลผล</h2>
@@ -592,7 +619,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
             </section>}
             {initialAdminArea === "diagnostics" && <>
               {adminStatus ? <section className="v3Diagnostics">
-                <div className="v3SectionHead"><div><span className="v3Kicker">DIAGNOSTICS</span><h2>เครื่องมือประมวลผล</h2></div><button className="v3MiniButton" onClick={() => void getAdminStatus(auth).then(setAdminStatus)}>รีเฟรช</button></div>
+                <div className="v3SectionHead"><div><span className="v3Kicker">DIAGNOSTICS</span><h2>เครื่องมือประมวลผล</h2></div><button className="v3MiniButton" onClick={() => void refreshAdminStatus()}>รีเฟรช</button></div>
                 <div className="v3DiagnosticGrid">{Object.entries({ ...adminStatus.tools, gotenberg: adminStatus.gotenberg_ok, storage: adminStatus.storage_write_ok }).map(([name, ok]) => <div key={name} className={ok ? "ok" : "bad"}><span>{ok ? "✓" : "×"}</span><strong>{name}</strong></div>)}</div>
               </section> : <p role="status">กำลังโหลด Diagnostic Status…</p>}
               <AdminPanel apiKey={auth} area="diagnostics"/>
