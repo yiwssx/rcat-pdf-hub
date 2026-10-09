@@ -1072,3 +1072,34 @@ test("P7F.2 job cancellation requires confirmation and declines without API muta
   await expect(page.getByRole("main")).toContainText("ยกเลิกงานแล้ว");
   expect(calls).toBe(1);
 });
+
+test("P7G.1 Admin Access shows effective role, scopes and quotas without credentials", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: {
+    name: "user:admin@example.org", display_name: "RCAT Administrator", subject: "institution-admin",
+    groups: ["pdfhub-admins"], roles: ["admin"], scopes: ["*"], auth_source: "oidc",
+    is_admin: true, rate_limit_per_minute: 120, daily_job_limit: 500,
+    max_storage_mb: 2048, quota_exempt: false,
+  }}));
+  await page.goto("/admin?section=access");
+  const region = page.getByRole("region", { name: "โควตาที่มีผลจริง" });
+  await expect(region).toContainText("120");
+  await expect(region).toContainText("500");
+  await expect(region).toContainText("2,048");
+  await expect(page.locator(".v3EffectiveScopes")).toContainText("*");
+  await expect(page.locator(".v3EffectiveAccess")).toContainText("admin");
+  await expect(page.locator(".v3EffectiveAccess")).not.toContainText("password");
+  await expect(page.locator(".v3EffectiveAccess")).not.toContainText("api_key");
+});
+
+test("P7G.1 bootstrap exemption is explicitly distinguished from a zero-valued limit", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: {
+    name: "bootstrap-admin", display_name: "Bootstrap Admin", subject: null,
+    groups: [], roles: ["admin"], scopes: ["*"], auth_source: "bootstrap",
+    is_admin: true, rate_limit_per_minute: 0, daily_job_limit: 0,
+    max_storage_mb: 0, quota_exempt: true,
+  }}));
+  await page.goto("/admin?section=access");
+  const region = page.getByRole("region", { name: "โควตาที่มีผลจริง" });
+  await expect(region.getByText("ไม่จำกัด")).toHaveCount(3);
+  await expect(region).toContainText("ยกเว้นข้อจำกัดสำหรับ Bootstrap");
+});

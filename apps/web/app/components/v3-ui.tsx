@@ -114,6 +114,19 @@ export function AdminIdentityPanel({ identity }: { identity: AuthMe }) {
           <small>{identity.is_admin ? "administrator" : "human user"}</small>
         </div>
       </div>
+      <div className="v3EffectiveAccessGrid v3EffectiveQuotaGrid" role="region" aria-label="โควตาที่มีผลจริง">
+        {([
+          ["REQUESTS / MIN", identity.rate_limit_per_minute, "/นาที"],
+          ["JOBS / DAY", identity.daily_job_limit, "/วัน"],
+          ["STORAGE", identity.max_storage_mb, "MB"],
+        ] as const).map(([label, limit, unit]) => (
+          <div className="v3EffectiveAccessItem" key={label}>
+            <span>{label}</span>
+            <strong>{identity.quota_exempt || limit === 0 ? "ไม่จำกัด" : typeof limit === "number" ? `${limit.toLocaleString("th-TH")} ${unit}` : "ไม่มีข้อมูล"}</strong>
+            <small>{identity.quota_exempt ? "ยกเว้นข้อจำกัดสำหรับ Bootstrap" : "โควตาของบัญชีปัจจุบัน"}</small>
+          </div>
+        ))}
+      </div>
       <div className="v3EffectiveScopes">
         <span>EFFECTIVE SCOPES</span>
         <div>{scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>

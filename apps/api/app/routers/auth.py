@@ -44,6 +44,10 @@ def _me(principal: Principal) -> AuthMeOut:
         roles=sorted(principal.roles),
         auth_source=principal.auth_source,
         is_admin=principal.is_bootstrap_admin or principal.is_identity_admin or "*" in principal.scopes,
+        rate_limit_per_minute=principal.rate_limit_per_minute,
+        daily_job_limit=principal.daily_job_limit,
+        max_storage_mb=principal.max_storage_mb,
+        quota_exempt=principal.is_bootstrap_admin,
     )
 
 
@@ -107,6 +111,9 @@ def local_login(req: LocalLoginRequest, response: Response):
         roles=identity["roles"],
         auth_source="local-admin",
         is_admin=True,
+        rate_limit_per_minute=settings.default_rate_limit_per_minute,
+        daily_job_limit=settings.default_daily_job_limit,
+        max_storage_mb=settings.default_max_storage_mb,
     )
 
 
@@ -130,6 +137,9 @@ def ldap_login(req: LdapLoginRequest, response: Response):
         roles=sorted(identity.get("roles", [])),
         auth_source="ldap",
         is_admin=bool(identity.get("is_identity_admin")) or "*" in set(identity.get("scopes", [])),
+        rate_limit_per_minute=settings.default_rate_limit_per_minute,
+        daily_job_limit=settings.default_daily_job_limit,
+        max_storage_mb=settings.default_max_storage_mb,
     )
 
 
