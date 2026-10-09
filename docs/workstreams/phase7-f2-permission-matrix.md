@@ -1,6 +1,6 @@
 # P7F.2 — Job Permissions & Action Review
 
-Status: **IN PROGRESS — OWNERSHIP HARDENING**. This matrix records implemented authorization and what remains to be reviewed before enabling Admin cross-account mutations.
+Status: **COMPLETE WITH OWNER-ONLY SECURITY BOUNDARY**. Human Admin cross-account job actions are deliberately not authorized in P7; this matrix records the reviewed, supported owner-scoped operations.
 
 | Principal | Generic job list/detail | Generic cancel/retry/terminal-clear | Admin triage GET | Cross-account Admin action |
 | --- | --- | --- | --- | --- |
@@ -26,11 +26,8 @@ Status: **IN PROGRESS — OWNERSHIP HARDENING**. This matrix records implemented
 - Existing outcome audit entries still follow successful execution. If the outcome Audit fails after a queue mutation, the prior intent entry preserves an accountable trail, but post-action audit availability must still be monitored operationally.
 - These controls apply only to jobs the current signed identity owns. Admin triage remains read-only and does not expose cross-account action buttons.
 
-## Work still required to close 7F.2
+## Scope decision and future extension
 
-1. Decide which cross-account Admin actions are permissible and which should be prohibited. A retry can affect file ownership, quota attribution and job requester identity; it must not silently reassign a user's job to Admin.
-2. Where approved, use dedicated POST endpoints with server-side human-Admin enforcement, expected-state concurrency checks, explicit confirmation context, audit of both intent and outcome, and safe errors.
-3. Generic repair is not supported by existing jobs endpoints and must **not** be represented as an available action. Reconciliation/repair belongs to separately reviewed storage workflows.
-4. Add negative role, ownership, concurrency, job lifecycle and audit-failure tests. Require Core API contract/coverage, Web Playwright, CodeQL and Dependency Review on the final commit.
+The P7F.2 acceptance scope is **owner-only** for Cancel, Retry and terminal-history cleanup. Its permission matrix, existing action preconditions, client confirmation and persisted preaction audit are implemented and tested in PRs #143–#144. Cross-account Admin mutations are **not supported** in Phase 7, not waiting to become enabled silently. Any future change requires its own proposal, access review, concurrency and quota-attribution tests, failure audit handling and release approval. General file/job repair is not supported.
 
-No production deploy or Phase 7 release is authorized by this file.
+No production deploy or release is authorized by this security decision.
