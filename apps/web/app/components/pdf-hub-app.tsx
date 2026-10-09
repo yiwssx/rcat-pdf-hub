@@ -255,6 +255,10 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   }
 
   function chooseTool(tool: ToolDefinition) {
+    if (routeTool?.id === tool.id) {
+      setActiveTool(tool.id);
+      return;
+    }
     // Route intent is explicit and survives navigation. The optional file ID
     // comes only from a user-selected workspace file, never a fallback.
     const selectedFile = targetId ? `?file=${encodeURIComponent(targetId)}` : "";
