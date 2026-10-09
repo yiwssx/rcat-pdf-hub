@@ -1380,3 +1380,28 @@ summary {
 .v3JobProgress small { color: var(--v3-muted); font-size: 13px; }
 .v3JobDetailActions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
 .v3JobDetailActions a { text-decoration: none; }
+
+
+/* P7C.3: result-to-tool handoff, reusing existing Candy palette. */
+.v3FollowOn { border-top: 1px solid var(--v3-line); padding-top: 18px; margin-top: 18px; }
+.v3FollowOn > p { color: var(--v3-muted); font-size: 14px; }
+.v3FollowOnGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.v3FollowOnTool {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+  padding: 13px;
+  border: 1px solid var(--v3-line);
+  border-radius: 15px;
+  text-decoration: none;
+  background: var(--v3-surface-soft);
+}
+.v3FollowOnTool:hover, .v3FollowOnTool:focus-visible { border-color: var(--v3-primary); box-shadow: var(--v3-shadow-soft); }
+.v3FollowOnTool strong { font-size: 14px; grid-column: 1; }
+.v3FollowOnTool small { color: var(--v3-muted); font-size: 12px; grid-column: 1; }
+.v3FollowOnTool span { grid-column: 2; grid-row: 1 / 3; color: var(--v3-primary); align-self: center; }
