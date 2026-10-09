@@ -37,6 +37,9 @@ export function isEligibleToolFile(tool: string, file: UploadedFile): boolean {
   const rule = TOOL_INPUT_RULES[tool];
   if (!rule) return false;
   if (file.size <= 0) return false;
+  // The list endpoint may exclude expired files, but a deep link still needs
+  // an explicit client-side gate. The backend remains authoritative.
+  if (file.expires_at && Date.parse(file.expires_at) <= Date.now()) return false;
   const type = file.content_type.toLowerCase();
   switch (rule.kind) {
     case "pdf": return type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf");

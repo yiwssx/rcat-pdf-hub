@@ -101,7 +101,8 @@ export function JobResultScreen({ jobId, auth }: Props) {
               <button type="button" className="v3PrimaryAction" disabled={!ready || downloading} onClick={() => void download()}>
                 {downloading ? "กำลังเตรียมดาวน์โหลด…" : "ดาวน์โหลดผลลัพธ์"}
               </button>
-              <a className="v3TextLink" href="/files">คลังไฟล์ของฉัน</a>
+              <a className="v3TextLink" href={`/files/${encodeURIComponent(data.file.id)}`}>ดูไฟล์ในคลัง →</a>
+              <a className="v3TextLink" href="/files">ไฟล์ทั้งหมด</a>
             </div>
             {eligibleTools.length > 0 && <section className="v3FollowOn" aria-label="ทำงานต่อด้วยเครื่องมืออื่น">
               <div className="v3SectionHead">

@@ -826,3 +826,54 @@ test("P7D.1 My Jobs also requests mine=true for wildcard Admin identity", async 
   expect(requests.length).toBeGreaterThan(0);
   expect(requests.every((url) => new URL(url).searchParams.get("mine") === "true")).toBe(true);
 });
+
+test("P7D.2 library opens a durable owner-checked file route, reloads and chooses a compatible tool", async ({ page }) => {
+  await page.route("**/api/v1/files/file-pdf-1", (route) => route.fulfill({ json: initialFile }));
+  await page.goto("/files");
+  await page.locator(".v3LibraryRow .v3FileOpen").filter({ hasText: "example.pdf" }).click();
+  await expect(page).toHaveURL(/\/files\/file-pdf-1$/);
+  await expect(page.getByRole("main", { name: "รายละเอียดไฟล์ของฉัน" })).toContainText("example.pdf");
+  await page.reload();
+  await expect(page.getByRole("region", { name: "เครื่องมือสำหรับไฟล์นี้" })).toBeVisible();
+  await page.getByRole("region", { name: "เครื่องมือสำหรับไฟล์นี้" }).getByRole("link", { name: /ลดขนาด PDF/ }).click();
+  await expect(page).toHaveURL(/\/tools\/compress\?file=file-pdf-1$/);
+  await expect(page.locator("#workspace-target")).toContainText("example.pdf");
+});
+
+test("P7D.2 deep link recovers an owned file beyond the bounded workspace list", async ({ page }) => {
+  const file = { ...initialFile, id: "file-deep-recovery", original_name: "deep-link.pdf" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/files/file-deep-recovery", (route) => route.fulfill({ json: file }));
+  await page.goto("/tools/compress?file=file-deep-recovery");
+  await expect(page.locator("#workspace-target")).toContainText("deep-link.pdf");
+  await expect(page.getByRole("button", { name: "บีบอัด PDF" })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator("#workspace-target")).toContainText("deep-link.pdf");
+});
+
+test("P7D.2 missing, denied and expired files never offer a tool action", async ({ page }) => {
+  await page.route("**/api/v1/files/file-denied-detail", (route) => route.fulfill({
+    status: 403, json: { detail: "private storage path" },
+  }));
+  await page.goto("/files/file-denied-detail");
+  await expect(page.getByRole("main", { name: "รายละเอียดไฟล์ของฉัน" }).getByRole("alert")).toContainText("ไม่มีสิทธิ์");
+  await expect(page.getByRole("main")).not.toContainText("private storage path");
+  await expect(page.getByRole("region", { name: "เครื่องมือสำหรับไฟล์นี้" })).toHaveCount(0);
+
+  await page.route("**/api/v1/files/file-missing-detail", (route) => route.fulfill({
+    status: 404, json: { detail: "File not found" },
+  }));
+  await page.goto("/files/file-missing-detail");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("ไม่พบไฟล์");
+
+  const expired = { ...initialFile, id: "file-expired-detail", expires_at: "2020-01-01T00:00:00Z" };
+  await page.route("**/api/v1/files/file-expired-detail", (route) => route.fulfill({ json: expired }));
+  await page.goto("/files/file-expired-detail");
+  await expect(page.getByRole("main", { name: "รายละเอียดไฟล์ของฉัน" })).toContainText("ไฟล์หมดอายุแล้ว");
+  await expect(page.getByRole("region", { name: "เครื่องมือสำหรับไฟล์นี้" })).toHaveCount(0);
+
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [expired] }));
+  await page.goto("/tools/compress?file=file-expired-detail");
+  await expect(page.getByRole("main", { name: "รายละเอียดไฟล์ของฉัน" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
+});
