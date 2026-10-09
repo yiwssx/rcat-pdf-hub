@@ -153,7 +153,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       <div className="panel panelHeader">
         <div>
           <span className="eyebrow">ADMINISTRATION</span>
-          <h2>{area === "access" ? "Service Keys และ Policies" : area === "integrations" ? "Webhook Delivery / DLQ" : "Audit Trail"}</h2>
+          <h2>{area === "access" ? "Service Keys และ Policies" : area === "integrations" ? "สถานะการส่ง Webhook" : "เหตุการณ์และการตรวจสอบ"}</h2>
           <p className="muted">{message}</p>
         </div>
         <button className="secondary" onClick={loadAdmin} disabled={busy}>โหลดข้อมูล Admin</button>
