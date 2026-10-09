@@ -111,6 +111,20 @@ test.beforeEach(async ({ page }) => {
   await installWorkspaceMocks(page);
 });
 
+test("shows the RCAT college emblem as the shared brand icon", async ({ page }) => {
+  await page.goto("/");
+
+  const emblem = page.locator(".v3BrandMark img");
+  await expect(emblem).toBeVisible();
+  await expect(emblem).toHaveAttribute("src", "/assets/rcat-college-logo.webp");
+  const loaded = await emblem.evaluate((element) => {
+    const image = element as HTMLImageElement;
+    return image.complete && image.naturalWidth > 0;
+  });
+  expect(loaded).toBe(true);
+  await expect(page.locator('link[rel="icon"][href="/assets/rcat-college-logo.webp"]')).toHaveCount(1);
+});
+
 test("keeps V3 readable and free of horizontal overflow on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("/");
