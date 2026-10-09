@@ -379,12 +379,13 @@ for section in ("Phase 5A", "Phase 5B", "Phase 5C"):
 phase6 = read("PHASE6.md")
 for marker in (
     "Phase 6 — Production Hardening & Scale",
-    "0.6.0 release candidate pending production release gate",
+    "Phase 6 production release completed (v0.6.0)",
     "backend statement-line coverage floor of **61.36%**",
 ):
     assert marker in phase6, f"Missing Phase 6 release documentation marker: {marker}"
 assert "| 6H.1 | Targeted architecture cleanup | COMPLETE | PR #108 |" in phase6_tracker
 assert "| 6H.2 | Documentation / operational runbook reconciliation | COMPLETE | PR #109 |" in phase6_tracker
+assert "| 6H.3 | Release baseline and `v0.6.0` release | COMPLETE |" in phase6_tracker
 assert f"## {CURRENT_RELEASE}" in read("CHANGELOG.md")
 
 # Phase 6 queue routing must remain centralized and fully classified.
