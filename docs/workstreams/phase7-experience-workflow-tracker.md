@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7B.2 CONFIGURE/PREVIEW/SUBMIT**
+Status: **IN PROGRESS — P7C NEXT (NOT STARTED)**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -32,7 +32,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7A.1 | Stable tool catalog and `/tools/[slug]` navigation; invalid slug, direct URL, back/forward/refresh | COMPLETE | 7.0 | PR #129 merged to `main` as `cf266d25d26bae9af450ece58f4fd1b374afaa08`; Web CI #37894340265, CodeQL #37894340305, Dependency Review #37894340179 PASS |
 | 7A.2 | Tool-first file intake: upload/My Files, type/count validation, explicit selection and merge ordering | COMPLETE | 7A.1 | PR #130 merged `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 PASS |
 | 7B.1 | Unified client journey state transitions, back/cancel, duplicate-submit guard, per-tool capability metadata | COMPLETE | 7A.2 | PR #131 merged as `b97c9ad62699bbbdf8d7cf21678c58d10c6909ef`; Web CI #37895653343, CodeQL #37895653364, Dependency Review #37895653338 PASS |
-| 7B.2 | Configure/preview/submit contract using current ToolWorkspace and one primary action | IN PROGRESS | 7B.1 | `feat/p7b2-configure-preview-submit`; PR/CI pending |
+| 7B.2 | Configure/preview/submit contract using current ToolWorkspace and one primary action | COMPLETE | 7B.1 | PR #132 merged `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 PASS |
 | 7C.1 | Job detail/progress surface for queued/running/completed/failed/cancelled; polling and error recovery | PENDING | 7B.2 | — |
 | 7C.2 | Durable authenticated result route; correct output/expiry handling; primary download action | PENDING | 7C.1 | — |
 | 7C.3 | Continue with eligible tool via `output_file_id` without downloading/reuploading | PENDING | 7C.2 | — |
@@ -47,7 +47,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A `COMPLETE`; P7B `IN PROGRESS` (7B.1 merged; 7B.2 active); P7C, P7D, P7E, P7F, P7G and P7H `PENDING`. P7B completion is not a Phase 7 release.
+**Roll-up:** P7A and P7B `COMPLETE` (PRs #129–#132 merged); P7C, P7D, P7E, P7F, P7G and P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
 
 ## User flow contract
 
@@ -131,11 +131,11 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | 2026-10-09 | 7A.1 | Tool deep links merged after full checks passed; 404, navigation/reload and authorized optional file query covered by Playwright | PR #129, merge `cf266d25d26bae9af450ece58f4fd1b374afaa08`; Web CI #37894340265, CodeQL #37894340305, Dependency Review #37894340179 | COMPLETE |
 | 2026-10-09 | 7A.2 | Validated upload/library picker, exact merge and image order and unsupported file recovery; merged after all required checks | PR #130, merge `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 | COMPLETE |
 | 2026-10-09 | 7B.1 | Added accessible journey steps, capability metadata, guarded concurrent submits; merged with Playwright validation | PR #131, merge `b97c9ad62699bbbdf8d7cf21678c58d10c6909ef`; Web CI #37895653343, CodeQL #37895653364, Dependency Review #37895653338 | COMPLETE |
-| 2026-10-09 | 7B.2 | Harden intake-configure-submit contracts: multi-input review, stamp preselection, PDF-only Paperless and source-ID validation | `feat/p7b2-configure-preview-submit`; CI pending | IN PROGRESS |
+| 2026-10-09 | 7B.2 | Validated single/multi-file configuration and preview/submit contract; merged after 26+ Playwright, CodeQL and dependency gates | PR #132, merge `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 | COMPLETE |
 
 ## Current next action
 
-**P7B.1 merged and complete.** Validate 7B.2 input capability consistency, submitted-ID checks, reviewed multi-input context and direct URL minimum count before merging. Next: 7C.1 durable job/progress surface. No production deployment until P7H.
+**P7A and P7B closed on `main`.** Next implementation task is 7C.1: public-seam tests for queued/running/completed/failed/cancelled, polling, error recovery and owned job detail. Then 7C.2 result deep link and 7C.3 chaining; parallel Admin path begins with 7E.1. Do not deploy or tag until the 7H production release gate.
 
 ## Tracker state protocol
 
