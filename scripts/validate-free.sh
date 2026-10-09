@@ -34,11 +34,7 @@ require_tool_versions() {
   need node
   need npm
   need npx
-  python3 - <<'PY'
-import sys
-if sys.version_info[:2] != (3, 12):
-    raise SystemExit(f"Python 3.12 is required to match the production image; found {sys.version.split()[0]}")
-PY
+  python3 scripts/check-host-python.py
   node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
 }
 
@@ -81,6 +77,7 @@ operations() {
   python3 -m py_compile \
     scripts/load-smoke.py \
     scripts/validate-release-policy.py \
+    scripts/check-host-python.py \
     scripts/check-direct-dependency.py \
     scripts/check-python-security-dependency.py \
     scripts/check-python-lock.py \
@@ -95,42 +92,41 @@ operations() {
 backend() {
   require_tool_versions
   need docker
-  local venv log coverage_image coverage_evidence
-  venv="$(mktemp -d)/venv"
-  log="$(mktemp)"
-  python3 -m venv "${venv}"
-  # shellcheck disable=SC1090
-  source "${venv}/bin/activate"
+  local coverage_image coverage_evidence
+
+  # The host runs stdlib-only orchestration. All pinned application packages,
+  # imports, contract checks and migrations run in the canonical API image,
+  # regardless of the host's Python minor version.
   python3 scripts/check-python-lock.py
-  python -m pip install --disable-pip-version-check --require-hashes -r apps/api/requirements.lock 2>&1 | tee "${log}"
-  check_clean_log "${log}"
-  python -m pip check
-  python -W error -c 'import ldap3, pyasn1, PIL'
-  (
-    cd apps/api
-    python -m compileall -q app tests alembic
-    cd "${ROOT}"
-    python scripts/validate-api-contract.py
-    cd apps/api
-    rm -f /tmp/pdfhub-migrate-fresh.db /tmp/pdfhub-migrate-adopt.db
-    PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db python -c 'from app.migrate import run_migrations; run_migrations()'
-    PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<'PY'
+  coverage_image="rcat-pdf-hub-api-coverage:local"
+  docker build -t "${coverage_image}" apps/api
+
+  docker run --rm \
+    -v "${ROOT}:/repo:ro" \
+    -w /app \
+    "${coverage_image}" \
+    sh -ceu '
+      python -m pip check
+      python -W error -c "import ldap3, pyasn1, PIL"
+      python -m compileall -q app tests alembic
+      cd /repo
+      python scripts/check-python-lock.py
+      python scripts/validate-api-contract.py
+      cd /app
+      PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-fresh.db python -c "from app.migrate import run_migrations; run_migrations()"
+      PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<PY
 from app.db import engine
 from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy
 for table in [ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__]:
     table.create(bind=engine, checkfirst=True)
 PY
-    PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python -c 'from app.migrate import run_migrations; run_migrations()'
-  )
-  deactivate
+      PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python -c "from app.migrate import run_migrations; run_migrations()"
+    '
 
-  # Coverage is compared with the Phase 6G.2 baseline measured in the API image.
-  # Run the local gate in that same image so host packages/system tools cannot
-  # change which tests execute or which application lines are observed.
-  coverage_image="rcat-pdf-hub-api-coverage:local"
+  # Keep the baseline denominator stable: tests and coverage always execute
+  # in the exact same API image as the contract and migration validations.
   coverage_evidence="$(mktemp -d)"
   chmod 0777 "${coverage_evidence}"
-  docker build -t "${coverage_image}" apps/api
   docker run --rm \
     -e PDFHUB_COVERAGE_ARTIFACT=/coverage/backend-coverage.json \
     -v "${ROOT}:/repo:ro" \
