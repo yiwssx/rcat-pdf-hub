@@ -877,3 +877,49 @@ test("P7D.2 missing, denied and expired files never offer a tool action", async 
   await expect(page.getByRole("main", { name: "รายละเอียดไฟล์ของฉัน" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
 });
+
+test("P7E.1 Admin navigation isolates six purpose-specific areas with stable deep links", async ({ page }) => {
+  await page.goto("/admin");
+  const nav = page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" });
+  await expect(nav.getByRole("link")).toHaveCount(6);
+  await expect(nav.getByRole("link", { name: /ภาพรวม/ })).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".v3AdminOverview")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Service Keys และ Policies" })).toHaveCount(0);
+
+  await nav.getByRole("link", { name: /งานประมวลผล/ }).click();
+  await expect(page).toHaveURL(/\/admin\?section=jobs$/);
+  await expect(page.getByRole("region", { name: "ข้อมูลคิวงานของระบบ" })).toContainText("คิวและงานประมวลผล");
+  await expect(page.getByRole("heading", { name: "สร้าง Service Key" })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" }).getByRole("link", { name: /งานประมวลผล/ })).toHaveAttribute("aria-current", "page");
+
+  await page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" }).getByRole("link", { name: /สิทธิ์เข้าถึง/ }).click();
+  await expect(page.locator(".v3EffectiveAccess")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Service Keys และ Policies" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Webhook Delivery / DLQ" })).toHaveCount(0);
+
+  await page.goto("/admin?section=storage");
+  await expect(page.getByRole("region", { name: "สถานะพื้นที่จัดเก็บ" })).toContainText("Retention");
+  await expect(page.getByRole("button", { name: "Reconcile" })).toHaveCount(0);
+
+  await page.goto("/admin?section=diagnostics");
+  await expect(page.locator(".v3Diagnostics")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Audit Trail" })).toBeVisible();
+
+  await page.goto("/admin?section=integrations");
+  await expect(page.getByRole("heading", { name: "Webhook Delivery / DLQ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "สร้าง Service Key" })).toHaveCount(0);
+
+  await page.goto("/admin?section=unknown");
+  await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" }).getByRole("link", { name: /ภาพรวม/ })).toHaveAttribute("aria-current", "page");
+});
+
+test("P7E.1 non-admin principal cannot see Admin areas or privileged panels", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({
+    json: operatorIdentityFixture({ name: "user:viewer", roles: ["viewer"], scopes: ["files:read", "jobs:read"], is_admin: false }),
+  }));
+  await page.goto("/admin?section=access");
+  await expect(page.getByText("บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "สร้าง Service Key" })).toHaveCount(0);
+});

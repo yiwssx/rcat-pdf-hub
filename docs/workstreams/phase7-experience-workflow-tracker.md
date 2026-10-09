@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7D.2 FILE HANDOFF**
+Status: **IN PROGRESS — P7E.1 ADMIN IA**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -37,8 +37,8 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7C.2 | Durable authenticated result route; correct output/expiry handling; primary download action | COMPLETE | 7C.1 | PR #135 merged `b6e5e538dc88fc77161d25a420a364bf460e47b0`; Web CI #37898003345, CodeQL #37898003319, Dependency Review #37898003281 PASS |
 | 7C.3 | Continue with eligible tool via `output_file_id` without downloading/reuploading | COMPLETE | 7C.2 | PR #136 merged `07e61f77754b03a331b411ebf0055cd5f3f27354`; Web CI #37898421603, CodeQL #37898421476, Dependency Review #37898421573 PASS |
 | 7D.1 | User-scoped My Jobs history/status filtering; reopen active or prior jobs | COMPLETE | 7C.2 | PR #137 merged `736e37a043e876239209ca4a6db663ec3e4b7234`; Core API CI #37899707311, Web CI #37899707395, CodeQL #37899707403, Dependency Review #37899707323 PASS |
-| 7D.2 | My Files ↔ tools ↔ result navigation; refresh recovery and expired/missing file states | IN PROGRESS | 7D.1 | `feat/p7d2-file-detail-route`; PR/CI pending |
-| 7E.1 | Admin information architecture: Overview, Jobs, Access, Storage, Diagnostics, Integrations | PENDING | 7.0 | — |
+| 7D.2 | My Files ↔ tools ↔ result navigation; refresh recovery and expired/missing file states | COMPLETE | 7D.1 | PR #138 merged `925e37703e74b6a9e90f4c613d4345061730664b`; Web CI #37900286145, CodeQL #37900286158, Dependency Review #37900286173 PASS |
+| 7E.1 | Admin information architecture: Overview, Jobs, Access, Storage, Diagnostics, Integrations | IN PROGRESS | 7.0 | `feat/p7e1-admin-areas`; PR/CI pending |
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | PENDING | 7E.1 | — |
 | 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | PENDING | 7E.2 | — |
 | 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | PENDING | 7F.1 | — |
@@ -47,7 +47,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A–P7C `COMPLETE`; P7D `IN PROGRESS` (7D.1 complete; 7D.2 active); P7E–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
+**Roll-up:** P7A–P7D `COMPLETE`; P7E `IN PROGRESS` (7E.1 active); P7F–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
 
 ## User flow contract
 
@@ -136,11 +136,12 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | 2026-10-09 | 7C.2 | Authenticated result route, original-name downloads, expiry/missing/403/410 recovery validated and merged | PR #135, merge `b6e5e538dc88fc77161d25a420a364bf460e47b0`; Web CI #37898003345, CodeQL #37898003319, Dependency Review #37898003281 | COMPLETE |
 | 2026-10-09 | 7C.3 | Compatible tool links retain output ID with no duplicate POST upload, tested PDF/image/expired paths | PR #136, merge `07e61f77754b03a331b411ebf0055cd5f3f27354`; Web CI #37898421603, CodeQL #37898421476, Dependency Review #37898421573 | COMPLETE |
 | 2026-10-09 | 7D.1 | Owner-scoped My Jobs, bounded status/page filters, direct handler/HTTP auth tests, backend coverage retained; merged | PR #137, merge `736e37a043e876239209ca4a6db663ec3e4b7234`; Core API CI #37899707311, Web CI #37899707395, CodeQL #37899707403, Dependency Review #37899707323 | COMPLETE |
-| 2026-10-09 | 7D.2 | Start refresh-safe owned file route, My Files/result/tool handoff and explicit missing/expired states | `feat/p7d2-file-detail-route`; CI pending | IN PROGRESS |
+| 2026-10-09 | 7D.2 | File-first route, deep-link recovery beyond listing limit and expiry/denial paths merged after regressions | PR #138, merge `925e37703e74b6a9e90f4c613d4345061730664b`; Web CI #37900286145, CodeQL #37900286158, Dependency Review #37900286173 | COMPLETE |
+| 2026-10-09 | 7E.1 | Start purpose-specific Admin Overview, Jobs, Access, Storage, Diagnostics and Integrations with deep links and negative permission tests | `feat/p7e1-admin-areas`; CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7D.2 execution:** add owner-checked `/files/[id]` from library and result, compatible tool links, deep-link refresh outside bounded library windows and explicit expired/missing/denied states. Run Web CI, CodeQL and Dependency Review on final head. P7E Admin IA is next after P7D closure. No deploy/tag before P7H.
+**P7E.1 execution:** validate addressable six-area Admin navigation, area-specific panels, non-admin rejection and no new cross-user access. Run Web CI, CodeQL and Dependency Review before merging. 7E.2 actionable operational overview is next. No deploy/tag before P7H.
 
 ## Tracker state protocol
 

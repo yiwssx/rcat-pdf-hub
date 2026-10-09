@@ -26,7 +26,7 @@ const scopeOptions = [
 
 const defaultServiceScopes = scopeOptions.filter((scope) => scope !== "jobs:manage");
 
-export function AdminPanel({ apiKey }: { apiKey: string }) {
+export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | "integrations" | "diagnostics" }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
@@ -153,12 +153,13 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
       <div className="panel panelHeader">
         <div>
           <span className="eyebrow">ADMINISTRATION</span>
-          <h2>Service Keys, Quotas, Webhook DLQ & Audit</h2>
+          <h2>{area === "access" ? "Service Keys และ Policies" : area === "integrations" ? "สถานะการส่ง Webhook" : "เหตุการณ์และการตรวจสอบ"}</h2>
           <p className="muted">{message}</p>
         </div>
         <button className="secondary" onClick={loadAdmin} disabled={busy}>โหลดข้อมูล Admin</button>
       </div>
 
+      {area === "access" && <>
       <div className="grid two">
         <div className="panel">
           <div className="panelTitle"><h2>สร้าง Service Key</h2><span>{scopes.length} scopes</span></div>
@@ -212,7 +213,8 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
         </div>
       )}
 
-      <div className="panel">
+      </>}
+      {area === "integrations" && <div className="panel">
         <div className="panelTitle"><h2>Webhook Delivery / DLQ</h2><span>{deliveries.filter((item) => item.status === "dead").length} dead</span></div>
         <div className="list compact">
           {deliveries.length === 0 && <p className="muted">ยังไม่มี webhook delivery ที่โหลดมา</p>}
@@ -228,9 +230,9 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
-      <div className="panel">
+      {area === "diagnostics" && <div className="panel">
         <div className="panelTitle"><h2>Audit Trail</h2><span>{audit.length}</span></div>
         <div className="auditList">
           {audit.length === 0 && <p className="muted">ยังไม่มี audit ที่โหลดมา</p>}
@@ -243,7 +245,7 @@ export function AdminPanel({ apiKey }: { apiKey: string }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
     </section>
   );
 }

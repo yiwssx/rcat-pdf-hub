@@ -37,6 +37,7 @@ import { JobDetailScreen } from "./job-detail-screen";
 import { JobResultScreen } from "./job-result-screen";
 import { MyJobsScreen } from "./my-jobs-screen";
 import { FileDetailScreen } from "./file-detail-screen";
+import { AdminAreaNav, type AdminArea } from "./admin-area-nav";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -72,7 +73,7 @@ function isPdf(file: UploadedFile | null) {
   return Boolean(file && (file.content_type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf")));
 }
 
-export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId, initialJobId }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string; initialJobId?: string }) {
+export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId, initialJobId, initialAdminArea = "overview" }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string; initialJobId?: string; initialAdminArea?: AdminArea }) {
   const [auth, setAuth] = useState("");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [identity, setIdentity] = useState<AuthMe | null>(null);
@@ -497,7 +498,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
       oidcUrl={authConfig?.oidc.login_url}
-      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? "/admin" : initialView === "files" ? "/files" : initialView === "file" && initialFileId ? `/files/${encodeURIComponent(initialFileId)}` : initialView === "jobs" ? "/jobs" : "/"}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? `/admin?section=${initialAdminArea}` : initialView === "files" ? "/files" : initialView === "file" && initialFileId ? `/files/${encodeURIComponent(initialFileId)}` : initialView === "jobs" ? "/jobs" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
@@ -549,16 +550,62 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
             <a className="v3TextLink" href="/">← กลับ Workspace</a>
           </section>
           {identity.is_admin ? <>
-            <AdminIdentityPanel identity={identity}/>
-            {adminStatus && <section className="v3AdminOverview"><div className="v3AdminMetric"><span>FILES</span><strong>{adminStatus.files}</strong><small>{(adminStatus.pdfhub_bytes / 1024 / 1024).toFixed(1)} MB ใน PDF Hub</small></div><div className="v3AdminMetric"><span>QUEUE</span><strong>{adminStatus.queue_depth}</strong><small>{adminStatus.workers} worker</small></div><div className="v3AdminMetric"><span>DISK FREE</span><strong>{(adminStatus.disk.free / 1024 / 1024 / 1024).toFixed(1)} GB</strong><small>{adminStatus.data_dir}</small></div><div className="v3AdminMetric"><span>SERVICES</span><strong>{adminStatus.database_ok && adminStatus.redis_ok ? "OK" : "WARN"}</strong><small>DB {adminStatus.database_ok ? "✓" : "×"} • Redis {adminStatus.redis_ok ? "✓" : "×"}</small></div></section>}
-            {adminStatus && <section className="v3Diagnostics"><div className="v3SectionHead"><div><span className="v3Kicker">DIAGNOSTICS</span><h2>เครื่องมือประมวลผล</h2></div><button className="v3MiniButton" onClick={() => void getAdminStatus(auth).then(setAdminStatus)}>รีเฟรช</button></div><div className="v3DiagnosticGrid">{Object.entries({ ...adminStatus.tools, gotenberg: adminStatus.gotenberg_ok, storage: adminStatus.storage_write_ok }).map(([name, ok]) => <div key={name} className={ok ? "ok" : "bad"}><span>{ok ? "✓" : "×"}</span><strong>{name}</strong></div>)}</div></section>}
-            {integrations && <section className="v3SystemStrip">
-              <div><span>▰</span><p><strong>Storage</strong><small>{integrations.storage_backend.toUpperCase()}</small></p></div>
-              <div><span>✓</span><p><strong>Malware scan</strong><small>{integrations.clamav_enabled ? "พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div>
-              <div><span>⌁</span><p><strong>Secure delivery</strong><small>Signed URL + webhook</small></p></div>
-              <div><span>▣</span><p><strong>Archive</strong><small>{integrations.paperless_enabled ? "Paperless พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div>
+            <AdminAreaNav active={initialAdminArea} />
+            {initialAdminArea === "overview" && <>
+              <AdminIdentityPanel identity={identity}/>
+              {adminStatus ? <section className="v3AdminOverview">
+                <div className="v3AdminMetric"><span>FILES</span><strong>{adminStatus.files}</strong><small>{(adminStatus.pdfhub_bytes / 1024 / 1024).toFixed(1)} MB ใน PDF Hub</small></div>
+                <div className="v3AdminMetric"><span>QUEUE</span><strong>{adminStatus.queue_depth}</strong><small>{adminStatus.workers} worker</small></div>
+                <div className="v3AdminMetric"><span>DISK FREE</span><strong>{(adminStatus.disk.free / 1024 / 1024 / 1024).toFixed(1)} GB</strong><small>{adminStatus.data_dir}</small></div>
+                <div className="v3AdminMetric"><span>SERVICES</span><strong>{adminStatus.database_ok && adminStatus.redis_ok ? "OK" : "WARN"}</strong><small>DB {adminStatus.database_ok ? "✓" : "×"} • Redis {adminStatus.redis_ok ? "✓" : "×"}</small></div>
+              </section> : <div className="v3InfoBox" role="status">กำลังโหลดสถานะระบบ…</div>}
+              <section className="v3AdminSection"><h2>เริ่มตรวจจากภาพรวม</h2><p>เลือกพื้นที่ด้านบนเพื่อดูข้อมูลหรือดำเนินงานเฉพาะประเภทโดยไม่ปะปนกัน</p></section>
+            </>}
+            {initialAdminArea === "jobs" && <section className="v3AdminSection" aria-label="ข้อมูลคิวงานของระบบ">
+              <h2>คิวและงานประมวลผล</h2>
+              {adminStatus ? <>
+                <div className="v3AdminOverview">
+                  {(["queued", "running", "completed", "failed", "cancelled"] as const).map((status) => (
+                    <div key={status} className="v3AdminMetric"><span>{status.toUpperCase()}</span><strong>{adminStatus.jobs[status] ?? 0}</strong><small>จำนวนงาน</small></div>
+                  ))}
+                </div>
+                <p>คิวรอ {adminStatus.queue_depth} งาน · Worker {adminStatus.workers} ตัว</p>
+              </> : <p role="status">กำลังโหลดข้อมูลคิวงาน…</p>}
+              <p>หน้านี้แสดงเฉพาะภาพรวม ไม่มีการเปิดอ่านงานหรือไฟล์ของผู้ใช้อื่น รายการงานระดับผู้ดูแลจะพัฒนาแยกใน P7F หลังตรวจสิทธิ์</p>
+              <a className="v3TextLink" href="/jobs">งานของฉัน →</a>
             </section>}
-            <AdminPanel apiKey={auth}/>
+            {initialAdminArea === "access" && <>
+              <AdminIdentityPanel identity={identity}/>
+              <AdminPanel apiKey={auth} area="access"/>
+            </>}
+            {initialAdminArea === "storage" && <section className="v3AdminSection" aria-label="สถานะพื้นที่จัดเก็บ">
+              <h2>พื้นที่จัดเก็บและ Retention</h2>
+              {adminStatus ? <>
+                <div className="v3AdminOverview">
+                  <div className="v3AdminMetric"><span>DISK FREE</span><strong>{(adminStatus.disk.free / 1024 ** 3).toFixed(1)} GB</strong><small>คงเหลือ</small></div>
+                  <div className="v3AdminMetric"><span>PDF HUB USED</span><strong>{(adminStatus.pdfhub_bytes / 1024 ** 2).toFixed(1)} MB</strong><small>{adminStatus.files} ไฟล์</small></div>
+                  <div className="v3AdminMetric"><span>RETENTION</span><strong>{adminStatus.retention_hours} ชม.</strong><small>ค่าเริ่มต้น</small></div>
+                </div>
+                <p>Storage backend: {adminStatus.storage_backend} · การเขียนข้อมูล: {adminStatus.storage_write_ok ? "พร้อม" : "มีปัญหา"}</p>
+              </> : <p role="status">กำลังโหลดสถานะพื้นที่จัดเก็บ…</p>}
+              <p>ยังไม่เปิดคำสั่งซ่อม ลบ หรือ Reconcile แบบอัตโนมัติจนกว่าจะผ่าน Security Review ใน P7G</p>
+            </section>}
+            {initialAdminArea === "diagnostics" && <>
+              {adminStatus ? <section className="v3Diagnostics">
+                <div className="v3SectionHead"><div><span className="v3Kicker">DIAGNOSTICS</span><h2>เครื่องมือประมวลผล</h2></div><button className="v3MiniButton" onClick={() => void getAdminStatus(auth).then(setAdminStatus)}>รีเฟรช</button></div>
+                <div className="v3DiagnosticGrid">{Object.entries({ ...adminStatus.tools, gotenberg: adminStatus.gotenberg_ok, storage: adminStatus.storage_write_ok }).map(([name, ok]) => <div key={name} className={ok ? "ok" : "bad"}><span>{ok ? "✓" : "×"}</span><strong>{name}</strong></div>)}</div>
+              </section> : <p role="status">กำลังโหลด Diagnostic Status…</p>}
+              <AdminPanel apiKey={auth} area="diagnostics"/>
+            </>}
+            {initialAdminArea === "integrations" && <>
+              {integrations && <section className="v3SystemStrip">
+                <div><span>▰</span><p><strong>Storage</strong><small>{integrations.storage_backend.toUpperCase()}</small></p></div>
+                <div><span>✓</span><p><strong>Malware scan</strong><small>{integrations.clamav_enabled ? "พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div>
+                <div><span>⌁</span><p><strong>Secure delivery</strong><small>Signed URL + webhook</small></p></div>
+                <div><span>▣</span><p><strong>Archive</strong><small>{integrations.paperless_enabled ? "Paperless พร้อมใช้งาน" : "ไม่ได้เปิดใช้"}</small></p></div>
+              </section>}
+              <AdminPanel apiKey={auth} area="integrations"/>
+            </>}
           </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/admin/login">เข้าสู่ระบบผู้ดูแล</a><a href="/">กลับ Workspace</a></section>}
         </main>
       ) : routeTool && (!target || !hasValidRouteInputs) ? (
