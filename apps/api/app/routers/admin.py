@@ -18,6 +18,7 @@ from app.queue import redis_conn
 from app.schemas import (
     AdminJobTriageItemOut,
     AdminJobTriagePageOut,
+    AdminStorageHealthOut,
     ApiKeyCreate,
     ApiKeyCreated,
     ApiKeyOut,
@@ -215,6 +216,27 @@ def list_admin_job_triage(
     ]
     return AdminJobTriagePageOut(
         items=items, limit=limit, offset=offset, has_more=len(rows) > limit,
+    )
+
+
+@router.get("/storage/health", response_model=AdminStorageHealthOut)
+def admin_storage_health(
+    principal: Principal = Depends(require_scope("admin:keys")),
+    db: Session = Depends(get_db),
+) -> AdminStorageHealthOut:
+    # Do not expose per-file issue details or physical object paths to the UI.
+    _require_human_triage_admin(principal)
+    if not audit_event("admin.storage_health.read", principal.name, "storage", None, {"mode": "dry_run"}):
+        raise HTTPException(status_code=503, detail="Admin audit unavailable")
+    report = reconcile_storage(db, detail_limit=1)
+    return AdminStorageHealthOut(
+        dry_run=True,
+        backend=report["backend"],
+        database_records=report["database_records"],
+        storage_objects=report["storage_objects"],
+        issue_count=report["issue_count"],
+        healthy=report["healthy"],
+        category_counts=report["category_counts"],
     )
 
 
