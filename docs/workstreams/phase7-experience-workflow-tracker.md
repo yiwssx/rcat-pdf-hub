@@ -8,7 +8,7 @@ Prior release: `v0.6.0` — Phase 6 **COMPLETE**, tag unchanged
 Phase 7 target version: **TBD at release planning**  
 Tracker role: **canonical source of truth for Phase 7 execution status**
 
-Source of scope: [PHASE7.md](../../PHASE7.md). Decision to validate in P7A: [ADR-0005](../adr/0005-task-first-journey.md) (Proposed).
+Source of scope: [PHASE7.md](../../PHASE7.md). Accepted task-first/role-safe interface: [ADR-0005](../adr/0005-task-first-journey.md).
 
 ## Starting point (source-backed)
 
@@ -148,13 +148,13 @@ This design boundary was accepted in PR #142 with negative authorization and aud
 
 1. One coherent objective per PR; update task status/evidence and this Activity Log in the **same PR**.
 2. For implementation: measure/reproduce current gap, record a public-seam failing test, implement minimum behavior, run the applicable gates, review diff, merge only when green.
-3. Preserve accepted ADR-0001 (ToolWorkspace settings ownership), ADR-0004 (RBAC) and the published Phase 6 `v0.6.0` tag.
-4. ADR-0005 is `Proposed`: finalize route/interface details in P7A before promoting it to `Accepted`.
+3. Preserve accepted ADR-0001 (ToolWorkspace settings ownership), ADR-0004 (RBAC), ADR-0005 (validated task-first interface) and the published Phase 6 `v0.6.0` tag.
+4. ADR-0005 is `Accepted` after P7A–P7H.1 validation; future route/interface changes require explicit ADR, tracker and test updates.
 5. No new workflow service, backend status type, storage engine, paid cloud dependency or UI visual rewrite by default.
 6. Never disable source security scanners, coverage, API-contract, a11y/performance, backup or production release gates.
 7. Use file/job ownership on every result/deep link; UI route guards do not replace server authorization.
 8. Admin destructive actions require distinct confirmation and durable audit. Global jobs/users endpoints require separate threat-model review.
-9. No P7 release version, tag, migration, deploy or production environment mutation during planning.
+9. No P7 release version, tag, migration, deploy or production environment mutation without explicit P7H.2 operator approval and verified release gates.
 10. No work is `COMPLETE` based on a passing PR alone when its acceptance criteria require operator/deployment evidence.
 
 ## Activity log
