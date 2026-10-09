@@ -42,7 +42,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | COMPLETE | 7E.1 | PR #140 merged `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 PASS |
 | 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | COMPLETE | 7E.2 | PR #142 merged `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 PASS |
 | 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | IN PROGRESS | 7F.1 | PR #143 merged `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; PR #144 merged `f0b9ff968d3e50415dd3d05a55030410d6d83c59` (Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 PASS); cross-account mutations remain explicitly pending |
-| 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | IN PROGRESS | 7E.1 | `feat/p7g1-effective-role-quotas`; self-scoped role/limits display, API/Web CI pending; no identity mutations |
+| 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | IN PROGRESS | 7E.1 | PR #146 merged `cf0dd647d202cb53ee3be83a98959c12faa62896`; Core API CI #37905364357, Web CI #37905364564, CodeQL #37905364778, Dependency Review #37905364511 PASS; self-scoped only, role mutation excluded |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | PENDING | 7E.2, 7F.2 | — |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
@@ -162,7 +162,7 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7F.1 | Minimized human Admin triage with bounded filters, audit gate, negative tests and UI merged | PR #142, merge `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 | COMPLETE |
 | 2026-10-09 | 7F.2 | Human/session wildcard owner isolation and security action matrix merged | PR #143, merge `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; Core API CI #37903849520, CodeQL #37903849543, Dependency Review #37903849917 | IN PROGRESS |
 | 2026-10-09 | 7F.2 | Confirmed owner-scoped Cancel/Retry, synchronous duplicate prevention and fail-closed Audit Intent on cancel/retry/purge merged | PR #144, merge `f0b9ff968d3e50415dd3d05a55030410d6d83c59`; Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 | IN PROGRESS |
-| 2026-10-09 | 7G.1 | Begin self-scoped effective role, scope and quota visibility with explicit bootstrap exemption | `feat/p7g1-effective-role-quotas`; PR/CI pending | IN PROGRESS |
+| 2026-10-09 | 7G.1 | Self-scoped effective role, scope and quota visibility with bootstrap exemption merged; cross-account reads and mutations excluded pending security decision | PR #146, merge `cf0dd647d202cb53ee3be83a98959c12faa62896`; Core API CI #37905364357, Web CI #37905364564, CodeQL #37905364778, Dependency Review #37905364511 PASS | IN PROGRESS |
 
 ## Current next action
 
