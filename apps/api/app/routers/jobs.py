@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete, desc, select
@@ -67,12 +68,20 @@ def get_job(
 @router.get("", response_model=list[JobOut])
 def list_jobs(
     limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
+    mine: bool = Query(default=False),
+    status: Literal["queued", "running", "completed", "failed", "cancelled"] | None = Query(default=None),
     principal: Principal = Depends(require_scope("jobs:read")),
     db: Session = Depends(get_db),
 ):
-    stmt = select(JobRecord).order_by(desc(JobRecord.created_at)).limit(limit)
-    if "*" not in principal.scopes:
+    # Explicit "mine" is required for a human My Jobs view, including admins.
+    # Existing API clients retain their current default scope semantics.
+    stmt = select(JobRecord)
+    if mine or "*" not in principal.scopes:
         stmt = stmt.where(JobRecord.requested_by == principal.name)
+    if status is not None:
+        stmt = stmt.where(JobRecord.status == status)
+    stmt = stmt.order_by(desc(JobRecord.created_at), desc(JobRecord.id)).offset(offset).limit(limit)
     return [serialize(job) for job in db.scalars(stmt).all()]
 
 
