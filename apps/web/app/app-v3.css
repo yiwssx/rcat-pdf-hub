@@ -1429,3 +1429,44 @@ summary {
   .v3JobsHistoryRow { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .v3JobsHistoryRow .v3TextLink { justify-self: start; }
 }
+
+
+/* P7E.1 operations-first Admin architecture; retain existing Candy design. */
+.v3AdminAreaNav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 20px;
+}
+.v3AdminAreaNav a {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid var(--v3-line);
+  border-radius: 15px;
+  background: var(--v3-surface);
+  padding: 12px 14px;
+  text-decoration: none;
+}
+.v3AdminAreaNav strong { font-size: 14px; }
+.v3AdminAreaNav small { font-size: 12px; color: var(--v3-muted); }
+.v3AdminAreaNav a[aria-current="page"] {
+  border-color: var(--v3-primary);
+  background: #f0f0ff;
+  color: var(--v3-primary);
+}
+.v3AdminAreaNav a:hover, .v3AdminAreaNav a:focus-visible { border-color: var(--v3-primary); }
+.v3AdminSection {
+  padding: 18px;
+  margin: 18px 0;
+  border-radius: 18px;
+  border: 1px solid var(--v3-line);
+  background: var(--v3-surface);
+}
+.v3AdminSection h2 { margin: 0 0 10px; }
+.v3AdminSection p { font-size: 14px; line-height: 1.7; }
+@media (max-width: 720px) {
+  .v3AdminAreaNav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .v3AdminAreaNav a { padding: 10px; }
+  .v3AdminAreaNav small { font-size: 11px; }
+}
