@@ -90,7 +90,8 @@ operations() {
 }
 
 backend() {
-  require_tool_versions
+  need python3
+  python3 scripts/check-host-python.py
   need docker
   local coverage_image coverage_evidence
 
