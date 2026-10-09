@@ -715,3 +715,64 @@ test("P7C.2 expired-on-download responds to backend 410 without false success", 
   await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("หมดอายุหรือไม่พร้อมใช้งาน");
   await expect(page.getByRole("main")).not.toContainText("storage not found");
 });
+
+test("P7C.3 compatible PDF output chains to a new tool with no reupload", async ({ page }) => {
+  const output = { ...initialFile, id: "file-chain-output", original_name: "processed.pdf", size: 7100 };
+  let uploads = 0;
+  await page.route("**/api/v1/jobs/job-chain-3", (route) => route.fulfill({ json: {
+    id: "job-chain-3", operation: "watermark", status: "completed", progress: 100,
+    input_file_ids: [initialFile.id], output_file_id: output.id,
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  }}));
+  await page.route("**/api/v1/files/file-chain-output", (route) => route.fulfill({ json: output }));
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, output] }));
+  await page.route("**/api/v1/files", (route) => {
+    if (route.request().method() === "POST") uploads += 1;
+    return route.fallback();
+  });
+  await page.route("**/api/v1/pdf/compress", (route) => route.fulfill({ json: {
+    id: "job-chain-3-new", operation: "compress", status: "queued", progress: 0,
+    input_file_ids: [output.id], output_file_id: null, params: {},
+    error: null, requested_by: "web-console:smoke-test",
+  }}));
+
+  await page.goto("/jobs/job-chain-3/result");
+  const next = page.getByRole("region", { name: "ทำงานต่อด้วยเครื่องมืออื่น" });
+  await expect(next).toBeVisible();
+  await next.getByRole("link", { name: /ลดขนาด PDF/ }).click();
+  await expect(page).toHaveURL(/\/tools\/compress\?file=file-chain-output$/);
+  await expect(page.locator("#workspace-target")).toContainText("processed.pdf");
+  const request = page.waitForRequest("**/api/v1/pdf/compress");
+  await page.getByRole("button", { name: "บีบอัด PDF" }).click();
+  expect((await request).postDataJSON()).toEqual({ file_id: output.id });
+  expect(uploads).toBe(0);
+});
+
+test("P7C.3 image output offers only compatible follow-on workflows", async ({ page }) => {
+  const output = { ...initialFile, id: "file-image-result", original_name: "scan.png", content_type: "image/png" };
+  await page.route("**/api/v1/jobs/job-image-chain", (route) => route.fulfill({ json: {
+    id: "job-image-chain", operation: "pdf-to-images", status: "completed", progress: 100,
+    input_file_ids: [initialFile.id], output_file_id: output.id,
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  }}));
+  await page.route("**/api/v1/files/file-image-result", (route) => route.fulfill({ json: output }));
+  await page.goto("/jobs/job-image-chain/result");
+  const next = page.getByRole("region", { name: "ทำงานต่อด้วยเครื่องมืออื่น" });
+  await expect(next.getByRole("link", { name: /รูปภาพ → PDF/ })).toBeVisible();
+  await expect(next.getByRole("link", { name: /ลดขนาด PDF/ })).toHaveCount(0);
+  await expect(next.getByRole("link", { name: /สแกน \/ OCR/ })).toHaveCount(0);
+});
+
+test("P7C.3 expired outputs never receive a chaining link", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-expired-chain", (route) => route.fulfill({ json: {
+    id: "job-expired-chain", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: [initialFile.id], output_file_id: "file-chain-expired",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  }}));
+  await page.route("**/api/v1/files/file-chain-expired", (route) => route.fulfill({ json: {
+    ...initialFile, id: "file-chain-expired", expires_at: "2020-01-01T00:00:00Z",
+  }}));
+  await page.goto("/jobs/job-expired-chain/result");
+  await expect(page.getByText(/ไฟล์ผลลัพธ์หมดอายุแล้ว/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "ทำงานต่อด้วยเครื่องมืออื่น" })).toHaveCount(0);
+});
