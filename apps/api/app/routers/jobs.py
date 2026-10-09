@@ -104,6 +104,8 @@ def cancel_job(
         raise HTTPException(status_code=409, detail="Only queued or running jobs can be cancelled")
     if not job.rq_job_id:
         raise HTTPException(status_code=409, detail="Queue job reference is missing")
+    if not audit_event("job.cancel_requested", principal.name, "job", job.id, {"status": job.status}):
+        raise HTTPException(status_code=503, detail="Job action audit unavailable")
     try:
         rq_job = RQJob.fetch(job.rq_job_id, connection=redis_conn)
         if job.status == "running":
@@ -138,6 +140,8 @@ def retry_job(
         raise HTTPException(status_code=410, detail="One or more input files no longer exist")
     if not principal.is_bootstrap_admin:
         ensure_daily_job_quota(db, principal.name, principal.daily_job_limit)
+    if not audit_event("job.retry_requested", principal.name, "job", source.id, {"status": source.status}):
+        raise HTTPException(status_code=503, detail="Job action audit unavailable")
     job = JobRecord(
         operation=source.operation,
         input_file_ids_json=source.input_file_ids_json,
@@ -179,6 +183,8 @@ def clear_terminal_jobs(
         stmt = stmt.where(JobRecord.requested_by == principal.name)
     rows = db.scalars(stmt).all()
     job_ids = [job.id for job in rows]
+    if not audit_event("job.history_clear_requested", principal.name, "job", None, {"count": len(job_ids)}):
+        raise HTTPException(status_code=503, detail="Job action audit unavailable")
     if job_ids:
         db.execute(delete(WebhookDelivery).where(WebhookDelivery.job_id.in_(job_ids)))
         for job in rows:
