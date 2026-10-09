@@ -111,7 +111,7 @@ export function JobDetailScreen({ jobId, auth }: Props) {
           <div className="v3JobDetailActions">
             {(job.status === "queued" || job.status === "running") && <button type="button" className="v3SecondaryAction" disabled={busy} onClick={() => void act("cancel")}>ยกเลิกงาน</button>}
             {(job.status === "failed" || job.status === "cancelled") && <button type="button" className="v3PrimaryAction" disabled={busy} onClick={() => void act("retry")}>ลองประมวลผลใหม่</button>}
-            {job.status === "completed" && job.output_file_id && <a className="v3PrimaryAction" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูผลลัพธ์ →</a>}
+            {job.status === "completed" && job.output_file_id && <p>ไฟล์ผลลัพธ์พร้อมแล้ว · ขั้นตอนดาวน์โหลดจะเปิดใช้ใน P7C.2</p>}
           </div>
         </>}
         <button type="button" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>รีเฟรชสถานะ</button>
