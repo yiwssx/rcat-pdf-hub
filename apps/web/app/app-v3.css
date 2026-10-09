@@ -1289,3 +1289,63 @@ summary {
   .v3ToolCard,
   .v3PageImage { transition: none; }
 }
+
+
+/* P7B task-first journey stages: presentation only; backend remains authoritative. */
+.v3Journey {
+  margin: 14px 0 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--v3-line);
+  border-radius: 18px;
+  background: var(--v3-surface);
+}
+.v3Journey ol {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.v3Journey li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  color: var(--v3-muted);
+  border-radius: 12px;
+  font-size: 14px;
+}
+.v3Journey li > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: #f0f1fa;
+  font-weight: 900;
+}
+.v3Journey li strong { font-weight: 800; }
+.v3Journey li[data-state="active"] {
+  color: var(--v3-primary);
+  background: #f0f0ff;
+}
+.v3Journey li[data-state="active"] > span {
+  color: #fff;
+  background: var(--v3-primary);
+}
+.v3Journey li[data-state="complete"] { color: #27705d; }
+.v3Journey li[data-state="complete"] > span { background: #e1f5eb; }
+.v3Journey p[role="status"] {
+  margin: 8px 0 0;
+  padding: 6px;
+  color: var(--v3-primary);
+  font-size: 13px;
+}
+@media (max-width: 620px) {
+  .v3Journey { padding: 8px; }
+  .v3Journey ol { gap: 2px; }
+  .v3Journey li { flex-direction: column; gap: 4px; padding: 5px 2px; text-align: center; font-size: 11px; }
+  .v3Journey li > span { flex: 0 0 25px; width: 25px; height: 25px; }
+}

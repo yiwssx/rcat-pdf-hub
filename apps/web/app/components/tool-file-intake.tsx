@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { UploadedFile } from "../../lib/api";
 import type { ToolDefinition } from "./v3-ui";
 import { isEligibleToolFile, TOOL_INPUT_RULES, validateToolInputs } from "./tool-input-rules";
+import { TaskJourneyNav } from "./task-journey";
 
 type Props = {
   tool: ToolDefinition;
@@ -58,9 +59,11 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, onChange, onUpl
           <span className="v3Kicker">ขั้นตอนที่ 1 · เลือกไฟล์</span>
           <h1>{tool.title}</h1>
           <p>{tool.description} — เลือกเฉพาะไฟล์ที่จะใช้ ระบบจะไม่เพิ่มไฟล์อื่นให้อัตโนมัติ</p>
+          <p>ต้องเลือกอย่างน้อย {rule.min} ไฟล์{rule.max ? ` และไม่เกิน ${rule.max} ไฟล์` : ""}{rule.pdfPreview ? " · มีตัวอย่าง PDF หลังเลือก" : ""}</p>
         </div>
         <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
       </section>
+      <TaskJourneyNav stage="intake" kind={rule.flow} />
       <section className="v3StartGrid" aria-label="เลือกไฟล์สำหรับเครื่องมือ">
         <div className="v3Dropzone">
           <input id="files" type="file" accept={rule.accept} multiple={multi} disabled={busy} onChange={(event) => { onUpload(event.currentTarget.files); event.currentTarget.value = ""; }}/>

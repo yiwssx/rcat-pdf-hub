@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   archiveToPaperless,
   AdminStatus,
@@ -34,7 +34,8 @@ import {
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
-import { validateToolInputs } from "./tool-input-rules";
+import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
+import { resolveTaskJourneyStage } from "./task-journey";
 import {
   AdminIdentityPanel,
   AppHeader,
@@ -79,6 +80,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   const [selectedInputIds, setSelectedInputIds] = useState<string[]>(initialFileId ? [initialFileId] : []);
   const [activeTool, setActiveTool] = useState(initialTool ?? "");
   const [jobsOpen, setJobsOpen] = useState(false);
+  const submitInFlight = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [lastSubmittedJobId, setLastSubmittedJobId] = useState<string | null>(null);
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
   const [ldapUser, setLdapUser] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
@@ -103,6 +107,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   }, [files, initialTool, selectedInputIds]);
   const targetIsPdf = isPdf(target);
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
+  const lastSubmittedJob = jobs.find((job) => job.id === lastSubmittedJobId) ?? null;
+  const taskStage = resolveTaskJourneyStage(Boolean(target), submitting, lastSubmittedJob);
   const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
 
   function clearSignedToolResult() {
@@ -228,6 +234,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       setTargetId("");
       setActiveTool("");
       setJobsOpen(false);
+      setLastSubmittedJobId(null);
       setMessage("ออกจากระบบแล้ว");
       window.location.href = "/";
     }
@@ -305,17 +312,23 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   }
 
   async function submit(operation: string, payload: object) {
-    if (!auth) return;
+    // A ref closes the gap between two synchronous clicks before React renders busy=true.
+    if (!auth || submitInFlight.current) return;
+    submitInFlight.current = true;
+    setSubmitting(true);
     setBusy(true);
     try {
       const job = await createJob(operation, payload, auth);
       setJobs((old) => [job, ...old.filter((item) => item.id !== job.id)]);
+      setLastSubmittedJobId(job.id);
       setActiveTool("");
       setJobsOpen(true);
       setMessage(`ส่งงาน ${operation} แล้ว`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ");
     } finally {
+      submitInFlight.current = false;
+      setSubmitting(false);
       setBusy(false);
     }
   }
@@ -516,7 +529,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
           previewPage={previewPage}
           busy={busy}
           toolPanel={toolPanel}
-          onBack={() => { setTargetId(""); setActiveTool(initialTool ?? ""); setPreviewUrl(null); }}
+          taskJourney={routeTool ? { stage: taskStage, kind: TOOL_INPUT_RULES[routeTool.id].flow } : undefined}
+          onBack={() => { setTargetId(""); setActiveTool(initialTool ?? ""); setLastSubmittedJobId(null); setPreviewUrl(null); }}
           onTool={chooseTool}
           onPreview={() => void preview()}
           onPreviewPage={setPreviewPage}
