@@ -102,6 +102,7 @@ backend() {
   docker build -t "${coverage_image}" apps/api
 
   docker run --rm \
+    -e PDFHUB_CONTRACT_ARTIFACT=/tmp/openapi.json \
     -v "${ROOT}:/repo:ro" \
     -w /app \
     "${coverage_image}" \
