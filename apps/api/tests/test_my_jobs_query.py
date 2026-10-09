@@ -110,14 +110,14 @@ def test_job_detail_denies_foreign_and_missing_ids_and_rejects_invalid_state_act
 
 def test_my_jobs_handler_query_branches_directly():
     """Exercise handler logic in-process as well as through the HTTP tests above."""
-    from types import SimpleNamespace
     from fastapi import HTTPException
+    from app.security import Principal
     from app.routers.jobs import get_job, list_jobs
 
     seed_jobs()
     db = SessionLocal()
     try:
-        user = SimpleNamespace(name="user:alpha", scopes={"jobs:read"})
+        user = Principal(name="user:alpha", scopes={"jobs:read"}, auth_source="session")
         completed = list_jobs(
             limit=1, offset=1, mine=True, status="completed", principal=user, db=db
         )
@@ -130,7 +130,7 @@ def test_my_jobs_handler_query_branches_directly():
             "job-alpha-new", "job-alpha-done", "job-alpha-old",
         ]
 
-        admin = SimpleNamespace(name="user:admin", scopes={"*"})
+        admin = Principal(name="bootstrap-admin", scopes={"*"}, auth_source="bootstrap")
         admin_all = list_jobs(
             limit=100, offset=0, mine=False, status=None, principal=admin, db=db
         )

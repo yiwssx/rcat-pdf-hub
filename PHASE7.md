@@ -1,6 +1,6 @@
 # Phase 7 — Task-first Experience & Operational Workflows
 
-Status: **IMPLEMENTATION IN PROGRESS — P7F.1 HUMAN ADMIN READ-ONLY TRIAGE**
+Status: **IMPLEMENTATION IN PROGRESS — P7F.2 PERMISSIONS REVIEW**
 
 Base: RCAT PDF Hub `v0.6.0`. Preserve the published Phase 6 release and security/production gates.
 
