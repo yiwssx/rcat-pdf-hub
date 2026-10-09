@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cancelJob, getJob, Job, JobLookupError, retryJob } from "../../lib/api";
 import { TaskJourneyNav } from "./task-journey";
 
@@ -28,6 +28,7 @@ export function JobDetailScreen({ jobId, auth }: Props) {
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const actionInFlight = useRef(false);
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
@@ -57,7 +58,12 @@ export function JobDetailScreen({ jobId, auth }: Props) {
   }, [auth, jobId, reload]);
 
   async function act(action: "cancel" | "retry") {
-    if (!job || busy) return;
+    if (!job || busy || actionInFlight.current) return;
+    const warning = action === "cancel"
+      ? "ยืนยันการยกเลิกงานนี้? งานที่กำลังประมวลผลอาจหยุดทันที"
+      : "ยืนยันการประมวลผลงานนี้อีกครั้ง? ระบบจะสร้างงานใหม่และอาจใช้โควตาประมวลผล";
+    if (!window.confirm(warning)) return;
+    actionInFlight.current = true;
     setBusy(true);
     try {
       const updated = action === "cancel" ? await cancelJob(job.id, auth) : await retryJob(job.id, auth);
@@ -72,6 +78,7 @@ export function JobDetailScreen({ jobId, auth }: Props) {
         ? "ไม่สามารถยกเลิกงานได้ อาจเปลี่ยนสถานะไปแล้ว กรุณารีเฟรช"
         : "ไม่สามารถลองใหม่ได้ ตรวจสอบสิทธิ์และไฟล์ต้นฉบับ");
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
