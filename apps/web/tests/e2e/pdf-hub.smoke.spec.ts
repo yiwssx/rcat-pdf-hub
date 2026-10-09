@@ -1140,3 +1140,63 @@ test("P7G.2 Storage health denial and audit outages are presented without raw in
   await expect(section.getByRole("alert")).toContainText("ตรวจสอบ Storage ไม่สำเร็จ");
   await expect(section).not.toContainText("/data/private");
 });
+
+test("P7G.2 revoking a service key requires explicit confirmation", async ({ page }) => {
+  let active = true;
+  let revocations = 0;
+  const record = () => ({
+    id: "service-key-1", name: "lab-service",
+    scopes: ["files:read"], active,
+    policy: { service_name: "lab-service", rate_limit_per_minute: 10,
+      daily_job_limit: 20, max_storage_mb: 300, webhook_url: null },
+  });
+  await page.route("**/api/v1/admin/api-keys", (route) => route.fulfill({ json: [record()] }));
+  await page.route("**/api/v1/admin/audit?limit=100", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/admin/webhook-deliveries?limit=100", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/admin/api-keys/service-key-1", (route) => {
+    revocations += 1;
+    active = false;
+    return route.fulfill({ json: record() });
+  });
+  await page.goto("/admin?section=access");
+  await page.getByRole("button", { name: "โหลดข้อมูล Admin" }).click();
+  await expect(page.getByText("lab-service", { exact: true })).toBeVisible();
+  page.once("dialog", (dialog) => void dialog.dismiss());
+  await page.getByRole("button", { name: "Revoke" }).click();
+  expect(revocations).toBe(0);
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Revoke" }).click();
+  await expect(page.getByText("REVOKED", { exact: true })).toBeVisible();
+  expect(revocations).toBe(1);
+});
+
+test("P7G.2 webhook replay requires consent and never displays raw delivery error", async ({ page }) => {
+  let replays = 0;
+  let state = "dead";
+  const delivery = () => ({
+    id: "delivery-integration-1", job_id: "job-private-1",
+    service_name: "lab-service", event: "job.completed",
+    status: state, attempt_count: 3, max_attempts: 5,
+    last_status_code: 503, last_error: "secret /data/storage/private-key",
+    updated_at: "2026-10-09T07:00:00Z",
+  });
+  await page.route("**/api/v1/admin/api-keys", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/admin/audit?limit=100", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/admin/webhook-deliveries?limit=100", (route) => route.fulfill({ json: [delivery()] }));
+  await page.route("**/api/v1/admin/webhook-deliveries/delivery-integration-1/retry", (route) => {
+    replays += 1;
+    state = "queued";
+    return route.fulfill({ json: delivery() });
+  });
+  await page.goto("/admin?section=integrations");
+  await page.getByRole("button", { name: "โหลดข้อมูล Admin" }).click();
+  await expect(page.getByRole("button", { name: "Replay" })).toBeVisible();
+  await expect(page.getByRole("main")).not.toContainText("secret /data/storage/private-key");
+  page.once("dialog", (dialog) => void dialog.dismiss());
+  await page.getByRole("button", { name: "Replay" }).click();
+  expect(replays).toBe(0);
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "Replay" }).click();
+  await expect(page.getByText("QUEUED", { exact: true })).toBeVisible();
+  expect(replays).toBe(1);
+});
