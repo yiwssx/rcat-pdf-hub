@@ -85,8 +85,16 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
 
   const routeTool = initialTool ? findPdfTool(initialTool) : undefined;
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
-  const pdfFiles = useMemo(() => files.filter((file) => isPdf(file)), [files]);
-  const imageFiles = useMemo(() => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase())), [files]);
+  // A routed task may only see explicitly selected inputs. P7A.2 extends
+  // this to reviewed multi-selection; do not submit unrelated library files.
+  const pdfFiles = useMemo(
+    () => files.filter((file) => isPdf(file) && (!initialTool || file.id === targetId)),
+    [files, initialTool, targetId],
+  );
+  const imageFiles = useMemo(
+    () => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase()) && (!initialTool || file.id === targetId)),
+    [files, initialTool, targetId],
+  );
   const targetIsPdf = isPdf(target);
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
   const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
@@ -227,7 +235,11 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       const uploaded: UploadedFile[] = [];
       for (const file of Array.from(list)) uploaded.push(await uploadFile(file, auth));
       setFiles((old) => [...uploaded, ...old.filter((item) => !uploaded.some((fresh) => fresh.id === item.id))]);
-      if (uploaded[0]) {
+      if (initialTool && uploaded.length > 1) {
+        // Multi-file inputs must be reviewed as an explicit ordered set in P7A.2.
+        setTargetId("");
+        setActiveTool(initialTool);
+      } else if (uploaded[0]) {
         setTargetId(uploaded[0].id);
         setPreviewUrl(null);
         if (initialTool) setActiveTool(initialTool);
