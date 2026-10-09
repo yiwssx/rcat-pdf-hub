@@ -923,3 +923,54 @@ test("P7E.1 non-admin principal cannot see Admin areas or privileged panels", as
   await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "สร้าง Service Key" })).toHaveCount(0);
 });
+
+test("P7E.2 Admin Overview identifies actionable failures and links to responsible areas", async ({ page }) => {
+  let healthy = false;
+  await page.route("**/api/v1/admin/status", (route) => route.fulfill({ json: {
+    database_ok: healthy, redis_ok: healthy, workers: healthy ? 2 : 0, queue_depth: 4,
+    storage_backend: "local", storage_write_ok: healthy, gotenberg_ok: healthy,
+    data_dir: "/data", disk: { total: 1024 * 1024 * 1024, used: 100, free: 1024 * 1024 },
+    pdfhub_bytes: 2048, files: 3,
+    jobs: { queued: 4, running: 0, completed: 2, failed: 0, cancelled: 0 },
+    retention_hours: 24, cleanup_temporary_hours: 6,
+    clamav_enabled: true, paperless_enabled: false,
+    tools: { qpdf: healthy, gs: true },
+    auth: { local_admin: false, oidc: true, ldap: false, web_console_auto_login: false },
+    principal: "user:admin@example.org",
+  } }));
+  await page.goto("/admin?section=overview");
+  const issues = page.getByRole("region", { name: "รายการตรวจสอบที่ควรดำเนินการ" });
+  await expect(issues).toContainText("Database ตอบสนองผิดปกติ");
+  await expect(issues).toContainText("Redis / คิวงานไม่พร้อม");
+  await expect(issues).toContainText("Storage เขียนข้อมูลไม่ได้");
+  await expect(issues).toContainText("มีงานรอแต่ไม่มี Worker");
+  await expect(issues).toContainText("เครื่องมือประมวลผลไม่พร้อม");
+  await expect(issues.getByRole("link", { name: "ไปตรวจสอบ →" })).toHaveCount(5);
+  healthy = true;
+  await page.getByRole("button", { name: "ตรวจสถานะใหม่" }).click();
+  await expect(issues).toContainText("ไม่พบความผิดปกติจากข้อมูลสถานะที่ระบบตรวจสอบได้");
+  await expect(issues.getByRole("link", { name: "ไปตรวจสอบ →" })).toHaveCount(0);
+});
+
+test("P7E.2 failed Admin status read offers safe retry instead of perpetual loading", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/api/v1/admin/status", (route) => {
+    calls += 1;
+    if (calls === 1) return route.fulfill({ status: 503, json: { detail: "internal DB hostname" } });
+    return route.fulfill({ json: {
+      database_ok: true, redis_ok: true, workers: 1, queue_depth: 0,
+      storage_backend: "local", storage_write_ok: true, gotenberg_ok: true, data_dir: "/data",
+      disk: { total: 1000000, used: 10, free: 999990 },
+      pdfhub_bytes: 2048, files: 1, jobs: { queued: 0, running: 0, completed: 0, failed: 0, cancelled: 0 },
+      retention_hours: 24, cleanup_temporary_hours: 6, clamav_enabled: true, paperless_enabled: false,
+      tools: { qpdf: true }, auth: {}, principal: "user:admin@example.org",
+    } });
+  });
+  await page.goto("/admin?section=overview");
+  const overviewAlert = page.locator(".v3AdminOverviewScreen [role='alert']");
+  await expect(overviewAlert).toContainText("อ่านสถานะระบบไม่ได้");
+  await expect(page.getByRole("main")).not.toContainText("internal DB hostname");
+  await page.getByRole("button", { name: "ตรวจสถานะใหม่" }).click();
+  await expect(page.locator(".v3AdminOverview")).toBeVisible();
+  await expect(overviewAlert).toHaveCount(0);
+});

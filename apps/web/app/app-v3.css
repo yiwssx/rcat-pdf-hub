@@ -1470,3 +1470,27 @@ summary {
   .v3AdminAreaNav a { padding: 10px; }
   .v3AdminAreaNav small { font-size: 11px; }
 }
+
+
+/* P7E.2: read-only operational attention list with meaningful next links. */
+.v3AdminOverviewScreen > .v3SectionHead { margin: 14px 0; }
+.v3AdminIssueList { display: grid; gap: 10px; margin: 12px 0 18px; }
+.v3AdminIssue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--v3-line);
+  border-radius: 14px;
+  background: var(--v3-surface-soft);
+}
+.v3AdminIssue strong { font-size: 14px; }
+.v3AdminIssue p { margin: 4px 0 0; font-size: 13px; color: var(--v3-muted); }
+.v3AdminIssue a { flex-shrink: 0; }
+.v3AdminQuickLinks { display: flex; flex-wrap: wrap; gap: 10px; }
+.v3AdminQuickLinks a { border-bottom: 1px solid var(--v3-line); padding: 8px; font-size: 13px; font-weight: 800; text-decoration: none; }
+.v3AdminQuickLinks a:hover { color: var(--v3-primary); }
+@media (max-width: 650px) {
+  .v3AdminIssue { align-items: flex-start; flex-direction: column; }
+}
