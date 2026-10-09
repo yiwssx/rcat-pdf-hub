@@ -118,7 +118,7 @@ async function installApiMocks(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/jobs?limit=50", async (route) => {
+  await page.route("**/api/v1/jobs?limit=50**", async (route) => {
     if (!(await requireSession(route))) return;
     await route.fulfill({ json: [] });
   });
@@ -775,4 +775,54 @@ test("P7C.3 expired outputs never receive a chaining link", async ({ page }) => 
   await page.goto("/jobs/job-expired-chain/result");
   await expect(page.getByText(/ไฟล์ผลลัพธ์หมดอายุแล้ว/)).toBeVisible();
   await expect(page.getByRole("region", { name: "ทำงานต่อด้วยเครื่องมืออื่น" })).toHaveCount(0);
+});
+
+test("P7D.1 My Jobs uses server-filtered owned history with status and pagination", async ({ page }) => {
+  const allJobs = Array.from({ length: 22 }, (_, index) => ({
+    id: `job-my-${String(index + 1).padStart(2, "0")}`,
+    operation: "compress", status: index % 2 === 0 ? "completed" : "failed",
+    progress: 100, input_file_ids: [initialFile.id],
+    output_file_id: index % 2 === 0 ? "file-output-1" : null,
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  }));
+  const queries: URL[] = [];
+  await page.route("**/api/v1/jobs?limit=21&mine=true**", async (route) => {
+    const url = new URL(route.request().url());
+    queries.push(url);
+    const status = url.searchParams.get("status");
+    const filtered = allJobs.filter((job) => !status || job.status === status);
+    const offset = Number(url.searchParams.get("offset") || 0);
+    await route.fulfill({ json: filtered.slice(offset, offset + 21) });
+  });
+
+  await page.goto("/jobs");
+  await expect(page.getByRole("heading", { name: "งานของฉัน" })).toBeVisible();
+  await expect(page.locator(".v3JobsHistoryRow")).toHaveCount(20);
+  await expect(page.getByRole("navigation", { name: "หน้าประวัติงาน" }).getByRole("button", { name: "ถัดไป →" })).toBeEnabled();
+  await page.getByRole("navigation", { name: "หน้าประวัติงาน" }).getByRole("button", { name: "ถัดไป →" }).click();
+  await expect(page.locator(".v3JobsHistoryRow")).toHaveCount(2);
+  await expect(page.getByText("หน้า 2")).toBeVisible();
+  await page.getByLabel("กรองสถานะงาน").selectOption("failed");
+  await expect(page.locator(".v3JobsHistoryRow")).toHaveCount(11);
+  expect(queries.every((url) => url.searchParams.get("mine") === "true")).toBe(true);
+  expect(queries.some((url) => url.searchParams.get("status") === "failed")).toBe(true);
+  await page.getByRole("link", { name: "ดูสถานะ →" }).first().click();
+  await expect(page).toHaveURL(/\/jobs\/job-my-/);
+});
+
+test("P7D.1 My Jobs also requests mine=true for wildcard Admin identity", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: operatorIdentityFixture({
+    name: "user:admin", display_name: "Administrator",
+    roles: ["admin"], scopes: ["*"], is_admin: true,
+  }) }));
+  const requests: string[] = [];
+  await page.route("**/api/v1/jobs?**", async (route) => {
+    requests.push(route.request().url());
+    await route.fulfill({ json: [] });
+  });
+  await page.goto("/jobs");
+  await expect(page.getByRole("heading", { name: "งานของฉัน" })).toBeVisible();
+  await expect(page.getByText("ไม่พบงานในสถานะนี้")).toBeVisible();
+  expect(requests.length).toBeGreaterThan(0);
+  expect(requests.every((url) => new URL(url).searchParams.get("mine") === "true")).toBe(true);
 });
