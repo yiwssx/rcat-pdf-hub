@@ -33,6 +33,8 @@ import {
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
+import { ToolFileIntake } from "./tool-file-intake";
+import { validateToolInputs } from "./tool-input-rules";
 import {
   AdminIdentityPanel,
   AppHeader,
@@ -74,6 +76,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("พร้อมใช้งาน");
   const [targetId, setTargetId] = useState(initialFileId ?? "");
+  const [selectedInputIds, setSelectedInputIds] = useState<string[]>(initialFileId ? [initialFileId] : []);
   const [activeTool, setActiveTool] = useState(initialTool ?? "");
   const [jobsOpen, setJobsOpen] = useState(false);
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
@@ -88,12 +91,12 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   // A routed task may only see explicitly selected inputs. P7A.2 extends
   // this to reviewed multi-selection; do not submit unrelated library files.
   const pdfFiles = useMemo(
-    () => files.filter((file) => isPdf(file) && (!initialTool || file.id === targetId)),
-    [files, initialTool, targetId],
+    () => files.filter((file) => isPdf(file) && (!initialTool || selectedInputIds.includes(file.id))),
+    [files, initialTool, selectedInputIds],
   );
   const imageFiles = useMemo(
-    () => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase()) && (!initialTool || file.id === targetId)),
-    [files, initialTool, targetId],
+    () => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase()) && (!initialTool || selectedInputIds.includes(file.id))),
+    [files, initialTool, selectedInputIds],
   );
   const targetIsPdf = isPdf(target);
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
@@ -235,14 +238,15 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       const uploaded: UploadedFile[] = [];
       for (const file of Array.from(list)) uploaded.push(await uploadFile(file, auth));
       setFiles((old) => [...uploaded, ...old.filter((item) => !uploaded.some((fresh) => fresh.id === item.id))]);
-      if (initialTool && uploaded.length > 1) {
-        // Multi-file inputs must be reviewed as an explicit ordered set in P7A.2.
+      if (initialTool) {
+        // Uploads enter the same review screen as library selection.
+        setSelectedInputIds(uploaded.map((file) => file.id));
         setTargetId("");
         setActiveTool(initialTool);
+        setPreviewUrl(null);
       } else if (uploaded[0]) {
         setTargetId(uploaded[0].id);
         setPreviewUrl(null);
-        if (initialTool) setActiveTool(initialTool);
       }
       clearSignedToolResult();
       setMessage(`อัปโหลดแล้ว ${uploaded.length} ไฟล์`);
@@ -264,6 +268,26 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   function selectLibraryFile(file: UploadedFile) {
     setFiles((old) => [file, ...old.filter((item) => item.id !== file.id)]);
     selectFile(file.id);
+  }
+
+  function confirmToolInputs(ids: string[]) {
+    if (!initialTool) return;
+    const chosen = ids.map((id) => files.find((file) => file.id === id));
+    if (chosen.some((file) => !file)) {
+      setMessage("ไฟล์ที่เลือกไม่อยู่ใน Workspace หรือไม่มีสิทธิ์เข้าถึง");
+      return;
+    }
+    const error = validateToolInputs(initialTool, chosen as UploadedFile[]);
+    if (error) {
+      setMessage(error);
+      return;
+    }
+    setSelectedInputIds(ids);
+    setToolSettings((old) => ({ ...old, mergeOrder: [...ids] }));
+    setTargetId(ids[0]);
+    setActiveTool(initialTool);
+    setPreviewUrl(null);
+    setMessage(`เลือกไฟล์แล้ว ${ids.length} รายการ`);
   }
 
   function chooseTool(tool: ToolDefinition) {
@@ -471,43 +495,15 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
           </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/admin/login">เข้าสู่ระบบผู้ดูแล</a><a href="/">กลับ Workspace</a></section>}
         </main>
       ) : routeTool && !target ? (
-        <main className="v3Main" id="workspace">
-          <section className="v3HomeTitle">
-            <div>
-              <span className="v3Kicker">เลือกเครื่องมือ → เลือกไฟล์ → ตั้งค่า</span>
-              <h1>{routeTool.title}</h1>
-              <p>{routeTool.description} — เลือกไฟล์ที่ต้องการโดยตรง ระบบจะไม่เลือกไฟล์เดิมให้อัตโนมัติ</p>
-            </div>
-            <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
-          </section>
-          <section className="v3StartGrid" aria-label="เลือกไฟล์สำหรับเครื่องมือ">
-            <div className="v3Dropzone">
-              <input id="files" type="file" multiple disabled={busy} onChange={(event) => void onFiles(event.target.files)}/>
-              <label htmlFor="files">
-                <span className="v3DropIcon">＋</span>
-                <strong>อัปโหลดไฟล์สำหรับ {routeTool.title}</strong>
-                <p>เลือกไฟล์จากเครื่องเพื่อเริ่มงานนี้</p>
-                <span className="v3UploadButton">เลือกไฟล์</span>
-              </label>
-            </div>
-            <div className="v3RecentCard">
-              <div className="v3SectionHead">
-                <div><span className="v3Kicker">MY FILES</span><h2>เลือกไฟล์ที่มีอยู่</h2></div>
-                <a href="/files">ดูคลังไฟล์</a>
-              </div>
-              <div className="v3RecentList">
-                {files.length === 0 && <p className="v3EmptyMini">ยังไม่มีไฟล์ใน Workspace</p>}
-                {files.map((file) => (
-                  <button className="v3RecentFile" key={file.id} type="button" onClick={() => { setTargetId(file.id); setActiveTool(routeTool.id); }}>
-                    <span className="v3FileBadge">{isPdf(file) ? "PDF" : "FILE"}</span>
-                    <span><strong>{file.original_name}</strong><small>{file.content_type}</small></span>
-                    <b>›</b>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-        </main>
+        <ToolFileIntake
+          tool={routeTool}
+          files={files}
+          selectedIds={selectedInputIds}
+          busy={busy}
+          onChange={setSelectedInputIds}
+          onUpload={(list) => void onFiles(list)}
+          onContinue={confirmToolInputs}
+        />
       ) : target ? (
         <DocumentWorkspace
           target={target}
