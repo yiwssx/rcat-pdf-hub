@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
 import { BrandGlyph, ToolIcon, ToolIconName } from "./tool-icons";
+import { TaskJourneyNav, type TaskJourneyStage, type ToolFlowKind } from "./task-journey";
 
 export type ToolDefinition = {
   id: string;
@@ -237,6 +238,7 @@ export function DocumentWorkspace({
   previewPage,
   busy,
   toolPanel,
+  taskJourney,
   onBack,
   onTool,
   onPreview,
@@ -249,6 +251,7 @@ export function DocumentWorkspace({
   previewPage: number;
   busy: boolean;
   toolPanel: React.ReactNode;
+  taskJourney?: { stage: TaskJourneyStage; kind: ToolFlowKind };
   onBack: () => void;
   onTool: (tool: ToolDefinition) => void;
   onPreview: () => void;
@@ -257,6 +260,7 @@ export function DocumentWorkspace({
   const isPdf = fileKind(target) === "PDF";
   return (
     <main className="v3Main v3DocumentMode" id="workspace">
+      {taskJourney && <TaskJourneyNav stage={taskJourney.stage} kind={taskJourney.kind} />}
       <section className="v3DocumentBar" id="workspace-target">
         <button className="v3BackLink" type="button" onClick={onBack}>← กลับ</button>
         <span className={`v3FileBadge ${fileKind(target).toLowerCase()}`}>{fileKind(target)}</span>
