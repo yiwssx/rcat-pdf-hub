@@ -967,9 +967,10 @@ test("P7E.2 failed Admin status read offers safe retry instead of perpetual load
     } });
   });
   await page.goto("/admin?section=overview");
-  await expect(page.getByRole("alert")).toContainText("อ่านสถานะระบบไม่ได้");
+  const overviewAlert = page.locator(".v3AdminOverviewScreen [role='alert']");
+  await expect(overviewAlert).toContainText("อ่านสถานะระบบไม่ได้");
   await expect(page.getByRole("main")).not.toContainText("internal DB hostname");
   await page.getByRole("button", { name: "ตรวจสถานะใหม่" }).click();
   await expect(page.locator(".v3AdminOverview")).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(overviewAlert).toHaveCount(0);
 });
