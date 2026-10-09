@@ -289,7 +289,7 @@ test("propagates the session through preview, job detail, drawer, download and u
   await page.getByRole("button", { name: /งานล่าสุด/ }).click();
   await expect(page.locator(".v3JobDrawer")).toBeVisible();
   await expect(page.locator(".jobInfo").getByText("compress", { exact: true })).toBeVisible();
-  await expect(page.locator(".v3JobBadge.completed")).toContainText("100%");
+  await expect(page.locator(".v3JobDrawer .v3JobBadge.completed")).toContainText("100%");
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "ดาวน์โหลด", exact: true }).click();
