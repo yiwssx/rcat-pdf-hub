@@ -58,7 +58,7 @@ const ToolWorkspace = dynamic(
 
 const imageContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
 
-const tools = PDF_TOOLS;
+const tools: ToolDefinition[] = [...PDF_TOOLS];
 
 function isPdf(file: UploadedFile | null) {
   return Boolean(file && (file.content_type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf")));
