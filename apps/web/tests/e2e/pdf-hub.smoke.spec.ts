@@ -496,3 +496,43 @@ test("P7A.2 image-to-PDF payload retains reviewed image sequence", async ({ page
   await page.getByRole("button", { name: "สร้าง PDF จากภาพ" }).click();
   expect((await request).postDataJSON()).toMatchObject({ file_ids: ["img-2", "img-1"] });
 });
+
+test("P7B.1 journey shows explicit intake and configure steps with back navigation", async ({ page }) => {
+  await page.goto("/tools/compress");
+  const nav = page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" });
+  await expect(nav.locator('[aria-current="step"]')).toContainText("เลือกไฟล์");
+  await page.getByRole("radio", { name: "example.pdf" }).check();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+  await expect(nav.locator('[aria-current="step"]')).toContainText("ตั้งค่า");
+  await page.locator(".v3DocumentBar .v3BackLink").click();
+  await expect(nav.locator('[aria-current="step"]')).toContainText("เลือกไฟล์");
+
+  await page.goto("/tools/archive");
+  await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" })).toContainText("จัดเก็บ");
+});
+
+test("P7B.1 synchronous double click creates exactly one backend processing job", async ({ page }) => {
+  let requestCount = 0;
+  await page.route("**/api/v1/pdf/compress", async (route) => {
+    requestCount += 1;
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    await route.fulfill({
+      json: {
+        id: "job-compress-guarded", operation: "compress", status: "completed", progress: 100,
+        input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+        params: {}, error: null, requested_by: "web-console:smoke-test",
+      },
+    });
+  });
+
+  await page.goto("/tools/compress?file=file-pdf-1");
+  const button = page.getByRole("button", { name: "บีบอัด PDF" });
+  await expect(button).toBeEnabled();
+  await button.evaluate((node) => {
+    (node as HTMLButtonElement).click();
+    (node as HTMLButtonElement).click();
+  });
+  await expect(page.locator(".v3JobDrawer")).toBeVisible();
+  expect(requestCount).toBe(1);
+  await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" }).locator('[aria-current="step"]')).toContainText("ผลลัพธ์");
+});
