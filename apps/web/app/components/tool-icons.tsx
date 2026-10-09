@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export type ToolIconName =
   | "scan" | "merge" | "organize" | "split" | "compress" | "image" | "imagePdf"
   | "watermark" | "numbers" | "archive" | "office" | "stamp" | "link" | "pdfa";
@@ -33,10 +35,6 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
 
 export function BrandGlyph() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M13 7h15l8 8v25H13a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z" fill="currentColor" opacity=".18"/>
-      <path d="M28 7v9h8" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/>
-      <path d="M16 24h13M16 30h10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-    </svg>
+    <Image src="/assets/rcat-college-logo.webp" alt="" width={128} height={128} unoptimized />
   );
 }
