@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from sqlalchemy import select
@@ -193,7 +193,10 @@ def reconcile_storage(db: Session, detail_limit: int = 200) -> dict:
 
     issues.sort(key=lambda issue: (issue["category"], issue["stored_name"], issue["file_id"] or ""))
     total_issues = len(issues)
+    # Aggregate on the full issue set before trimming potentially sensitive details.
+    category_counts = dict(sorted(Counter(issue["category"] for issue in issues).items()))
     return {
+        "category_counts": category_counts,
         "dry_run": True,
         "backend": settings.storage_backend,
         "database_records": len(records),
