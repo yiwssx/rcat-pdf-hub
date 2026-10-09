@@ -261,13 +261,18 @@ test("tool workspace owns settings and submits the configured watermark payload"
     position: "center",
     margin: 36,
   });
-  await expect(page.locator(".v3JobDrawer")).toBeVisible();
-  await page.locator(".v3JobDrawer").getByRole("button", { name: "×" }).click();
-  await page.getByRole("button", { name: /ลายน้ำ/ }).click();
-  await expect(page.getByLabel("ข้อความ")).toHaveValue("เอกสารทดสอบ");
+  await expect(page).toHaveURL(/\/jobs\/job-watermark-1$/);
+  await expect(page.getByRole("heading", { name: "สถานะงาน PDF" })).toBeVisible();
 });
 
-test("propagates the session through preview, job drawer, download and upload", async ({ page }) => {
+test("propagates the session through preview, job detail, drawer, download and upload", async ({ page }) => {
+  const completed = {
+    id: "job-compress-1", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: [initialFile.id], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  };
+  await page.route("**/api/v1/jobs?limit=50", (route) => route.fulfill({ json: [completed] }));
+  await page.route("**/api/v1/jobs/job-compress-1", (route) => route.fulfill({ json: completed }));
   await page.goto("/");
 
   await expect(page.locator("#workspace")).toBeVisible();
@@ -279,6 +284,9 @@ test("propagates the session through preview, job drawer, download and upload", 
 
   await page.getByRole("button", { name: /ลดขนาด PDF/ }).click();
   await page.getByRole("button", { name: "บีบอัด PDF" }).click();
+  await expect(page).toHaveURL(/\/jobs\/job-compress-1$/);
+  await expect(page.getByRole("heading", { name: "สถานะงาน PDF" })).toBeVisible();
+  await page.getByRole("button", { name: /งานล่าสุด/ }).click();
   await expect(page.locator(".v3JobDrawer")).toBeVisible();
   await expect(page.locator(".jobInfo").getByText("compress", { exact: true })).toBeVisible();
   await expect(page.locator(".v3JobBadge.completed")).toContainText("100%");
@@ -360,11 +368,13 @@ test("admin console exposes effective identity role groups and scopes", async ({
 
 test("completed jobs expose file context and can clear terminal history", async ({ page }) => {
   page.on("dialog", (dialog) => void dialog.accept());
+  await page.route("**/api/v1/jobs?limit=50", (route) => route.fulfill({ json: [{
+    id: "job-compress-history-1", operation: "compress", status: "completed", progress: 100,
+    input_file_ids: [initialFile.id], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  }] }));
   await page.goto("/");
-  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
-  await page.getByRole("button", { name: /ลดขนาด PDF/ }).click();
-  await page.getByRole("button", { name: "บีบอัด PDF" }).click();
-
+  await page.getByRole("button", { name: /งานล่าสุด/ }).click();
   const drawer = page.locator(".v3JobDrawer");
   await expect(drawer).toContainText("example.pdf");
   await expect(drawer.getByRole("button", { name: "ล้างประวัติ" })).toBeVisible();
@@ -575,20 +585,20 @@ test("P7C.1 job link survives refresh and renders backend-authoritative state tr
   const main = page.getByRole("main", { name: "รายละเอียดงานประมวลผล" });
   await expect(main).toContainText("รอประมวลผล");
   await expect(main).toContainText("กำลังประมวลผล", { timeout: 10000 });
-  await expect(main.getByText("ประมวลผลเสร็จแล้ว")).toBeVisible({ timeout: 10000 });
+  await expect(main.locator(".v3JobBadge.completed")).toBeVisible({ timeout: 10000 });
   await expect(main.getByRole("progressbar", { name: "ความคืบหน้างาน" })).toHaveCount(0);
   await page.reload();
-  await expect(main.getByText("ประมวลผลเสร็จแล้ว")).toBeVisible();
+  await expect(main.locator(".v3JobBadge.completed")).toBeVisible();
 });
 
 test("P7C.1 owned job endpoint denies unknown and foreign jobs without disclosing data", async ({ page }) => {
   await page.route("**/api/v1/jobs/job-private-1", async (route) => route.fulfill({ status: 403, json: { detail: "Job belongs to another service" } }));
   await page.goto("/jobs/job-private-1");
-  await expect(page.getByRole("alert")).toContainText("ไม่มีสิทธิ์");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("ไม่มีสิทธิ์");
   await expect(page.locator(".v3JobDetailCard")).not.toContainText("belongs to another service");
   await page.route("**/api/v1/jobs/job-missing-1", async (route) => route.fulfill({ status: 404, json: { detail: "Job not found" } }));
   await page.goto("/jobs/job-missing-1");
-  await expect(page.getByRole("alert")).toContainText("ไม่พบงาน");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("ไม่พบงาน");
 });
 
 test("P7C.1 failed jobs allow scoped retry into new durable URL", async ({ page }) => {
@@ -603,7 +613,7 @@ test("P7C.1 failed jobs allow scoped retry into new durable URL", async ({ page 
     error: null, requested_by: "web-console:smoke-test",
   }}));
   await page.goto("/jobs/job-failed-1");
-  await expect(page.getByRole("alert")).toContainText("งานนี้ไม่สำเร็จ");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("งานนี้ไม่สำเร็จ");
   await expect(page.getByRole("main")).not.toContainText("worker internal trace");
   await page.getByRole("button", { name: "ลองประมวลผลใหม่" }).click();
   await expect(page).toHaveURL(/\/jobs\/job-retry-2$/);
@@ -621,7 +631,7 @@ test("P7C.1 transient job fetch error offers manual retry", async ({ page }) => 
     }});
   });
   await page.goto("/jobs/job-outage-1");
-  await expect(page.getByRole("alert")).toContainText("เชื่อมต่อสถานะงานไม่ได้");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("เชื่อมต่อสถานะงานไม่ได้");
   await page.getByRole("button", { name: "รีเฟรชสถานะ" }).click();
   await expect(page.getByRole("main")).toContainText("ยกเลิกงานแล้ว");
 });
