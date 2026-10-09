@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7F.2 PERMISSIONS / AUDITED ACTIONS**
+Status: **IN PROGRESS — P7G.1 EFFECTIVE ACCESS (P7F.2 PARTIAL)**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -42,12 +42,12 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | COMPLETE | 7E.1 | PR #140 merged `fb5af25da258db38efca677d590cd694608822a6`; Web CI #37901625014, CodeQL #37901624801, Dependency Review #37901624950 PASS |
 | 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | COMPLETE | 7E.2 | PR #142 merged `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 PASS |
 | 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | IN PROGRESS | 7F.1 | PR #143 merged `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; PR #144 merged `f0b9ff968d3e50415dd3d05a55030410d6d83c59` (Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 PASS); cross-account mutations remain explicitly pending |
-| 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | PENDING | 7E.1 | — |
+| 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | IN PROGRESS | 7E.1 | `feat/p7g1-effective-role-quotas`; self-scoped role/limits display, API/Web CI pending; no identity mutations |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | PENDING | 7E.2, 7F.2 | — |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A–P7E COMPLETE; P7F IN PROGRESS (7F.1 merged; 7F.2 permission hardening active); P7G–P7H PENDING. No Phase 7 deploy or release.
+**Roll-up:** P7A–P7E COMPLETE; P7F IN PROGRESS (7F.1 complete, 7F.2 partial); P7G IN PROGRESS (7G.1 active); P7H PENDING. No Phase 7 deploy or release.
 
 ## User flow contract
 
@@ -162,10 +162,13 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7F.1 | Minimized human Admin triage with bounded filters, audit gate, negative tests and UI merged | PR #142, merge `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 | COMPLETE |
 | 2026-10-09 | 7F.2 | Human/session wildcard owner isolation and security action matrix merged | PR #143, merge `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; Core API CI #37903849520, CodeQL #37903849543, Dependency Review #37903849917 | IN PROGRESS |
 | 2026-10-09 | 7F.2 | Confirmed owner-scoped Cancel/Retry, synchronous duplicate prevention and fail-closed Audit Intent on cancel/retry/purge merged | PR #144, merge `f0b9ff968d3e50415dd3d05a55030410d6d83c59`; Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 | IN PROGRESS |
+| 2026-10-09 | 7G.1 | Begin self-scoped effective role, scope and quota visibility with explicit bootstrap exemption | `feat/p7g1-effective-role-quotas`; PR/CI pending | IN PROGRESS |
 
 ## Current next action
 
 **P7F.2 execution:** PRs #143 and #144 merged with security/regression gates. General jobs are owner-scoped for signed identities; Cancel/Retry/terminal-clear now fail closed on missing preaction audit, and Cancel/Retry require explicit client consent and synchronous duplicate guard. The only outstanding F2 decision is whether any **cross-account** Admin mutation is authorized, with race/ownership/quota/audit review; generic repair is unsupported. Do not mark 7F.2 complete without recording that decision and testing permitted scope. P7G.1's read-only effective-role work can proceed independently; no deploy/tag before P7H.
+
+**P7G.1 execution:** expose current signed principal's effective roles, scopes and rate/job/storage limits on existing authenticated identity response, with explicit bootstrap exemption. Add UI on Access panel and user-safe E2E. Do not expose credentials or introduce identity changes. Cross-account effective-role introspection requires a separately reviewed privacy/permission boundary; do not close P7G.1 on self-only information until accepted scope is recorded.
 
 ## Tracker state protocol
 
