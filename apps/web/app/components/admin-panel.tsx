@@ -62,7 +62,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setAudit(auditRows);
       setDeliveries(deliveryRows);
       setMessage("โหลดข้อมูลผู้ดูแลและ webhook delivery แล้ว");
-    } catch (error) {
+    } catch {
       setMessage("โหลดข้อมูล Admin ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และสถานะบริการ");
     } finally {
       setBusy(false);
@@ -93,7 +93,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setWebhookUrl("");
       setMessage("สร้าง service key แล้ว — plaintext key แสดงครั้งนี้ครั้งเดียว");
       setKeys(await listApiKeys(apiKey));
-    } catch (error) {
+    } catch {
       setMessage("สร้าง Service Key ไม่สำเร็จ กรุณาตรวจสอบข้อมูลและสถานะ Audit");
     } finally {
       actionInFlight.current = false;
@@ -110,7 +110,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       await revokeApiKey(record.id, apiKey);
       setKeys(await listApiKeys(apiKey));
       setMessage(`Revoke ${record.name} แล้ว`);
-    } catch (error) {
+    } catch {
       setMessage("Revoke ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และสถานะ Audit");
     } finally {
       actionInFlight.current = false;
@@ -128,7 +128,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setEditing(result);
       setKeys(await listApiKeys(apiKey));
       setMessage(`บันทึก policy ของ ${result.service_name} แล้ว`);
-    } catch (error) {
+    } catch {
       setMessage("บันทึก Policy ไม่สำเร็จ กรุณาตรวจสอบค่าและสถานะ Audit");
     } finally {
       actionInFlight.current = false;
@@ -145,7 +145,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       await retryWebhookDelivery(delivery.id, apiKey);
       setDeliveries(await listWebhookDeliveries(apiKey));
       setMessage(`นำ delivery ${delivery.id.slice(0, 8)} กลับเข้าคิวแล้ว`);
-    } catch (error) {
+    } catch {
       setMessage("Replay Webhook ไม่สำเร็จ กรุณาตรวจสอบสถานะ Delivery และ Audit");
     } finally {
       actionInFlight.current = false;
