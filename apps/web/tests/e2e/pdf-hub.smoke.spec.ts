@@ -414,3 +414,14 @@ test("P7A.1 file-selected deep links respect the authorized library", async ({ p
   await expect(page.locator("#workspace-target")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "เลือกไฟล์ที่มีอยู่" })).toBeVisible();
 });
+
+test("P7A.1 routed merge never adds an unrelated library PDF implicitly", async ({ page }) => {
+  const otherPdf = { ...initialFile, id: "file-pdf-2", original_name: "unrelated.pdf" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, otherPdf] }));
+  await page.goto("/tools/merge-pdf?file=file-pdf-1");
+
+  await expect(page.locator(".v3ToolPanel")).toBeVisible();
+  await expect(page.locator(".v3MergeList")).toContainText("example.pdf");
+  await expect(page.locator(".v3MergeList")).not.toContainText("unrelated.pdf");
+  await expect(page.getByRole("button", { name: /รวม PDF/ }).last()).toBeDisabled();
+});
