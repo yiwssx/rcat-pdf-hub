@@ -1494,3 +1494,18 @@ summary {
 @media (max-width: 650px) {
   .v3AdminIssue { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* P7F.1: bounded, read-only operational job list */
+.v3AdminTriageFilters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0; }
+.v3AdminTriageFilters label { display: grid; gap: 5px; font-size: 13px; font-weight: 700; }
+.v3AdminTriageFilters form { display: flex; align-items: end; gap: 8px; flex-wrap: wrap; }
+.v3AdminTriageFilters input, .v3AdminTriageFilters select { max-width: 240px; min-height: 38px; padding: 8px; border: 1px solid var(--v3-line); border-radius: 10px; background: var(--v3-surface); }
+.v3AdminTriageFilters button { min-height: 38px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--v3-line); cursor: pointer; }
+.v3AdminTriageList { display: grid; gap: 9px; margin-top: 14px; }
+.v3AdminTriageRow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(120px, .4fr); gap: 12px; align-items: center; padding: 13px; background: var(--v3-surface-soft); border: 1px solid var(--v3-line); border-radius: 12px; }
+.v3AdminTriageRow > div { min-width: 0; display: grid; gap: 4px; }
+.v3AdminTriageRow strong { font-size: 14px; }
+.v3AdminTriageRow small { font-size: 12px; color: var(--v3-muted); overflow-wrap: anywhere; }
+.v3AdminTriageNote { color: var(--v3-muted); font-size: 12px; }
+@media (max-width: 700px) { .v3AdminTriageRow { grid-template-columns: minmax(0,1fr) auto; } .v3AdminTriageRow > div:last-child { grid-column: 1 / -1; } }

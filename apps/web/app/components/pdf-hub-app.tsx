@@ -39,6 +39,7 @@ import { MyJobsScreen } from "./my-jobs-screen";
 import { FileDetailScreen } from "./file-detail-screen";
 import { AdminAreaNav, type AdminArea } from "./admin-area-nav";
 import { AdminOverviewScreen } from "./admin-overview-screen";
+import { AdminJobTriagePanel } from "./admin-job-triage-panel";
 import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -598,7 +599,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
                 </div>
                 <p>คิวรอ {adminStatus.queue_depth} งาน · Worker {adminStatus.workers} ตัว</p>
               </> : <p role="status">กำลังโหลดข้อมูลคิวงาน…</p>}
-              <p>หน้านี้แสดงเฉพาะภาพรวม ไม่มีการเปิดอ่านงานหรือไฟล์ของผู้ใช้อื่น รายการงานระดับผู้ดูแลจะพัฒนาแยกใน P7F หลังตรวจสิทธิ์</p>
+              <AdminJobTriagePanel auth={auth} />
               <a className="v3TextLink" href="/jobs">งานของฉัน →</a>
             </section>}
             {initialAdminArea === "access" && <>

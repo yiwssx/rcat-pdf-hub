@@ -45,6 +45,31 @@ export type Job = {
   requested_by: string;
 };
 
+export type AdminJobTriageItem = {
+  id: string;
+  operation: string;
+  status: Job["status"];
+  progress: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  failure_recorded: boolean;
+};
+
+export type AdminJobTriagePage = {
+  items: AdminJobTriageItem[];
+  limit: number;
+  offset: number;
+  has_more: boolean;
+};
+
+export type AdminJobTriageQuery = {
+  limit?: number;
+  offset?: number;
+  status?: Job["status"];
+  operation?: string;
+};
+
 export type ServicePolicy = {
   service_name: string;
   rate_limit_per_minute: number;
@@ -427,6 +452,17 @@ export async function listAudit(auth: string): Promise<AuditEvent[]> {
   return expectJson<AuditEvent[]>(await request("/api/v1/admin/audit?limit=100", { headers: headers(auth), cache: "no-store" }));
 }
 
+
+export async function listAdminJobTriage(auth: string, query: AdminJobTriageQuery = {}): Promise<AdminJobTriagePage> {
+  const params = new URLSearchParams();
+  params.set("limit", String(query.limit ?? 25));
+  params.set("offset", String(query.offset ?? 0));
+  if (query.status) params.set("status", query.status);
+  if (query.operation) params.set("operation", query.operation);
+  return expectJson<AdminJobTriagePage>(await request(`/api/v1/admin/jobs/triage?${params.toString()}`, {
+    headers: headers(auth), cache: "no-store",
+  }));
+}
 
 export async function getAdminStatus(auth: string): Promise<AdminStatus> {
   return expectJson<AdminStatus>(await request("/api/v1/admin/status", { headers: headers(auth), cache: "no-store" }));

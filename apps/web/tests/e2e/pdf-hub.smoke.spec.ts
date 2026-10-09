@@ -62,6 +62,10 @@ async function installApiMocks(page: Page) {
     });
   });
 
+  await page.route("**/api/v1/admin/jobs/triage?**", async (route) => {
+    await route.fulfill({ json: { items: [], limit: 25, offset: 0, has_more: false } });
+  });
+
   await page.route("**/api/v1/admin/status", async (route) => {
     await route.fulfill({
       json: {
@@ -973,4 +977,70 @@ test("P7E.2 failed Admin status read offers safe retry instead of perpetual load
   await page.getByRole("button", { name: "ตรวจสถานะใหม่" }).click();
   await expect(page.locator(".v3AdminOverview")).toBeVisible();
   await expect(overviewAlert).toHaveCount(0);
+});
+
+test("P7F.1 Admin triage is read-only, paginated, scoped to safe fields and server-filtered", async ({ page }) => {
+  const jobs = Array.from({ length: 27 }, (_, idx) => ({
+    id: `triage-${String(idx).padStart(2, "0")}`,
+    operation: idx % 2 ? "ocr" : "compress",
+    status: idx % 2 ? "running" : "failed",
+    progress: idx,
+    created_at: "2026-10-09T07:00:00Z",
+    started_at: null, finished_at: null,
+    failure_recorded: idx % 2 === 0,
+  }));
+  const readUrls: URL[] = [];
+  await page.route("**/api/v1/admin/jobs/triage?**", async (route) => {
+    const url = new URL(route.request().url());
+    readUrls.push(url);
+    const filtered = jobs.filter((j) =>
+      (!url.searchParams.has("status") || j.status === url.searchParams.get("status"))
+      && (!url.searchParams.has("operation") || j.operation === url.searchParams.get("operation"))
+    );
+    const offset = Number(url.searchParams.get("offset") || 0);
+    const limit = Number(url.searchParams.get("limit") || 25);
+    await route.fulfill({ json: {
+      items: filtered.slice(offset, offset + limit), limit, offset,
+      has_more: filtered.length > offset + limit,
+    } });
+  });
+
+  await page.goto("/admin?section=jobs");
+  const section = page.getByRole("region", { name: "รายการงานสำหรับวิเคราะห์ปัญหา" });
+  await expect(section).toBeVisible();
+  await expect(section.locator(".v3AdminTriageRow")).toHaveCount(25);
+  await expect(section).not.toContainText("secret-file-id");
+  await expect(section).not.toContainText("user:alice");
+  await expect(section.getByRole("button", { name: /Retry|Cancel|Repair/ })).toHaveCount(0);
+  await section.getByRole("navigation", { name: "หน้ารายการงานระดับผู้ดูแล" }).getByRole("button", { name: "ถัดไป →" }).click();
+  await expect(section.locator(".v3AdminTriageRow")).toHaveCount(2);
+  await section.getByLabel("กรองสถานะงานของระบบ").selectOption("failed");
+  await expect(section.locator(".v3AdminTriageRow")).toHaveCount(14);
+  await section.getByLabel("กรองประเภทงาน").fill("compress");
+  await section.getByRole("button", { name: "ใช้ตัวกรอง" }).click();
+  await expect(section.locator(".v3AdminTriageRow")).toHaveCount(14);
+  expect(readUrls.some((url) => url.searchParams.get("status") === "failed")).toBe(true);
+  expect(readUrls.some((url) => url.searchParams.get("operation") === "compress")).toBe(true);
+  expect(readUrls.every((url) => url.searchParams.get("limit") === "25")).toBe(true);
+  expect(readUrls.every((url) => !url.searchParams.has("mine"))).toBe(true);
+});
+
+test("P7F.1 triage denial and audit failure never reveal raw response or enable actions", async ({ page }) => {
+  await page.route("**/api/v1/admin/jobs/triage?**", async (route) => route.fulfill({
+    status: 503, json: { detail: "secret audit file path" },
+  }));
+  await page.goto("/admin?section=jobs");
+  const section = page.getByRole("region", { name: "รายการงานสำหรับวิเคราะห์ปัญหา" });
+  await expect(section.getByRole("alert")).toContainText("ไม่สามารถอ่านรายการงาน");
+  await expect(section).not.toContainText("secret audit file path");
+  await expect(section.getByRole("button", { name: /Retry|Cancel|Repair/ })).toHaveCount(0);
+
+  await page.route("**/api/v1/auth/me", async (route) => route.fulfill({
+    json: operatorIdentityFixture({
+      name: "user:viewer", roles: ["viewer"], scopes: ["jobs:read"], is_admin: false,
+    }),
+  }));
+  await page.goto("/admin?section=jobs");
+  await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "รายการงานสำหรับวิเคราะห์ปัญหา" })).toHaveCount(0);
 });

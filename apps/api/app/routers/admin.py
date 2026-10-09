@@ -1,5 +1,6 @@
 import shutil
 import json
+from typing import Literal
 
 import httpx
 
@@ -15,6 +16,8 @@ from app.observability import collect_queue_runtime_snapshot
 from app.policy import effective_policy
 from app.queue import redis_conn
 from app.schemas import (
+    AdminJobTriageItemOut,
+    AdminJobTriagePageOut,
     ApiKeyCreate,
     ApiKeyCreated,
     ApiKeyOut,
@@ -166,6 +169,53 @@ def admin_status(
         },
         "principal": principal.name,
     }
+
+
+def _require_human_triage_admin(principal: Principal) -> None:
+    # Both bootstrap and wildcard service/API-key principals must be denied.
+    if (
+        not principal.is_identity_admin
+        or "admin" not in principal.roles
+        or principal.auth_source not in {"oidc", "ldap", "local-admin"}
+    ):
+        raise HTTPException(status_code=403, detail="Human Admin identity required")
+
+
+@router.get("/jobs/triage", response_model=AdminJobTriagePageOut)
+def list_admin_job_triage(
+    status: Literal["queued", "running", "completed", "failed", "cancelled"] | None = Query(default=None),
+    operation: str | None = Query(default=None, min_length=1, max_length=40, pattern=r"^[a-z0-9-]+$"),
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=100000),
+    principal: Principal = Depends(require_scope("admin:keys")),
+    db: Session = Depends(get_db),
+) -> AdminJobTriagePageOut:
+    _require_human_triage_admin(principal)
+    # Fail closed if the privileged read cannot be audited.
+    if not audit_event(
+        "admin.jobs_triage.read", principal.name, "job_triage", None,
+        {"status": status, "operation": operation, "limit": limit, "offset": offset},
+    ):
+        raise HTTPException(status_code=503, detail="Admin audit unavailable")
+
+    stmt = select(
+        JobRecord.id, JobRecord.operation, JobRecord.status, JobRecord.progress,
+        JobRecord.created_at, JobRecord.started_at, JobRecord.finished_at,
+        JobRecord.error.is_not(None).label("failure_recorded"),
+    )
+    if status is not None:
+        stmt = stmt.where(JobRecord.status == status)
+    if operation is not None:
+        stmt = stmt.where(JobRecord.operation == operation)
+    stmt = stmt.order_by(desc(JobRecord.created_at), desc(JobRecord.id))
+    rows = db.execute(stmt.offset(offset).limit(limit + 1)).all()
+    items = [
+        AdminJobTriageItemOut(**dict(row._mapping))
+        for row in rows[:limit]
+    ]
+    return AdminJobTriagePageOut(
+        items=items, limit=limit, offset=offset, has_more=len(rows) > limit,
+    )
 
 
 @router.get("/storage-reconciliation", response_model=StorageReconciliationOut)
