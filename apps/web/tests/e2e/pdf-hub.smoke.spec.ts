@@ -473,3 +473,26 @@ test("P7A.2 single-file intake requires explicit choice and rejects other file t
   await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
   await expect(page.locator("#workspace-target")).toContainText("example.pdf");
 });
+
+test("P7A.2 image-to-PDF payload retains reviewed image sequence", async ({ page }) => {
+  const first = { ...initialFile, id: "img-1", original_name: "first.png", content_type: "image/png" };
+  const second = { ...initialFile, id: "img-2", original_name: "second.png", content_type: "image/png" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [first, second] }));
+  await page.route("**/api/v1/pdf/images-to-pdf", (route) => route.fulfill({
+    json: {
+      id: "job-img-1", operation: "images-to-pdf", status: "queued", progress: 0,
+      input_file_ids: ["img-2", "img-1"], output_file_id: null, params: {},
+      error: null, requested_by: "web-console:smoke-test",
+    },
+  }));
+
+  await page.goto("/tools/images-to-pdf");
+  await page.getByRole("checkbox", { name: "first.png" }).check();
+  await page.getByRole("checkbox", { name: "second.png" }).check();
+  await page.getByRole("button", { name: "เลื่อน second.png ขึ้น" }).click();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+
+  const request = page.waitForRequest("**/api/v1/pdf/images-to-pdf");
+  await page.getByRole("button", { name: "สร้าง PDF จากภาพ" }).click();
+  expect((await request).postDataJSON()).toMatchObject({ file_ids: ["img-2", "img-1"] });
+});
