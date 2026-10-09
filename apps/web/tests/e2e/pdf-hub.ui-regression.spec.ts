@@ -117,7 +117,10 @@ test("shows the RCAT college emblem as the shared brand icon", async ({ page }) 
   const emblem = page.locator(".v3BrandMark img");
   await expect(emblem).toBeVisible();
   await expect(emblem).toHaveAttribute("src", "/assets/rcat-college-logo.webp");
-  const loaded = await emblem.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0);
+  const loaded = await emblem.evaluate((element) => {
+    const image = element as HTMLImageElement;
+    return image.complete && image.naturalWidth > 0;
+  });
   expect(loaded).toBe(true);
   await expect(page.locator('link[rel="icon"][href="/assets/rcat-college-logo.webp"]')).toHaveCount(1);
 });
