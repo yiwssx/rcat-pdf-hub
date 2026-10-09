@@ -21,7 +21,7 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, onChange, onUpl
   const rule = TOOL_INPUT_RULES[tool.id];
   const eligible = useMemo(() => files.filter((file) => isEligibleToolFile(tool.id, file)), [files, tool.id]);
   const displayed = eligible.filter((file) => file.original_name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).slice(0, 100);
-  const selected = selectedIds.map((id) => eligible.find((file) => file.id === id)).filter((file): file is UploadedFile => Boolean(file));
+  const selected = selectedIds.map((id) => files.find((file) => file.id === id)).filter((file): file is UploadedFile => Boolean(file));
   const multi = !rule.max || rule.max > 1;
   const validation = selected.length !== selectedIds.length ? "ไฟล์บางรายการไม่อยู่ในคลังไฟล์ที่คุณเข้าถึงได้" : validateToolInputs(tool.id, selected);
 
