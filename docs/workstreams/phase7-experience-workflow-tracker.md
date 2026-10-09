@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7C.3 RESULT CHAINING**
+Status: **IN PROGRESS — P7D.1 MY JOBS**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -35,8 +35,8 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7B.2 | Configure/preview/submit contract using current ToolWorkspace and one primary action | COMPLETE | 7B.1 | PR #132 merged `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 PASS |
 | 7C.1 | Job detail/progress surface for queued/running/completed/failed/cancelled; polling and error recovery | COMPLETE | 7B.2 | PR #134 merged `04382a1f763abf900f9cf3520eba2383fb06b05c`; Web CI #37897501924, CodeQL #37897501993, Dependency Review #37897501952 PASS |
 | 7C.2 | Durable authenticated result route; correct output/expiry handling; primary download action | COMPLETE | 7C.1 | PR #135 merged `b6e5e538dc88fc77161d25a420a364bf460e47b0`; Web CI #37898003345, CodeQL #37898003319, Dependency Review #37898003281 PASS |
-| 7C.3 | Continue with eligible tool via `output_file_id` without downloading/reuploading | IN PROGRESS | 7C.2 | `feat/p7c3-output-tool-handoff`; PR / CI pending |
-| 7D.1 | User-scoped My Jobs history/status filtering; reopen active or prior jobs | PENDING | 7C.2 | — |
+| 7C.3 | Continue with eligible tool via `output_file_id` without downloading/reuploading | COMPLETE | 7C.2 | PR #136 merged `07e61f77754b03a331b411ebf0055cd5f3f27354`; Web CI #37898421603, CodeQL #37898421476, Dependency Review #37898421573 PASS |
+| 7D.1 | User-scoped My Jobs history/status filtering; reopen active or prior jobs | IN PROGRESS | 7C.2 | `feat/p7d1-my-jobs-history`; Core API/Web CI pending |
 | 7D.2 | My Files ↔ tools ↔ result navigation; refresh recovery and expired/missing file states | PENDING | 7D.1 | — |
 | 7E.1 | Admin information architecture: Overview, Jobs, Access, Storage, Diagnostics, Integrations | PENDING | 7.0 | — |
 | 7E.2 | Actionable Admin Overview based on existing availability, jobs, queue and storage status | PENDING | 7E.1 | — |
@@ -47,7 +47,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A and P7B `COMPLETE`; P7C `IN PROGRESS` (7C.1/7C.2 complete; 7C.3 active); P7D–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
+**Roll-up:** P7A, P7B and P7C `COMPLETE`; P7D `IN PROGRESS` (7D.1 active); P7E–P7H `PENDING`. No Phase 7 release, deployment or production acceptance has occurred.
 
 ## User flow contract
 
@@ -134,11 +134,12 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | 2026-10-09 | 7B.2 | Validated single/multi-file configuration and preview/submit contract; merged after Playwright, CodeQL and dependency gates | PR #132, merge `d8c193270ee430459d3b6325676bd60a09c2e829`; Web CI #37896155601, CodeQL #37896155568, Dependency Review #37896155388 | COMPLETE |
 | 2026-10-09 | 7C.1 | Durable job status, polling, scoped denial/error recovery and retry tested; merged after full CI | PR #134, merge `04382a1f763abf900f9cf3520eba2383fb06b05c`; Web CI #37897501924, CodeQL #37897501993, Dependency Review #37897501952 | COMPLETE |
 | 2026-10-09 | 7C.2 | Authenticated result route, original-name downloads, expiry/missing/403/410 recovery validated and merged | PR #135, merge `b6e5e538dc88fc77161d25a420a364bf460e47b0`; Web CI #37898003345, CodeQL #37898003319, Dependency Review #37898003281 | COMPLETE |
-| 2026-10-09 | 7C.3 | Start eligible follow-on links from owned completed outputs, keeping original output ID and avoiding reupload | `feat/p7c3-output-tool-handoff`; CI pending | IN PROGRESS |
+| 2026-10-09 | 7C.3 | Compatible tool links retain output ID with no duplicate POST upload, tested PDF/image/expired paths | PR #136, merge `07e61f77754b03a331b411ebf0055cd5f3f27354`; Web CI #37898421603, CodeQL #37898421476, Dependency Review #37898421573 | COMPLETE |
+| 2026-10-09 | 7D.1 | Start bounded server-side owned jobs list, status/page filters and history route with admin mine-only defense | `feat/p7d1-my-jobs-history`; Core API/Web CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7C.3 execution:** verify owned result -> compatible `/tools/[slug]?file=<output_file_id>` -> reviewed input -> exact new job payload with no reupload; disallow incompatible/missing/expired outputs. Merge only after Web CI/CodeQL/Dependency Review PASS. Next P7D.1 My Jobs history. No deploy/tag before P7H.
+**P7D.1 execution:** validate `mine=true` even for admin wildcard identities; bounded/paginated/status-filtered jobs, user history links, private-job denial, Core API coverage/contract, Web CI, CodeQL and Dependency Review before merging. Next P7D.2 My Files cross-navigation. No deploy/tag before P7H.
 
 ## Tracker state protocol
 

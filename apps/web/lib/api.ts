@@ -321,8 +321,23 @@ export async function getJob(jobId: string, auth: string): Promise<Job> {
   return res.json() as Promise<Job>;
 }
 
-export async function listJobs(auth: string): Promise<Job[]> {
-  return expectJson<Job[]>(await request("/api/v1/jobs?limit=50", { headers: headers(auth), cache: "no-store" }));
+export type JobsListQuery = {
+  mine?: boolean;
+  limit?: number;
+  offset?: number;
+  status?: Job["status"];
+};
+
+export async function listJobs(auth: string, query: JobsListQuery = {}): Promise<Job[]> {
+  const params = new URLSearchParams();
+  params.set("limit", String(query.limit ?? 50));
+  if (query.mine) params.set("mine", "true");
+  if (query.offset) params.set("offset", String(query.offset));
+  if (query.status) params.set("status", query.status);
+  return expectJson<Job[]>(await request(`/api/v1/jobs?${params.toString()}`, {
+    headers: headers(auth),
+    cache: "no-store",
+  }));
 }
 
 
