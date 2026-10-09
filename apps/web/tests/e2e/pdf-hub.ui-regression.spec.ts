@@ -264,3 +264,57 @@ test("keeps browser performance within the measured Phase 6 baseline", async ({ 
     }
   }
 });
+
+test("P7H.1 Admin Overview, Jobs, Storage, Access and Integrations fit mobile and pass accessibility audit", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: operatorIdentityFixture({
+    name: "user:admin-p7h1", display_name: "Admin H1", subject: "admin-h1",
+    roles: ["admin"], scopes: ["*"], is_admin: true,
+  }) }));
+  await page.route("**/api/v1/admin/status", (route) => route.fulfill({ json: {
+    database_ok: true, redis_ok: true, workers: 2, queue_depth: 1,
+    storage_backend: "local", storage_write_ok: true, gotenberg_ok: true,
+    data_dir: "/data", disk: { total: 1024 * 1024 * 1024, used: 3000, free: 1024 * 1024 * 512 },
+    pdfhub_bytes: 2048, files: 1,
+    jobs: { queued: 1, running: 0, completed: 2, failed: 0, cancelled: 0 },
+    retention_hours: 24, cleanup_temporary_hours: 6, clamav_enabled: true, paperless_enabled: false,
+    tools: { qpdf: true, gs: true, ocrmypdf: true, tesseract: true, pdftoppm: true },
+    auth: { local_admin: true, oidc: true, ldap: false, web_console_auto_login: false },
+    principal: "user:admin-p7h1",
+  } }));
+  await page.route("**/api/v1/admin/jobs/triage?**", (route) => route.fulfill({ json: {
+    items: [], limit: 25, offset: 0, has_more: false,
+  } }));
+  await page.route("**/api/v1/admin/storage/health", (route) => route.fulfill({ json: {
+    dry_run: true, backend: "local", database_records: 1, storage_objects: 1,
+    issue_count: 0, healthy: true, category_counts: {},
+  } }));
+
+  const baselines: Record<string, { domNodes: number; resources: number; bytes: number }> = {};
+  for (const area of ["overview", "jobs", "storage", "access", "integrations"]) {
+    await page.goto(`/admin?section=${area}`);
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" })).toBeVisible();
+    const layout = await page.evaluate(() => {
+      const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+      return {
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        domNodes: document.querySelectorAll("*").length,
+        resources: resources.length,
+        bytes: Math.round(resources.reduce((sum, item) => sum + (item.encodedBodySize || 0), 0)),
+      };
+    });
+    expect(layout.overflow, `/admin?section=${area}: mobile horizontal overflow`).toBeLessThanOrEqual(1);
+    const findings = await automatedAccessibilityFindings(page);
+    expect(findings, `/admin?section=${area} accessibility: ${JSON.stringify(findings)}`).toEqual([]);
+    baselines[area] = { domNodes: layout.domNodes, resources: layout.resources, bytes: layout.bytes };
+    if (area === "storage") {
+      const button = page.getByRole("button", { name: "ตรวจสอบความสอดคล้อง" });
+      await button.focus();
+      await expect(button).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("region", { name: "ตรวจสอบความสอดคล้องของ Storage" })).toContainText("ไม่พบรายการผิดปกติ");
+    }
+  }
+  console.log("P7H1_ADMIN_MOBILE_PERF_CANDIDATE " + JSON.stringify(baselines));
+});
