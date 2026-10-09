@@ -1,6 +1,6 @@
 # Phase 7 — Task-first Experience & Operational Workflows
 
-Status: **PLANNED — IMPLEMENTATION NOT STARTED**
+Status: **IMPLEMENTATION IN PROGRESS — P7A.2**
 
 Base: RCAT PDF Hub `v0.6.0`. Preserve the published Phase 6 release and security/production gates.
 
@@ -48,6 +48,6 @@ Track each independently revertible implementation PR, dependencies, actual test
 - Existing UI visual style, RBAC, quota/retention, audit, API contract, coverage, CodeQL, supply-chain, accessibility/performance and runtime validation stay intact.
 - Completion rates, latency targets and journey improvements are measured during P7H; do not assert unmeasured results.
 
-## Planning handoff
+## Planning handoff and execution continuity
 
-**This PR is documentation/governance only.** No P7 implementation, migrations, production deployment, retagging or release is authorized by the planning request. After the planning PR merges, stop and wait for an explicit instruction to begin P7A. Maintain P7 task status as `PENDING` until actual implementation PRs are validated.
+**The Phase 7 planning PR #128 was documentation/governance only.** No P7 implementation, migrations, production deployment, retagging or release is authorized by the planning request. Execution was explicitly requested on 2026-10-09. P7A.1 merged in PR #129 with tested tool deep links. P7A.2 is in progress in PR #130. P7B–P7H remain pending, and there is no Phase 7 deployment or release authorization.
