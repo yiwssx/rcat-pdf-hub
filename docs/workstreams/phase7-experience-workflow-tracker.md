@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **IN PROGRESS — P7A.2 EXPLICIT INPUT INTAKE**
+Status: **IN PROGRESS — P7B.1 TASK JOURNEY**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -30,8 +30,8 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | --- | --- | --- | --- | --- |
 | 7.0 | Planning: PHASE7, canonical Master Tracker, proposed ADR-0005, glossary and routing/policy guard | COMPLETE | Phase 6 baseline | PR #128 (planning-only) |
 | 7A.1 | Stable tool catalog and `/tools/[slug]` navigation; invalid slug, direct URL, back/forward/refresh | COMPLETE | 7.0 | PR #129 merged to `main` as `cf266d25d26bae9af450ece58f4fd1b374afaa08`; Web CI #37894340265, CodeQL #37894340305, Dependency Review #37894340179 PASS |
-| 7A.2 | Tool-first file intake: upload/My Files, type/count validation, explicit selection and merge ordering | IN PROGRESS | 7A.1 | PR #130 (`feat/p7a2-explicit-intake`); CI pending |
-| 7B.1 | Unified client journey state transitions, back/cancel, duplicate-submit guard, per-tool capability metadata | PENDING | 7A.2 | — |
+| 7A.2 | Tool-first file intake: upload/My Files, type/count validation, explicit selection and merge ordering | COMPLETE | 7A.1 | PR #130 merged `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 PASS |
+| 7B.1 | Unified client journey state transitions, back/cancel, duplicate-submit guard, per-tool capability metadata | IN PROGRESS | 7A.2 | `feat/p7b1-client-journey-states`; PR and CI pending |
 | 7B.2 | Configure/preview/submit contract using current ToolWorkspace and one primary action | PENDING | 7B.1 | — |
 | 7C.1 | Job detail/progress surface for queued/running/completed/failed/cancelled; polling and error recovery | PENDING | 7B.2 | — |
 | 7C.2 | Durable authenticated result route; correct output/expiry handling; primary download action | PENDING | 7C.1 | — |
@@ -47,7 +47,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
-**Roll-up:** P7A `IN PROGRESS` (7A.1 COMPLETE; 7A.2 IN PROGRESS); P7B, P7C, P7D, P7E, P7F, P7G and P7H `PENDING`. Finishing 7.0 or 7A is NOT shipping Phase 7.
+**Roll-up:** P7A `COMPLETE` (7A.1 and 7A.2 merged); P7B `IN PROGRESS` (7B.1 active); P7C, P7D, P7E, P7F, P7G and P7H `PENDING`. P7A completion is not a Phase 7 release.
 
 ## User flow contract
 
@@ -129,11 +129,12 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 | --- | --- | --- | --- | --- |
 | 2026-10-09 | 7.0 | Baseline identified, two user paths + admin path defined; create master tracker and proposed ADR; pause P7 implementation until requested | Pre-plan `main` `4f808fd3d8e094e1d37b361ff171a021f5e02ace`; PR #128 | PLAN READY |
 | 2026-10-09 | 7A.1 | Tool deep links merged after full checks passed; 404, navigation/reload and authorized optional file query covered by Playwright | PR #129, merge `cf266d25d26bae9af450ece58f4fd1b374afaa08`; Web CI #37894340265, CodeQL #37894340305, Dependency Review #37894340179 | COMPLETE |
-| 2026-10-09 | 7A.2 | Start reviewed upload and owned-library selection, type/count validation, explicit input order; preserve ToolWorkspace seam | PR #130; browser E2E and CI pending | IN PROGRESS |
+| 2026-10-09 | 7A.2 | Validated upload/library picker, exact merge and image order and unsupported file recovery; merged after all required checks | PR #130, merge `8da9bb618bbbeeed10a1a4a043426bdc75153b83`; Web CI #37895142089, CodeQL #37895142051, Dependency Review #37895142092 | COMPLETE |
+| 2026-10-09 | 7B.1 | Add presentation-only task stages, accessible progress steps, capability metadata, synchronous duplicate-submit guard and browser regressions | `feat/p7b1-client-journey-states`; tests/CI pending | IN PROGRESS |
 
 ## Current next action
 
-**7A.1 merged and complete.** Execute P7A.2 explicit ordered selection and upload-review flow. Require Web CI, CodeQL, Dependency Review and applicable browser regressions before merging; subsequently validate P7B journey states. No production deployment until P7H.
+**P7A is complete and merged.** Validate P7B.1 client journey and duplicate-submit regression gates; merge with exact CI evidence, then implement P7B.2 configuration/preview/action contract. P7E Admin information architecture may proceed independently. No production deployment until P7H.
 
 ## Tracker state protocol
 
