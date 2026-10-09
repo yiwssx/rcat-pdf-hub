@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiKeyCreated,
   ApiKeyRecord,
@@ -38,6 +38,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
   const [editing, setEditing] = useState<ServicePolicy | null>(null);
   const [message, setMessage] = useState("ใช้ session ของผู้ดูแลที่ระบบรับรองเพื่อจัดการ Service Keys และนโยบายระบบ");
   const [busy, setBusy] = useState(false);
+  const actionLock = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -73,7 +74,9 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
   }
 
   async function createServiceKey() {
-    if (authorized !== true || !name.trim()) return;
+    if (authorized !== true || !name.trim() || busy || actionLock.current) return;
+    if (!window.confirm(`ยืนยันสร้าง Service Key สำหรับ "${name.trim()}" พร้อมสิทธิ์ ${scopes.length} รายการ? โปรดตรวจขอบเขตก่อนดำเนินการ`)) return;
+    actionLock.current = true;
     setBusy(true);
     setCreated(null);
     try {
@@ -91,28 +94,34 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setMessage("สร้าง service key แล้ว — plaintext key แสดงครั้งนี้ครั้งเดียว");
       setKeys(await listApiKeys(apiKey));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "สร้าง key ไม่สำเร็จ");
+      setMessage("สร้าง Service Key ไม่สำเร็จ ตรวจสอบสิทธิ์และ Audit แล้วลองอีกครั้ง");
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   }
 
   async function revoke(record: ApiKeyRecord) {
-    if (authorized !== true) return;
+    if (authorized !== true || busy || actionLock.current) return;
+    if (!window.confirm(`ยืนยันเพิกถอน Service Key "${record.name}"? ระบบที่ใช้ Key นี้อาจเชื่อมต่อไม่ได้ทันที`)) return;
+    actionLock.current = true;
     setBusy(true);
     try {
       await revokeApiKey(record.id, apiKey);
       setKeys(await listApiKeys(apiKey));
       setMessage(`Revoke ${record.name} แล้ว`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Revoke ไม่สำเร็จ");
+      setMessage("เพิกถอน Key ไม่สำเร็จ ตรวจสอบสิทธิ์และ Audit");
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   }
 
   async function savePolicy() {
-    if (authorized !== true || !editing) return;
+    if (authorized !== true || !editing || busy || actionLock.current) return;
+    if (!window.confirm(`ยืนยันบันทึก Policy ของ "${editing.service_name}"? ค่า Rate Limit, Quota และ Webhook อาจเปลี่ยนทันที`)) return;
+    actionLock.current = true;
     setBusy(true);
     try {
       const result = await updateServicePolicy(editing, apiKey);
@@ -120,22 +129,26 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setKeys(await listApiKeys(apiKey));
       setMessage(`บันทึก policy ของ ${result.service_name} แล้ว`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "บันทึก policy ไม่สำเร็จ");
+      setMessage("บันทึก Policy ไม่สำเร็จ ตรวจสอบสิทธิ์และ Audit");
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   }
 
   async function replayDelivery(delivery: WebhookDelivery) {
-    if (authorized !== true) return;
+    if (authorized !== true || busy || actionLock.current || delivery.status !== "dead") return;
+    if (!window.confirm(`ยืนยัน Replay Webhook ของ "${delivery.service_name}"? อาจส่ง Event เดิมซ้ำไปยังปลายทาง`)) return;
+    actionLock.current = true;
     setBusy(true);
     try {
       await retryWebhookDelivery(delivery.id, apiKey);
       setDeliveries(await listWebhookDeliveries(apiKey));
       setMessage(`นำ delivery ${delivery.id.slice(0, 8)} กลับเข้าคิวแล้ว`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Replay webhook ไม่สำเร็จ");
+      setMessage("Replay Webhook ไม่สำเร็จ ตรวจสอบสิทธิ์และ Audit");
     } finally {
+      actionLock.current = false;
       setBusy(false);
     }
   }
