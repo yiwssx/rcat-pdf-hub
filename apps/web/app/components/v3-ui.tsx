@@ -114,7 +114,7 @@ export function AdminIdentityPanel({ identity }: { identity: AuthMe }) {
           <small>{identity.is_admin ? "administrator" : "human user"}</small>
         </div>
       </div>
-      <div className="v3EffectiveAccessGrid v3EffectiveQuotaGrid" aria-label="โควตาที่มีผลจริง">
+      <div className="v3EffectiveAccessGrid v3EffectiveQuotaGrid" role="region" aria-label="โควตาที่มีผลจริง">
         {([
           ["REQUESTS / MIN", identity.rate_limit_per_minute, "/นาที"],
           ["JOBS / DAY", identity.daily_job_limit, "/วัน"],
