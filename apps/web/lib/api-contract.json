@@ -82,7 +82,19 @@
       "method": "GET",
       "path": "/api/v1/jobs",
       "response": "list[JobOut]",
-      "client_marker": "\"/api/v1/jobs?limit=50\""
+      "client_marker": "`/api/v1/jobs?${params.toString()}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/jobs/{job_id}",
+      "response": "JobOut",
+      "client_marker": "`/api/v1/jobs/${encodeURIComponent(jobId)}`"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/files/{file_id}",
+      "response": "FileOut",
+      "client_marker": "`/api/v1/files/${encodeURIComponent(fileId)}`"
     },
     {
       "method": "DELETE",
