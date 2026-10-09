@@ -47,3 +47,22 @@ def test_mutations_denied_if_audit_unavailable(monkeypatch):
         assert db.query(JobRecord).count() == 2
     finally:
         db.close()
+
+
+def test_cancel_has_intent_audit_before_queue_action(monkeypatch):
+    seed_job("queue-for-cancel", "queued")
+    events = []
+    queue_events = []
+    monkeypatch.setattr(job_routes, "audit_event", lambda event, *args, **kwargs: events.append(event) or True)
+
+    class FakeRQ:
+        id = "rq-queue-for-cancel"
+        def cancel(self):
+            queue_events.append("cancelled")
+
+    monkeypatch.setattr(job_routes.RQJob, "fetch", lambda *args, **kwargs: FakeRQ())
+    res = owned_client().post("/api/v1/jobs/queue-for-cancel/cancel")
+    assert res.status_code == 200
+    assert res.json()["status"] == "cancelled"
+    assert events == ["job.cancel_requested", "job.cancelled"]
+    assert queue_events == ["cancelled"]
