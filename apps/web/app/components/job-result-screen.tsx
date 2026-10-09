@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { fetchDownload, FileLookupError, getFile, getJob, Job, JobLookupError, UploadedFile } from "../../lib/api";
 import { TaskJourneyNav } from "./task-journey";
+import { PDF_TOOLS } from "./tool-catalog";
+import { isEligibleToolFile, TOOL_INPUT_RULES } from "./tool-input-rules";
 
 type ResultState = { job: Job; file: UploadedFile | null };
 type Props = { jobId: string; auth: string };
@@ -47,6 +49,9 @@ export function JobResultScreen({ jobId, auth }: Props) {
 
   const expired = Boolean(data?.file?.expires_at && Date.parse(data.file.expires_at) <= Date.now());
   const ready = Boolean(data?.job.status === "completed" && data.file && !expired);
+  const eligibleTools = ready && data?.file
+    ? PDF_TOOLS.filter((tool) => isEligibleToolFile(tool.id, data.file!))
+    : [];
 
   async function download() {
     if (!data?.file || !ready || downloading) return;
@@ -98,6 +103,22 @@ export function JobResultScreen({ jobId, auth }: Props) {
               </button>
               <a className="v3TextLink" href="/files">คลังไฟล์ของฉัน</a>
             </div>
+            {eligibleTools.length > 0 && <section className="v3FollowOn" aria-label="ทำงานต่อด้วยเครื่องมืออื่น">
+              <div className="v3SectionHead">
+                <div><span className="v3Kicker">NEXT TASK</span><h2>ใช้ไฟล์นี้ทำงานต่อ</h2></div>
+              </div>
+              <p>ส่งไฟล์ผลลัพธ์ไปยังเครื่องมือถัดไปได้โดยไม่ต้องดาวน์โหลดหรืออัปโหลดซ้ำ</p>
+              <div className="v3FollowOnGrid">
+                {eligibleTools.map((tool) => (
+                  <a className="v3FollowOnTool" data-tone={tool.tone} key={tool.id}
+                    href={`/tools/${encodeURIComponent(tool.id)}?file=${encodeURIComponent(data.file!.id)}`}>
+                    <strong>{tool.title}</strong>
+                    <small>{TOOL_INPUT_RULES[tool.id].min > 1 ? "ใช้ไฟล์นี้และเลือกไฟล์เพิ่ม" : "ใช้ไฟล์ผลลัพธ์นี้"}</small>
+                    <span aria-hidden="true">→</span>
+                  </a>
+                ))}
+              </div>
+            </section>}
           </>) : null}
         </>}
         <button type="button" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>ตรวจสอบใหม่</button>
