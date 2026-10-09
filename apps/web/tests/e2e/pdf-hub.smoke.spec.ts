@@ -532,9 +532,9 @@ test("P7B.1 synchronous double click creates exactly one backend processing job"
     (node as HTMLButtonElement).click();
     (node as HTMLButtonElement).click();
   });
-  await expect(page.locator(".v3JobDrawer")).toBeVisible();
+  await expect(page).toHaveURL(/\/jobs\/job-compress-guarded$/);
   expect(requestCount).toBe(1);
-  await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" }).locator('[aria-current="step"]')).toContainText("ผลลัพธ์");
+  await expect(page.getByRole("heading", { name: "สถานะงาน PDF" })).toBeVisible();
 });
 
 test("P7B.2 stamp configuration reuses the reviewed second PDF without reselecting", async ({ page }) => {
@@ -557,4 +557,71 @@ test("P7B.2 archival intake agrees with PDF-only processing requirement", async 
   await expect(page.getByRole("radio", { name: "photo.png" })).toHaveCount(0);
   await expect(page.getByRole("radio", { name: "example.pdf" })).toBeVisible();
   await expect(page.locator('input[type="file"]')).toHaveAttribute("accept", /application\/pdf/);
+});
+
+test("P7C.1 job link survives refresh and renders backend-authoritative state transitions", async ({ page }) => {
+  let reads = 0;
+  await page.route("**/api/v1/jobs/job-status-1", async (route) => {
+    reads += 1;
+    const status = reads === 1 ? "queued" : reads === 2 ? "running" : "completed";
+    await route.fulfill({ json: {
+      id: "job-status-1", operation: "compress", status,
+      progress: status === "queued" ? 0 : status === "running" ? 55 : 100,
+      input_file_ids: ["file-pdf-1"], output_file_id: status === "completed" ? "file-output-1" : null,
+      params: {}, error: null, requested_by: "web-console:smoke-test",
+    }});
+  });
+  await page.goto("/jobs/job-status-1");
+  const main = page.getByRole("main", { name: "รายละเอียดงานประมวลผล" });
+  await expect(main).toContainText("รอประมวลผล");
+  await expect(main).toContainText("กำลังประมวลผล", { timeout: 10000 });
+  await expect(main.getByText("ประมวลผลเสร็จแล้ว")).toBeVisible({ timeout: 10000 });
+  await expect(main.getByRole("progressbar", { name: "ความคืบหน้างาน" })).toHaveCount(0);
+  await page.reload();
+  await expect(main.getByText("ประมวลผลเสร็จแล้ว")).toBeVisible();
+});
+
+test("P7C.1 owned job endpoint denies unknown and foreign jobs without disclosing data", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-private-1", async (route) => route.fulfill({ status: 403, json: { detail: "Job belongs to another service" } }));
+  await page.goto("/jobs/job-private-1");
+  await expect(page.getByRole("alert")).toContainText("ไม่มีสิทธิ์");
+  await expect(page.locator(".v3JobDetailCard")).not.toContainText("belongs to another service");
+  await page.route("**/api/v1/jobs/job-missing-1", async (route) => route.fulfill({ status: 404, json: { detail: "Job not found" } }));
+  await page.goto("/jobs/job-missing-1");
+  await expect(page.getByRole("alert")).toContainText("ไม่พบงาน");
+});
+
+test("P7C.1 failed jobs allow scoped retry into new durable URL", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-failed-1", async (route) => route.fulfill({ json: {
+    id: "job-failed-1", operation: "compress", status: "failed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: null, params: {},
+    error: "worker internal trace", requested_by: "web-console:smoke-test",
+  }}));
+  await page.route("**/api/v1/jobs/job-failed-1/retry", async (route) => route.fulfill({ status: 202, json: {
+    id: "job-retry-2", operation: "compress", status: "queued", progress: 0,
+    input_file_ids: ["file-pdf-1"], output_file_id: null, params: {},
+    error: null, requested_by: "web-console:smoke-test",
+  }}));
+  await page.goto("/jobs/job-failed-1");
+  await expect(page.getByRole("alert")).toContainText("งานนี้ไม่สำเร็จ");
+  await expect(page.getByRole("main")).not.toContainText("worker internal trace");
+  await page.getByRole("button", { name: "ลองประมวลผลใหม่" }).click();
+  await expect(page).toHaveURL(/\/jobs\/job-retry-2$/);
+});
+
+test("P7C.1 transient job fetch error offers manual retry", async ({ page }) => {
+  let attempts = 0;
+  await page.route("**/api/v1/jobs/job-outage-1", async (route) => {
+    attempts += 1;
+    if (attempts === 1) { await route.abort("failed"); return; }
+    await route.fulfill({ json: {
+      id: "job-outage-1", operation: "compress", status: "cancelled", progress: 100,
+      input_file_ids: ["file-pdf-1"], output_file_id: null, params: {},
+      error: null, requested_by: "web-console:smoke-test",
+    }});
+  });
+  await page.goto("/jobs/job-outage-1");
+  await expect(page.getByRole("alert")).toContainText("เชื่อมต่อสถานะงานไม่ได้");
+  await page.getByRole("button", { name: "รีเฟรชสถานะ" }).click();
+  await expect(page.getByRole("main")).toContainText("ยกเลิกงานแล้ว");
 });
