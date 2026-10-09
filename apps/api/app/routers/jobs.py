@@ -41,14 +41,12 @@ OPERATION_SCOPES = {
 }
 
 
-def _human_admin_owns_generic_jobs(principal: Principal) -> bool:
-    # The minimal, audited Admin triage API is the only human-admin-wide
-    # browsing seam. A wildcard role does NOT grant owner bypass here.
-    return principal.is_identity_admin and principal.auth_source in {"oidc", "ldap", "local-admin"}
-
-
 def _must_filter_job_owner(principal: Principal) -> bool:
-    return "*" not in principal.scopes or _human_admin_owns_generic_jobs(principal)
+    # All identity/session principals must remain owner-scoped, even if a
+    # legacy cookie or human Admin role carries wildcard scopes.
+    # Privileged human cross-user visibility is available only through the
+    # separately audited, minimized Admin triage endpoint.
+    return principal.auth_source not in {"api_key", "bootstrap"} or "*" not in principal.scopes
 
 
 def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
