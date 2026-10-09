@@ -1230,3 +1230,66 @@ test("P7G.2 updating a service policy is not submitted before confirmation", asy
   await expect(page.getByRole("main")).toContainText("บันทึก policy ของ quota-service แล้ว");
   expect(updates).toBe(1);
 });
+
+test("P7H.1 user journey survives queued-to-complete refresh, result reload and zero-reupload chaining", async ({ page }) => {
+  const output = { ...initialFile, id: "file-h1-output", original_name: "watermarked.pdf", size: 6251 };
+  let jobState: "queued" | "completed" = "queued";
+  let uploads = 0;
+  let originalSubmits = 0;
+  let chainedSubmits = 0;
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, output] }));
+  await page.route("**/api/v1/files", (route) => {
+    if (route.request().method() === "POST") uploads += 1;
+    return route.fallback();
+  });
+  await page.route("**/api/v1/pdf/watermark", (route) => {
+    originalSubmits += 1;
+    return route.fulfill({ json: {
+      id: "job-h1-start", operation: "watermark", status: "queued", progress: 0,
+      input_file_ids: [initialFile.id], output_file_id: null,
+      params: {}, error: null, requested_by: "web-console:smoke-test",
+    } });
+  });
+  await page.route("**/api/v1/jobs/job-h1-start", (route) => route.fulfill({ json: {
+    id: "job-h1-start", operation: "watermark", status: jobState,
+    progress: jobState === "queued" ? 0 : 100,
+    input_file_ids: [initialFile.id],
+    output_file_id: jobState === "completed" ? output.id : null,
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/file-h1-output", (route) => route.fulfill({ json: output }));
+  await page.route("**/api/v1/pdf/compress", (route) => {
+    chainedSubmits += 1;
+    return route.fulfill({ json: {
+      id: "job-h1-next", operation: "compress", status: "queued", progress: 0,
+      input_file_ids: [output.id], output_file_id: null,
+      params: {}, error: null, requested_by: "web-console:smoke-test",
+    } });
+  });
+
+  await page.goto("/tools/watermark");
+  await page.getByRole("radio", { name: "example.pdf" }).check();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+  await page.getByLabel("ข้อความ").fill("P7 H1 user journey");
+  await page.getByRole("button", { name: "ใส่ลายน้ำ" }).click();
+  await expect(page).toHaveURL(/\/jobs\/job-h1-start$/);
+  await expect(page.getByRole("main")).toContainText("รอประมวลผล");
+  expect(originalSubmits).toBe(1);
+  jobState = "completed";
+  await page.reload();
+  await expect(page.getByRole("link", { name: /ดูผลลัพธ์และดาวน์โหลด/ })).toBeVisible();
+  await page.getByRole("link", { name: /ดูผลลัพธ์และดาวน์โหลด/ }).click();
+  await expect(page).toHaveURL(/\/jobs\/job-h1-start\/result$/);
+  await expect(page.getByText("watermarked.pdf")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("watermarked.pdf")).toBeVisible();
+  const followOn = page.getByRole("region", { name: "ทำงานต่อด้วยเครื่องมืออื่น" });
+  await followOn.getByRole("link", { name: /ลดขนาด PDF/ }).click();
+  await expect(page).toHaveURL(/\/tools\/compress\?file=file-h1-output$/);
+  await expect(page.locator("#workspace-target")).toContainText("watermarked.pdf");
+  const nextRequest = page.waitForRequest("**/api/v1/pdf/compress");
+  await page.getByRole("button", { name: "บีบอัด PDF" }).click();
+  expect((await nextRequest).postDataJSON()).toEqual({ file_id: output.id });
+  expect(chainedSubmits).toBe(1);
+  expect(uploads).toBe(0);
+});
