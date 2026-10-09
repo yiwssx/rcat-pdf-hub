@@ -92,6 +92,13 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
 
   const routeTool = initialTool ? findPdfTool(initialTool) : undefined;
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
+  const reviewedFiles = selectedInputIds
+    .map((id) => files.find((file) => file.id === id))
+    .filter((file): file is UploadedFile => Boolean(file));
+  const hasValidRouteInputs = !routeTool || (
+    reviewedFiles.length === selectedInputIds.length
+    && validateToolInputs(routeTool.id, reviewedFiles) === null
+  );
   // A routed task may only see explicitly selected inputs. P7A.2 extends
   // this to reviewed multi-selection; do not submit unrelated library files.
   const pdfFiles = useMemo(
@@ -293,7 +300,11 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       return;
     }
     setSelectedInputIds(ids);
-    setToolSettings((old) => ({ ...old, mergeOrder: [...ids] }));
+    setToolSettings((old) => ({
+      ...old,
+      mergeOrder: [...ids],
+      stampId: initialTool === "pdf-stamp" ? ids[1] : old.stampId,
+    }));
     setTargetId(ids[0]);
     setActiveTool(initialTool);
     setPreviewUrl(null);
@@ -314,6 +325,18 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   async function submit(operation: string, payload: object) {
     // A ref closes the gap between two synchronous clicks before React renders busy=true.
     if (!auth || submitInFlight.current) return;
+    if (routeTool) {
+      const args = payload as Record<string, unknown>;
+      const used = [
+        ...(Array.isArray(args.file_ids) ? args.file_ids : []),
+        args.file_id,
+        args.stamp_file_id,
+      ].filter((id): id is string => typeof id === "string");
+      if (!used.length || used.some((id) => !selectedInputIds.includes(id))) {
+        setMessage("โปรดตรวจรายการไฟล์ก่อนส่งงาน — พบไฟล์ที่ไม่ได้เลือกไว้");
+        return;
+      }
+    }
     submitInFlight.current = true;
     setSubmitting(true);
     setBusy(true);
@@ -510,7 +533,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
             <AdminPanel apiKey={auth}/>
           </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/admin/login">เข้าสู่ระบบผู้ดูแล</a><a href="/">กลับ Workspace</a></section>}
         </main>
-      ) : routeTool && !target ? (
+      ) : routeTool && (!target || !hasValidRouteInputs) ? (
         <ToolFileIntake
           tool={routeTool}
           files={files}

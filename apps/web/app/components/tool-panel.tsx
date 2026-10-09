@@ -121,6 +121,16 @@ export function ToolPanel(props: Props) {
       </header>
 
       <div className="v3ToolPanelBody">
+        {(tool === "images-to-pdf" || tool === "pdf-stamp") && (
+          <section className="v3InputReview" aria-label="ไฟล์ที่จะประมวลผล">
+            <strong>ตรวจรายการไฟล์ที่เลือก</strong>
+            <ol>
+              {(tool === "images-to-pdf" ? imageFiles : [target, ...pdfFiles.filter((file) => file.id !== target.id)]).map((file) => (
+                <li key={file.id}>{file.original_name}</li>
+              ))}
+            </ol>
+          </section>
+        )}
         {tool === "ocr" && <>
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>

@@ -418,15 +418,15 @@ test("P7A.1 file-selected deep links respect the authorized library", async ({ p
   await expect(page.getByText("ไฟล์บางรายการไม่อยู่ในคลังไฟล์ที่คุณเข้าถึงได้")).toBeVisible();
 });
 
-test("P7A.1 routed merge never adds an unrelated library PDF implicitly", async ({ page }) => {
+test("P7B.2 routed merge requires reviewed second input rather than picking a library PDF", async ({ page }) => {
   const otherPdf = { ...initialFile, id: "file-pdf-2", original_name: "unrelated.pdf" };
   await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, otherPdf] }));
   await page.goto("/tools/merge-pdf?file=file-pdf-1");
 
-  await expect(page.locator(".v3ToolPanel")).toBeVisible();
-  await expect(page.locator(".v3MergeList")).toContainText("example.pdf");
-  await expect(page.locator(".v3MergeList")).not.toContainText("unrelated.pdf");
-  await expect(page.getByRole("button", { name: /รวม PDF/ }).last()).toBeDisabled();
+  await expect(page.locator(".v3ToolPanel")).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "example.pdf" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "unrelated.pdf" })).not.toBeChecked();
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
 });
 
 test("P7A.2 validates kind and count, reviews exact ordered merge inputs", async ({ page }) => {
@@ -535,4 +535,26 @@ test("P7B.1 synchronous double click creates exactly one backend processing job"
   await expect(page.locator(".v3JobDrawer")).toBeVisible();
   expect(requestCount).toBe(1);
   await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" }).locator('[aria-current="step"]')).toContainText("ผลลัพธ์");
+});
+
+test("P7B.2 stamp configuration reuses the reviewed second PDF without reselecting", async ({ page }) => {
+  const stamp = { ...initialFile, id: "file-stamp-pdf", original_name: "stamp.pdf" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [initialFile, stamp] }));
+  await page.goto("/tools/pdf-stamp");
+  await page.getByRole("checkbox", { name: "example.pdf" }).check();
+  await page.getByRole("checkbox", { name: "stamp.pdf" }).check();
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+
+  await expect(page.getByRole("combobox", { name: "ไฟล์ตราประทับ" })).toHaveValue("file-stamp-pdf");
+  await expect(page.getByRole("region", { name: "ไฟล์ที่จะประมวลผล" })).toContainText("stamp.pdf");
+  await expect(page.getByRole("button", { name: "ประทับ PDF" })).toBeEnabled();
+});
+
+test("P7B.2 archival intake agrees with PDF-only processing requirement", async ({ page }) => {
+  const image = { ...initialFile, id: "image-for-archive", original_name: "photo.png", content_type: "image/png" };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [image, initialFile] }));
+  await page.goto("/tools/archive");
+  await expect(page.getByRole("radio", { name: "photo.png" })).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "example.pdf" })).toBeVisible();
+  await expect(page.locator('input[type="file"]')).toHaveAttribute("accept", /application\/pdf/);
 });
