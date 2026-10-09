@@ -70,3 +70,30 @@ def test_logout_clears_session_cookie():
     response = client.post("/api/v1/auth/logout")
     assert response.status_code == 204
     assert "pdfhub_session=" in response.headers.get("set-cookie", "")
+
+
+
+def test_effective_role_and_limits_are_self_scoped_and_stable(monkeypatch):
+    from app.config import get_settings
+    from app.identity import create_local_admin_identity, create_session_token
+    settings = get_settings()
+    monkeypatch.setattr(security, "ensure_rate_limit", lambda *args, **kwargs: None)
+    local = TestClient(app)
+    local.cookies.set("pdfhub_session", create_session_token(create_local_admin_identity("teacher-admin")))
+    response = local.get("/api/v1/auth/me")
+    assert response.status_code == 200
+    identity = response.json()
+    assert identity["roles"] == ["admin"]
+    assert identity["auth_source"] == "local-admin"
+    assert identity["rate_limit_per_minute"] == settings.default_rate_limit_per_minute
+    assert identity["daily_job_limit"] == settings.default_daily_job_limit
+    assert identity["max_storage_mb"] == settings.default_max_storage_mb
+    assert identity["quota_exempt"] is False
+    assert "password" not in response.text.lower()
+    assert "api_key" not in identity
+
+    bootstrap = TestClient(app)
+    response = bootstrap.get("/api/v1/auth/me", headers={"X-API-Key": "pdfh_ci_admin_key_change_me"})
+    assert response.status_code == 200
+    assert response.json()["quota_exempt"] is True
+    assert response.json()["daily_job_limit"] == 0
