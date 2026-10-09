@@ -86,3 +86,22 @@ def test_my_jobs_bounds_and_permissions():
 
     anonymous = TestClient(app)
     assert anonymous.get("/api/v1/jobs", params={"mine": "true"}).status_code == 401
+
+
+
+def test_job_detail_denies_foreign_and_missing_ids_and_rejects_invalid_state_actions():
+    seed_jobs()
+    viewer = user_client()
+    owned = viewer.get("/api/v1/jobs/job-alpha-new")
+    assert owned.status_code == 200
+    assert owned.json()["requested_by"] == "user:alpha"
+
+    foreign = viewer.get("/api/v1/jobs/job-beta-new")
+    assert foreign.status_code == 403
+    missing = viewer.get("/api/v1/jobs/no-such-job")
+    assert missing.status_code == 404
+
+    admin = TestClient(app)
+    headers = {"X-API-Key": "pdfh_ci_admin_key_change_me"}
+    assert admin.post("/api/v1/jobs/job-alpha-done/cancel", headers=headers).status_code == 409
+    assert admin.post("/api/v1/jobs/job-alpha-new/retry", headers=headers).status_code == 409
