@@ -1,6 +1,6 @@
 # Phase 7 — Task-first Experience & Operational Workflows
 
-Status: **IMPLEMENTATION IN PROGRESS — P7F.2 & P7G.1**
+Status: **IMPLEMENTATION IN PROGRESS — P7G.2 (P7F AND P7G.1 COMPLETE AT REVIEWED SCOPE)**
 
 Base: RCAT PDF Hub `v0.6.0`. Preserve the published Phase 6 release and security/production gates.
 
