@@ -1,6 +1,6 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **P7H.1 IN PROGRESS — USER/ADMIN JOURNEYS, MOBILE AND QUALITY GATES**
+Status: **P7H.1 COMPLETE — P7H.2 RELEASE READINESS IN PROGRESS (NO DEPLOY AUTHORIZATION)**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
@@ -44,10 +44,10 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | COMPLETE | 7F.1 | PR #143 merged `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; PR #144 merged `f0b9ff968d3e50415dd3d05a55030410d6d83c59` (Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 PASS); security decision: no cross-account mutation or repair in P7 |
 | 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | COMPLETE | 7E.1 | PR #146 merged `cf0dd647d202cb53ee3be83a98959c12faa62896`; Core API CI #37905364357, Web CI #37905364564, CodeQL #37905364778, Dependency Review #37905364511 PASS; accepted self-scoped read-only scope, no identity mutation |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | COMPLETE | 7E.2, 7F.2 | PR #148 merged `7a90ca5a034c83c39707ddfe83ff3a3aac094a8f` (Core API #37907436955, Web #37907436782, CodeQL #37907436864, Dependency Review #37907436807 PASS); PR #149 merged `882ef978bb0ccfadc597debc428cca015a552074` (Core API #37908227263, Web #37908227296, CodeQL #37908227364, Dependency Review #37908227398 PASS); no automatic repair or expanded ownership |
-| 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | IN PROGRESS | 7A–7G | `test/p7h1-user-admin-journey-mobile`: durable queued→completed→result→chain E2E, Admin 390px overflow/a11y/keyboard/performance candidates; CI pending |
-| 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
+| 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | COMPLETE | 7A–7G | PR #151 merged `eb51a7bd61fe741d734c59b309a2000feb004218`; Web CI #37909217495 (61 Playwright PASS), CodeQL #37909217792 and Dependency Review #37909218130 PASS. Existing negative role/ownership regressions PASS. API code unchanged since Core API CI #37908227263 PASS (PR #149); Admin 390px keyboard/a11y/overflow PASS; candidate metrics recorded, no new performance ceilings |
+| 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | IN PROGRESS | 7H.1 | [Release-readiness handoff](phase7-release-readiness.md) drafted; local `make validate-free`, code/production release-readiness, backup/DR, operator approval, staged deployment and final release remain PENDING; no rollout authorized |
 
-**Roll-up:** P7A–P7G COMPLETE within explicitly reviewed permission boundaries. P7H.1 IN PROGRESS; P7H.2 PENDING. No Phase 7 production deploy, tag or release.
+**Roll-up:** P7A–P7H.1 COMPLETE within explicitly reviewed permission boundaries. P7H.2 IN PROGRESS (documentation/evidence only). No Phase 7 production deploy, tag or release.
 
 ## User flow contract
 
@@ -102,14 +102,14 @@ Critical path: `7.0 → 7A → 7B → 7C → 7D → 7H`. Admin path: `7.0 → 7E
 
 ## P7F security boundary (review before implementation)
 
-P7F.1 is not yet implemented or authorized for cross-user document access. A purpose-limited read-only job triage API must use a **dedicated Admin route**, not silently reuse a user-scoped `/jobs` response or treat a UI flag as authorization:
+Historical design boundary for P7F.1 (implemented and verified in PR #142): the read-only human Admin triage API uses a **dedicated Admin route**. The rule below remains binding; it does not grant cross-user document access:
 
 1. Authorize **human Admin identity server-side**; deny viewer/operator and service credentials (including wildcard-scoped service keys) unless an explicit separate security decision is recorded.
 2. Require bounded filters and stable pagination (status and operation, page size ≤100); query only the fields necessary for diagnosis. Never return document contents, storage paths, input/output file IDs, raw job params or raw exception text. A masked identity/aggregate is preferred over exposing `requested_by`.
 3. Log privileged triage reads with purpose and filter metadata while omitting file names, sensitive job payloads and document content. No automatic retry/cancel/repair from a read-only view.
 4. Add negative authorization, leakage and query-bound tests at the API contract seam, plus Core API coverage, Web E2E, CodeQL and Dependency Review gates. Audit any state-changing operation separately under P7F.2.
 
-This handoff is a proposed review boundary, not permission to deploy or a claim that P7F.1 is complete.
+This design boundary was accepted in PR #142 with negative authorization and audit tests. It is not permission to deploy.
 
 ## P7F.2 / P7G.1 acceptance decision (2026-10-09)
 
@@ -124,7 +124,7 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 - Query: optional validated `status` and `operation`; `limit` 1–100, `offset` 0–100000; deterministic descending created_at + ID pagination.
 - Data minimization: job ID, operation, status, progress, created/started/finished timestamp, boolean failure presence. No raw error, owner, file IDs, params, queue IDs, or storage locations.
 - Audit: privileged read logs only filter metadata and actor; if persistence fails return HTTP 503 (fail closed). Admin UI never offers job mutations in 7F.1.
-- Acceptance: negative service/legacy/operator access, contract drift, direct handler coverage, filter bounds, E2E paged read and denial. `PENDING` until PR merge and verified CI.
+- Acceptance: negative service/legacy/operator access, contract drift, direct handler coverage, filter bounds, E2E paged read and denial. **COMPLETE** via PR #142 and its verified checks.
 
 ## P7G.2 accepted operational scope (2026-10-09)
 
@@ -182,11 +182,14 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7G.2 | Preaction audit, confirmed Service Key/Policy/Webhook actions and safe error display merged | PR #149, merge `882ef978bb0ccfadc597debc428cca015a552074`; Core API CI #37908227263, Web CI #37908227296, CodeQL #37908227364, Dependency Review #37908227398 | COMPLETE |
 | 2026-10-09 | 7H.1 | Begin integrated browser task→job→result→chain verification and Admin mobile overflow/a11y/keyboard/performance candidate collection | `test/p7h1-user-admin-journey-mobile`; CI pending | IN PROGRESS |
 
+| 2026-10-09 | 7H.1 | Reconcile merged integrated user/job/result/zero-reupload Playwright suite and Admin 390px layout/keyboard/accessibility; preserve previous backend validated tree and prior denial tests | PR #151 merged `eb51a7bd61fe741d734c59b309a2000feb004218`; Web #37909217495 (61 PASS), CodeQL #37909217792, Dependency Review #37909218130 PASS; unchanged backend since Core API #37908227263 | COMPLETE |
+| 2026-10-09 | 7H.2 | Start evidence-based release-readiness and rollback/stop-gate operator handoff without authorizing deployment, tag or migration | [P7 Release Readiness](phase7-release-readiness.md); exact-host local validation, DR, production check and approval pending | IN PROGRESS |
+
 ## Current next action
 
-**P7H.1:** Add regression for full queued→completed refresh→result reload→output-file chaining and Admin mobile 390px overflow/a11y/keyboard, plus browser resource measurements recorded as **candidates** only. Existing measured Phase 6 `/` and `/files` ceilings remain enforced. Do not fabricate Admin performance ceilings before collecting validated baselines. Next: verify negative role/ownership paths and run Core API contract/coverage and complete Web/CodeQL/Dependency gates. P7H.2 remains pending.
+**P7H.2 NEXT:** Review the [release-readiness handoff](phase7-release-readiness.md), rerun exact-candidate `make validate-free` and `PDFHUB_RELEASE_MODE=code make release-readiness` on institution-owned Linux, collect backup/DR and production gate proof in an **explicitly authorized** window, and select the version only at release approval. P7H.1 PR #151 had 61 Playwright tests green, including negative role/ownership checks carried from prior waves, with backend unchanged since green Core API CI #37908227263. The single-run Admin mobile resource metrics are **candidates**, not enforced thresholds. No production rollout, tag or release authorized.
 
-**P7H:** Remains pending until P7G.2 closes and all journey/security/performance gates pass. No P7 production deploy, tag, migration or release before P7H.
+**P7H.2:** Candidate documentation and operator-runbook preparation are in progress after P7H.1 repository-level checks passed. Production/local all-in-one gates, rollback proof and explicit operator release authorization remain outstanding. No P7 production deploy, tag, migration or release before full P7H.2 acceptance.
 
 ## Tracker state protocol
 
