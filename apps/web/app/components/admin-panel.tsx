@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiKeyCreated,
   ApiKeyRecord,
@@ -38,6 +38,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
   const [editing, setEditing] = useState<ServicePolicy | null>(null);
   const [message, setMessage] = useState("ใช้ session ของผู้ดูแลที่ระบบรับรองเพื่อจัดการ Service Keys และนโยบายระบบ");
   const [busy, setBusy] = useState(false);
+  const actionInFlight = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -61,8 +62,8 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setAudit(auditRows);
       setDeliveries(deliveryRows);
       setMessage("โหลดข้อมูลผู้ดูแลและ webhook delivery แล้ว");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "โหลดข้อมูล Admin ไม่สำเร็จ");
+    } catch {
+      setMessage("โหลดข้อมูล Admin ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และสถานะบริการ");
     } finally {
       setBusy(false);
     }
@@ -73,7 +74,9 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
   }
 
   async function createServiceKey() {
-    if (authorized !== true || !name.trim()) return;
+    if (authorized !== true || !name.trim() || actionInFlight.current) return;
+    if (!window.confirm(`ยืนยันสร้าง Service Key "${name.trim()}" พร้อม ${scopes.length} สิทธิ์? โปรดตรวจสอบการอนุญาตก่อนสร้าง`)) return;
+    actionInFlight.current = true;
     setBusy(true);
     setCreated(null);
     try {
@@ -90,52 +93,62 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
       setWebhookUrl("");
       setMessage("สร้าง service key แล้ว — plaintext key แสดงครั้งนี้ครั้งเดียว");
       setKeys(await listApiKeys(apiKey));
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "สร้าง key ไม่สำเร็จ");
+    } catch {
+      setMessage("สร้าง Service Key ไม่สำเร็จ กรุณาตรวจสอบข้อมูลและสถานะ Audit");
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
 
   async function revoke(record: ApiKeyRecord) {
-    if (authorized !== true) return;
+    if (authorized !== true || actionInFlight.current) return;
+    if (!window.confirm(`ยืนยัน Revoke Service Key "${record.name}"? การเชื่อมต่อที่ใช้งาน Key นี้จะหยุดทำงาน`)) return;
+    actionInFlight.current = true;
     setBusy(true);
     try {
       await revokeApiKey(record.id, apiKey);
       setKeys(await listApiKeys(apiKey));
       setMessage(`Revoke ${record.name} แล้ว`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Revoke ไม่สำเร็จ");
+    } catch {
+      setMessage("Revoke ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และสถานะ Audit");
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
 
   async function savePolicy() {
-    if (authorized !== true || !editing) return;
+    if (authorized !== true || !editing || actionInFlight.current) return;
+    if (!window.confirm(`ยืนยันบันทึก Policy ของ "${editing.service_name}"? ค่าจำกัดการใช้งานจะเปลี่ยนทันที`)) return;
+    actionInFlight.current = true;
     setBusy(true);
     try {
       const result = await updateServicePolicy(editing, apiKey);
       setEditing(result);
       setKeys(await listApiKeys(apiKey));
       setMessage(`บันทึก policy ของ ${result.service_name} แล้ว`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "บันทึก policy ไม่สำเร็จ");
+    } catch {
+      setMessage("บันทึก Policy ไม่สำเร็จ กรุณาตรวจสอบค่าและสถานะ Audit");
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
 
   async function replayDelivery(delivery: WebhookDelivery) {
-    if (authorized !== true) return;
+    if (authorized !== true || actionInFlight.current || delivery.status !== "dead") return;
+    if (!window.confirm(`ยืนยัน Replay Webhook ${delivery.id.slice(0, 8)}? ปลายทางอาจได้รับเหตุการณ์ซ้ำ`)) return;
+    actionInFlight.current = true;
     setBusy(true);
     try {
       await retryWebhookDelivery(delivery.id, apiKey);
       setDeliveries(await listWebhookDeliveries(apiKey));
       setMessage(`นำ delivery ${delivery.id.slice(0, 8)} กลับเข้าคิวแล้ว`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Replay webhook ไม่สำเร็จ");
+    } catch {
+      setMessage("Replay Webhook ไม่สำเร็จ กรุณาตรวจสอบสถานะ Delivery และ Audit");
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
@@ -225,7 +238,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
                 <span className={delivery.status === "delivered" ? "pill ok" : delivery.status === "dead" ? "pill danger" : "pill"}>{delivery.status.toUpperCase()}</span>
               </div>
               <div className="quotaLine"><span>{delivery.attempt_count}/{delivery.max_attempts} attempts</span><span>HTTP {delivery.last_status_code ?? "—"}</span><span>{new Date(delivery.updated_at).toLocaleString("th-TH")}</span></div>
-              {delivery.last_error && <small className="muted">{delivery.last_error.slice(0, 220)}</small>}
+              {delivery.last_error && <small className="muted">มีข้อผิดพลาดจากการส่ง Webhook กรุณาตรวจสอบปลายทางก่อน Replay</small>}
               {delivery.status === "dead" && <div className="rowActions"><button className="secondary" onClick={() => replayDelivery(delivery)} disabled={busy}>Replay</button></div>}
             </div>
           ))}

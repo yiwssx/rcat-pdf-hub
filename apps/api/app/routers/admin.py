@@ -73,6 +73,11 @@ def _validated_webhook(url: str | None) -> str | None:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+def _require_action_audit(event: str, principal: Principal, resource_type: str, resource_id: str | None, details: dict) -> None:
+    if not audit_event(event, principal.name, resource_type, resource_id, details):
+        raise HTTPException(status_code=503, detail="Admin action audit unavailable")
+
+
 def _require_bootstrap_admin(principal: Principal) -> None:
     if not principal.is_bootstrap_admin:
         raise HTTPException(status_code=403, detail="Bootstrap admin required")
@@ -272,6 +277,10 @@ def create_api_key(
         raise HTTPException(status_code=409, detail="API key name already exists")
 
     webhook_url = _validated_webhook(req.webhook_url)
+    _require_action_audit(
+        "api_key.create_requested", principal, "api_key", None,
+        {"service": req.name, "scopes": sorted(set(req.scopes))},
+    )
     secret = new_api_key()
     record = ApiKey(name=req.name, key_hash=hash_api_key(secret), scopes_json=json.dumps(sorted(set(req.scopes))))
     policy = ServicePolicy(
@@ -310,6 +319,7 @@ def revoke_api_key(
     record = db.get(ApiKey, key_id)
     if not record:
         raise HTTPException(status_code=404, detail="API key not found")
+    _require_action_audit("api_key.revoke_requested", principal, "api_key", record.id, {"service": record.name})
     record.active = False
     db.commit()
     db.refresh(record)
@@ -336,6 +346,11 @@ def update_service_policy(
     if not db.scalar(select(ApiKey).where(ApiKey.name == service_name)):
         raise HTTPException(status_code=404, detail="Service API key not found")
     webhook_url = _validated_webhook(req.webhook_url)
+    _require_action_audit("service_policy.update_requested", principal, "service_policy", service_name,
+        {"rate_limit_per_minute": req.rate_limit_per_minute,
+         "daily_job_limit": req.daily_job_limit,
+         "max_storage_mb": req.max_storage_mb,
+         "webhook_configured": bool(webhook_url)})
     row = db.get(ServicePolicy, service_name)
     if not row:
         row = ServicePolicy(service_name=service_name)
@@ -394,6 +409,10 @@ def retry_webhook_delivery(
     delivery = db.get(WebhookDelivery, delivery_id)
     if not delivery:
         raise HTTPException(status_code=404, detail="Webhook delivery not found")
+    if delivery.status != "dead":
+        raise HTTPException(status_code=409, detail="Only dead-letter webhook deliveries can be retried")
+    _require_action_audit("webhook.requeue_requested", principal, "webhook_delivery", delivery.id,
+        {"status": delivery.status})
     try:
         return retry_dead_webhook(db, delivery, principal.name)
     except ValueError as exc:

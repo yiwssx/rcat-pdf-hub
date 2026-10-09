@@ -43,7 +43,7 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7F.1 | Read-only Admin job triage by queue/status/failure; scoped diagnostics, bounded queries | COMPLETE | 7E.2 | PR #142 merged `804643b5df5ec536e353769ce004641e09ac0a98`; Core API CI #37902944481, Web CI #37902944329, CodeQL #37902944366, Dependency Review #37902944332 PASS |
 | 7F.2 | Reviewed permission matrix and audited retry/cancel/repair operations where supported | COMPLETE | 7F.1 | PR #143 merged `358444d2ffb1e7cdb61eb7f41974f38cf97fa8df`; PR #144 merged `f0b9ff968d3e50415dd3d05a55030410d6d83c59` (Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 PASS); security decision: no cross-account mutation or repair in P7 |
 | 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | COMPLETE | 7E.1 | PR #146 merged `cf0dd647d202cb53ee3be83a98959c12faa62896`; Core API CI #37905364357, Web CI #37905364564, CodeQL #37905364778, Dependency Review #37905364511 PASS; accepted self-scoped read-only scope, no identity mutation |
-| 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | IN PROGRESS | 7E.2, 7F.2 | `feat/p7g2-safe-storage-health`: safe human-admin-only dry-run summary + privacy and E2E tests; integration actions pending |
+| 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | IN PROGRESS | 7E.2, 7F.2 | PR #148 merged `7a90ca5a034c83c39707ddfe83ff3a3aac094a8f` (Core API CI #37907436955, Web CI #37907436782, CodeQL #37907436864, Dependency Review #37907436807 PASS); `feat/p7g2-integration-action-guards` underway |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | PENDING | 7A–7G | — |
 | 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | PENDING | 7H.1 | — |
 
@@ -170,11 +170,12 @@ This handoff is a proposed review boundary, not permission to deploy or a claim 
 | 2026-10-09 | 7F.2 | Confirmed owner-scoped Cancel/Retry, synchronous duplicate prevention and fail-closed Audit Intent on cancel/retry/purge merged | PR #144, merge `f0b9ff968d3e50415dd3d05a55030410d6d83c59`; Core API CI #37904483477, Web CI #37904483515, CodeQL #37904483467, Dependency Review #37904483464 | IN PROGRESS |
 | 2026-10-09 | 7G.1 | Scoped effective access accepted: current principal only; no identity mutations; limits and bootstrap exemption verified | PR #146, merge `cf0dd647d202cb53ee3be83a98959c12faa62896`; Core API CI #37905364357, Web CI #37905364564, CodeQL #37905364778, Dependency Review #37905364511 PASS | COMPLETE |
 | 2026-10-09 | 7F.2 | Scope decision: cross-account job mutation/repair explicitly forbidden in P7; supported owner-only actions and Audit already tested | PRs #143–#144 + Permission Matrix; 2026-10-09 security boundary decision | COMPLETE |
-| 2026-10-09 | 7G.2 | Start sanitized, human Admin-only dry-run Storage health scan, with no file/object path response and fail-closed Audit | `feat/p7g2-safe-storage-health`; PR & gates pending | IN PROGRESS |
+| 2026-10-09 | 7G.2 | Human Admin-only Storage health with manual dry-run, redacted response, category summary, audit failure denial and responsive UI merged | PR #148, merge `7a90ca5a034c83c39707ddfe83ff3a3aac094a8f`; Core API CI #37907436955, Web CI #37907436782, CodeQL #37907436864, Dependency Review #37907436807 | IN PROGRESS |
+| 2026-10-09 | 7G.2 | Add preaction audit, explicit Admin confirmation and generic safe error feedback for existing Service Key, Service Policy and Webhook Replay operations | `feat/p7g2-integration-action-guards`; PR/CI pending | IN PROGRESS |
 
 ## Current next action
 
-**P7G.2:** Validate and merge manual, read-only, human-admin-only storage reconciliation summary with full issue counts, fail-closed audit and HTTP/browser privacy/denial tests. Then review Service Key policy/revocation and Webhook DLQ replay confirmations, expected-state enforcement and Audit before enabling additional actions. No automatic repair or cross-account data exposure.
+**P7G.2:** PR #148 merged with all applicable checks. Finish safe confirmed Service Key create/revoke, policy change and Webhook DLQ replay with backend fail-closed preaction audit, status guard and Web E2E. Existing ownership/retention rules remain unchanged; no Admin-wide file read or repair. Close 7G.2 only with action tests and CI evidence.
 
 **P7H:** Remains pending until P7G.2 closes and all journey/security/performance gates pass. No P7 production deploy, tag, migration or release before P7H.
 
