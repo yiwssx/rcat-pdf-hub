@@ -94,10 +94,13 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     () => files.filter((file) => isPdf(file) && (!initialTool || selectedInputIds.includes(file.id))),
     [files, initialTool, selectedInputIds],
   );
-  const imageFiles = useMemo(
-    () => files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase()) && (!initialTool || selectedInputIds.includes(file.id))),
-    [files, initialTool, selectedInputIds],
-  );
+  const imageFiles = useMemo(() => {
+    if (!initialTool) return files.filter((file) => imageContentTypes.has(file.content_type.toLowerCase()));
+    // Image-to-PDF page order must follow the user's reviewed input order.
+    return selectedInputIds
+      .map((id) => files.find((file) => file.id === id))
+      .filter((file): file is UploadedFile => Boolean(file && imageContentTypes.has(file.content_type.toLowerCase())));
+  }, [files, initialTool, selectedInputIds]);
   const targetIsPdf = isPdf(target);
   const activeJobs = useMemo(() => jobs.some((job) => job.status === "queued" || job.status === "running"), [jobs]);
   const enterpriseAuthEnabled = Boolean(authConfig?.oidc.enabled || authConfig?.ldap.enabled);
