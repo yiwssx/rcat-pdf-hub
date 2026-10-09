@@ -52,6 +52,7 @@ export function AppHeader({
       <nav className="v3PrimaryNav" aria-label="เมนูหลัก">
         <a href="/">Workspace</a>
         <a href="/files">Files</a>
+        <a href="/jobs">My Jobs</a>
       </nav>
 
       <div className="v3HeaderActions">
@@ -71,6 +72,7 @@ export function AppHeader({
             <div className="v3AccountMeta"><strong>{identity.display_name || identity.name}</strong><small>{identity.auth_source} • {identity.groups.join(", ") || "session"}</small></div>
             <a href="/">Workspace</a>
             <a href="/files">ไฟล์ทั้งหมด</a>
+            <a href="/jobs">งานของฉัน</a>
             {identity.is_admin && <a href="/admin">Admin Console</a>}
             <button type="button" onClick={onRefresh}>รีเฟรชข้อมูล</button>
             <button type="button" className="danger" onClick={onLogout}>ออกจากระบบ</button>
