@@ -66,3 +66,19 @@ def test_cancel_has_intent_audit_before_queue_action(monkeypatch):
     assert res.json()["status"] == "cancelled"
     assert events == ["job.cancel_requested", "job.cancelled"]
     assert queue_events == ["cancelled"]
+
+
+def test_retry_retains_owner_with_intent_and_result_audit(monkeypatch):
+    from types import SimpleNamespace
+    seed_job("failed-for-retry", "failed")
+    events = []
+    monkeypatch.setattr(job_routes, "audit_event", lambda event, *args, **kwargs: events.append(event) or True)
+    monkeypatch.setattr(job_routes, "ensure_daily_job_quota", lambda *args, **kwargs: None)
+    monkeypatch.setattr(job_routes, "enqueue_processing_job", lambda *args, **kwargs: (
+        SimpleNamespace(name="pdf"), SimpleNamespace(id="rq-retried"),
+    ))
+    res = owned_client().post("/api/v1/jobs/failed-for-retry/retry")
+    assert res.status_code == 202
+    assert res.json()["id"] != "failed-for-retry"
+    assert res.json()["requested_by"] == "local-admin:reviewer"
+    assert events == ["job.retry_requested", "job.retried"]
