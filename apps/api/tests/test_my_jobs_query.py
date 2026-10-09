@@ -105,3 +105,47 @@ def test_job_detail_denies_foreign_and_missing_ids_and_rejects_invalid_state_act
     headers = {"X-API-Key": "pdfh_ci_admin_key_change_me"}
     assert admin.post("/api/v1/jobs/job-alpha-done/cancel", headers=headers).status_code == 409
     assert admin.post("/api/v1/jobs/job-alpha-new/retry", headers=headers).status_code == 409
+
+
+
+def test_my_jobs_handler_query_branches_directly():
+    """Exercise handler logic in-process as well as through the HTTP tests above."""
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    from app.routers.jobs import get_job, list_jobs
+
+    seed_jobs()
+    db = SessionLocal()
+    try:
+        user = SimpleNamespace(name="user:alpha", scopes={"jobs:read"})
+        completed = list_jobs(
+            limit=1, offset=1, mine=True, status="completed", principal=user, db=db
+        )
+        assert [item.id for item in completed] == ["job-alpha-old"]
+
+        all_own = list_jobs(
+            limit=100, offset=0, mine=False, status=None, principal=user, db=db
+        )
+        assert [item.id for item in all_own] == [
+            "job-alpha-new", "job-alpha-done", "job-alpha-old",
+        ]
+
+        admin = SimpleNamespace(name="user:admin", scopes={"*"})
+        admin_all = list_jobs(
+            limit=100, offset=0, mine=False, status=None, principal=admin, db=db
+        )
+        assert len(admin_all) == 4
+        admin_mine = list_jobs(
+            limit=100, offset=0, mine=True, status=None, principal=admin, db=db
+        )
+        assert admin_mine == []
+
+        assert get_job("job-alpha-new", principal=user, db=db).id == "job-alpha-new"
+        with pytest.raises(HTTPException) as foreign:
+            get_job("job-beta-new", principal=user, db=db)
+        assert foreign.value.status_code == 403
+        with pytest.raises(HTTPException) as missing:
+            get_job("not-found", principal=user, db=db)
+        assert missing.value.status_code == 404
+    finally:
+        db.close()
