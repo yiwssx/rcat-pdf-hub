@@ -28,7 +28,7 @@ export const TOOL_INPUT_RULES: Readonly<Record<string, ToolInputRule>> = {
   "office-to-pdf": { kind: "office", flow: "processing", pdfPreview: false, min: 1, max: 1, accept: OFFICE },
   "pdf-stamp": { kind: "pdf", flow: "processing", pdfPreview: true, min: 2, max: 2, accept: PDF },
   "signed-link": { kind: "any", flow: "sharing", pdfPreview: false, min: 1, max: 1 },
-  "archive": { kind: "any", flow: "archiving", pdfPreview: false, min: 1, max: 1 },
+  "archive": { kind: "pdf", flow: "archiving", pdfPreview: true, min: 1, max: 1, accept: PDF },
 };
 const images = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
 const officeExtensions = /\.(doc|docx|xls|xlsx|ppt|pptx|odt|ods|odp|rtf)$/i;
