@@ -96,6 +96,24 @@ class JobOut(BaseModel):
     requested_by: str
 
 
+class AdminJobTriageItemOut(BaseModel):
+    id: str
+    operation: str
+    status: str
+    progress: int
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    failure_recorded: bool
+
+
+class AdminJobTriagePageOut(BaseModel):
+    items: list[AdminJobTriageItemOut]
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class MergeRequest(BaseModel):
     file_ids: list[str] = Field(min_length=2, max_length=50)
 
