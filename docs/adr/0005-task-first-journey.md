@@ -1,6 +1,6 @@
 # ADR-0005: Task-first journey and operations-oriented administration
 
-- Status: **Proposed** — interfaces and routes to be validated in P7A before acceptance
+- Status: **Accepted** — P7A route/input contracts and P7H.1 integration gates verified on 2026-10-09
 - Date: 2026-10-09
 - Related: ADR-0001 (Tool Workspace seam), ADR-0004 (Human RBAC), `PHASE7.md`, P7 Master Tracker
 
@@ -8,10 +8,10 @@
 
 RCAT PDF Hub has a tool catalog, file library, processing jobs, sessions, and admin tools but its user journey is document-state-centric: `PdfHubApp` conditionally renders Document Workspace upon selection and `submit` opens Job Drawer. Tool-first entry, result return URLs and cohesive admin triage are not yet first-class. The requested change concerns navigation and task flow, not visual appearance.
 
-## Proposed decision
+## Decision
 
 1. Provide three connected journeys: primary **Tool-first**, optional **File-first**, and administrator **Operations-first**. Keep their durable data on existing file/job and audit infrastructure.
-2. Introduce addressable navigation for tool intent and job/result status. Candidate routes: `/tools/[slug]`, `/jobs/[id]`, `/jobs/[id]/result`, and user-scoped My Jobs. Exact paths, compatibility, invalid-slug and refresh behavior are **proposals pending P7A**.
+2. Use addressable navigation for tool intent and job/result status: `/tools/[slug]`, `/jobs/[id]`, `/jobs/[id]/result`, and user-scoped My Jobs. P7A–P7D verified invalid-slug handling, back/forward, authorized file IDs and refresh recovery; these routes are now an accepted interface contract.
 3. Model *presentation* journey states (intake/configuration/submission/progress/result/recovery) separately from existing persistent backend job states (`queued`/`running`/`completed`/`failed`/`cancelled`). Do not invent extra RQ statuses.
 4. Preserve the deep `ToolWorkspace` seam: settings and payload construction stay there; the app shell coordinates identity, selected inputs, authorized jobs and navigation, not each tool's settings.
 5. Input selection is explicit. Provide upload and owned-library selection, show file names/count and validate type, count and order before submit. Never choose another user's or an unrelated file as a fallback.
@@ -39,11 +39,11 @@ Favor a small behavior-focused interface at each seam. Do not add a universal wo
 - Do not disable scanning, monitoring, retention, signed-link expiration or production readiness checks.
 - No P7 plan or implementation PR mutates the published Phase 6 tag.
 
-## Validation before promotion to Accepted
+## Validation and acceptance evidence
 
-During P7A agree on exact URL contract, slug catalog, compatibility redirects, selected-input ownership and minimal journey interface. Browser tests must cover direct links, back/forward, refresh, intake, configuration, submit, polling, result and download. Add authorization-negative tests before any global Admin jobs/users endpoint; preserve CodeQL, API contracts, coverage, accessibility and measured performance gates.
+P7A–P7D verified exact URLs, slug catalog, visible file selection and type/order handling, compatibility and back/forward/refresh, intake/configuration, submit, job polling, durable result and download. PR #151 passed a single queued→completed refresh→result reload→eligible next-tool, zero-reupload Playwright journey plus five Admin pages at 390px with keyboard, a11y and horizontal overflow assertions. Existing negative role/ownership checks and minimized human Admin triage remain part of the suite. Web CI #37909217495 ran 61 Playwright tests; CodeQL #37909217792 and Dependency Review #37909218130 passed. No API code changed since green Core API CI #37908227263. Admin mobile performance samples are baseline **candidates**, not enforced thresholds.
 
-Update the ADR and tracker together when an implementation PR accepts or revises the route/interface contract. This proposed ADR does **not** authorize code changes by itself.
+Interface decisions are accepted without granting any new backend or cross-account permission. Future contract changes must update this ADR and the canonical tracker together, and must pass the appropriate tests and security review. **ADR acceptance is not production authorization**; P7H.2 release gates, verified backup/DR and explicit operator approval remain mandatory.
 
 ## Alternatives rejected
 

@@ -1,10 +1,10 @@
 # Phase 7 — Task-first Experience & Operational Workflows
 
-Status: **P7A–P7G IMPLEMENTED — P7H VALIDATION AND RELEASE GATES PENDING**
+Status: **P7A–P7H.1 VERIFIED; P7H.2 RELEASE READINESS IN PROGRESS — NO PRODUCTION APPROVAL**
 
 Base: RCAT PDF Hub `v0.6.0`. Preserve the published Phase 6 release and security/production gates.
 
-Canonical tracker: [P7 Master Tracker](docs/workstreams/phase7-experience-workflow-tracker.md). Design decision: [ADR-0005](docs/adr/0005-task-first-journey.md) (**Proposed** pending P7A technical validation).
+Canonical tracker: [P7 Master Tracker](docs/workstreams/phase7-experience-workflow-tracker.md). Design decision: [ADR-0005](docs/adr/0005-task-first-journey.md) (**Accepted** after P7A route/input validation).
 
 ## Goal
 
@@ -50,4 +50,8 @@ Track each independently revertible implementation PR, dependencies, actual test
 
 ## Planning handoff and execution continuity
 
-**The Phase 7 planning PR #128 was documentation/governance only.** No P7 implementation, migrations, production deployment, retagging or release is authorized by the planning request. Execution was explicitly requested on 2026-10-09. P7A.1 merged in PR #129 with tested tool deep links. P7A.2 merged in PR #130 after browser, CodeQL and dependency gates. P7B.1 merged in PR #131. P7B.2 merged in PR #132. P7A and P7B are complete; P7C.1 merged in PR #134. P7C.2 merged in PR #135. P7C.3 merged in PR #136. P7A–P7C are complete; P7D.1 merged in PR #137. P7D.2 merged in PR #138. P7A–P7D are complete; P7E.1 merged in PR #139; P7E.2 merged in PR #140; P7A–P7E complete. P7F–P7H pending, with P7F.1 requiring explicit scoped Admin-read authorization and data-minimization review, with no Phase 7 production deployment or release, and there is no Phase 7 deployment or release authorization.
+The planning-only PR #128 was followed by owner-authorized implementation on 2026-10-09. P7A–P7G have been merged and validated through scoped PRs #129–#149. P7F.2 explicitly retains **owner-only job actions**; P7F.1 has bounded audited, redacted human Admin triage reads only; P7G.1 has **self-scoped** identity/quota introspection; P7G.2 retains audited confirmation and dry-run boundaries. No cross-user mutation, global repair or new role editing is approved.
+
+**P7H.1 COMPLETE:** PR #151 merged to `main` as `eb51a7bd61fe741d734c59b309a2000feb004218`. Web CI #37909217495 passed 61 Playwright tests (including queued→completed→result→next-tool handoff, Admin 390px layout, keyboard activation and a11y); CodeQL #37909217792 and Dependency Review #37909218130 passed. The backend did not change after the passing Core API CI #37908227263 from PR #149. Recorded Admin resource measurements are candidates, not automatically accepted performance budgets.
+
+**P7H.2 IN PROGRESS:** Documentation/operator gate preparation only. See [P7 Release Readiness](docs/workstreams/phase7-release-readiness.md) and the [Master Tracker](docs/workstreams/phase7-experience-workflow-tracker.md). Exact-candidate local `make validate-free`, code and production readiness, backup/DR, staging/rollback, release version selection and explicit deployment approval are **outstanding**. **No Phase 7 production deployment, migration, tag or release is authorized by these docs or by PR merges.** The prior published `v0.6.0` remains immutable.
