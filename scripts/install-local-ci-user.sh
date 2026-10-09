@@ -23,11 +23,7 @@ gh auth status >/dev/null 2>&1 || { echo "GitHub CLI must be authenticated befor
   gh repo view --json nameWithOwner --jq '.nameWithOwner' >/dev/null
 ) || { echo "Authenticated GitHub CLI cannot access this repository" >&2; exit 1; }
 
-python3 - <<'PY'
-import sys
-if sys.version_info[:2] != (3, 12):
-    raise SystemExit(f"Python 3.12 is required to match the production image; found {sys.version.split()[0]}")
-PY
+python3 scripts/check-host-python.py
 node -e 'const major=Number(process.versions.node.split(".")[0]); if (major !== 24) { console.error(`Node 24 is required to match the production image; found ${process.versions.node}`); process.exit(1); }'
 
 if [[ "${ROOT}" =~ [[:space:]] ]]; then
