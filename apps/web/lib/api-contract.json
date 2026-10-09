@@ -182,6 +182,12 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/jobs/triage",
+      "response": "AdminJobTriagePageOut",
+      "client_marker": "`/api/v1/admin/jobs/triage?${params.toString()}`"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/status",
       "response": null,
       "client_marker": "\"/api/v1/admin/status\""
