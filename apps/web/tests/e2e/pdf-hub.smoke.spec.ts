@@ -619,6 +619,7 @@ test("P7C.1 failed jobs allow scoped retry into new durable URL", async ({ page 
   await page.goto("/jobs/job-failed-1");
   await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("งานนี้ไม่สำเร็จ");
   await expect(page.getByRole("main")).not.toContainText("worker internal trace");
+  page.once("dialog", (dialog) => void dialog.accept());
   await page.getByRole("button", { name: "ลองประมวลผลใหม่" }).click();
   await expect(page).toHaveURL(/\/jobs\/job-retry-2$/);
 });
@@ -1043,4 +1044,31 @@ test("P7F.1 triage denial and audit failure never reveal raw response or enable 
   await page.goto("/admin?section=jobs");
   await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "รายการงานสำหรับวิเคราะห์ปัญหา" })).toHaveCount(0);
+});
+
+test("P7F.2 job cancellation requires confirmation and declines without API mutation", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/api/v1/jobs/job-confirm-cancel", (route) => route.fulfill({ json: {
+    id: "job-confirm-cancel", operation: "compress", status: calls ? "cancelled" : "queued", progress: 0,
+    input_file_ids: ["file-pdf-1"], output_file_id: null, params: {},
+    error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/jobs/job-confirm-cancel/cancel", (route) => {
+    calls += 1;
+    return route.fulfill({ json: {
+      id: "job-confirm-cancel", operation: "compress", status: "cancelled", progress: 100,
+      input_file_ids: ["file-pdf-1"], output_file_id: null, params: {},
+      error: null, requested_by: "web-console:smoke-test",
+    } });
+  });
+
+  await page.goto("/jobs/job-confirm-cancel");
+  await expect(page.getByRole("button", { name: "ยกเลิกงาน" })).toBeVisible();
+  page.once("dialog", (dialog) => void dialog.dismiss());
+  await page.getByRole("button", { name: "ยกเลิกงาน" }).click();
+  expect(calls).toBe(0);
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("button", { name: "ยกเลิกงาน" }).click();
+  await expect(page.getByRole("main")).toContainText("ยกเลิกงานแล้ว");
+  expect(calls).toBe(1);
 });
