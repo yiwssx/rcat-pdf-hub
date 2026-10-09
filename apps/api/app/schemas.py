@@ -61,6 +61,16 @@ class StorageReconciliationOut(BaseModel):
     issues: list[StorageReconciliationIssueOut]
 
 
+class AdminStorageHealthOut(BaseModel):
+    dry_run: bool
+    backend: Literal["local", "s3"]
+    database_records: int
+    storage_objects: int
+    issue_count: int
+    healthy: bool
+    category_counts: dict[str, int]
+
+
 class FileRetentionUpdate(BaseModel):
     keep: bool
 
