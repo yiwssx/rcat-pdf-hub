@@ -14,7 +14,11 @@ for cmd in systemctl git make python3 node npm npx docker flock curl gh; do
 done
 
 if command -v python3 >/dev/null 2>&1; then
-  if python3 -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)'; then ok "Python 3.12"; else fail "Python 3.12 required ($(python3 --version 2>&1))"; fi
+  if python3 scripts/check-host-python.py >/dev/null; then
+    ok "host Python $(python3 --version 2>&1) (>=3.11,<4; API runtime frozen in Docker)"
+  else
+    fail "host Python >=3.11,<4 required ($(python3 --version 2>&1))"
+  fi
 fi
 if command -v node >/dev/null 2>&1; then
   if node -e 'process.exit(Number(process.versions.node.split(".")[0]) === 24 ? 0 : 1)'; then ok "Node 24"; else fail "Node 24 required ($(node --version 2>&1))"; fi

@@ -315,7 +315,7 @@ Grafana is provisioned automatically with Prometheus and Tempo data sources plus
 
 ## Validation / local CI
 
-Development baseline: Python **3.12**, Node **24**, Docker Engine + Compose plugin, and Playwright-compatible Chromium libraries.
+Development host baseline: Python **>=3.11,<4** (3.11–3.14 checked in CI), Node **24**, Docker Engine + Compose plugin, and Playwright-compatible Chromium libraries. The host Python is used for standard-library-only orchestration; production API dependencies, import checks, API contract, migrations, and coverage run inside the **pinned Python 3.12 API image** with SHA-256-locked requirements. Keep the production image pinned for repeatable releases; do not downgrade or replace Ubuntu's system Python to run this project. Python 3.10 is end-of-life and unsupported by the OCRmyPDF 17.x runtime.
 
 ```bash
 make validate-policy

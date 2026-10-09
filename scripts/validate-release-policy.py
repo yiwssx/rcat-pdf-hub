@@ -511,7 +511,14 @@ assert "docker-compose.prod.yml" in validate_free
 assert "npm ci --no-audit --no-fund" in validate_free
 assert "check-python-security-dependency.py" in validate_free
 assert "check-python-lock.py" in validate_free
-assert "--require-hashes -r apps/api/requirements.lock" in validate_free
+assert "python3 scripts/check-host-python.py" in validate_free, "Local validation must check the supported host Python floor"
+assert "python -m pip check" in validate_free, "API-image validation must test the locked dependency graph"
+assert "python -W error -c" in validate_free, "API-image validation must fail on dependency import warnings"
+assert "python scripts/validate-api-contract.py" in validate_free
+assert "python -m compileall -q app tests alembic" in validate_free
+assert "PDFHUB_DATABASE_URL=sqlite+pysqlite:" in validate_free
+assert "python3 -m venv" not in validate_free, "Application packages must not be installed in the host Python"
+assert "--require-hashes -r requirements.lock" in api_dockerfile, "Production image must install only hash-pinned packages"
 assert 'cd "${ROOT}"' in validate_free, "Backend validation must return to the exact repository root"
 for marker in (
     'coverage_image="rcat-pdf-hub-api-coverage:local"',

@@ -21,7 +21,7 @@ RCAT PDF Hub validation must remain **100% free of paid CI/CD, paid runners, pai
 ## Required local host
 
 - Linux
-- Python **3.12**
+- Host Python **>=3.11,<4** (3.11, 3.12, 3.13, 3.14 covered by GitHub CI; Python 3.10 has reached end-of-life)
 - Node **24** + npm/npx
 - Docker Engine + Docker Compose plugin
 - Playwright-compatible Chromium runtime libraries
@@ -69,7 +69,7 @@ make validate-free
 
 `validate-ops` syntax-checks backup/restore/DR/local-CI scripts and compiles Python operator tooling.
 
-`validate-backend` first validates the direct manifest against the committed transitive lock, installs `apps/api/requirements.lock` with `--require-hashes`, treats warnings as errors, runs pytest and validates fresh/adopted Alembic migration paths.
+`validate-backend` first validates the direct manifest against the committed transitive lock using the host's standard library, then builds the canonical Python 3.12 API image. Only the **image** installs the full dependency graph with `pip --require-hashes`. Inside that same image, the gate runs `pip check`, warnings-as-errors imports, application compilation, API-contract validation, and fresh/adopted Alembic migration paths. Backend pytest/coverage then run in the same pinned image. The host never attempts to install the Python 3.12 lock with its own Python interpreter.
 
 `validate-frontend` performs a warning-free `npm ci` from the committed lockfile, TypeScript typecheck and production Next.js build while ensuring package metadata and the lockfile are not mutated.
 
@@ -116,7 +116,7 @@ Phase 6G.2 runs the complete pytest suite under the repository-owned `scripts/ba
 
 The accepted baseline was measured by Core API CI run `37519020885` at **61.36% (1,869 / 3,046 statement lines)**. `quality/backend-coverage-baseline.json` enforces the same 61.36% floor. Backend changes that reduce the measured percentage fail both Core API CI and the zero-cost backend gate.
 
-Coverage enforcement is executed inside the canonical API image built from `apps/api/Dockerfile` in both hosted Core API CI and local/operator validation. Host Python packages and optional system binaries therefore cannot change the measured test set or statement execution. Local validation still performs lock/import/migration checks in the host Python 3.12 environment, then writes the container-measured report to `artifacts/quality/backend-coverage.json`.
+Coverage enforcement, locked-package import checks, contract checks, and migrations execute inside the canonical API image built from `apps/api/Dockerfile`. Host Python version and packages therefore cannot change the measured test set, interpreter ABI, migrations, or statement execution. Local validation checks manifest/lock consistency with host stdlib-only tooling and writes container-measured coverage to `artifacts/quality/backend-coverage.json`. The host can use Python 3.11–3.14 without regenerating or installing the container's Python 3.12 lock. Full `make validate-free` still requires the documented Node, Docker, Compose, kernel and browser prerequisites.
 
 The production-runtime pytest pass runs inside the hardened Compose API container with explicit test-only database, Redis, API-key, webhook, and download-signing settings. These overrides prevent operator `.env` credentials from changing test behavior, and pytest's cache provider is disabled because the production application filesystem is intentionally read-only.
 
@@ -176,7 +176,7 @@ The production/test installation graph is committed separately as:
 apps/api/requirements.lock
 ```
 
-The lock is generated with Python 3.12.14 and pinned `pip-tools==7.5.2`, and every locked distribution must have SHA-256 hashes.
+The lock is generated in the canonical pinned `python:3.12.14-slim-bookworm` image with `pip-tools==7.5.2`, independently of the host Python version, and every locked distribution must have SHA-256 hashes. This is **not** a floating production/runtime version: changing the image or regenerating the lock must be tested and reviewed in a separate PR.
 
 Refresh it after an approved direct dependency change:
 
@@ -198,7 +198,7 @@ The hosted Python security lane is intentionally narrower than a normal full PR 
 - no dependency name or extras set changes
 - the raw manifest diff contains only the verified removed and added pin
 
-The workflow then checks out trusted base code, materializes only the verified requirements state, sets up Python 3.12 and Node 24, and runs `make validate-free`. If the lock is absent or stale, validation fails until it is regenerated. The workflow has `contents: read` only and contains no merge job.
+The workflow then checks out trusted base code, materializes only the verified requirements state, sets up a reproducible Python 3.12 **workflow runner** and Node 24, and runs `make validate-free`. Host tooling compatibility is separately checked under Python 3.11, 3.12, 3.13 and 3.14 by Core API CI; the production/API image remains pinned. If the lock is absent or stale, validation fails until it is regenerated. The workflow has `contents: read` only and contains no merge job.
 
 ## Local CI
 
