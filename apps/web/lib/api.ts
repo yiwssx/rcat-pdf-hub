@@ -121,6 +121,10 @@ export type AuthMe = {
   roles: string[];
   auth_source: string;
   is_admin: boolean;
+  rate_limit_per_minute?: number | null;
+  daily_job_limit?: number | null;
+  max_storage_mb?: number | null;
+  quota_exempt?: boolean;
 };
 
 export type IntegrationStatus = {
