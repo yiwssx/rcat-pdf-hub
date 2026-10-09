@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
 import { BrandGlyph, ToolIcon, ToolIconName } from "./tool-icons";
 

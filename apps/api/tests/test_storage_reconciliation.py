@@ -77,7 +77,7 @@ def test_s3_reconciliation_uses_managed_object_listing(monkeypatch):
     monkeypatch.setattr(storage_reconciliation.settings, "storage_backend", "s3")
     monkeypatch.setattr(storage_reconciliation.settings, "s3_bucket", "pdfhub-test")
     monkeypatch.setattr(storage_reconciliation.settings, "s3_prefix", "pdfhub")
-    monkeypatch.setattr(storage_reconciliation, "s3_client", lambda: FakeS3())
+    monkeypatch.setattr(storage_reconciliation, "s3_client", FakeS3)
 
     db = SessionLocal()
     try:
