@@ -2,7 +2,7 @@
 
 A **self-hosted, API-first** PDF processing hub that lets multiple systems share a single PDF infrastructure stack without installing duplicate PDF engines in every project.
 
-> Status: **0.6.0 — Phase 6 production hardening & scale**  
+> Status: **v0.6.0 released (Phase 6 complete); Phase 7 development/candidate handoff closed, production release pending authorization**  
 > Deployment target: Docker Compose on institution-owned hardware with local volumes, NAS, or self-hosted S3-compatible storage  
 > Cost policy: **zero-cost software/CI/CD** — no paid runners, paid CI/CD, or paid cloud services are required
 
@@ -73,7 +73,15 @@ A **self-hosted, API-first** PDF processing hub that lets multiple systems share
 - Dry-run DB ↔ storage reconciliation for local/NAS/self-hosted S3
 - OpenAPI/frontend contract drift detection, backend coverage floor, accessibility gate and measured browser performance budgets
 
-See `PHASE3.md`, `PHASE4.md`, `PHASE5.md`, and `PHASE6.md` for milestone details.
+### Phase 7 development — completed candidate, not yet released
+
+- Task-first PDF workflow: tool deep links, explicit file intake, per-tool configuration, durable job status/results, authenticated download and follow-on tools without reupload.
+- My Files / My Jobs routes, Admin Overview/Jobs/Access/Storage/Diagnostics/Integrations, scoped RBAC and audited operations.
+- Regression fix PR [#154](https://github.com/yiwssx/rcat-pdf-hub/pull/154) merged into `main` at `46f36cfc44692ee2821948ecebb7bc9c9757c172`.
+- Ubuntu operator evidence: 116 backend tests, 61 browser E2E tests and one real Docker production-stack E2E passed; full local validation recorded the same SHA. Operator separately reported Doctor and code-mode Release Readiness PASS.
+- **This closes development and code-candidate handoff, not the Phase 7 production release.** New tag/version, production release gates, verified backup/DR, deployment and rollback require explicit separate approval. Phase 6 release tag `v0.6.0` is unchanged.
+
+See `PHASE3.md`, `PHASE4.md`, `PHASE5.md`, `PHASE6.md`, `PHASE7.md` and the Phase 7 [Master Tracker](docs/workstreams/phase7-experience-workflow-tracker.md) for milestone and release-gate status.
 
 ## Architecture
 
