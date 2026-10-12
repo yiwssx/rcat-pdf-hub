@@ -249,6 +249,8 @@ Update this table whenever a Phase 6 task changes state or is merged.
 
 | 2026-10-09 | 6H.3 / Phase 6 closure | Verified published non-draft, non-prerelease GitHub Release `v0.6.0` and matching lightweight tag pointing to `73f1eee26ffaf594740a5af222cb885f2b8f82db` (then-current `main`); accepted the operator's earlier Ubuntu full production gate PASS attestation. Host log and exact tested SHA were not uploaded for independent review. This documentation reconciliation completes Phase 6 without re-running deployment, backup or DR. | [GitHub Release v0.6.0](https://github.com/yiwssx/rcat-pdf-hub/releases/tag/v0.6.0); tag ref `refs/tags/v0.6.0`; PR #125 | COMPLETE |
 
+| 2026-10-12 | P6 closure reaffirmation | Rechecked Phase 6 tracker, published `v0.6.0` GitHub Release and unchanged release boundary while closing Phase 7 development; no P6 implementation, tag or production operation repeated. | Published [v0.6.0 Release](https://github.com/yiwssx/rcat-pdf-hub/releases/tag/v0.6.0); Phase 6 completion in `PHASE6.md` | COMPLETE (UNCHANGED) |
+
 ## Current next action
 
 **None — Phase 6 is closed at the published `v0.6.0` release.**
@@ -259,9 +261,6 @@ The Ubuntu operator confirmed that `make release-readiness` passed in production
 
 No further Phase 6 implementation, retagging, redeployment, backup, restore, DR drill or production gate rerun is necessary merely to reconcile closure. Any later enhancement, defect or follow-up audit should be tracked separately.
 
- after branding #123. If a different commit was validated, use that verified commit as the release target. Do not create a tag by guessing from conversation timestamps, and do not rerun backup, restore, DR or full release gate merely to update tracking.
-
-After confirming the SHA, create the `v0.6.0` tag and corresponding GitHub Release, confirm the tag resolves to the verified commit, and record the release URL and operator evidence reference. Then set 6H.3 and the Phase 6 headline to `COMPLETE` in a final documentation-only reconciliation PR. Preserve the source-level security and CI gates.
 
 ## Status update convention
 
