@@ -1,11 +1,11 @@
 # Phase 7 — Experience & Workflow Master Tracker
 
-Status: **P7H.1 COMPLETE — P7H.2 RELEASE READINESS IN PROGRESS (NO DEPLOY AUTHORIZATION)**
+Status: **PHASE 7 DEVELOPMENT CLOSED (2026-10-12) — P7H.2 LOCAL VALIDATION + CODE READINESS ATTESTED PASS; PRODUCTION RELEASE UNAUTHORIZED**
 
 Default branch: `main`  
 Pre-planning code baseline: `4f808fd3d8e094e1d37b361ff171a021f5e02ace` (2026-10-09)  
 Prior release: `v0.6.0` — Phase 6 **COMPLETE**, tag unchanged  
-Phase 7 target version: **TBD at release planning**  
+Phase 7 target version: **TBD at separate, approved production release planning**  
 Tracker role: **canonical source of truth for Phase 7 execution status**
 
 Source of scope: [PHASE7.md](../../PHASE7.md). Accepted task-first/role-safe interface: [ADR-0005](../adr/0005-task-first-journey.md).
@@ -45,9 +45,9 @@ Each row has one deliverable, a verification obligation, an owner/PR evidence pl
 | 7G.1 | Human effective-role/quotas workflows; new identity mutations only after explicit security review | COMPLETE | 7E.1 | PR #146 merged `cf0dd647d202cb53ee3be83a98959c12faa62896`; Core API CI #37905364357, Web CI #37905364564, CodeQL #37905364778, Dependency Review #37905364511 PASS; accepted self-scoped read-only scope, no identity mutation |
 | 7G.2 | Storage/retention/reconciliation, service keys, webhooks and integration operations with safe confirmations | COMPLETE | 7E.2, 7F.2 | PR #148 merged `7a90ca5a034c83c39707ddfe83ff3a3aac094a8f` (Core API #37907436955, Web #37907436782, CodeQL #37907436864, Dependency Review #37907436807 PASS); PR #149 merged `882ef978bb0ccfadc597debc428cca015a552074` (Core API #37908227263, Web #37908227296, CodeQL #37908227364, Dependency Review #37908227398 PASS); no automatic repair or expanded ownership |
 | 7H.1 | User/Admin E2E journeys, denial tests, mobile/a11y/performance and backend regression gates | COMPLETE | 7A–7G | PR #151 merged `eb51a7bd61fe741d734c59b309a2000feb004218`; Web CI #37909217495 (61 Playwright PASS), CodeQL #37909217792 and Dependency Review #37909218130 PASS. Existing negative role/ownership regressions PASS. API code unchanged since Core API CI #37908227263 PASS (PR #149); Admin 390px keyboard/a11y/overflow PASS; candidate metrics recorded, no new performance ceilings |
-| 7H.2 | Documentation, staged rollout/rollback, production verification and release gate (version TBD) | IN PROGRESS | 7H.1 | [Release-readiness handoff](phase7-release-readiness.md) drafted; local `make validate-free`, code/production release-readiness, backup/DR, operator approval, staged deployment and final release remain PENDING; no rollout authorized |
+| 7H.2 | Final candidate validation, code-release-readiness evidence and safe production operator handoff; **execution of rollout/production release is a separate operational gate** | COMPLETE (DEVELOPMENT/HANDOFF) | 7H.1 | PR #154 merged as `46f36cfc44692ee2821948ecebb7bc9c9757c172`. Ubuntu operator-provided local log: 116 backend, 61 browser and 1 real production-stack E2E PASS; `runtime: PASS`; `zero-cost validation (all): PASS`; validated SHA matched `origin/main`; systemd exited 0. Operator separately confirms `make local-ci-doctor` and `PDFHUB_RELEASE_MODE=code make release-readiness` PASS (raw code-readiness/SBOM/scan logs not uploaded). [Release-readiness handoff](phase7-release-readiness.md) records remaining, **not passed**, production gates. |
 
-**Roll-up:** P7A–P7H.1 COMPLETE within explicitly reviewed permission boundaries. P7H.2 IN PROGRESS (documentation/evidence only). No Phase 7 production deploy, tag or release.
+**Roll-up:** P7A–P7H.2 **COMPLETE for the approved development and candidate-handoff scope** as of 2026-10-12. Final executable P7 candidate SHA: `46f36cfc44692ee2821948ecebb7bc9c9757c172`. The operator-reported code readiness is not a production approval: Phase 7 production change control, verified backup/DR, staging/rollback, production-mode readiness, target version/tag and deployment remain separately **PENDING / NOT AUTHORIZED**. Phase 6 `v0.6.0` is already released and unchanged.
 
 ## User flow contract
 
@@ -185,11 +185,14 @@ This design boundary was accepted in PR #142 with negative authorization and aud
 | 2026-10-09 | 7H.1 | Reconcile merged integrated user/job/result/zero-reupload Playwright suite and Admin 390px layout/keyboard/accessibility; preserve previous backend validated tree and prior denial tests | PR #151 merged `eb51a7bd61fe741d734c59b309a2000feb004218`; Web #37909217495 (61 PASS), CodeQL #37909217792, Dependency Review #37909218130 PASS; unchanged backend since Core API #37908227263 | COMPLETE |
 | 2026-10-09 | 7H.2 | Start evidence-based release-readiness and rollback/stop-gate operator handoff without authorizing deployment, tag or migration | [P7 Release Readiness](phase7-release-readiness.md); exact-host local validation, DR, production check and approval pending | IN PROGRESS |
 
+| 2026-10-12 | 7H.2 local runtime regression | Fixed real-stack E2E assertions for durable `/jobs/[id]`, result downloads and file-detail/tool preview flow; full local CI verified exact merge SHA; browser + real runtime succeeded. PR checks independently passed (Web CI, CodeQL, Dependency Review). | PR #154 merged `46f36cfc44692ee2821948ecebb7bc9c9757c172`; operator-copied Ubuntu log: 116 backend, 61 E2E, 1 real-stack E2E, `runtime: PASS`, `zero-cost validation (all): PASS`; `.local-ci/last-main-pass` exact SHA | COMPLETE (LOCAL) |
+| 2026-10-12 | Phase 7 development closure | Owner confirmed Doctor and code release-readiness gates PASS; close implementation and candidate handoff, separating unapproved production release operations. Preserve operator-attested status where host artifacts are unavailable in GitHub. | Operator confirmation; `make local-ci-doctor`; `PDFHUB_RELEASE_MODE=code make release-readiness`; [release handoff](phase7-release-readiness.md) | COMPLETE (DEVELOPMENT/HANDOFF), PRODUCTION RELEASE PENDING |
+
 ## Current next action
 
-**P7H.2 NEXT:** Review the [release-readiness handoff](phase7-release-readiness.md), rerun exact-candidate `make validate-free` and `PDFHUB_RELEASE_MODE=code make release-readiness` on institution-owned Linux, collect backup/DR and production gate proof in an **explicitly authorized** window, and select the version only at release approval. P7H.1 PR #151 had 61 Playwright tests green, including negative role/ownership checks carried from prior waves, with backend unchanged since green Core API CI #37908227263. The single-run Admin mobile resource metrics are **candidates**, not enforced thresholds. No production rollout, tag or release authorized.
+**None for Phase 7 development: CLOSED.** Do not repeat the successful Ubuntu full local CI or code-readiness validation solely to update this tracker. Code candidate `46f36cfc44692ee2821948ecebb7bc9c9757c172` has operator-reported passing local gates. The single-run Admin mobile performance metrics remain candidates, not enforced thresholds.
 
-**P7H.2:** Candidate documentation and operator-runbook preparation are in progress after P7H.1 repository-level checks passed. Production/local all-in-one gates, rollback proof and explicit operator release authorization remain outstanding. No P7 production deploy, tag, migration or release before full P7H.2 acceptance.
+**Future production release is separate:** follow the [release-readiness handoff](phase7-release-readiness.md) when the owner explicitly selects a version, authorizes the change window and rollback owner, and supplies verified backup/DR and production gate evidence. No Phase 7 tag, deployment, migration, or release has been executed or authorized by development closure. Do not move the Phase 6 `v0.6.0` tag.
 
 ## Tracker state protocol
 
