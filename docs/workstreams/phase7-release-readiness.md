@@ -1,6 +1,6 @@
 # Phase 7 — Release readiness and operator handoff
 
-Status: **CANDIDATE PREPARATION ONLY — NO PRODUCTION AUTHORIZATION**  
+Status: **DEVELOPMENT/HANDOFF CLOSED — EXACT-SHA LOCAL VALIDATION AND CODE READINESS ATTESTED PASS; PRODUCTION RELEASE NOT AUTHORIZED** (2026-10-12)  
 Source of truth: [Phase 7 Master Tracker](phase7-experience-workflow-tracker.md)  
 Baseline: released `v0.6.0` (immutable). Phase 7 release version: **not selected**.
 
@@ -14,21 +14,34 @@ Baseline: released `v0.6.0` (immutable). Phase 7 release version: **not selected
 
 **Boundary:** H.1 denotes repository-level functional, negative-path, security and browser regression evidence. This is **not** approval to roll out. Real-environment full `make validate-free`, image scans, production verification, DR/backup and rollback are H.2 gates.
 
+## P7H.2 development candidate verification (2026-10-12)
+
+- PR [#154](https://github.com/yiwssx/rcat-pdf-hub/pull/154) corrected an obsolete Production Stack E2E expectation (the former Job Drawer versus P7 durable job/result/file routes) and merged at `46f36cfc44692ee2821948ecebb7bc9c9757c172`. Web CI, CodeQL and Dependency Review passed on that PR.
+- Ubuntu operator-provided output for the exact merged `main` SHA showed **116 backend tests, 61 Playwright browser tests, one genuine Docker production-stack E2E test** passing, plus `runtime: PASS`, `zero-cost validation (all): PASS` and `.local-ci/last-main-pass` matching that SHA. Systemd service completed with `Result=success`, `ExecMainStatus=0`.
+- The operator subsequently confirmed `make local-ci-doctor` and `PDFHUB_RELEASE_MODE=code make release-readiness` **PASS**. Raw code-readiness output, source/image scan artifacts, SBOM and backup/DR files were not supplied to GitHub; code readiness is recorded as **operator-attested**, not independently re-run by this documentation change.
+- **Decision:** Owner closed **Phase 7 development and code-candidate handoff**. This is not permission to deploy, create a new tag/release, run migrations, or exercise a destructive restore.
+
 ## P7H.2 gate register
 
 | Gate | Required proof | Current state |
 | --- | --- | --- |
-| Repository change review | No unresolved PR / merge conflict / critical security review finding; PR #151 and Phase 7 code lineage reviewed | PR #151 merged; final release-scope review **pending** |
-| CI security | Fresh CodeQL and Dependency Review for any new code changes | PR #151 checks green; recheck if code changes |
-| Backend contract / coverage | Core API checks for any backend changes; `validate-api-contract.py` and coverage floor remain enforced | PR #149 green; no API changes through #151; H.2 local revalidation **pending** |
-| All-in-one local gate | Institution-owned Linux executor runs `make local-ci-doctor` and **`make validate-free`** against exact candidate commit; retain logs and exit code | **PENDING — not run in this handoff** |
-| Code release readiness | `PDFHUB_RELEASE_MODE=code make release-readiness` on exact candidate; store SBOM and scan evidence | **PENDING** |
+| Repository change review | No unresolved PR / merge conflict / critical security review finding; PR #151 and Phase 7 code lineage reviewed | Implementation PR #154 merged; as of development closure no open PR or Issue; formal production release-scope review **pending** |
+| CI security | Fresh CodeQL and Dependency Review for any new code changes | PR #154 Web CI, CodeQL, Dependency Review **PASS**; recheck on later changes |
+| Backend contract / coverage | Core API checks for any backend changes; `validate-api-contract.py` and coverage floor remain enforced | Prior Core API PR #149 green; exact-SHA local `make validate-free` returned 116 passing backend tests and coverage gate PASS in operator-provided log |
+| All-in-one local gate | Institution-owned Linux executor runs `make local-ci-doctor` and **`make validate-free`** against exact candidate commit; retain logs and exit code | **PASS (operator evidence)** at `46f36cfc44692ee2821948ecebb7bc9c9757c172`: 116 backend, 61 browser, 1 real-stack E2E, runtime/all PASS, systemd exit 0, validated SHA = origin/main; Doctor additionally attested PASS |
+| Code release readiness | `PDFHUB_RELEASE_MODE=code make release-readiness` on exact candidate; store SBOM and scan evidence | **PASS per operator confirmation**; raw scan output/SBOM not archived in GitHub, retain externally before audit |
 | Operator release decision | Approve target release version, exact commit, downtime/rollback owner, change window and written authorization | **PENDING** |
 | Pre-production data safety | Verified current backup, backup checksum verification, isolated DR drill, configured retention and alerts, storage capacity, migration review | **PENDING** |
 | Production gate | On authorized operator host: `BACKUP=<verified-backup> URL=<production-url> make release-readiness`; production Compose/security, image SBOM/Trivy, load smoke and DR must pass | **PENDING — production access not used** |
 | Staged deployment / verification | Approved limited rollout; verify `/healthz`, `/readyz`, user tool/job/result, expired output, authenticated Admin read and audit without inspecting private documents | **PENDING — deployment not authorized** |
 | Rollback rehearsal | Proven ability to restore previously deployed image/commit/configuration and traffic routing; data restore only under separately acknowledged recovery procedure | **PENDING** |
 | Final release | Create a *new* tag/release only at the selected approved P7 version on the verified deployed SHA; publish operator evidence | **BLOCKED until all gates and authorization** |
+
+## Development workstream closure vs production release
+
+**Development status: COMPLETE.** Preserve the passing code candidate and avoid rerunning the same gate merely for bookkeeping. A subsequent documentation-only merge advances `main` and will require a new exact-SHA local validation under the existing no-bypass doctor policy before that **new** commit is considered validated. The candidate SHA above remains the evidence for the code change.
+
+**Production status: PENDING / NOT AUTHORIZED.** Operator approval, release version, backup verification, disaster-recovery proof, production-mode release gate and staged rollback/verification have not been confirmed for Phase 7. The released Phase 6 tag `v0.6.0` stays immutable. Resume these as separately approved release operations only.
 
 ## Operator execution sequence (do not execute without release authorization)
 
