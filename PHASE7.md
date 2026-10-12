@@ -1,6 +1,6 @@
 # Phase 7 — Task-first Experience & Operational Workflows
 
-Status: **P7A–P7H.1 VERIFIED; P7H.2 RELEASE READINESS IN PROGRESS — NO PRODUCTION APPROVAL**
+Status: **PHASE 7 DEVELOPMENT CLOSED — P7A–P7H.2 CANDIDATE VALIDATION COMPLETE; PRODUCTION RELEASE NOT AUTHORIZED** (2026-10-12)
 
 Base: RCAT PDF Hub `v0.6.0`. Preserve the published Phase 6 release and security/production gates.
 
@@ -54,4 +54,6 @@ The planning-only PR #128 was followed by owner-authorized implementation on 202
 
 **P7H.1 COMPLETE:** PR #151 merged to `main` as `eb51a7bd61fe741d734c59b309a2000feb004218`. Web CI #37909217495 passed 61 Playwright tests (including queued→completed→result→next-tool handoff, Admin 390px layout, keyboard activation and a11y); CodeQL #37909217792 and Dependency Review #37909218130 passed. The backend did not change after the passing Core API CI #37908227263 from PR #149. Recorded Admin resource measurements are candidates, not automatically accepted performance budgets.
 
-**P7H.2 IN PROGRESS:** Documentation/operator gate preparation only. See [P7 Release Readiness](docs/workstreams/phase7-release-readiness.md) and the [Master Tracker](docs/workstreams/phase7-experience-workflow-tracker.md). Exact-candidate local `make validate-free`, code and production readiness, backup/DR, staging/rollback, release version selection and explicit deployment approval are **outstanding**. **No Phase 7 production deployment, migration, tag or release is authorized by these docs or by PR merges.** The prior published `v0.6.0` remains immutable.
+**P7H.2 DEVELOPMENT/HANDOFF COMPLETE (operator attestation, 2026-10-12):** PR [#154](https://github.com/yiwssx/rcat-pdf-hub/pull/154) fixed real-stack smoke navigation for the P7 durable job/result/file flow and merged as `46f36cfc44692ee2821948ecebb7bc9c9757c172`. The institution-owned Ubuntu local-CI evidence reported backend 116 tests PASS, browser E2E 61 PASS, real Docker production-stack E2E 1 PASS, `runtime: PASS`, `zero-cost validation (all): PASS`, service exit 0 and `.local-ci/last-main-pass` equal to that exact merge SHA. The operator additionally confirmed `make local-ci-doctor` and `PDFHUB_RELEASE_MODE=code make release-readiness` passed. The code-gate console output, scan reports and artifacts have **not** been uploaded into this repository; record that part as operator-attested, not independently reviewed. These facts close the **Phase 7 development and candidate-handoff workstream**.
+
+**Production release remains a distinct, unexecuted operational decision:** A new Phase 7 version/tag, verified current backup, isolated DR drill, production-mode `BACKUP=... URL=... make release-readiness`, approved deployment window/rollback ownership, staged rollout and live acceptance still require separate authorization and evidence. See [P7 Release Readiness](docs/workstreams/phase7-release-readiness.md); none is represented as having passed merely because the development workstream is closed. **No Phase 7 production deployment, migration, tag or release is authorized by this closure.** The published Phase 6 `v0.6.0` remains immutable.
