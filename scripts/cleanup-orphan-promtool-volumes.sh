@@ -15,8 +15,9 @@ if [[ "${mode}" == "--apply" ]]; then
     echo "Refusing deletion without CI_CLEANUP_CONFIRM=DELETE" >&2
     exit 2
   }
-  mkdir -p "${ROOT}/.local-ci"
-  exec 9>"${ROOT}/.local-ci/validator.lock"
+  lock_file="${CI_CLEANUP_LOCK_FILE:-${ROOT}/.local-ci/validator.lock}"
+  mkdir -p "$(dirname "${lock_file}")"
+  exec 9>"${lock_file}"
   if ! flock -n 9; then
     echo "Local CI validation is running; retry after its cycle completes." >&2
     exit 1
