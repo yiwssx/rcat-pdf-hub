@@ -37,9 +37,12 @@ def test_mutations_denied_if_audit_unavailable(monkeypatch):
     monkeypatch.setattr(job_routes, "audit_event", lambda *args, **kwargs: False)
     monkeypatch.setattr(job_routes, "ensure_daily_job_quota", lambda *args, **kwargs: None)
     web = owned_client()
-    assert web.post("/api/v1/jobs/guard-queued/cancel").status_code == 503
-    assert web.post("/api/v1/jobs/guard-failed/retry").status_code == 503
-    assert web.delete("/api/v1/jobs/terminal").status_code == 503
+    cancel_response = web.post("/api/v1/jobs/guard-queued/cancel")
+    assert cancel_response.status_code == 503
+    retry_response = web.post("/api/v1/jobs/guard-failed/retry")
+    assert retry_response.status_code == 503
+    delete_response = web.delete("/api/v1/jobs/terminal")
+    assert delete_response.status_code == 503
     db = SessionLocal()
     try:
         assert db.get(JobRecord, "guard-queued").status == "queued"

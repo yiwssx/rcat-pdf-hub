@@ -160,11 +160,16 @@ def test_human_admin_wildcard_stays_owner_scoped_on_general_job_routes():
     seed_jobs()
     human = client_for(create_local_admin_identity("triage-admin"))
     # The wide view is explicitly limited to the minimized audited endpoint.
-    assert len(human.get("/api/v1/admin/jobs/triage").json()["items"]) == 3
-    assert human.get("/api/v1/jobs").json() == []
-    assert human.get("/api/v1/jobs/triage-old").status_code == 403
-    assert human.post("/api/v1/jobs/triage-new/cancel").status_code == 403
-    assert human.post("/api/v1/jobs/triage-medium/retry").status_code == 403
+    triage_response = human.get("/api/v1/admin/jobs/triage")
+    assert len(triage_response.json()["items"]) == 3
+    jobs_response = human.get("/api/v1/jobs")
+    assert jobs_response.json() == []
+    job_response = human.get("/api/v1/jobs/triage-old")
+    assert job_response.status_code == 403
+    cancel_response = human.post("/api/v1/jobs/triage-new/cancel")
+    assert cancel_response.status_code == 403
+    retry_response = human.post("/api/v1/jobs/triage-medium/retry")
+    assert retry_response.status_code == 403
     deleted = human.delete("/api/v1/jobs/terminal")
     assert deleted.status_code == 200 and deleted.json()["deleted"] == 0
 
@@ -181,10 +186,14 @@ def test_legacy_signed_wildcard_session_cannot_read_or_delete_foreign_jobs():
         "name": "user:legacy", "subject": "legacy", "source": "session",
         "groups": [], "scopes": ["*"], "is_identity_admin": True,
     })
-    assert legacy.get("/api/v1/jobs").json() == []
-    assert legacy.get("/api/v1/jobs/triage-old").status_code == 403
-    assert legacy.post("/api/v1/jobs/triage-new/cancel").status_code == 403
-    assert legacy.delete("/api/v1/jobs/terminal").json()["deleted"] == 0
+    jobs_response = legacy.get("/api/v1/jobs")
+    assert jobs_response.json() == []
+    job_response = legacy.get("/api/v1/jobs/triage-old")
+    assert job_response.status_code == 403
+    cancel_response = legacy.post("/api/v1/jobs/triage-new/cancel")
+    assert cancel_response.status_code == 403
+    delete_response = legacy.delete("/api/v1/jobs/terminal")
+    assert delete_response.json()["deleted"] == 0
 
 
 def test_direct_general_job_query_keeps_identity_scoped_with_wildcard():
