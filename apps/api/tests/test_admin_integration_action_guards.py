@@ -42,15 +42,17 @@ def test_privileged_integration_mutations_fail_closed_on_unavailable_audit(monke
         "name": "another-key", "scopes": ["files:read"],
     })
     assert create.status_code == 503
-    assert client.delete("/api/v1/admin/api-keys/service-key-1", headers=headers).status_code == 503
+    deleted = client.delete("/api/v1/admin/api-keys/service-key-1", headers=headers)
+    assert deleted.status_code == 503
     update = client.put("/api/v1/admin/service-policies/integration-service",
                         headers=headers, json={
                             "rate_limit_per_minute": 55, "daily_job_limit": 60,
                             "max_storage_mb": 700, "webhook_url": None,
                         })
     assert update.status_code == 503
-    assert client.post("/api/v1/admin/webhook-deliveries/delivery-1/retry",
-                       headers=headers).status_code == 503
+    retried = client.post("/api/v1/admin/webhook-deliveries/delivery-1/retry",
+                          headers=headers)
+    assert retried.status_code == 503
 
     db = SessionLocal()
     try:
