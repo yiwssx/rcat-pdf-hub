@@ -71,7 +71,10 @@ operations() {
     scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
     scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
     scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh \
-    scripts/compile-python-lock.sh scripts/validate-container-hardening.sh; do
+    scripts/compile-python-lock.sh scripts/validate-container-hardening.sh \
+    scripts/validate-prometheus.sh scripts/validate-free.sh \
+    scripts/cleanup-ci-project.sh scripts/cleanup-orphan-promtool-volumes.sh \
+    scripts/test-ci-resource-cleanup.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
@@ -86,6 +89,7 @@ operations() {
     scripts/check-grafana-provisioning.py \
     scripts/validate-api-contract.py \
     scripts/backend-coverage.py
+  bash scripts/test-ci-resource-cleanup.sh
   echo 'operations: PASS'
 }
 
@@ -238,10 +242,33 @@ runtime() {
   }
 
   cleanup_runtime() {
-    dc --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans >/dev/null 2>&1 || true
-    rm -rf "${PDFHUB_NAS_PATH}" >/dev/null 2>&1 || true
+    local failed=0
+    if ! bash scripts/cleanup-ci-project.sh "${project}" runtime; then
+      echo "runtime: CI resource cleanup failed for ${project}" >&2
+      failed=1
+    fi
+    # Only remove the test-created temporary NAS path. Never touch a real NAS.
+    if [[ "${PDFHUB_NAS_PATH}" =~ ^/tmp/pdfhub-validation-nas-[0-9]+$ ]]; then
+      if ! rm -rf -- "${PDFHUB_NAS_PATH}"; then
+        echo "runtime: failed to remove temporary NAS directory" >&2
+        failed=1
+      fi
+    else
+      echo "runtime: refusing unexpected NAS cleanup path" >&2
+      failed=1
+    fi
+    return "${failed}"
   }
-  trap cleanup_runtime EXIT
+  cleanup_runtime_on_exit() {
+    local result=$?
+    trap - EXIT
+    if ! cleanup_runtime; then result=1; fi
+    exit "${result}"
+  }
+  trap cleanup_runtime_on_exit EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
 
   dc build --pull api worker-interactive worker worker-heavy cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
@@ -286,8 +313,8 @@ runtime() {
 
   dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
-  cleanup_runtime
-  trap - EXIT
+  if ! cleanup_runtime; then exit 1; fi
+  trap - EXIT INT TERM HUP
   echo 'runtime: PASS'
 }
 
