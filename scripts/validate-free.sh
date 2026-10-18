@@ -71,7 +71,13 @@ operations() {
     scripts/install-backup-user.sh scripts/uninstall-backup-user.sh scripts/local-ci-doctor.sh \
     scripts/local-ci-cycle.sh scripts/local-ci-prs.sh scripts/local-ci-dependabot.sh \
     scripts/install-local-ci-user.sh scripts/uninstall-local-ci-user.sh scripts/validate-direct-dependency.sh \
-    scripts/compile-python-lock.sh scripts/validate-container-hardening.sh; do
+    scripts/compile-python-lock.sh scripts/validate-container-hardening.sh \
+    scripts/validate-prometheus.sh scripts/validate-free.sh \
+    scripts/cleanup-ci-project.sh scripts/cleanup-orphan-promtool-volumes.sh \
+    scripts/test-ci-resource-cleanup.sh \
+    scripts/local-ci-result-cache.sh scripts/local-ci-retry-pr.sh \
+    scripts/test-local-ci-result-cache.sh scripts/local-ci-prs.sh \
+    scripts/ci-nas-dir.sh scripts/test-ci-nas-dir.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
@@ -86,6 +92,9 @@ operations() {
     scripts/check-grafana-provisioning.py \
     scripts/validate-api-contract.py \
     scripts/backend-coverage.py
+  bash scripts/test-ci-resource-cleanup.sh
+  bash scripts/test-local-ci-result-cache.sh
+  bash scripts/test-ci-nas-dir.sh
   echo 'operations: PASS'
 }
 
@@ -232,16 +241,42 @@ runtime() {
   export PDFHUB_ALLOWED_ORIGINS="http://localhost:${PDFHUB_HTTP_PORT}"
   export PDFHUB_PUBLIC_BASE_URL="http://localhost:${PDFHUB_HTTP_PORT}"
   printf 'runtime validation HTTP port: %s\n' "${PDFHUB_HTTP_PORT}"
+  # Create this Docker bind-mount source as the CI user *before* Compose runs.
+  # Otherwise Docker may create it as root, leaving /tmp cleanup impossible.
+  bash scripts/ci-nas-dir.sh create "${PDFHUB_NAS_PATH}"
+  local cleanup_attempted=0
 
   dc() {
     docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml "$@"
   }
 
   cleanup_runtime() {
-    dc --profile s3 --profile security --profile observability --profile archive down -v --remove-orphans >/dev/null 2>&1 || true
-    rm -rf "${PDFHUB_NAS_PATH}" >/dev/null 2>&1 || true
+    cleanup_attempted=1
+    local failed=0
+    if ! bash scripts/cleanup-ci-project.sh "${project}" runtime; then
+      echo "runtime: CI resource cleanup failed for ${project}" >&2
+      failed=1
+    fi
+    # Fail on unexpected files or ownership; never sudo/rm -rf a bind mount.
+    if ! bash scripts/ci-nas-dir.sh remove "${PDFHUB_NAS_PATH}"; then
+      echo "runtime: failed to remove temporary NAS directory" >&2
+      failed=1
+    fi
+    return "${failed}"
   }
-  trap cleanup_runtime EXIT
+  cleanup_runtime_on_exit() {
+    local result=$?
+    trap - EXIT
+    # Explicit cleanup already ran; do not repeat an identical failure.
+    if [[ "${cleanup_attempted}" -eq 0 ]]; then
+      if ! cleanup_runtime; then result=1; fi
+    fi
+    exit "${result}"
+  }
+  trap cleanup_runtime_on_exit EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
 
   dc build --pull api worker-interactive worker worker-heavy cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
@@ -286,8 +321,8 @@ runtime() {
 
   dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
-  cleanup_runtime
-  trap - EXIT
+  if ! cleanup_runtime; then exit 1; fi
+  trap - EXIT INT TERM HUP
   echo 'runtime: PASS'
 }
 

@@ -52,7 +52,9 @@ Description=Run RCAT PDF Hub zero-cost local validation periodically
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
+# Start the next cycle only after the prior oneshot has finished.
+# OnUnitActiveSec can cause an immediate retry after a long validation run.
+OnUnitInactiveSec=5min
 RandomizedDelaySec=30
 Unit=${SERVICE}
 

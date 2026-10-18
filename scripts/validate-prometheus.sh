@@ -16,8 +16,22 @@ export PDFHUB_AUTH_TOKEN_SECRET="${PDFHUB_AUTH_TOKEN_SECRET:-promtool-auth-secre
 export PDFHUB_DOWNLOAD_SIGNING_SECRET="${PDFHUB_DOWNLOAD_SIGNING_SECRET:-promtool-download-secret-placeholder-0123456789abcdef}"
 
 project="pdfhub-promtool-$$"
-cleanup() { docker compose -p "${project}" --profile observability down --remove-orphans >/dev/null 2>&1 || true; }
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if ! bash scripts/cleanup-ci-project.sh "${project}" promtool; then
+    echo "promtool: CI resource cleanup failed for ${project}" >&2
+    result=1
+  fi
+  if [ "${result}" -eq 0 ]; then
+    echo "observability configuration validation: PASS"
+  fi
+  exit "${result}"
+}
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 docker compose -p "${project}" --profile observability run --rm --no-deps \
   --entrypoint /bin/promtool prometheus \
@@ -37,6 +51,3 @@ docker compose -p "${project}" --profile observability run --rm --no-deps \
 
 python3 scripts/check-grafana-provisioning.py
 
-cleanup
-trap - EXIT
-echo "observability configuration validation: PASS"

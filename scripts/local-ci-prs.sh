@@ -18,6 +18,8 @@ repo="$(gh repo view --json nameWithOwner --jq '.nameWithOwner')"
 git fetch --quiet --prune origin main
 main_sha="$(git rev-parse origin/main)"
 mkdir -p "${STATE_ROOT}/worktrees" "${STATE_ROOT}/logs" "${STATE_ROOT}/status"
+# SHA-pair failure/interruption state protects the host from infinite retries.
+source "${ROOT}/scripts/local-ci-result-cache.sh"
 
 post_status() {
   local sha="$1" state="$2" description="$3"
@@ -52,12 +54,24 @@ for row in "${rows[@]}"; do
     continue
   fi
 
-  success_file="${STATE_ROOT}/status/pr-${pr}-success"
-  if [ -f "${success_file}" ] && [ "$(cat "${success_file}")" = "${base_sha}:${head_sha}" ]; then
-    post_status "${head_sha}" success "Zero-cost full validation already passed"
-    echo "local-ci: PR #${pr} ${head_sha} already passed against ${base_sha}"
-    continue
-  fi
+  validation_key="${base_sha}:${head_sha}"
+  case "$(local_ci_result "${pr}" "${validation_key}")" in
+    success)
+      post_status "${head_sha}" success "Zero-cost full validation already passed"
+      echo "local-ci: PR #${pr} ${head_sha} already passed against ${base_sha}"
+      continue
+      ;;
+    failure)
+      post_status "${head_sha}" failure "Previous full validation failed for unchanged SHA; inspect server log, explicit retry required"
+      echo "local-ci: PR #${pr} unchanged failed SHA; skipping full validation (use scripts/local-ci-retry-pr.sh ${pr} after fixing root cause)"
+      continue
+      ;;
+    interrupted)
+      post_status "${head_sha}" error "Previous full validation interrupted for unchanged SHA; explicit retry required"
+      echo "local-ci: PR #${pr} unchanged interrupted SHA; skipping full validation (use scripts/local-ci-retry-pr.sh ${pr})"
+      continue
+      ;;
+  esac
 
   git fetch --quiet --force origin "pull/${pr}/head:refs/remotes/origin/pr-${pr}"
   fetched_sha="$(git rev-parse "refs/remotes/origin/pr-${pr}")"
@@ -89,6 +103,10 @@ for row in "${rows[@]}"; do
     rm -rf "${worktree}"
   }
 
+  # Persist an attempt *before* marking GitHub pending. If the service is
+  # interrupted, the next timer tick reports the interruption but does not
+  # rebuild Docker images indefinitely for the same commit pair.
+  local_ci_record_start "${pr}" "${validation_key}"
   post_status "${head_sha}" pending "Zero-cost full validation running on institution-owned hardware"
 
   log="${STATE_ROOT}/logs/pr-${pr}-${head_sha}.log"
@@ -97,16 +115,18 @@ for row in "${rows[@]}"; do
     current_main="$(gh api "repos/${repo}/git/ref/heads/main" --jq '.object.sha')"
     current_head="$(gh api "repos/${repo}/pulls/${pr}" --jq '.head.sha')"
     if [ "${current_main}" = "${main_sha}" ] && [ "${current_head}" = "${head_sha}" ]; then
-      printf '%s\n' "${base_sha}:${head_sha}" > "${success_file}"
+      local_ci_record_success "${pr}" "${validation_key}"
       post_status "${head_sha}" success "Zero-cost full validation passed"
       echo "local-ci: PR #${pr} PASS"
     else
+      # Stale SHA pairs must not block fresh validation when a branch moves.
+      rm -f -- "${STATE_ROOT}/status/pr-${pr}-attempt"
       post_status "${head_sha}" error "PR or main moved during validation; result discarded"
       echo "local-ci: PR #${pr} moved during validation; result discarded"
     fi
   else
-    rm -f "${success_file}"
-    post_status "${head_sha}" failure "Zero-cost full validation failed; inspect local CI log"
+    local_ci_record_failure "${pr}" "${validation_key}"
+    post_status "${head_sha}" failure "Zero-cost full validation failed; same SHA will not be retried automatically"
     echo "local-ci: PR #${pr} FAIL — ${log}" >&2
   fi
 
