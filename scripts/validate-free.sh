@@ -74,7 +74,9 @@ operations() {
     scripts/compile-python-lock.sh scripts/validate-container-hardening.sh \
     scripts/validate-prometheus.sh scripts/validate-free.sh \
     scripts/cleanup-ci-project.sh scripts/cleanup-orphan-promtool-volumes.sh \
-    scripts/test-ci-resource-cleanup.sh; do
+    scripts/test-ci-resource-cleanup.sh \
+    scripts/local-ci-result-cache.sh scripts/local-ci-retry-pr.sh \
+    scripts/test-local-ci-result-cache.sh scripts/local-ci-prs.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
@@ -90,6 +92,7 @@ operations() {
     scripts/validate-api-contract.py \
     scripts/backend-coverage.py
   bash scripts/test-ci-resource-cleanup.sh
+  bash scripts/test-local-ci-result-cache.sh
   echo 'operations: PASS'
 }
 
