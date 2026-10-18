@@ -34,3 +34,21 @@ The 30 lingering containers belong to four named `pdfhub-validation-*` projects.
 ## Production release boundary
 
 The seven valid v0.6.0 backup directories are prior release evidence, not a current P7 snapshot or proven disaster recovery. Production requires a verified **current** backup, isolated DR evidence, authorized release version and rollback owner, and the production release-readiness gate. No deployment, tag, migration or restore is authorized by this repair.
+
+## Local CI full-validation retry circuit breaker
+
+Related issue: [#160](https://github.com/yiwssx/rcat-pdf-hub/issues/160). An Ubuntu journal excerpt shows repeated PR #159 failures on an unchanged commit, even though GitHub's CodeQL/Core API/Dependency Review workflows passed. Those GitHub checks **do not** identify the Local CI failure root cause; inspect the host-side test log.
+
+The repaired `local-ci-prs.sh` stores a `base_sha:head_sha` result for each PR:
+
+- `success`: no new full build, re-posts success status;
+- `failure`: does not rerun the same commit pair; reports failed status, points to the host log;
+- `attempt`: if the previous run was interrupted before recording success/failure, the next cycle reports an error but does not automatically start another expensive build;
+- new base or head SHA: full validation is eligible again automatically;
+- failed validation is **never** treated as PASS.
+
+On Ubuntu, while PR #159 is repeatedly failing, stop **only** the schedule with `systemctl --user stop rcat-pdf-hub-local-ci.timer`. This does not terminate a running one-shot service. Investigate `.local-ci/logs/pr-159-<head_sha>.log` with `tail -n 120` and selective `grep -nEi 'error|failed|traceback|assert|warn'`, plus `journalctl --user -u rcat-pdf-hub-local-ci.service`. Review the *first causal error*; the final `FAIL` line alone is insufficient.
+
+After the fix is merged, pushed/pulled onto Ubuntu and a precise failure has been corrected, the operator can inspect `bash scripts/local-ci-retry-pr.sh 159` and explicitly clear the SHA-pair failure/interruption cache using `bash scripts/local-ci-retry-pr.sh 159 --apply`. **The script will refuse to run while Local CI is active or its lock is held**, and it never posts green success. If the timer was stopped, re-enable it using `systemctl --user start rcat-pdf-hub-local-ci.timer` only when a new validation run is intended.
+
+Regression tests: `bash scripts/test-local-ci-result-cache.sh`, `bash scripts/test-ci-resource-cleanup.sh`, `make validate-ops`. The pending local-ci/validate-free status on PR #159 is not a pass and must not be bypassed as evidence for Production Release.
