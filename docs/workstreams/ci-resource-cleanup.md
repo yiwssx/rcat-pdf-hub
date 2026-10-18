@@ -52,3 +52,9 @@ On Ubuntu, while PR #159 is repeatedly failing, stop **only** the schedule with 
 After the fix is merged, pushed/pulled onto Ubuntu and a precise failure has been corrected, the operator can inspect `bash scripts/local-ci-retry-pr.sh 159` and explicitly clear the SHA-pair failure/interruption cache using `bash scripts/local-ci-retry-pr.sh 159 --apply`. **The script will refuse to run while Local CI is active or its lock is held**, and it never posts green success. If the timer was stopped, re-enable it using `systemctl --user start rcat-pdf-hub-local-ci.timer` only when a new validation run is intended.
 
 Regression tests: `bash scripts/test-local-ci-result-cache.sh`, `bash scripts/test-ci-resource-cleanup.sh`, `make validate-ops`. The pending local-ci/validate-free status on PR #159 is not a pass and must not be bypassed as evidence for Production Release.
+
+### Existing Ubuntu timer schedule
+
+The Local CI installer now uses `OnUnitInactiveSec=5min` instead of `OnUnitActiveSec=5min` so that an expensive completed run does not cause an immediate back-to-back start. This change affects newly installed/reinstalled user timers, not an existing service until its unit is updated.
+
+After rollout on Ubuntu, inspect the current timer first: `systemctl --user cat rcat-pdf-hub-local-ci.timer`. When no full-validation run is active and the CI issue is resolved, run `make install-local-ci` to regenerate the user timer from the updated repository and verify with `systemctl --user list-timers --all`. Do not restart a currently running validation solely to change the timer.
