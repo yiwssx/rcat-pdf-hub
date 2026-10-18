@@ -58,3 +58,18 @@ Regression tests: `bash scripts/test-local-ci-result-cache.sh`, `bash scripts/te
 The Local CI installer now uses `OnUnitInactiveSec=5min` instead of `OnUnitActiveSec=5min` so that an expensive completed run does not cause an immediate back-to-back start. This change affects newly installed/reinstalled user timers, not an existing service until its unit is updated.
 
 After rollout on Ubuntu, inspect the current timer first: `systemctl --user cat rcat-pdf-hub-local-ci.timer`. When no full-validation run is active and the CI issue is resolved, run `make install-local-ci` to regenerate the user timer from the updated repository and verify with `systemctl --user list-timers --all`. Do not restart a currently running validation solely to change the timer.
+
+### Resolved root cause for repeated #159 FAILs (Ubuntu log, 2026-10-18)
+
+The operator-provided validation log explicitly reports 116 backend tests PASS, one production-stack Playwright E2E PASS, and all container/security policy checks PASS. Docker Compose also removed the `pdfhub-validation-2087395` test containers, named volumes and networks successfully. The ultimate failure was **after teardown**:
+
+```
+rm: cannot remove '/tmp/pdfhub-validation-nas-2087395': Operation not permitted
+runtime: failed to remove temporary NAS directory
+```
+
+Root cause: `docker-compose.yml` uses `${PDFHUB_NAS_PATH:-./data/nas-placeholder}:/mnt/pdfhub-nas` as a host bind mount. If the host source does not exist, Docker/Compose can create it with ownership inappropriate for the unprivileged CI user. Under sticky `/tmp`, that user cannot delete the directory even when the Docker containers are gone.
+
+Repair: `scripts/ci-nas-dir.sh create` now creates the narrowly named host path with `0700` mode as the current CI user before any Docker Compose build/up. After all ephemeral containers are removed, `scripts/ci-nas-dir.sh remove` checks exact path/ownership, refuses symlinks, and uses only `rmdir` (non-recursive). Unexpected files or ownership intentionally produce an actionable FAIL without broad `sudo rm -rf`. `scripts/test-ci-nas-dir.sh` covers ownership, permissions, non-empty directory preservation and symlink/collision guards. Cleanup failures no longer run twice.
+
+Previous root-owned `/tmp/pdfhub-validation-nas-*` leftovers are not automatically deleted by this change. Inspect them separately before any privileged cleanup; never run a blind recursive delete.
