@@ -86,7 +86,7 @@ export function JobDetailScreen({ jobId, auth }: Props) {
   }, [auth, job?.status, job?.output_file_id, reload]);
 
   const expiredOutput = Boolean(outputFile?.expires_at && Date.parse(outputFile.expires_at) <= Date.now());
-  const downloadable = Boolean(job?.status === "completed" && job.output_file_id && outputFile && !expiredOutput);
+  const downloadable = Boolean(job?.status === "completed" && job.output_file_id && outputFile?.id === job.output_file_id && !expiredOutput);
 
   async function downloadOutput() {
     if (!downloadable || !outputFile || downloading || downloadInFlight.current) return;
