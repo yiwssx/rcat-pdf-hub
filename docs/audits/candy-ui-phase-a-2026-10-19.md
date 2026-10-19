@@ -74,6 +74,19 @@ All 13 tool slugs are registered in `apps/web/app/components/tool-catalog.ts` (O
 
 The values above are **proposals**. Validate actual computed styles and brand contrast before adopting.
 
+## Phase A2 visual evidence addendum (2026-10-19)
+
+**Mock screenshot capture implemented and merged** in PR #168 (commit `9890d3f004ff276ccce4da267bfa50f7653c0bc2`). Web CI #39232638160, CodeQL and Dependency Review all PASS.
+
+- GitHub Actions artifact: **`candy-ui-baseline`**, artifact ID `12177877072` (42 PNG screenshots + self-contained `index.html` gallery; 14-day retention), created from synthetic browser-mocked inputs/jobs/identity.
+- Includes 5 viewports of Office intake selected, **two-image** intake selected, completed job status and result, plus individual desktop snapshots of 13 tools and 6 Admin areas and core files/jobs/home.
+- Representative operator and mobile images were independently inspected after download: content is rendered (not a blank shell), and **A-01 is reproduced**. In the two-image review, the remove button appears on a separate row beneath the filename/reorder controls because the row's four children are rendered in a three-column grid. This verifies the severity and makes C1 the first implementation candidate.
+- Mock Admin Overview renders six navigation choices and the current effective-access panel, but this is **not** evidence of correct real production access/data. It also reinforces the terminology and text-density finding.
+- The job-completed snapshot renders both download and result-detail actions; existing action remains visible in the mock baseline.
+- Mobile screenshot capture currently reflects the viewport position after checking a file (Playwright scroll-into-view); when setting visual snapshot acceptance, record the scroll state explicitly and obtain top-of-page captures as well.
+
+**Phase A2 synthetic capture DONE; Phase A3 baseline approval and real production screenshots remain PENDING.** Do not treat the synthetic gallery or CI PASS as production UI/UX acceptance.
+
 ## Baseline and acceptance matrix (Phase A remaining evidence / Phase E release gate)
 
 For each priority route, capture **same deterministic data and fonts** at widths:
