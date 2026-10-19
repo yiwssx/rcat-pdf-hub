@@ -179,7 +179,7 @@ export function JobDetailScreen({ jobId, auth }: Props) {
             {downloadable && <button type="button" className="v3PrimaryAction" disabled={downloading} onClick={() => void downloadOutput()}>
               {downloading ? "กำลังเตรียมดาวน์โหลด…" : outputFile?.content_type === "application/pdf" ? "ดาวน์โหลด PDF" : "ดาวน์โหลดผลลัพธ์"}
             </button>}
-            {job.status === "completed" && job.output_file_id && <a className="v3SecondaryAction" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูรายละเอียดผลลัพธ์ →</a>}
+            {job.status === "completed" && job.output_file_id && <a className="v3SecondaryAction" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูผลลัพธ์และดาวน์โหลด →</a>}
           </div>
         </>}
         <button type="button" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>รีเฟรชสถานะ</button>
