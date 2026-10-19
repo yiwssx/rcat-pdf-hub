@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cancelJob, getJob, Job, JobLookupError, retryJob } from "../../lib/api";
+import { cancelJob, fetchDownload, FileLookupError, getFile, getJob, Job, JobLookupError, retryJob, UploadedFile } from "../../lib/api";
 import { TaskJourneyNav } from "./task-journey";
 
 type Props = { jobId: string; auth: string };
@@ -24,12 +24,26 @@ function safeLookupMessage(error: unknown): string {
   return "เชื่อมต่อสถานะงานไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองใหม่";
 }
 
+function safeOutputMessage(reason: unknown): string {
+  if (reason instanceof FileLookupError) {
+    if (reason.status === 401) return "Session หมดอายุ กรุณาเข้าสู่ระบบใหม่";
+    if (reason.status === 403) return "บัญชีนี้ไม่มีสิทธิ์ดาวน์โหลดไฟล์ผลลัพธ์";
+    if (reason.status === 404) return "ไม่พบไฟล์ผลลัพธ์ อาจถูกลบแล้ว";
+    if (reason.status === 410) return "ไฟล์ผลลัพธ์หมดอายุหรือไม่พร้อมใช้งานแล้ว";
+  }
+  return "เข้าถึงไฟล์ผลลัพธ์ไม่ได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่";
+}
+
 export function JobDetailScreen({ jobId, auth }: Props) {
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const actionInFlight = useRef(false);
   const [reload, setReload] = useState(0);
+  const [outputFile, setOutputFile] = useState<UploadedFile | null>(null);
+  const [outputError, setOutputError] = useState("");
+  const [downloading, setDownloading] = useState(false);
+  const downloadInFlight = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -56,6 +70,47 @@ export function JobDetailScreen({ jobId, auth }: Props) {
     void refresh();
     return () => { live = false; if (timer) clearTimeout(timer); };
   }, [auth, jobId, reload]);
+
+  useEffect(() => {
+    let live = true;
+    setOutputFile(null);
+    setOutputError("");
+    if (job?.status === "completed" && job.output_file_id) {
+      void getFile(job.output_file_id, auth).then((file) => {
+        if (live) setOutputFile(file);
+      }).catch((reason: unknown) => {
+        if (live) setOutputError(safeOutputMessage(reason));
+      });
+    }
+    return () => { live = false; };
+  }, [auth, job?.status, job?.output_file_id, reload]);
+
+  const expiredOutput = Boolean(outputFile?.expires_at && Date.parse(outputFile.expires_at) <= Date.now());
+  const downloadable = Boolean(job?.status === "completed" && job.output_file_id && outputFile && !expiredOutput);
+
+  async function downloadOutput() {
+    if (!downloadable || !outputFile || downloading || downloadInFlight.current) return;
+    downloadInFlight.current = true;
+    setDownloading(true);
+    setOutputError("");
+    try {
+      // Use the same authenticated, owner-scoped file endpoint as the result page.
+      const blob = await fetchDownload(outputFile.id, auth);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = outputFile.original_name || `pdfhub-${outputFile.id}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (reason) {
+      setOutputError(safeOutputMessage(reason));
+    } finally {
+      downloadInFlight.current = false;
+      setDownloading(false);
+    }
+  }
 
   async function act(action: "cancel" | "retry") {
     if (!job || busy || actionInFlight.current) return;
@@ -111,6 +166,9 @@ export function JobDetailScreen({ jobId, auth }: Props) {
           {job.status === "completed" && <div className="v3InfoBox" role="status">
             ประมวลผลสำเร็จ {job.output_file_id ? "ระบบบันทึกไฟล์ผลลัพธ์แล้ว" : "ไม่มีไฟล์ผลลัพธ์จากงานนี้"}
           </div>}
+          {job.status === "completed" && job.output_file_id && !outputFile && !outputError && <p role="status">กำลังตรวจสอบไฟล์ผลลัพธ์…</p>}
+          {expiredOutput && <div className="v3InfoBox" role="status">ไฟล์ผลลัพธ์หมดอายุแล้ว ไม่สามารถดาวน์โหลดได้</div>}
+          {outputError && <div className="v3InfoBox" role="alert">{outputError}</div>}
           {job.status === "failed" && <div className="v3InfoBox" role="alert">
             งานนี้ไม่สำเร็จ สามารถลองส่งงานใหม่ได้หากไฟล์ต้นฉบับยังอยู่
           </div>}
@@ -118,7 +176,10 @@ export function JobDetailScreen({ jobId, auth }: Props) {
           <div className="v3JobDetailActions">
             {(job.status === "queued" || job.status === "running") && <button type="button" className="v3SecondaryAction" disabled={busy} onClick={() => void act("cancel")}>ยกเลิกงาน</button>}
             {(job.status === "failed" || job.status === "cancelled") && <button type="button" className="v3PrimaryAction" disabled={busy} onClick={() => void act("retry")}>ลองประมวลผลใหม่</button>}
-            {job.status === "completed" && job.output_file_id && <a className="v3PrimaryAction" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูผลลัพธ์และดาวน์โหลด →</a>}
+            {downloadable && <button type="button" className="v3PrimaryAction" disabled={downloading} onClick={() => void downloadOutput()}>
+              {downloading ? "กำลังเตรียมดาวน์โหลด…" : outputFile?.content_type === "application/pdf" ? "ดาวน์โหลด PDF" : "ดาวน์โหลดผลลัพธ์"}
+            </button>}
+            {job.status === "completed" && job.output_file_id && <a className="v3SecondaryAction" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูรายละเอียดผลลัพธ์ →</a>}
           </div>
         </>}
         <button type="button" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>รีเฟรชสถานะ</button>
