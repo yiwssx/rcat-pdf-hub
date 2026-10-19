@@ -176,26 +176,48 @@ Backup/restore tooling must use the same deployment mode through `PDFHUB_COMPOSE
 ### Office → PDF layout and Thai font fidelity
 
 Office → PDF uses LibreOffice **inside the Gotenberg container**, not Microsoft Office.
-The custom pinned Gotenberg image adds Thai fallback fonts. For government
-documents using TH Sarabun, install the **exact** font files (matching the
-document's family and version) in `ops/gotenberg/fonts/` before rebuilding
-Gotenberg. Locally supplied font binaries are excluded from Git.
+The custom pinned Gotenberg image adds Thai fallback fonts.
+
+The institution-provided `13Fonts.zip` contains **57 TTF files / 14 internal font
+families**, including `TH SarabunPSK` and `TH Sarabun New`. The ZIP is
+**not** checked into Git: font binaries are installed exclusively on the
+trusted Ubuntu Docker build host after archive integrity verification.
 
 ```bash
-# List font families available to the converter:
-PDFHUB_COMPOSE_MODE=prod make office-font-doctor
+cd /opt/rcat-pdf-hub
+git pull --ff-only
 
-# Require an exact font family (detect missing fonts, not fc-match fallback):
-PDFHUB_COMPOSE_MODE=prod bash scripts/check-office-fonts.sh "TH Sarabun New"
+# Transfer the original 13Fonts.zip to /tmp/13Fonts.zip on the Ubuntu host.
+# Verify the full 57-file bundle then install atomically in the image build context:
+python3 scripts/office_font_bundle.py /tmp/13Fonts.zip --verify-only
+make office-font-install ZIP=/tmp/13Fonts.zip
 
-# After approved .ttf/.otf files are placed in ops/gotenberg/fonts/:
+# Production Compose: rebuild/recreate only Gotenberg. Drain Office jobs first.
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
   up -d --build --no-deps gotenberg
+
+# Verify the 57 binary hashes and that Fontconfig indexes all of them:
+PDFHUB_COMPOSE_MODE=prod make office-font-bundle-doctor
+
+# Verify exact Family names (not substitutes):
+PDFHUB_COMPOSE_MODE=prod bash scripts/check-office-fonts.sh \
+  "TH SarabunPSK" "TH Sarabun New"
 ```
 
-See [Gotenberg font instructions](ops/gotenberg/README.md). Compare complex
-DOCX/XLSX/PPTX conversions with reference PDFs exported by Microsoft Office.
-LibreOffice cannot guarantee pixel-identical rendering in every document.
+For `prod-nas`, add the NAS Compose file and use
+`PDFHUB_COMPOSE_MODE=prod-nas`; for development, omit the production
+override and use the default doctor mode.
+
+The archive must be supplied on the Ubuntu host. Installing fonts only on
+the Ubuntu host (outside the Gotenberg image), API or worker containers does
+not fix the Office → PDF converter. Files installed under
+`ops/gotenberg/fonts/13fonts/` are ignored by Git but included in the
+custom Gotenberg Docker build.
+
+See [detailed font bundle instructions](ops/gotenberg/README.md). Compare
+representative DOCX/XLSX/PPTX with PDF exports from Microsoft Office: even
+exact fonts cannot guarantee pixel-identical rendering of all Microsoft Office
+features.
 
 ## Authentication / service isolation
 
