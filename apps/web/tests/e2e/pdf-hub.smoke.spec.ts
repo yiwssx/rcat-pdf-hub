@@ -1444,3 +1444,114 @@ test("job status handles download-time file expiry without showing success", asy
   await expect(page.getByRole("button", { name: "ดาวน์โหลด PDF" })).toBeEnabled();
   await expect(page.locator(".v3JobDetailCard")).not.toContainText("internal path");
 });
+
+test("Candy UI baseline capture uses mock-only routes across user and Admin journeys", async ({ page }) => {
+  test.skip(process.env.PDFHUB_UI_CAPTURE !== "1", "Opt-in screenshot baseline; not part of functional test runs");
+  test.setTimeout(300_000);
+
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const output = path.resolve("test-results", "candy-ui-baseline");
+  await fs.mkdir(output, { recursive: true });
+
+  // All screenshots are produced from synthetic identities, files, and jobs:
+  // do not connect the gallery to production or commit private documents.
+  const office = { ...initialFile, id: "baseline-office-docx", original_name: "ตัวอย่าง_เอกสารราชการ_2569.docx",
+    content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+  const image = { ...initialFile, id: "baseline-image-png", original_name: "แผนผัง_สวนพฤกษศาสตร์_จำลอง.png",
+    content_type: "image/png" };
+  const secondImage = { ...initialFile, id: "baseline-image-2", original_name: "รูปภาพ_ทดสอบ_ชื่อยาวเพื่อทดสอบการจัดแถว.png",
+    content_type: "image/png" };
+  const outputFile = { ...initialFile, id: "baseline-output-pdf", original_name: "ผลการแปลงเอกสาร_ตัวอย่าง.pdf" };
+  const mockFiles = [initialFile, office, image, secondImage];
+  const mockJob = {
+    id: "baseline-job-1", operation: "office-to-pdf", status: "completed", progress: 100,
+    input_file_ids: [office.id], output_file_id: outputFile.id, params: {},
+    error: null, requested_by: "web-console:smoke-test",
+  };
+
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: mockFiles }));
+  await page.route("**/api/v1/files/library**", (route) => {
+    const url = new URL(route.request().url());
+    const q = (url.searchParams.get("q") || "").toLowerCase();
+    const kind = url.searchParams.get("kind") || "all";
+    const filtered = mockFiles.filter((file) =>
+      (!q || file.original_name.toLowerCase().includes(q))
+      && (kind === "all" || kind === "other" || (kind === "pdf" && file.content_type === "application/pdf") || (kind === "image" && file.content_type.startsWith("image/")))
+    );
+    return route.fulfill({ json: {
+      items: filtered, total: filtered.length, limit: 50, offset: 0, has_more: false,
+    } });
+  });
+  await page.route("**/api/v1/jobs?*", (route) => route.fulfill({ json: [mockJob] }));
+  await page.route("**/api/v1/jobs/baseline-job-1", (route) => route.fulfill({ json: mockJob }));
+  await page.route("**/api/v1/files/baseline-output-pdf", (route) => route.fulfill({ json: outputFile }));
+
+  const screenshots: { title: string; filename: string }[] = [];
+  async function shot(route: string, filename: string, title: string) {
+    await page.goto(route);
+    await expect(page.locator(".v3Header")).toBeVisible();
+    await expect(page.locator(".v3Main").first()).toBeVisible();
+    await page.screenshot({ path: path.join(output, filename), animations: "disabled", fullPage: false });
+    screenshots.push({ title, filename });
+  }
+
+  const viewports = [
+    { name: "operator", width: 1649, height: 925 },
+    { name: "desktop", width: 1440, height: 900 },
+    { name: "laptop", width: 1366, height: 768 },
+    { name: "tablet", width: 768, height: 1024 },
+    { name: "mobile", width: 390, height: 844 },
+  ] as const;
+
+  await page.goto("/");
+  await expect(page.locator(".v3Header")).toBeVisible();
+
+  for (const vp of viewports) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+
+    await page.goto("/tools/office-to-pdf");
+    await expect(page.getByRole("radio", { name: office.original_name })).toBeVisible();
+    await page.getByRole("radio", { name: office.original_name }).check();
+    const officeName = `office-selected-${vp.name}.png`;
+    await page.screenshot({ path: path.join(output, officeName), animations: "disabled" });
+    screenshots.push({ filename: officeName, title: `Office intake, 1 selected (${vp.width}x${vp.height})` });
+
+    await page.goto("/tools/images-to-pdf");
+    await expect(page.getByRole("checkbox", { name: image.original_name })).toBeVisible();
+    await page.getByRole("checkbox", { name: image.original_name }).check();
+    await page.getByRole("checkbox", { name: secondImage.original_name }).check();
+    const imageName = `images-selected-${vp.name}.png`;
+    await page.screenshot({ path: path.join(output, imageName), animations: "disabled" });
+    screenshots.push({ filename: imageName, title: `Images intake, 2 selected (${vp.width}x${vp.height})` });
+
+    await shot("/jobs/baseline-job-1", `job-completed-${vp.name}.png`, `Completed job (${vp.width}x${vp.height})`);
+    await shot("/jobs/baseline-job-1/result", `result-${vp.name}.png`, `Result (${vp.width}x${vp.height})`);
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await shot("/", "home-desktop.png", "Workspace home");
+  await shot("/files", "files-desktop.png", "Files library");
+  await shot("/jobs", "my-jobs-desktop.png", "My Jobs");
+
+  for (const slug of [
+    "ocr", "merge-pdf", "split-rotate", "compress", "pdf-to-images",
+    "images-to-pdf", "watermark", "page-numbers", "pdfa",
+    "office-to-pdf", "pdf-stamp", "signed-link", "archive",
+  ]) {
+    await shot(`/tools/${slug}`, `tool-${slug}.png`, `Tool intake: ${slug}`);
+  }
+
+  for (const area of ["overview", "jobs", "access", "storage", "diagnostics", "integrations"]) {
+    await shot(`/admin?section=${area}`, `admin-${area}.png`, `Admin: ${area}`);
+  }
+
+  const escape = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
+  const cards = screenshots.map(({ filename, title }) =>
+    `<figure><a href="${escape(filename)}"><img src="${escape(filename)}" alt="${escape(title)}" loading="lazy"></a><figcaption>${escape(title)}</figcaption></figure>`
+  ).join("\n");
+  await fs.writeFile(path.join(output, "index.html"),
+    `<!doctype html><html lang="th"><meta charset="utf-8"><title>Candy UI mock baseline</title><style>body{font:15px system-ui;background:#f5f5fb;color:#1c2445;margin:2rem}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:20px}figure{margin:0;background:white;border:1px solid #e5e5ef;border-radius:14px;padding:12px}img{width:100%;height:auto;border:1px solid #eee}figcaption{padding:10px}small{color:#666}</style><h1>RCAT PDF Hub — Mocked UI Baseline</h1><p>2026-10-19 · synthetic data only; screenshot collection is NOT a visual pass/fail claim.</p><small>${screenshots.length} screenshots · Review before accepting Phase A3</small><main>${cards}</main></html>`,
+    "utf8");
+  expect(screenshots.length).toBe(42);
+});
