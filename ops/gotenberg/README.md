@@ -1,58 +1,99 @@
-# Office → PDF font fidelity
+# RCAT Office → PDF font fidelity
 
-Gotenberg uses LibreOffice, **not Microsoft Office**. When the container lacks
-an exact source-document font, LibreOffice substitutes a different font. This
-changes line wrapping, table heights, page breaks, and pagination, especially
-with Thai government forms.
+Gotenberg uses LibreOffice, **not Microsoft Office**. The fonts available
+inside Gotenberg determine its substitutions, line wrapping, table sizing and
+page breaks. Installing fonts only on the Ubuntu host or in API containers
+will not affect Office → PDF.
 
-The custom Gotenberg image uses the pinned upstream Gotenberg 8.34.0 and adds
-the Debian `fonts-thai-tlwg` fallback package. The base image includes other
-general-purpose fonts. **Neither package guarantees matching TH Sarabun or
-other installed Windows fonts.**
+## 13Fonts.zip — approved local font bundle
 
-## Install exact source-document fonts
+The uploaded archive was inspected before preparing the integration:
+- 57 valid TrueType (`.ttf`) files; 14 distinct internal font families;
+- no identical duplicate file content, no unreadable font payloads;
+- includes TH SarabunPSK, TH Sarabun New, and various Thai display families;
+- includes special `IT๙` variants; their internal family/style names may
+  coincide with normal variants, so file count and content are verified as
+  well as Fontconfig registration.
 
-1. Identify the font family and version used in the Office document (e.g.
-   `TH Sarabun New`, `THSarabunPSK`, or `TH SarabunPSK`). These are not
-   always the same family and may have different layout metrics.
-2. Obtain the permitted .ttf/.otf font files from the institution's
-   approved distribution or an authoritative rights-compliant source.
-3. Copy the font files to `ops/gotenberg/fonts/` **on the Docker build host**.
-   Do not commit or upload font binaries to Git; `.gitignore` excludes them.
-4. Rebuild **only** Gotenberg and restart it:
+**Only metadata and an integrity fingerprint are committed to Git.** Keep
+the original `13Fonts.zip` and installed font binaries on the trusted
+Ubuntu server. Follow the applicable licensing terms; some font licenses
+are embedded in their TTF metadata.
+
+The `ops/gotenberg/13fonts-manifest.json` content fingerprint is built from
+the original filenames and SHA-256 values of all 57 file payloads. Altered,
+incomplete, unknown, path-traversal, duplicate-name and non-font ZIP members
+are rejected; arbitrary archives must not be treated as substitutes.
+
+## Installation on Ubuntu
+
+1. Transfer **the original file** `13Fonts.zip` to the server, for example
+   by WinSCP or PowerShell from the PC where the ZIP exists:
+
+   ```powershell
+   scp .\13Fonts.zip rcat_iot_admin@SERVER_IP:/tmp/13Fonts.zip
+   ```
+
+   Replace `SERVER_IP` with the server's actual hostname/IP. The archive
+   uploaded to a ChatGPT conversation is not automatically copied to Ubuntu.
+
+2. Pull the merged changes and verify the archive *without extraction*:
 
    ```bash
+   cd /opt/rcat-pdf-hub
+   git pull --ff-only
+   python3 scripts/office_font_bundle.py /tmp/13Fonts.zip --verify-only
+   ```
+
+3. Install all 57 files atomically into the custom Docker build context:
+
+   ```bash
+   make office-font-install ZIP=/tmp/13Fonts.zip
+   find ops/gotenberg/fonts/13fonts -type f -name '*.ttf' | wc -l
+   ```
+
+   Expect `57`. The installer does not publish the files or modify any
+   database/document records. Git ignores the local binaries.
+
+4. **After draining in-flight Office conversion jobs**, rebuild *only*
+   Gotenberg using the same Compose mode already used by the deployment:
+
+   ```bash
+   # Production without NAS override:
    docker compose -f docker-compose.yml -f docker-compose.prod.yml \
      up -d --build --no-deps gotenberg
+
+   # Standard development mode (alternative):
+   # docker compose up -d --build --no-deps gotenberg
    ```
 
-   For non-production Compose, omit `-f docker-compose.prod.yml`. Production
-   also works with the NAS override as needed.
-5. Verify the exact family name and its loaded face:
+5. Verify that the **running container** contains exactly the 57 expected
+   files, all SHA-256 checksums agree, and Fontconfig registered every file:
 
    ```bash
-   PDFHUB_COMPOSE_MODE=prod bash scripts/check-office-fonts.sh "TH Sarabun New"
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-     exec -T gotenberg fc-match "TH Sarabun New"
+   PDFHUB_COMPOSE_MODE=prod make office-font-bundle-doctor
+   PDFHUB_COMPOSE_MODE=prod bash scripts/check-office-fonts.sh \
+     "TH SarabunPSK" "TH Sarabun New"
    ```
 
-   `fc-match` *always* returns a fallback even when the desired font is absent;
-   the doctor checks exact installed family names using `fc-list`.
+   For production with NAS, use `PDFHUB_COMPOSE_MODE=prod-nas`; for normal
+   development, omit the mode override. Do not infer font installation from
+   `fc-match` alone: it always returns a fallback.
 
-## Acceptance testing
+## Acceptance test before closing the incident
 
-Test at least one real DOCX, XLSX, and PPTX containing Thai fonts, tables,
-headers/footers, page numbering, and page breaks. Compare the generated PDF
-against **PDF exported by Microsoft Office using the same source file and font
-versions**. Check A4 page size, page count, line wrapping, table overflow,
-Thai glyphs, merged cells and images. A conversion returning HTTP 200 does not
-prove layout fidelity.
+Compare real DOCX, XLSX and PPTX files against reference PDFs exported by
+Microsoft Office, using the same source files/font versions. Check:
 
-Gotenberg/LibreOffice cannot guarantee byte-for-byte or pixel-identical PDF
-output for every Microsoft Office document, even with exact fonts. For
-complex proprietary Office features, use Microsoft Office's own PDF export
-when exact rendering is legally or operationally required. Installing the
-font in the *API* container or Ubuntu host does **not** install it in Gotenberg.
+- Thai glyph visibility, text wrapping, styles, baseline/line spacing;
+- A4 vs Letter, print area, table widths and rows, merged cells;
+- running headers, footers, page numbering and expected page count;
+- embedded images, shapes, positions and slide proportions.
 
-See https://gotenberg.dev/docs/convert-with-libreoffice/convert-to-pdf
-and https://gotenberg.dev/docs/configuration .
+A successful Gotenberg response or checksum check **does not demonstrate
+pixel-identical page fidelity**. Complex proprietary Office features can
+still differ. Missing fonts outside the supplied 13Fonts bundle (e.g. other
+Windows/Office fonts) still require separately authorized font installation.
+
+Do not commit or redistribute font binaries unless the rights explicitly
+permit it. See https://gotenberg.dev/docs/convert-with-libreoffice/convert-to-pdf .
