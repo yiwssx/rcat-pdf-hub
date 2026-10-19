@@ -12,3 +12,7 @@ coverage/
 .DS_Store
 *.log
 artifacts/
+
+# Site-installed Office fonts: do not commit font binaries to Git.
+/ops/gotenberg/fonts/*
+!/ops/gotenberg/fonts/.gitkeep
