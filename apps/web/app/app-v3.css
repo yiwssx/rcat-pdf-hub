@@ -689,8 +689,9 @@ a { color: inherit; }
 .v3PrimaryAction {
   border:0;
   color:#fff;
-  background:linear-gradient(135deg,color-mix(in srgb,var(--tone) 78%,#6672ff),var(--tone));
-  box-shadow:0 8px 18px color-mix(in srgb,var(--tone) 18%,transparent);
+  /* Standalone pages (jobs, results, intake) do not define --tone. */
+  background:linear-gradient(135deg,color-mix(in srgb,var(--tone,var(--v3-primary)) 78%,#6672ff),var(--tone,var(--v3-primary)));
+  box-shadow:0 8px 18px color-mix(in srgb,var(--tone,var(--v3-primary)) 18%,transparent);
 }
 .v3SecondaryAction { border:1px solid #dfe2ed; color:#5d6680; background:#fff; }
 .v3PrimaryAction:disabled,
@@ -1392,6 +1393,20 @@ summary {
 .v3JobProgress small { color: var(--v3-muted); font-size: 13px; }
 .v3JobDetailActions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
 .v3JobDetailActions a { text-decoration: none; }
+.v3JobDetailActions .v3PrimaryAction,
+.v3JobDetailActions .v3SecondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 11px 20px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+@media (max-width: 580px) {
+  .v3JobDetailActions .v3PrimaryAction,
+  .v3JobDetailActions .v3SecondaryAction { width: 100%; }
+}
 
 
 /* P7C.3: result-to-tool handoff, reusing existing Candy palette. */
