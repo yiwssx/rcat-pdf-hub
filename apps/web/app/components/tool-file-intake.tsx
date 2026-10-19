@@ -11,12 +11,13 @@ type Props = {
   files: UploadedFile[];
   selectedIds: string[];
   busy: boolean;
+  uploadError?: string | null;
   onChange: (ids: string[]) => void;
   onUpload: (files: FileList | null) => void;
   onContinue: (ids: string[]) => void;
 };
 
-export function ToolFileIntake({ tool, files, selectedIds, busy, onChange, onUpload, onContinue }: Props) {
+export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, onChange, onUpload, onContinue }: Props) {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const rule = TOOL_INPUT_RULES[tool.id];
@@ -70,9 +71,10 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, onChange, onUpl
           <label htmlFor="files">
             <span className="v3DropIcon">＋</span>
             <strong>อัปโหลดไฟล์สำหรับ {tool.title}</strong>
-            <p>ไฟล์ใหม่จะปรากฏในรายการเลือกด้านข้าง</p>
+            <p>หลังอัปโหลด ให้ตรวจไฟล์ที่เลือกด้านล่างแล้วกด ตั้งค่าและดำเนินการ</p>
             <span className="v3UploadButton">เลือกไฟล์จากเครื่อง</span>
           </label>
+          {uploadError && <p role="alert" className="v3ErrorText">อัปโหลดไฟล์ไม่สำเร็จ: {uploadError} โปรดลองอีกครั้งหลังตรวจสอบระบบ</p>}
         </div>
         <div className="v3RecentCard">
           <div className="v3SectionHead">
