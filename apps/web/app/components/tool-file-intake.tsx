@@ -97,8 +97,11 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, on
           {eligible.length > 100 && <small>แสดงสูงสุด 100 รายการจาก {eligible.length} รายการ · ใช้ช่องค้นหาเพื่อเลือกไฟล์อื่น</small>}
         </div>
       </section>
-      <section className="v3RecentCard" aria-label="ตรวจรายการไฟล์ก่อนดำเนินการ">
-        <div className="v3SectionHead"><div><span className="v3Kicker">REVIEW INPUTS</span><h2>ไฟล์ที่เลือก {selected.length} รายการ</h2></div></div>
+      <section className={`v3RecentCard v3IntakeReview${!validation && !busy ? " isReady" : ""}`} aria-label="ตรวจรายการไฟล์ก่อนดำเนินการ">
+        <div className="v3SectionHead v3IntakeReviewHead">
+          <div><span className="v3Kicker">REVIEW INPUTS</span><h2>ไฟล์ที่เลือก {selected.length} รายการ</h2></div>
+          <button type="button" className="v3PrimaryAction v3IntakeNextAction" disabled={busy || Boolean(validation)} onClick={continueTask}>ตั้งค่าและดำเนินการ →</button>
+        </div>
         {selected.length === 0 && <p>ยังไม่ได้เลือกไฟล์</p>}
         <div className="v3RecentList">
           {selected.map((file, i) => (
@@ -113,7 +116,6 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, on
           ))}
         </div>
         {(validation || error) && <p role="status">{error || validation}</p>}
-        <button type="button" className="v3PrimaryAction" disabled={busy || Boolean(validation)} onClick={continueTask}>ตั้งค่าและดำเนินการ →</button>
       </section>
     </main>
   );

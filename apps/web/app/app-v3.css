@@ -1528,3 +1528,31 @@ summary {
 .v3AdminStorageCategories li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--v3-line); background: var(--v3-surface-soft); }
 .v3AdminStorageCategories li span { overflow-wrap: anywhere; }
 .v3AdminStorageCategories li strong { font-variant-numeric: tabular-nums; }
+
+
+/* Office/PDF intake: keep the next-step control visible beside reviewed inputs. */
+.v3IntakeReview { min-height: 0; }
+.v3IntakeReviewHead {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.v3IntakeReviewHead .v3IntakeNextAction {
+  flex-shrink: 0;
+  min-height: 46px;
+  padding-inline: 22px;
+  font-size: 14px;
+}
+@media (max-width: 800px), (max-height: 740px) {
+  .v3IntakeReviewHead .v3IntakeNextAction { width: 100%; }
+  .v3IntakeReview.isReady { padding-bottom: 84px; }
+  .v3IntakeReview.isReady .v3IntakeNextAction {
+    position: fixed;
+    z-index: 60;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 16px;
+    width: calc(100% - 32px);
+    min-height: 52px;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(46, 32, 84, .26);
+  }
+}

@@ -1293,3 +1293,57 @@ test("P7H.1 user journey survives queued-to-complete refresh, result reload and 
   expect(chainedSubmits).toBe(1);
   expect(uploads).toBe(0);
 });
+
+
+test("Office intake puts the enabled continue action in view on desktop and advances to step 2", async ({ page }) => {
+  await page.setViewportSize({ width: 1649, height: 925 });
+  const office = {
+    ...initialFile,
+    id: "office-docx-1",
+    original_name: "Online_RMS_21_2569_final.docx",
+    content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [office] }));
+  await page.goto("/tools/office-to-pdf");
+
+  const next = page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ });
+  await expect(next).toBeDisabled();
+  await page.getByRole("radio", { name: office.original_name }).check();
+  await expect(next).toBeEnabled();
+
+  const position = await next.boundingBox();
+  expect(position).not.toBeNull();
+  expect(position!.y + position!.height, "Continue action must be visible at the screenshot viewport height").toBeLessThanOrEqual(925);
+
+  await next.click();
+  await expect(page.locator("#workspace-target")).toContainText(office.original_name);
+  await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" }).locator('[aria-current="step"]')).toContainText("ตั้งค่า");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test("Office intake keeps one reachable next-step action fixed on mobile until confirmed", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const office = {
+    ...initialFile,
+    id: "office-docx-mobile",
+    original_name: "thai-document.docx",
+    content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+  await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [office] }));
+  await page.goto("/tools/office-to-pdf");
+  await page.getByRole("radio", { name: office.original_name }).check();
+
+  const next = page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ });
+  await expect(next).toBeEnabled();
+  await expect(next).toHaveCSS("position", "fixed");
+  expect(await next.count()).toBe(1);
+  const position = await next.boundingBox();
+  expect(position).not.toBeNull();
+  expect(position!.y + position!.height).toBeLessThanOrEqual(844);
+  expect(position!.x).toBeGreaterThanOrEqual(0);
+
+  await next.click();
+  await expect(page.locator("#workspace-target")).toContainText(office.original_name);
+  await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" }).locator('[aria-current="step"]')).toContainText("ตั้งค่า");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+});
