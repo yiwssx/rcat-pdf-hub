@@ -267,7 +267,36 @@ export async function getIntegrationStatus(auth: string): Promise<IntegrationSta
 export async function uploadFile(file: File, auth: string): Promise<UploadedFile> {
   const form = new FormData();
   form.append("file", file);
-  return expectJson<UploadedFile>(await request("/api/v1/files", { method: "POST", headers: headers(auth), body: form }));
+  let response: Response;
+  try {
+    response = await request("/api/v1/files", { method: "POST", headers: headers(auth), body: form });
+  } catch {
+    throw new Error("เชื่อมต่อเซิร์ฟเวอร์อัปโหลดไม่ได้ กรุณาตรวจสอบเครือข่ายแล้วลองอีกครั้ง");
+  }
+  if (!response.ok) {
+    const body = await response.text();
+    let detail = body;
+    try {
+      const parsed: unknown = JSON.parse(body);
+      if (typeof parsed === "object" && parsed !== null && "detail" in parsed) {
+        const value = (parsed as { detail: unknown }).detail;
+        if (typeof value === "string") detail = value;
+      }
+    } catch {
+      // Plain text errors from upstream proxies are valid error responses.
+    }
+    if (/Errno -3|Temporary failure in name resolution|Name or service not known|getaddrinfo/i.test(detail)) {
+      throw new Error("เซิร์ฟเวอร์ค้นหาบริการภายในไม่พบ (DNS) กรุณาแจ้งผู้ดูแลระบบให้ตรวจสอบ Docker network");
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("หมดเวลาการเข้าสู่ระบบหรือไม่มีสิทธิ์อัปโหลด กรุณาเข้าสู่ระบบอีกครั้ง");
+    }
+    if (response.status >= 500) {
+      throw new Error(`บริการอัปโหลดไม่พร้อมใช้งาน (HTTP ${response.status}) กรุณาแจ้งผู้ดูแลระบบตรวจสอบ API และบริการจัดเก็บไฟล์`);
+    }
+    throw new Error(detail || `ไม่สามารถอัปโหลดได้ (HTTP ${response.status})`);
+  }
+  return response.json() as Promise<UploadedFile>;
 }
 
 export async function listFiles(auth: string): Promise<UploadedFile[]> {
