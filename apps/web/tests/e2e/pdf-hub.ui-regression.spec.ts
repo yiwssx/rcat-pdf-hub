@@ -351,11 +351,11 @@ test("Office upload DNS failure stays on intake with a visible explanation, then
   };
 
   await page.locator("#files").setInputFiles(officeFile);
-  await expect(page.getByRole("alert")).toContainText("DNS");
+  await expect(page.locator(".v3UploadError")).toContainText("DNS");
   await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
 
   await page.locator("#files").setInputFiles(officeFile);
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.locator(".v3UploadError")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeEnabled();
   await expect(page.getByRole("region", { name: "ตรวจรายการไฟล์ก่อนดำเนินการ" })).toContainText("document.docx");
   await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
