@@ -85,6 +85,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("พร้อมใช้งาน");
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [targetId, setTargetId] = useState(initialFileId ?? "");
   const [selectedInputIds, setSelectedInputIds] = useState<string[]>(initialFileId ? [initialFileId] : []);
   const [activeTool, setActiveTool] = useState(initialTool ?? "");
@@ -294,30 +295,43 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   async function onFiles(list: FileList | null) {
     if (!list?.length || !auth) return;
     setBusy(true);
+    setUploadError(null);
     setMessage("กำลังอัปโหลดและตรวจความปลอดภัย…");
+    // Preserve every successfully uploaded file even if a later file fails.
+    // Never retry POST uploads automatically: a server may have committed the
+    // file even if its response was interrupted.
+    const uploaded: UploadedFile[] = [];
+    let allSucceeded = false;
     try {
-      const uploaded: UploadedFile[] = [];
-      for (const file of Array.from(list)) uploaded.push(await uploadFile(file, auth));
-      setFiles((old) => [...uploaded, ...old.filter((item) => !uploaded.some((fresh) => fresh.id === item.id))]);
-      if (initialTool) {
-        // Uploads enter the same review screen as library selection.
-        setSelectedInputIds(uploaded.map((file) => file.id));
-        setTargetId("");
-        setActiveTool(initialTool);
-        setPreviewUrl(null);
-      } else if (uploaded[0]) {
-        if (initialView === "files") {
-          window.location.assign(`/files/${encodeURIComponent(uploaded[0].id)}`);
-          return;
-        }
-        setTargetId(uploaded[0].id);
-        setPreviewUrl(null);
+      for (const file of Array.from(list)) {
+        uploaded.push(await uploadFile(file, auth));
       }
-      clearSignedToolResult();
+      allSucceeded = true;
       setMessage(`อัปโหลดแล้ว ${uploaded.length} ไฟล์`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
+      const detail = error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ";
+      setUploadError(detail);
+      setMessage(detail);
     } finally {
+      if (uploaded.length > 0) {
+        setFiles((old) => [...uploaded, ...old.filter((item) => !uploaded.some((fresh) => fresh.id === item.id))]);
+        if (initialTool) {
+          // Uploads enter the explicit review step; do not submit without review.
+          setSelectedInputIds(uploaded.map((file) => file.id));
+          setTargetId("");
+          setActiveTool(initialTool);
+          setPreviewUrl(null);
+        } else {
+          if (initialView === "files" && allSucceeded) {
+            // Successful uploads are retained in the list before navigation.
+            window.location.assign(`/files/${encodeURIComponent(uploaded[0].id)}`);
+          } else {
+            setTargetId(uploaded[0].id);
+            setPreviewUrl(null);
+          }
+        }
+        clearSignedToolResult();
+      }
       setBusy(false);
     }
   }
@@ -644,7 +658,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
           files={files}
           selectedIds={selectedInputIds}
           busy={busy}
-          onChange={setSelectedInputIds}
+          uploadError={uploadError}
+          onChange={(ids) => { setSelectedInputIds(ids); setUploadError(null); }}
           onUpload={(list) => void onFiles(list)}
           onContinue={confirmToolInputs}
         />
