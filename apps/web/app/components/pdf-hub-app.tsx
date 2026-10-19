@@ -370,6 +370,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     setActiveTool(initialTool);
     setPreviewUrl(null);
     setMessage(`เลือกไฟล์แล้ว ${ids.length} รายการ`);
+    // The intake card can be below the fold. Reveal the configured tool and
+    // its updated journey stage instead of leaving the user at the old scroll position.
+    window.scrollTo(0, 0);
   }
 
   function chooseTool(tool: ToolDefinition) {
