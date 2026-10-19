@@ -1460,8 +1460,10 @@ test("Candy UI baseline capture uses mock-only routes across user and Admin jour
     content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
   const image = { ...initialFile, id: "baseline-image-png", original_name: "แผนผัง_สวนพฤกษศาสตร์_จำลอง.png",
     content_type: "image/png" };
+  const secondImage = { ...initialFile, id: "baseline-image-2", original_name: "รูปภาพ_ทดสอบ_ชื่อยาวเพื่อทดสอบการจัดแถว.png",
+    content_type: "image/png" };
   const outputFile = { ...initialFile, id: "baseline-output-pdf", original_name: "ผลการแปลงเอกสาร_ตัวอย่าง.pdf" };
-  const mockFiles = [initialFile, office, image];
+  const mockFiles = [initialFile, office, image, secondImage];
   const mockJob = {
     id: "baseline-job-1", operation: "office-to-pdf", status: "completed", progress: 100,
     input_file_ids: [office.id], output_file_id: outputFile.id, params: {},
@@ -1518,9 +1520,10 @@ test("Candy UI baseline capture uses mock-only routes across user and Admin jour
     await page.goto("/tools/images-to-pdf");
     await expect(page.getByRole("checkbox", { name: image.original_name })).toBeVisible();
     await page.getByRole("checkbox", { name: image.original_name }).check();
+    await page.getByRole("checkbox", { name: secondImage.original_name }).check();
     const imageName = `images-selected-${vp.name}.png`;
     await page.screenshot({ path: path.join(output, imageName), animations: "disabled" });
-    screenshots.push({ filename: imageName, title: `Images intake, 1 selected (${vp.width}x${vp.height})` });
+    screenshots.push({ filename: imageName, title: `Images intake, 2 selected (${vp.width}x${vp.height})` });
 
     await shot("/jobs/baseline-job-1", `job-completed-${vp.name}.png`, `Completed job (${vp.width}x${vp.height})`);
     await shot("/jobs/baseline-job-1/result", `result-${vp.name}.png`, `Result (${vp.width}x${vp.height})`);
