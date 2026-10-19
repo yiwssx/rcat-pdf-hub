@@ -1347,3 +1347,100 @@ test("Office intake keeps one reachable next-step action fixed on mobile until c
   await expect(page.getByRole("navigation", { name: "ขั้นตอนการทำงาน" }).locator('[aria-current="step"]')).toContainText("ตั้งค่า");
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 });
+
+test("completed Office job downloads PDF directly from status with visible high-contrast action", async ({ page }) => {
+  const file = { ...initialFile, id: "office-output-1", original_name: "converted-office.pdf", size: 12110 };
+  await page.route("**/api/v1/jobs/office-completed-1", (route) => route.fulfill({ json: {
+    id: "office-completed-1", operation: "office-to-pdf", status: "completed", progress: 100,
+    input_file_ids: ["office-original-1"], output_file_id: file.id,
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/office-output-1", (route) => route.fulfill({ json: file }));
+  await page.route("**/api/v1/files/office-output-1/download", (route) =>
+    route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n%%EOF\n" }));
+  await page.setViewportSize({ width: 1649, height: 925 });
+  await page.goto("/jobs/office-completed-1");
+
+  const downloadButton = page.getByRole("button", { name: "ดาวน์โหลด PDF" });
+  await expect(downloadButton).toBeVisible();
+  await expect(downloadButton).toBeEnabled();
+  const display = await downloadButton.evaluate((element) => ({
+    background: getComputedStyle(element).backgroundImage,
+    color: getComputedStyle(element).color,
+    rect: element.getBoundingClientRect().toJSON(),
+  }));
+  expect(display.background).not.toBe("none");
+  expect(display.rect.bottom, "Action must be visible within screenshot viewport").toBeLessThanOrEqual(925);
+  await expect(page.getByRole("link", { name: /ดูผลลัพธ์และดาวน์โหลด/ })).toBeVisible();
+
+  const event = page.waitForEvent("download");
+  await downloadButton.click();
+  expect((await event).suggestedFilename()).toBe("converted-office.pdf");
+  await expect(downloadButton).toBeEnabled();
+});
+
+test("job status never offers direct download for running or failed jobs", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-running-direct", (route) => route.fulfill({ json: {
+    id: "job-running-direct", operation: "office-to-pdf", status: "running", progress: 55,
+    input_file_ids: ["docx-1"], output_file_id: "office-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.goto("/jobs/job-running-direct");
+  await expect(page.getByRole("progressbar", { name: "ความคืบหน้างาน" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ดาวน์โหลด PDF" })).toHaveCount(0);
+  await page.route("**/api/v1/jobs/job-failed-direct", (route) => route.fulfill({ json: {
+    id: "job-failed-direct", operation: "office-to-pdf", status: "failed", progress: 100,
+    input_file_ids: ["docx-1"], output_file_id: null,
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.goto("/jobs/job-failed-direct");
+  await expect(page.getByRole("button", { name: "ลองประมวลผลใหม่" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ดาวน์โหลด PDF" })).toHaveCount(0);
+});
+
+test("job status hides direct download for inaccessible or expired output", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-status-expired", (route) => route.fulfill({ json: {
+    id: "job-status-expired", operation: "office-to-pdf", status: "completed", progress: 100,
+    input_file_ids: ["docx-1"], output_file_id: "office-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/office-output-1", (route) => route.fulfill({ json: {
+    ...initialFile, id: "office-output-1", original_name: "converted-office.pdf",
+    expires_at: "2020-01-01T00:00:00Z",
+  } }));
+  await page.goto("/jobs/job-status-expired");
+  await expect(page.getByRole("main")).toContainText("ไฟล์ผลลัพธ์หมดอายุแล้ว");
+  await expect(page.getByRole("button", { name: "ดาวน์โหลด PDF" })).toHaveCount(0);
+
+  await page.route("**/api/v1/jobs/job-status-denied", (route) => route.fulfill({ json: {
+    id: "job-status-denied", operation: "office-to-pdf", status: "completed", progress: 100,
+    input_file_ids: ["docx-1"], output_file_id: "office-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/office-output-1", (route) => route.fulfill({
+    status: 403, json: { detail: "internal principal name" },
+  }));
+  await page.goto("/jobs/job-status-denied");
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("ไม่มีสิทธิ์");
+  await expect(page.locator(".v3JobDetailCard")).not.toContainText("internal principal name");
+  await expect(page.getByRole("button", { name: "ดาวน์โหลด PDF" })).toHaveCount(0);
+});
+
+test("job status handles download-time file expiry without showing success", async ({ page }) => {
+  await page.route("**/api/v1/jobs/job-status-expired-download", (route) => route.fulfill({ json: {
+    id: "job-status-expired-download", operation: "office-to-pdf", status: "completed", progress: 100,
+    input_file_ids: ["docx-1"], output_file_id: "office-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route("**/api/v1/files/office-output-1", (route) => route.fulfill({ json: {
+    ...initialFile, id: "office-output-1", original_name: "converted-office.pdf", expires_at: null,
+  } }));
+  await page.route("**/api/v1/files/office-output-1/download", (route) => route.fulfill({
+    status: 410, json: { detail: "internal path" },
+  }));
+  await page.goto("/jobs/job-status-expired-download");
+  await page.getByRole("button", { name: "ดาวน์โหลด PDF" }).click();
+  await expect(page.locator(".v3JobDetailCard [role='alert']")).toContainText("หมดอายุหรือไม่พร้อมใช้งาน");
+  await expect(page.getByRole("button", { name: "ดาวน์โหลด PDF" })).toBeEnabled();
+  await expect(page.locator(".v3JobDetailCard")).not.toContainText("internal path");
+});
