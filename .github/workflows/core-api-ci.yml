@@ -38,6 +38,21 @@ jobs:
           python3 scripts/check-host-python.py
           make validate-ops
 
+  gotenberg-fonts:
+    name: Build and check Thai Office converter image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build pinned Gotenberg image with Thai fonts
+        run: docker build -t rcat-pdf-hub-gotenberg-ci ops/gotenberg
+      - name: Verify Thai font packages are installed in Gotenberg
+        run: |
+          docker run --rm --entrypoint fc-list rcat-pdf-hub-gotenberg-ci -f '%{family}\n' > /tmp/gotenberg-fonts.txt
+          grep -Eiq '(^|, ?)(Garuda|Kinnari|Loma|Norasi|Purisa|Umpush|Waree)(,|$)' /tmp/gotenberg-fonts.txt
+      - name: Verify converter starts unprivileged
+        run: |
+          test "$(docker run --rm --entrypoint id rcat-pdf-hub-gotenberg-ci -u)" = '1001'
   api:
     runs-on: ubuntu-latest
     timeout-minutes: 20

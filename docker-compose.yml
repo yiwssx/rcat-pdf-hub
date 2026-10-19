@@ -30,7 +30,8 @@ services:
     restart: unless-stopped
 
   gotenberg:
-    image: gotenberg/gotenberg:8.34.0
+    build: ./ops/gotenberg
+    image: rcat-pdf-hub/gotenberg:8.34.0-thai1
     command:
       - gotenberg
       - --api-timeout=300s
