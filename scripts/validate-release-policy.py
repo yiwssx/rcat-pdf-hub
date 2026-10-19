@@ -286,7 +286,7 @@ for image in expected_images:
 
 # The Gotenberg engine itself, not the API container, must have Thai fonts.
 gotenberg_dockerfile = read("ops/gotenberg/Dockerfile")
-assert gotenberg_dockerfile.startswith("FROM gotenberg/gotenberg:8.34.0\n"), "Gotenberg upstream version must remain frozen"
+assert re.search(r"^FROM gotenberg/gotenberg:8\.34\.0$", gotenberg_dockerfile, flags=re.MULTILINE), "Gotenberg upstream version must remain frozen"
 assert "fonts-thai-tlwg" in gotenberg_dockerfile, "Thai fallback font package missing"
 assert "COPY fonts/ /usr/local/share/fonts/rcat/" in gotenberg_dockerfile, "Site fonts build input missing"
 assert "RUN fc-cache -f" in gotenberg_dockerfile, "Gotenberg font cache not built"
