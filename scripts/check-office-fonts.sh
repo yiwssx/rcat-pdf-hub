@@ -28,7 +28,7 @@ if (( $# == 0 )); then
   echo "Relevant installed Thai font families (sample):"
   printf '%s\n' "$families" | grep -Ei 'thai|sarabun|tlwg|garuda|kinnari|loma|umpush|waree|purisa|norasi' || true
   echo
-  echo 'To REQUIRE exact fonts: bash scripts/check-office-fonts.sh "TH Sarabun New" "THSarabunPSK"'
+  echo 'To REQUIRE exact fonts: bash scripts/check-office-fonts.sh "TH Sarabun New" "TH SarabunPSK"'
   echo "A close-looking fallback can still change pagination."
   exit 0
 fi

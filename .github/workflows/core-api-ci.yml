@@ -8,6 +8,7 @@ on:
       - ".env.example"
       - "scripts/**"
       - "ops/prometheus/**"
+      - "ops/gotenberg/**"
       - "ops/alertmanager/**"
       - "ops/otel/**"
       - "ops/tempo/**"
@@ -37,6 +38,7 @@ jobs:
         run: |
           python3 scripts/check-host-python.py
           make validate-ops
+          python3 -m unittest discover -s scripts/tests -p "test_office_font_bundle.py"
 
   gotenberg-fonts:
     name: Build and check Thai Office converter image

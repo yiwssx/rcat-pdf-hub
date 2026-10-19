@@ -1,7 +1,14 @@
-.PHONY: office-font-doctor up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-contract validate-coverage validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: office-font-doctor office-font-install office-font-bundle-doctor up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-contract validate-coverage validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 office-font-doctor:
 	bash scripts/check-office-fonts.sh
+
+office-font-install:
+	@test -n "$(ZIP)" || (echo "Usage: make office-font-install ZIP=/path/to/13Fonts.zip" >&2; exit 2)
+	python3 scripts/office_font_bundle.py "$(ZIP)"
+
+office-font-bundle-doctor:
+	bash scripts/check-office-font-bundle.sh
 
 up:
 	docker compose up -d --build

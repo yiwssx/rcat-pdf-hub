@@ -1,0 +1,23 @@
+{
+  "name": "13Fonts",
+  "font_count": 57,
+  "family_count": 14,
+  "fingerprint_sha256": "f6e97d9ff6bba7446cb2d50530b034afedbd23e78c2d47c9cfcef50db8c2e015",
+  "note": "Content fingerprint of all 57 TTF files in user-provided 13Fonts.zip, sorted by original filename and SHA-256; font binaries are intentionally excluded from Git.",
+  "families": [
+    "TH Baijam",
+    "TH Chakra Petch",
+    "TH Charm of AU",
+    "TH Charmonman",
+    "TH Fah kwang",
+    "TH K2D July8",
+    "TH Kodchasal",
+    "TH KoHo",
+    "TH Krub",
+    "TH Mali Grade 6",
+    "TH Niramit AS",
+    "TH Srisakdi",
+    "TH SarabunPSK",
+    "TH Sarabun New"
+  ]
+}
