@@ -14,7 +14,7 @@ The project is **not** completed by a successful code merge alone. The acceptanc
 | ID | Phase / task | State | Dependency | Acceptance evidence |
 | --- | --- | --- | --- | --- |
 | UI-A1 | Read current code, ADRs and UI skills; identify sources of visual drift across user/Admin routes | **DONE** (source inspection) | none | audit report; baseline source SHA; evidence table A-01–A-10 |
-| UI-A2 | Inventory route/state/viewport combinations, deterministic **mock-data** Playwright capture and screenshot artifact collection | **IN PROGRESS** | A1 | 42 screenshots across five viewports/13 tools/6 Admin pages from isolated mock data; validate CI artifact before marking DONE |
+| UI-A2 | Inventory route/state/viewport combinations, deterministic **mock-data** Playwright capture and screenshot artifact collection | **DONE (mock baseline only)** | A1 | PR #168 merged `9890d3f004ff276ccce4da267bfa50f7653c0bc2`; Web CI #39232638160 PASS; artifact `candy-ui-baseline` ID `12177877072` contains 42 PNGs + gallery; visual approval remains A3 |
 | UI-A3 | Review screenshots, approve before/after criteria, severity and baseline with project owner | **PENDING** | A2 | signed-off baseline; exceptions recorded; Phase A closed |
 | UI-B1 | Define Candy presentation foundation (typography, spacing, surfaces, control scale, responsive breakpoints) | **TODO** | A3 | inspected computed style/token table; no regressions at screenshot widths |
 | UI-B2 | Consolidate redundant CSS overrides in limited scope, no blanket restyle | **TODO** | B1 | visual snapshots reviewed; Playwright, accessibility, CodeQL and build |
@@ -63,7 +63,7 @@ Critical assertions:
 
 | Date | Scope | Evidence | Outcome |
 | --- | --- | --- | --- |
-| 2026-10-19 | A2 deterministic visual baseline harness (in implementation) | Playwright mock-only browser collection, 42 screenshots, gallery HTML, CI artifact upload | **Awaiting CI and screenshot review; no production browser capture claimed** |
+| 2026-10-19 | A2 deterministic screenshot gallery | PR #168 merge `9890d3f004ff276ccce4da267bfa50f7653c0bc2`; Web CI #39232638160 PASS; CodeQL, Dependency Review PASS; `candy-ui-baseline` 42 PNG + HTML, downloaded and inspected representative operator/mobile/Admin images | **A2 DONE for synthetic screenshots; A3 operator sign-off and production verification PENDING** |
 | 2026-10-19 | A1 baseline source audit and existing Skills inspection | `docs/audits/candy-ui-phase-a-2026-10-19.md`; source `5ba802415e8518b7469f6111cce499ba2cf66d35` | **Source audit completed. Phase A remains open for visual baseline.** |
 
 ## Handoff to next work period
