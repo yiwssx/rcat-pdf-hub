@@ -271,7 +271,6 @@ assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-true}" i
 expected_images = {
     "postgres:18.6-bookworm",
     "valkey/valkey:8.1.9-alpine3.24",
-    "gotenberg/gotenberg:8.34.0",
     "caddy:2.11.4-alpine",
     "chrislusf/seaweedfs:4.44",
     "clamav/clamav:1.5.4",
@@ -284,6 +283,17 @@ expected_images = {
 }
 for image in expected_images:
     assert f"image: {image}" in compose, f"Missing frozen image baseline: {image}"
+
+# The Gotenberg engine itself, not the API container, must have Thai fonts.
+gotenberg_dockerfile = read("ops/gotenberg/Dockerfile")
+assert gotenberg_dockerfile.startswith("FROM gotenberg/gotenberg:8.34.0\n"), "Gotenberg upstream version must remain frozen"
+assert "fonts-thai-tlwg" in gotenberg_dockerfile, "Thai fallback font package missing"
+assert "COPY fonts/ /usr/local/share/fonts/rcat/" in gotenberg_dockerfile, "Site fonts build input missing"
+assert "RUN fc-cache -f" in gotenberg_dockerfile, "Gotenberg font cache not built"
+assert "USER gotenberg" in gotenberg_dockerfile, "Gotenberg must run unprivileged"
+assert "build: ./ops/gotenberg" in compose, "Gotenberg must build with Thai font support"
+assert "image: rcat-pdf-hub/gotenberg:8.34.0-thai1" in compose, "Custom Gotenberg image must be pinned"
+assert Path("scripts/check-office-fonts.sh").exists(), "Office font doctor missing"
 for floating in ("image: valkey/valkey:8-alpine", "image: caddy:2-alpine", "image: clamav/clamav:stable", ":latest"):
     assert floating not in compose, f"Floating image tag is forbidden: {floating}"
 assert 'command: ["python", "-m", "app.webhook_runner"]' in compose
