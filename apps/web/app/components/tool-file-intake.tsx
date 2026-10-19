@@ -11,12 +11,13 @@ type Props = {
   files: UploadedFile[];
   selectedIds: string[];
   busy: boolean;
+  uploadError?: string | null;
   onChange: (ids: string[]) => void;
   onUpload: (files: FileList | null) => void;
   onContinue: (ids: string[]) => void;
 };
 
-export function ToolFileIntake({ tool, files, selectedIds, busy, onChange, onUpload, onContinue }: Props) {
+export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, onChange, onUpload, onContinue }: Props) {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const rule = TOOL_INPUT_RULES[tool.id];
@@ -64,13 +65,14 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, onChange, onUpl
         <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
       </section>
       <TaskJourneyNav stage="intake" kind={rule.flow} />
+      {uploadError && <p role="alert" className="v3UploadError">อัปโหลดไฟล์ไม่สำเร็จ: {uploadError} โปรดลองอีกครั้งหลังตรวจสอบระบบ</p>}
       <section className="v3StartGrid" aria-label="เลือกไฟล์สำหรับเครื่องมือ">
         <div className="v3Dropzone">
           <input id="files" type="file" accept={rule.accept} multiple={multi} disabled={busy} onChange={(event) => { onUpload(event.currentTarget.files); event.currentTarget.value = ""; }}/>
           <label htmlFor="files">
             <span className="v3DropIcon">＋</span>
             <strong>อัปโหลดไฟล์สำหรับ {tool.title}</strong>
-            <p>ไฟล์ใหม่จะปรากฏในรายการเลือกด้านข้าง</p>
+            <p>หลังอัปโหลด โปรดตรวจสอบรายการไฟล์ที่เลือก แล้วใช้ปุ่มดำเนินการด้านล่าง</p>
             <span className="v3UploadButton">เลือกไฟล์จากเครื่อง</span>
           </label>
         </div>

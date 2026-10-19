@@ -173,6 +173,36 @@ Backup/restore tooling must use the same deployment mode through `PDFHUB_COMPOSE
 - `prod` — base + production override;
 - `prod-nas` — base + production + NAS overrides.
 
+### Upload failure: DNS / services not reachable
+
+If the upload reports `[Errno -3] Temporary failure in name resolution`, the
+Office-to-PDF font package is **not** the root cause. The API, Redis, database
+or storage dependency may be inaccessible from the current Docker network.
+An upload must complete before the task wizard can advance.
+
+Run this **read-only** diagnostic on the Ubuntu server (choose the same Compose
+mode already used by the deployment):
+
+```bash
+cd /opt/rcat-pdf-hub
+PDFHUB_COMPOSE_MODE=prod make upload-dns-doctor
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  logs --tail=100 api caddy postgres valkey
+```
+
+Use `PDFHUB_COMPOSE_MODE=default` for base Compose, `nas` for NAS, or
+`prod-nas` for production with NAS. The doctor runs *inside* the API
+container and checks name resolution and TCP reachability to configured
+PostgreSQL, Valkey, Gotenberg, and optional S3/ClamAV services. It never
+prints credentials, alters database records or retries uploads.
+
+If DNS fails, inspect `docker compose ... ps`, `docker network ls`, the
+Compose override currently in use, and service logs. Do not replace
+`PDFHUB_*` endpoints, edit `/etc/resolv.conf`, restart the entire stack,
+run `down -v`, or delete application volumes as a blind workaround.
+Because uploads are not guaranteed idempotent, inspect My Files before
+retrying a request whose network response may have been interrupted.
+
 ### Office → PDF layout and Thai font fidelity
 
 Office → PDF uses LibreOffice **inside the Gotenberg container**, not Microsoft Office.

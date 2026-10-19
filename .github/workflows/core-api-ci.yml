@@ -39,6 +39,8 @@ jobs:
           python3 scripts/check-host-python.py
           make validate-ops
           python3 -m unittest discover -s scripts/tests -p "test_office_font_bundle.py"
+          python3 -m unittest discover -s scripts/tests -p "test_upload_dns_doctor.py"
+          bash -n scripts/doctor-upload-dns.sh
 
   gotenberg-fonts:
     name: Build and check Thai Office converter image
