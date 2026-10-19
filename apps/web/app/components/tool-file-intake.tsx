@@ -72,7 +72,7 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, on
           <label htmlFor="files">
             <span className="v3DropIcon">＋</span>
             <strong>อัปโหลดไฟล์สำหรับ {tool.title}</strong>
-            <p>หลังอัปโหลด ให้ตรวจไฟล์ที่เลือกด้านล่างแล้วกด ตั้งค่าและดำเนินการ</p>
+            <p>หลังอัปโหลด โปรดตรวจสอบรายการไฟล์ที่เลือก แล้วใช้ปุ่มดำเนินการด้านล่าง</p>
             <span className="v3UploadButton">เลือกไฟล์จากเครื่อง</span>
           </label>
         </div>
