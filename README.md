@@ -173,6 +173,30 @@ Backup/restore tooling must use the same deployment mode through `PDFHUB_COMPOSE
 - `prod` — base + production override;
 - `prod-nas` — base + production + NAS overrides.
 
+### Office → PDF layout and Thai font fidelity
+
+Office → PDF uses LibreOffice **inside the Gotenberg container**, not Microsoft Office.
+The custom pinned Gotenberg image adds Thai fallback fonts. For government
+documents using TH Sarabun, install the **exact** font files (matching the
+document's family and version) in `ops/gotenberg/fonts/` before rebuilding
+Gotenberg. Locally supplied font binaries are excluded from Git.
+
+```bash
+# List font families available to the converter:
+PDFHUB_COMPOSE_MODE=prod make office-font-doctor
+
+# Require an exact font family (detect missing fonts, not fc-match fallback):
+PDFHUB_COMPOSE_MODE=prod bash scripts/check-office-fonts.sh "TH Sarabun New"
+
+# After approved .ttf/.otf files are placed in ops/gotenberg/fonts/:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  up -d --build --no-deps gotenberg
+```
+
+See [Gotenberg font instructions](ops/gotenberg/README.md). Compare complex
+DOCX/XLSX/PPTX conversions with reference PDFs exported by Microsoft Office.
+LibreOffice cannot guarantee pixel-identical rendering in every document.
+
 ## Authentication / service isolation
 
 `PDFHUB_ADMIN_API_KEY` is a bootstrap/break-glass key with `*` scope. Use it only for administrative operations and never embed it in a browser application.
