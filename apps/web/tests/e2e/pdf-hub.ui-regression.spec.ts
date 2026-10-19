@@ -318,3 +318,47 @@ test("P7H.1 Admin Overview, Jobs, Storage, Access and Integrations fit mobile an
   }
   console.log("P7H1_ADMIN_MOBILE_PERF_CANDIDATE " + JSON.stringify(baselines));
 });
+
+
+test("Office upload DNS failure stays on intake with a visible explanation, then retries safely", async ({ page }) => {
+  let uploadAttempts = 0;
+  await page.route("**/api/v1/files", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    uploadAttempts += 1;
+    if (uploadAttempts === 1) {
+      return route.fulfill({
+        status: 503,
+        json: { detail: "[Errno -3] Temporary failure in name resolution" },
+      });
+    }
+    return route.fulfill({ json: {
+      id: "uploaded-office-1",
+      original_name: "document.docx",
+      content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 12,
+      sha256: "a".repeat(64),
+      source_system: "ui-regression",
+      created_at: "2026-10-19T00:00:00Z",
+      expires_at: null,
+    } });
+  });
+
+  await page.goto("/tools/office-to-pdf");
+  const officeFile = {
+    name: "document.docx",
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    buffer: Buffer.from("sample-upload"),
+  };
+
+  await page.locator("#files").setInputFiles(officeFile);
+  await expect(page.getByRole("alert")).toContainText("DNS");
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeDisabled();
+
+  await page.locator("#files").setInputFiles(officeFile);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ })).toBeEnabled();
+  await expect(page.getByRole("region", { name: "ตรวจรายการไฟล์ก่อนดำเนินการ" })).toContainText("document.docx");
+  await page.getByRole("button", { name: /ตั้งค่าและดำเนินการ/ }).click();
+  await expect(page.locator("#workspace-target")).toContainText("document.docx");
+  expect(uploadAttempts).toBe(2);
+});
