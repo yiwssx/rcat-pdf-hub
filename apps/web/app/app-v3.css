@@ -76,7 +76,7 @@ a { color: inherit; }
   flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid rgba(73, 84, 111, .12);
-  border-radius: 50%;
+  border-radius: 12px;
   background: #fff;
   box-shadow: 0 6px 14px rgba(52, 60, 86, .12);
 }
