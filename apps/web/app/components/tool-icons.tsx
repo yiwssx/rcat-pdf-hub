@@ -35,6 +35,6 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
 
 export function BrandGlyph() {
   return (
-    <Image src="/assets/rcat-college-logo.webp" alt="" width={128} height={128} unoptimized />
+    <Image src="/assets/rcat-pdf-hub-logo.webp" alt="" width={128} height={128} unoptimized />
   );
 }
