@@ -95,6 +95,8 @@ operations() {
     scripts/tests/test_tool_registry.py \
     scripts/validate-tool-parameters.py \
     scripts/tests/test_tool_parameters.py \
+    scripts/validate-tool-artifacts.py \
+    scripts/tests/test_tool_artifacts.py \
     scripts/backend-coverage.py
   bash scripts/test-ci-resource-cleanup.sh
   bash scripts/test-local-ci-result-cache.sh
@@ -103,6 +105,8 @@ operations() {
   python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
   python3 scripts/validate-tool-parameters.py
   python3 -m unittest discover -s scripts/tests -p 'test_tool_parameters.py'
+  python3 scripts/validate-tool-artifacts.py
+  python3 -m unittest discover -s scripts/tests -p 'test_tool_artifacts.py'
   echo 'operations: PASS'
 }
 
