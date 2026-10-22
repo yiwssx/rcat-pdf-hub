@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -65,6 +65,31 @@ class JobRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+
+ 
+class JobOutputArtifact(Base):
+    """FileRecord linked to a finished JobRecord; never an authorization substitute."""
+    __tablename__ = "job_output_artifacts"
+    __table_args__ = (
+        UniqueConstraint("job_id", "role", "ordinal", name="uq_job_output_artifact_order"),
+        CheckConstraint(
+            "(role = 'part' AND ordinal >= 1 AND ordinal <= 200) OR "
+            "(role IN ('result', 'bundle') AND ordinal IS NULL)",
+            name="ck_job_output_artifact_role_ordinal",
+        ),
+    )
+
+    job_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("jobs.id", ondelete="CASCADE"), primary_key=True
+    )
+    file_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("files.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    role: Mapped[str] = mapped_column(String(12), nullable=False)
+    ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
 
 
 class ArchiveRecord(Base):
