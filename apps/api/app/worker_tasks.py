@@ -201,7 +201,7 @@ def process_job(job_id: str) -> str:
             raise RuntimeError(f"Unsupported operation: {job.operation}")
 
         _set_job(db, job, progress=80)
-        if job.operation == "pdf-to-images":
+        if job.operation == "pdf-to-images" and settings.multi_output_artifacts_enabled:
             # Extract only self-generated, verified page images. Keep the
             # original ZIP as the backward-compatible output_file_id.
             staging = TemporaryDirectory(prefix="pdfhub-pages-", dir=output.parent)
