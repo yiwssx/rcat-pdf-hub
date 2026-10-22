@@ -73,7 +73,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M02",
@@ -107,7 +111,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "compress"
+        ]
+      }
     },
     {
       "id": "M03",
@@ -137,7 +147,11 @@
         "workload_hint": "heavy",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M04",
@@ -171,7 +185,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "merge"
+        ]
+      }
     },
     {
       "id": "M05",
@@ -201,7 +221,11 @@
         "workload_hint": "heavy",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M06",
@@ -231,7 +255,11 @@
         "workload_hint": "heavy",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M07",
@@ -265,7 +293,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "split"
+        ]
+      }
     },
     {
       "id": "M08",
@@ -295,7 +329,11 @@
         "workload_hint": "interactive",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M09",
@@ -325,7 +363,11 @@
         "workload_hint": "interactive",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M10",
@@ -359,7 +401,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "rotate"
+        ]
+      }
     },
     {
       "id": "M11",
@@ -389,7 +437,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M12",
@@ -419,7 +471,11 @@
         "workload_hint": "interactive",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M13",
@@ -449,7 +505,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M14",
@@ -483,7 +543,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "organize"
+        ]
+      }
     },
     {
       "id": "M15",
@@ -517,7 +583,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "organize"
+        ]
+      }
     },
     {
       "id": "M16",
@@ -551,7 +623,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "split"
+        ]
+      }
     },
     {
       "id": "M17",
@@ -581,7 +659,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M18",
@@ -611,7 +693,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M19",
@@ -645,7 +731,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "page-numbers"
+        ]
+      }
     },
     {
       "id": "M20",
@@ -675,7 +767,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M21",
@@ -709,7 +805,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "watermark"
+        ]
+      }
     },
     {
       "id": "M22",
@@ -739,7 +841,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M23",
@@ -769,7 +875,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M24",
@@ -799,7 +909,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M25",
@@ -829,7 +943,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M26",
@@ -859,7 +977,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M27",
@@ -889,7 +1011,11 @@
         "workload_hint": "interactive",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M28",
@@ -919,7 +1045,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M29",
@@ -949,7 +1079,11 @@
         "workload_hint": "interactive",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M30",
@@ -979,7 +1113,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M31",
@@ -1013,7 +1151,13 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "page-numbers"
+        ]
+      }
     },
     {
       "id": "M32",
@@ -1043,7 +1187,11 @@
         "workload_hint": "interactive",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "M33",
@@ -1073,7 +1221,11 @@
         "workload_hint": "interactive",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T01",
@@ -1107,7 +1259,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T02",
@@ -1141,7 +1299,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "images-to-pdf"
+        ]
+      }
     },
     {
       "id": "T03",
@@ -1175,7 +1339,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "images-to-pdf"
+        ]
+      }
     },
     {
       "id": "T04",
@@ -1205,7 +1375,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T05",
@@ -1239,7 +1413,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T06",
@@ -1273,7 +1453,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T07",
@@ -1307,7 +1493,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T08",
@@ -1341,7 +1533,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T09",
@@ -1371,7 +1569,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T10",
@@ -1401,7 +1603,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T11",
@@ -1431,7 +1637,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T12",
@@ -1461,7 +1671,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T13",
@@ -1495,7 +1709,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "images-to-pdf"
+        ]
+      }
     },
     {
       "id": "T14",
@@ -1525,7 +1745,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T15",
@@ -1559,7 +1783,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T16",
@@ -1589,7 +1819,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T17",
@@ -1619,7 +1853,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T18",
@@ -1653,7 +1891,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "office-to-pdf"
+        ]
+      }
     },
     {
       "id": "T19",
@@ -1683,7 +1927,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T20",
@@ -1713,7 +1961,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T21",
@@ -1743,7 +1995,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T22",
@@ -1773,7 +2029,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T23",
@@ -1803,7 +2063,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T24",
@@ -1837,7 +2101,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "images-to-pdf"
+        ]
+      }
     },
     {
       "id": "T25",
@@ -1867,7 +2137,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T26",
@@ -1897,7 +2171,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T27",
@@ -1927,7 +2205,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T28",
@@ -1961,7 +2243,13 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "images-to-pdf"
+        ]
+      }
     },
     {
       "id": "T29",
@@ -1991,7 +2279,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T30",
@@ -2021,7 +2313,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T31",
@@ -2051,7 +2347,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T32",
@@ -2081,7 +2381,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T33",
@@ -2111,7 +2415,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T34",
@@ -2141,7 +2449,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T35",
@@ -2171,7 +2483,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T36",
@@ -2201,7 +2517,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T37",
@@ -2231,7 +2551,11 @@
         "workload_hint": "pdf",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T38",
@@ -2261,7 +2585,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T39",
@@ -2291,7 +2619,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "T40",
@@ -2321,7 +2653,11 @@
         "workload_hint": "pdf",
         "security_review": true
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F01",
@@ -2355,7 +2691,13 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "ocr"
+        ]
+      }
     },
     {
       "id": "F02",
@@ -2385,7 +2727,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F03",
@@ -2419,7 +2765,13 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "pdf-to-images"
+        ]
+      }
     },
     {
       "id": "F04",
@@ -2453,7 +2805,13 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "pdf-to-images"
+        ]
+      }
     },
     {
       "id": "F05",
@@ -2483,7 +2841,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F06",
@@ -2513,7 +2875,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F07",
@@ -2543,7 +2909,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F08",
@@ -2573,7 +2943,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F09",
@@ -2603,7 +2977,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F10",
@@ -2633,7 +3011,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F11",
@@ -2667,7 +3049,13 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "legacy_projection",
+        "operation_refs": [
+          "pdfa"
+        ]
+      }
     },
     {
       "id": "F12",
@@ -2697,7 +3085,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F13",
@@ -2727,7 +3119,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F14",
@@ -2757,7 +3153,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F15",
@@ -2787,7 +3187,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F16",
@@ -2817,7 +3221,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     },
     {
       "id": "F17",
@@ -2847,7 +3255,11 @@
         "workload_hint": "heavy",
         "security_review": false
       },
-      "runtime_enabled": false
+      "runtime_enabled": false,
+      "parameter_contract": {
+        "status": "pending_design",
+        "operation_refs": []
+      }
     }
   ]
 }
