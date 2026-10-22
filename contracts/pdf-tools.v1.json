@@ -1,0 +1,2853 @@
+{
+  "schema_version": "1.0.0",
+  "status": "planning-only",
+  "generated_from_tracker": "docs/workstreams/pdf-90-tools-master-tracker.md",
+  "policy": {
+    "release_requires_manual_acceptance": true,
+    "all_new_routes_disabled": true,
+    "legacy_catalog_unchanged": true
+  },
+  "counts": {
+    "manage": 33,
+    "to_pdf": 40,
+    "from_pdf": 17
+  },
+  "existing": {
+    "ui_routes": [
+      "ocr",
+      "merge-pdf",
+      "split-rotate",
+      "compress",
+      "pdf-to-images",
+      "images-to-pdf",
+      "watermark",
+      "page-numbers",
+      "pdfa",
+      "office-to-pdf",
+      "pdf-stamp",
+      "signed-link",
+      "archive"
+    ],
+    "backend_operations": [
+      "merge",
+      "organize",
+      "split",
+      "rotate",
+      "compress",
+      "ocr",
+      "pdfa",
+      "office-to-pdf",
+      "watermark",
+      "page-numbers",
+      "stamp",
+      "images-to-pdf",
+      "pdf-to-images"
+    ]
+  },
+  "tools": [
+    {
+      "id": "M01",
+      "title": "Edit PDF",
+      "slug": "edit-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "PDF editor / PyMuPDF + UI",
+      "acceptance": "Text/image edits persist; fonts and page geometry visually reviewed",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M02",
+      "title": "Compress PDF",
+      "slug": "compress-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Ghostscript",
+      "acceptance": "Compression presets; smaller-size check without silent fidelity loss",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "compress"
+        ],
+        "operations": [
+          "compress"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M03",
+      "title": "PDF Summarizer",
+      "slug": "pdf-summarizer",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Isolated OCR + local AI",
+      "acceptance": "Grounded citations, sensitive-data controls, no invented claims",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "special"
+        },
+        "workload_hint": "heavy",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M04",
+      "title": "Merge PDF",
+      "slug": "merge-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "qpdf",
+      "acceptance": "Reordering, mixed sizes, password/input validation",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "merge-pdf"
+        ],
+        "operations": [
+          "merge"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 2,
+            "max_count": null
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M05",
+      "title": "PDF Translator",
+      "slug": "pdf-translator",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "OCR + translation adapter",
+      "acceptance": "Thai/English text and layout QA; preserve source",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "special"
+        },
+        "workload_hint": "heavy",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M06",
+      "title": "Chat with PDF",
+      "slug": "chat-with-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Isolated extraction + local retrieval/LLM",
+      "acceptance": "Answers grounded with page references, tenant isolation",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "special"
+        },
+        "workload_hint": "heavy",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M07",
+      "title": "Split PDF",
+      "slug": "split-pdf",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "qpdf + multi-output",
+      "acceptance": "Ranges and per-page outputs; individual files / ZIP",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "split-rotate"
+        ],
+        "operations": [
+          "split"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "multi"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M08",
+      "title": "Unlock PDF",
+      "slug": "unlock-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "qpdf / pypdf",
+      "acceptance": "Requires valid supplied password and legitimate access",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M09",
+      "title": "Protect PDF",
+      "slug": "protect-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "qpdf AES-256",
+      "acceptance": "Encrypted output, permissions and password tests",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M10",
+      "title": "Rotate PDF",
+      "slug": "rotate-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "qpdf",
+      "acceptance": "Selected/all pages preserve page content",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "split-rotate"
+        ],
+        "operations": [
+          "rotate"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M11",
+      "title": "Crop PDF",
+      "slug": "crop-pdf",
+      "state": "PLANNED",
+      "priority": "P0",
+      "adapter_proposal": "pypdf / PyMuPDF",
+      "acceptance": "Visual crop rectangle and MediaBox/CropBox QA",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M12",
+      "title": "Sign PDF",
+      "slug": "sign-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Visible signature + reviewed pyHanko",
+      "acceptance": "Explicit visual signature versus cryptographic signature distinction",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M13",
+      "title": "Edit metadata",
+      "slug": "edit-metadata",
+      "state": "PLANNED",
+      "priority": "P0",
+      "adapter_proposal": "pypdf",
+      "acceptance": "Round-trip title/author/subject/keywords",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M14",
+      "title": "Delete pages",
+      "slug": "delete-pages",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "Existing organize pipeline",
+      "acceptance": "Multi-page remove UX; must reject empty result",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "split-rotate"
+        ],
+        "operations": [
+          "organize"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M15",
+      "title": "Rearrange pages",
+      "slug": "rearrange-pages",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Existing organize pipeline",
+      "acceptance": "Drag/drop, exact page order after download",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "split-rotate"
+        ],
+        "operations": [
+          "organize"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M16",
+      "title": "Extract pages",
+      "slug": "extract-pages",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "qpdf + multi-output",
+      "acceptance": "Select ranges, individual PDFs/ZIP",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "split-rotate"
+        ],
+        "operations": [
+          "split"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "multi"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M17",
+      "title": "Extract text",
+      "slug": "extract-text",
+      "state": "PLANNED",
+      "priority": "P0",
+      "adapter_proposal": "Poppler/pypdf + optional OCR",
+      "acceptance": "UTF-8 Thai ordering and searchable/scanned cases",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "text/plain",
+          "cardinality": "special"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M18",
+      "title": "Extract images",
+      "slug": "extract-images",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "pdfimages / PyMuPDF",
+      "acceptance": "Original image objects exported rather than rasterized pages",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/*",
+          "cardinality": "multi"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M19",
+      "title": "Add page numbers",
+      "slug": "add-page-numbers",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "ReportLab + pypdf",
+      "acceptance": "Thai fonts, start/page numbering and positions",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "page-numbers"
+        ],
+        "operations": [
+          "page-numbers"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M20",
+      "title": "PDF Viewer",
+      "slug": "pdf-viewer",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "Existing preview + PDF.js or equivalent",
+      "acceptance": "Full multi-page zoom/search/navigation without mutation",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "special"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M21",
+      "title": "Add watermark",
+      "slug": "add-watermark",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "Existing text watermark + image mode",
+      "acceptance": "Thai text/image watermark opacity/rotation/selection",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "watermark"
+        ],
+        "operations": [
+          "watermark"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M22",
+      "title": "Add text",
+      "slug": "add-text",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "ReportLab overlay",
+      "acceptance": "Thai text selectable and positioned",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M23",
+      "title": "Add image to PDF",
+      "slug": "add-image-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "pypdf / PyMuPDF overlay",
+      "acceptance": "Place PNG/JPEG with transparent images",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M24",
+      "title": "Flatten PDF",
+      "slug": "flatten-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "pypdf / Ghostscript reviewed",
+      "acceptance": "Form/annotation appearance persists; no unexpected loss",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M25",
+      "title": "Annotate PDF",
+      "slug": "annotate-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "PDF.js editor + PyMuPDF",
+      "acceptance": "Comments/shapes retained in readers",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M26",
+      "title": "Highlight PDF",
+      "slug": "highlight-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "PDF text selection + annotation",
+      "acceptance": "Highlight anchors to text accurately",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M27",
+      "title": "Remove metadata",
+      "slug": "remove-metadata",
+      "state": "PLANNED",
+      "priority": "P0",
+      "adapter_proposal": "pypdf + verify",
+      "acceptance": "No retained sensitive metadata where removal is promised",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M28",
+      "title": "Resize pages",
+      "slug": "resize-pages",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "pypdf transformations",
+      "acceptance": "Correct page dimensions, content fit and orientation",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M29",
+      "title": "Whiteout PDF",
+      "slug": "whiteout-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Whiteout overlay + explicit labeling",
+      "acceptance": "Do not claim secure redaction; test underlying text remains",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M30",
+      "title": "Grayscale PDF",
+      "slug": "grayscale-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Ghostscript",
+      "acceptance": "Preserve content and legibility, verify color space",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M31",
+      "title": "Header and footer",
+      "slug": "header-and-footer",
+      "state": "PARTIAL",
+      "priority": "P1",
+      "adapter_proposal": "ReportLab overlay",
+      "acceptance": "Text/date/page token formatting and placement",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [
+          "page-numbers"
+        ],
+        "operations": [
+          "page-numbers"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M32",
+      "title": "Repair PDF",
+      "slug": "repair-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "qpdf / Ghostscript recovery",
+      "acceptance": "Best effort only; immutable original and failure disclosure",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "M33",
+      "title": "PDF Filler",
+      "slug": "pdf-filler",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "AcroForm fill + UI",
+      "acceptance": "Interactive fields filled, flattened optional, owner-safe",
+      "category": "manage",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "interactive",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T01",
+      "title": "Word to PDF",
+      "slug": "word-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "DOC/DOCX text, tables, Thai font fidelity",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/msword",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T02",
+      "title": "JPG to PDF",
+      "slug": "jpg-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Pillow + ReportLab",
+      "acceptance": "Dedicated JPG input, ordering, output PDF",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "images-to-pdf"
+        ],
+        "operations": [
+          "images-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/jpeg",
+            "min_count": 1,
+            "max_count": null
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T03",
+      "title": "PNG to PDF",
+      "slug": "png-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Pillow + ReportLab",
+      "acceptance": "Alpha, page sizing and DPI verified",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "images-to-pdf"
+        ],
+        "operations": [
+          "images-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/png",
+            "min_count": 1,
+            "max_count": null
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T04",
+      "title": "EPUB to PDF",
+      "slug": "epub-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Calibre / ebook engine review",
+      "acceptance": "Chapter hierarchy, images, font license/limits",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/epub+zip",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T05",
+      "title": "DOCX to PDF",
+      "slug": "docx-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "Explicit DOCX route, Thai fonts and sections",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T06",
+      "title": "Excel to PDF",
+      "slug": "excel-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "XLS/XLSX sheets, print area and page breaks",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T07",
+      "title": "PPT to PDF",
+      "slug": "ppt-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "Legacy slides and fonts",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.ms-powerpoint",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T08",
+      "title": "PPTX to PDF",
+      "slug": "pptx-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "Slide geometry, text, embedded visuals",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T09",
+      "title": "HEIC to PDF",
+      "slug": "heic-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "libheif/Pillow plugin",
+      "acceptance": "Color profiles, multipage, dependency review",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/heic",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T10",
+      "title": "HTML to PDF",
+      "slug": "html-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Gotenberg Chromium",
+      "acceptance": "Sanitized input, no remote fetch by default, Thai font",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "text/html",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T11",
+      "title": "DjVu to PDF",
+      "slug": "djvu-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "DjVuLibre adapter",
+      "acceptance": "Scanned-page fidelity + file sandbox",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T12",
+      "title": "PAGES to PDF",
+      "slug": "pages-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Specialized adapter feasibility",
+      "acceptance": "Proprietary Apple formats; disclose unsupported variants",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T13",
+      "title": "TIFF to PDF",
+      "slug": "tiff-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Pillow + ReportLab",
+      "acceptance": "Multi-frame TIFF pages and order",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "images-to-pdf"
+        ],
+        "operations": [
+          "images-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/tiff",
+            "min_count": 1,
+            "max_count": null
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T14",
+      "title": "TXT to PDF",
+      "slug": "txt-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "ReportLab/HTML renderer",
+      "acceptance": "UTF-8 Thai wrapping and page breaks",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "text/plain",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T15",
+      "title": "ODT to PDF",
+      "slug": "odt-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "ODT style and page-fidelity regression",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.oasis.opendocument.text",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T16",
+      "title": "SVG to PDF",
+      "slug": "svg-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "CairoSVG / renderer",
+      "acceptance": "No external references, preserve vectors where feasible",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/svg+xml",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T17",
+      "title": "CSV to PDF",
+      "slug": "csv-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Tabular renderer",
+      "acceptance": "Encoding, delimiter, long tables, Thai glyphs",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "text/csv",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T18",
+      "title": "RTF to PDF",
+      "slug": "rtf-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Gotenberg LibreOffice",
+      "acceptance": "Styles and text encoding",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "office-to-pdf"
+        ],
+        "operations": [
+          "office-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/rtf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T19",
+      "title": "MOBI to PDF",
+      "slug": "mobi-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Calibre feasibility",
+      "acceptance": "DRM-free only, chapter/cover fidelity",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T20",
+      "title": "DWG to PDF",
+      "slug": "dwg-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "CAD conversion feasibility",
+      "acceptance": "Licensing, layers, scale and fonts",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T21",
+      "title": "PUB to PDF",
+      "slug": "pub-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Publisher import feasibility",
+      "acceptance": "Page geometry and compatibility matrix",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T22",
+      "title": "XPS to PDF",
+      "slug": "xps-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "GhostXPS / mutool evaluation",
+      "acceptance": "Fonts/transparency validation",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T23",
+      "title": "XML to PDF",
+      "slug": "xml-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Safe XML renderer",
+      "acceptance": "Schema/template choice and XXE disabled",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/xml",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T24",
+      "title": "WebP to PDF",
+      "slug": "webp-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Pillow + ReportLab",
+      "acceptance": "Alpha and multipage/animation policy",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "images-to-pdf"
+        ],
+        "operations": [
+          "images-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/webp",
+            "min_count": 1,
+            "max_count": null
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T25",
+      "title": "HEIF to PDF",
+      "slug": "heif-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "libheif / Pillow plugin",
+      "acceptance": "Frames, color profile and resource limits",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/heif",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T26",
+      "title": "JFIF to PDF",
+      "slug": "jfif-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Pillow",
+      "acceptance": "JPEG/JFIF signature, EXIF orientation",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/jpeg",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T27",
+      "title": "GIF to PDF",
+      "slug": "gif-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Pillow",
+      "acceptance": "Frame selection policy documented; transparencies",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/gif",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T28",
+      "title": "BMP to PDF",
+      "slug": "bmp-to-pdf",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "Pillow + ReportLab",
+      "acceptance": "Large BMP resource bounds and correct page sizing",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [
+          "images-to-pdf"
+        ],
+        "operations": [
+          "images-to-pdf"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "image/bmp",
+            "min_count": 1,
+            "max_count": null
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T29",
+      "title": "HWP to PDF",
+      "slug": "hwp-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Hancom adapter feasibility",
+      "acceptance": "Version support and licensing proof",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T30",
+      "title": "CHM to PDF",
+      "slug": "chm-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Sandboxed CHM extraction",
+      "acceptance": "Archive exploit protections, navigation ordering",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T31",
+      "title": "FB2 to PDF",
+      "slug": "fb2-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Calibre feasibility",
+      "acceptance": "Books and illustrations, no external fetch",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T32",
+      "title": "ZIP to PDF",
+      "slug": "zip-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Archive validator + conversion pipeline",
+      "acceptance": "Prevent zip bombs/path traversal; explicit chosen documents",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/zip",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T33",
+      "title": "URL to PDF",
+      "slug": "url-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Gotenberg Chromium + egress controls",
+      "acceptance": "Block SSRF/private IP, DNS rebinding, timeouts",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "text/uri-list",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T34",
+      "title": "WPS to PDF",
+      "slug": "wps-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "LibreOffice compatibility feasibility",
+      "acceptance": "Legacy WPS text accuracy",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T35",
+      "title": "EML to PDF",
+      "slug": "eml-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "MIME parser + HTML renderer",
+      "acceptance": "Sanitize HTML, block remote images, attachments policy",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T36",
+      "title": "MD to PDF",
+      "slug": "md-to-pdf",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Gotenberg Markdown/HTML",
+      "acceptance": "Code, tables, Thai fonts, escaping",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "text/markdown",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T37",
+      "title": "DXF to PDF",
+      "slug": "dxf-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "ezdxf + renderer feasibility",
+      "acceptance": "Units, layers, vector scaling",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T38",
+      "title": "CBZ to PDF",
+      "slug": "cbz-to-pdf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Safe ZIP image pipeline",
+      "acceptance": "Natural page ordering and decompression limits",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.comicbook+zip",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T39",
+      "title": "AI to PDF",
+      "slug": "ai-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Vector/Illustrator file adapter feasibility",
+      "acceptance": "Adobe Illustrator AI files, not generative AI",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/octet-stream",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "T40",
+      "title": "CBR to PDF",
+      "slug": "cbr-to-pdf",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Sandboxed RAR extraction",
+      "acceptance": "Archive security, rights, ordering",
+      "category": "to_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/vnd.comicbook-rar",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "pdf",
+        "security_review": true
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F01",
+      "title": "PDF OCR",
+      "slug": "pdf-ocr",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "OCRmyPDF / Tesseract",
+      "acceptance": "Searchable PDF exists; add TXT extraction path where required",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [
+          "ocr"
+        ],
+        "operations": [
+          "ocr"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F02",
+      "title": "PDF to Word",
+      "slug": "pdf-to-word",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Layout-aware DOC/DOCX converter",
+      "acceptance": "Editable content, Thai paragraphs and tables",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/msword",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F03",
+      "title": "PDF to JPG",
+      "slug": "pdf-to-jpg",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "Poppler PDF raster -> ZIP",
+      "acceptance": "Dedicated JPG flow, individual/ZIP outputs and DPI",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [
+          "pdf-to-images"
+        ],
+        "operations": [
+          "pdf-to-images"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/jpeg",
+          "cardinality": "multi"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F04",
+      "title": "PDF to PNG",
+      "slug": "pdf-to-png",
+      "state": "PARTIAL",
+      "priority": "P0",
+      "adapter_proposal": "Poppler PDF raster -> ZIP",
+      "acceptance": "Dedicated PNG flow, transparent/white background policy",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [
+          "pdf-to-images"
+        ],
+        "operations": [
+          "pdf-to-images"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/png",
+          "cardinality": "multi"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F05",
+      "title": "PDF to EPUB",
+      "slug": "pdf-to-epub",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Extraction + ebook generator",
+      "acceptance": "Reflow quality, images and page-reference QA",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/epub+zip",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F06",
+      "title": "PDF to DOCX",
+      "slug": "pdf-to-docx",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Layout-aware DOCX converter",
+      "acceptance": "True selectable editable text, not page screenshots",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F07",
+      "title": "PDF to Excel",
+      "slug": "pdf-to-excel",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Table extraction / XLSX writer",
+      "acceptance": "Table cell accuracy, merged cells and numeric typing",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F08",
+      "title": "PDF to PPT",
+      "slug": "pdf-to-ppt",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Slide writer / layout extraction",
+      "acceptance": "Slides retain correctly positioned editable content",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/vnd.ms-powerpoint",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F09",
+      "title": "PDF to TIFF",
+      "slug": "pdf-to-tiff",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Poppler + Pillow",
+      "acceptance": "Multi-page TIFF, DPI and file sizing",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/tiff",
+          "cardinality": "multi"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F10",
+      "title": "PDF to ODT",
+      "slug": "pdf-to-odt",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Structured extraction + ODT writer",
+      "acceptance": "Editable paragraphs, fonts, page fidelity",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/vnd.oasis.opendocument.text",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F11",
+      "title": "PDF to PDF/A",
+      "slug": "pdf-to-pdfa",
+      "state": "BASELINE",
+      "priority": "P0",
+      "adapter_proposal": "OCRmyPDF/PDF-A pipeline + veraPDF gate",
+      "acceptance": "Independent ISO conformance validation",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [
+          "pdfa"
+        ],
+        "operations": [
+          "pdfa"
+        ]
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/pdf",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F12",
+      "title": "PDF to SVG",
+      "slug": "pdf-to-svg",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Poppler SVG renderer",
+      "acceptance": "Vector/bitmap policy and per-page output",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/svg+xml",
+          "cardinality": "multi"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F13",
+      "title": "PDF to CSV",
+      "slug": "pdf-to-csv",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Table extraction",
+      "acceptance": "CSV delimiter/encoding with manually validated examples",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "text/csv",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F14",
+      "title": "PDF to RTF",
+      "slug": "pdf-to-rtf",
+      "state": "PLANNED",
+      "priority": "P2",
+      "adapter_proposal": "Text/layout extractor + RTF writer",
+      "acceptance": "Thai formatting and valid RTF",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/rtf",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F15",
+      "title": "PDF to MOBI",
+      "slug": "pdf-to-mobi",
+      "state": "PLANNED",
+      "priority": "P3",
+      "adapter_proposal": "Ebook conversion feasibility",
+      "acceptance": "DRM-free, reflow/coverage disclosure",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "application/x-mobipocket-ebook",
+          "cardinality": "single"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F16",
+      "title": "PDF to GIF",
+      "slug": "pdf-to-gif",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Poppler + Pillow",
+      "acceptance": "Page-to-frame choice, resolution and animation policy",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/gif",
+          "cardinality": "multi"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    },
+    {
+      "id": "F17",
+      "title": "PDF to BMP",
+      "slug": "pdf-to-bmp",
+      "state": "PLANNED",
+      "priority": "P1",
+      "adapter_proposal": "Poppler + Pillow",
+      "acceptance": "Page range, depth, resource guard",
+      "category": "from_pdf",
+      "legacy": {
+        "ui_routes": [],
+        "operations": []
+      },
+      "planned_contract": {
+        "inputs": [
+          {
+            "mime": "application/pdf",
+            "min_count": 1,
+            "max_count": 1
+          }
+        ],
+        "output": {
+          "mime": "image/bmp",
+          "cardinality": "multi"
+        },
+        "workload_hint": "heavy",
+        "security_review": false
+      },
+      "runtime_enabled": false
+    }
+  ]
+}
