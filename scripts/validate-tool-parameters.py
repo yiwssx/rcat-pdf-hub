@@ -170,6 +170,15 @@ def validate(contract, capabilities, models, routes):
                 nested = field.get("items")
                 if not isinstance(nested, dict) or nested.get("type") != "object" or not isinstance(nested.get("properties"), dict):
                     fail(context + ": array lacks typed item shape " + name)
+                if context == "organize" and name == "pages" and isinstance(nested, dict) and isinstance(nested.get("properties"), dict):
+                    child = models.get("OrganizePage", {})
+                    if set(nested["properties"]) != set(child) or set(nested.get("required_properties", [])) != {k for k, v in child.items() if v.get("required")}:
+                        fail(context + ": nested page fields drift")
+                    for child_name, child_field in nested["properties"].items():
+                        source_child = child.get(child_name, {})
+                        for attr in ("type", "minimum", "maximum", "default"):
+                            if attr in source_child and child_field.get(attr) != source_child[attr]:
+                                fail(context + ": nested page property drift " + child_name + "." + attr)
                 if "min_items" in field and field["min_items"] != source.get("min_length"):
                     fail(context + ": array lower-bound drift " + name)
                 if "max_items" in field and field["max_items"] != source.get("max_length"):
