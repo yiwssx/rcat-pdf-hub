@@ -85,6 +85,8 @@ validate-tool-registry:
 	python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
 	python3 scripts/validate-tool-parameters.py
 	python3 -m unittest discover -s scripts/tests -p 'test_tool_parameters.py'
+	python3 scripts/validate-tool-artifacts.py
+	python3 -m unittest discover -s scripts/tests -p 'test_tool_artifacts.py'
 
 validate-coverage:
 	python3 scripts/backend-coverage.py
