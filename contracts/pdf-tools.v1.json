@@ -77,6 +77,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -117,6 +124,13 @@
         "operation_refs": [
           "compress"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -151,6 +165,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "special",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -191,6 +212,13 @@
         "operation_refs": [
           "merge"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -225,6 +253,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "special",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -259,6 +294,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "special",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -299,6 +341,13 @@
         "operation_refs": [
           "split"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": true,
+        "status": "planning_only"
       }
     },
     {
@@ -333,6 +382,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -367,6 +423,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -407,6 +470,13 @@
         "operation_refs": [
           "rotate"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -441,6 +511,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -475,6 +552,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -509,6 +593,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -549,6 +640,13 @@
         "operation_refs": [
           "organize"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -589,6 +687,13 @@
         "operation_refs": [
           "organize"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -629,6 +734,13 @@
         "operation_refs": [
           "split"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": true,
+        "status": "planning_only"
       }
     },
     {
@@ -663,6 +775,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "special",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -697,6 +816,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -737,6 +863,13 @@
         "operation_refs": [
           "page-numbers"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -771,6 +904,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "special",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -811,6 +951,13 @@
         "operation_refs": [
           "watermark"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -845,6 +992,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -879,6 +1033,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -913,6 +1074,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -947,6 +1115,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -981,6 +1156,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1015,6 +1197,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1049,6 +1238,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1083,6 +1279,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1117,6 +1320,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1157,6 +1367,13 @@
         "operation_refs": [
           "page-numbers"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1191,6 +1408,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1225,6 +1449,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1265,6 +1496,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1305,6 +1543,13 @@
         "operation_refs": [
           "images-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1345,6 +1590,13 @@
         "operation_refs": [
           "images-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1379,6 +1631,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1419,6 +1678,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1459,6 +1725,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1499,6 +1772,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1539,6 +1819,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1573,6 +1860,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1607,6 +1901,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1641,6 +1942,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1675,6 +1983,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1715,6 +2030,13 @@
         "operation_refs": [
           "images-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1749,6 +2071,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1789,6 +2118,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1823,6 +2159,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1857,6 +2200,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1897,6 +2247,13 @@
         "operation_refs": [
           "office-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1931,6 +2288,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1965,6 +2329,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -1999,6 +2370,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2033,6 +2411,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2067,6 +2452,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2107,6 +2499,13 @@
         "operation_refs": [
           "images-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2141,6 +2540,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2175,6 +2581,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2209,6 +2622,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2249,6 +2669,13 @@
         "operation_refs": [
           "images-to-pdf"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2283,6 +2710,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2317,6 +2751,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2351,6 +2792,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2385,6 +2833,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2419,6 +2874,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2453,6 +2915,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2487,6 +2956,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2521,6 +2997,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2555,6 +3038,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2589,6 +3079,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2623,6 +3120,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2657,6 +3161,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2697,6 +3208,13 @@
         "operation_refs": [
           "ocr"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2731,6 +3249,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2771,6 +3296,13 @@
         "operation_refs": [
           "pdf-to-images"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_zip",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": true,
+        "status": "planning_only"
       }
     },
     {
@@ -2811,6 +3343,13 @@
         "operation_refs": [
           "pdf-to-images"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_zip",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": true,
+        "status": "planning_only"
       }
     },
     {
@@ -2845,6 +3384,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2879,6 +3425,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2913,6 +3466,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2947,6 +3507,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -2981,6 +3548,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3015,6 +3589,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3055,6 +3636,13 @@
         "operation_refs": [
           "pdfa"
         ]
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "legacy_pdf",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3089,6 +3677,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3123,6 +3718,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3157,6 +3759,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3191,6 +3800,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "single",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3225,6 +3841,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     },
     {
@@ -3259,6 +3882,13 @@
       "parameter_contract": {
         "status": "pending_design",
         "operation_refs": []
+      },
+      "artifact_contract": {
+        "schema_ref": "contracts/pdf-output-manifest.v1.schema.json",
+        "current_delivery": "none",
+        "target_cardinality": "multi",
+        "multi_output_migration_required": false,
+        "status": "planning_only"
       }
     }
   ]
