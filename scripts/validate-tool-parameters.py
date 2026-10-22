@@ -43,7 +43,7 @@ def descriptor(annotation, aliases):
     raise ValueError(f"Unsupported request annotation: {ast.dump(annotation)}")
 
 
-def inspect_source_models(source):
+def inspect_source_models(source, target_models):
     tree = ast.parse(source)
     aliases = {}
     for node in tree.body:
@@ -53,7 +53,7 @@ def inspect_source_models(source):
                 aliases[key] = [literal(v) for v in value.slice.elts] if isinstance(value.slice, ast.Tuple) else [literal(value.slice)]
     models = {}
     for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
+        if not isinstance(node, ast.ClassDef) or node.name not in target_models:
             continue
         fields = {}
         for item in node.body:
@@ -198,7 +198,10 @@ def validate(contract, capabilities, models, routes):
 def main():
     params = json.loads(PARAMETERS.read_text(encoding="utf-8"))
     capabilities = json.loads(CAPABILITIES.read_text(encoding="utf-8"))
-    models = inspect_source_models(SCHEMAS.read_text(encoding="utf-8"))
+    models = inspect_source_models(
+        SCHEMAS.read_text(encoding="utf-8"),
+        {item["request_model"] for item in params["operations"].values()} | {"OrganizePage"},
+    )
     routes = inspect_routes(ROUTES.read_text(encoding="utf-8"))
     errors = validate(params, capabilities, models, routes)
     for problem in errors:
