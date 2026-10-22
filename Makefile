@@ -83,6 +83,8 @@ validate-contract:
 validate-tool-registry:
 	python3 scripts/validate-tool-registry.py
 	python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
+	python3 scripts/validate-tool-parameters.py
+	python3 -m unittest discover -s scripts/tests -p 'test_tool_parameters.py'
 
 validate-coverage:
 	python3 scripts/backend-coverage.py
