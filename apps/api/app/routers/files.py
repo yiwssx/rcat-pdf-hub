@@ -4,7 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import asc, desc, func, not_, or_, select, update
+from sqlalchemy import asc, delete, desc, func, not_, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.audit import audit_event
@@ -13,7 +13,7 @@ from app.db import get_db
 from app.downloads import issue_signed_download, verify_signed_download
 from app.malware import MalwareDetected, scan_file
 from app.filetypes import validate_uploaded_file
-from app.models import ArchiveRecord, FileRecord, JobRecord
+from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.policy import ensure_storage_quota
 from app.schemas import FileBulkDeleteRequest, FileLibraryPageOut, FileOut, FileRetentionUpdate, PageInfoOut, SignedDownloadOut
 from app.security import Principal, require_scope
@@ -73,6 +73,7 @@ def _delete_file_record(db: Session, record: FileRecord, principal: Principal) -
     if _active_job_uses_file(db, record.id):
         raise HTTPException(status_code=409, detail="File is being used by an active job")
     removed_bytes = delete_stored_name(record.stored_name) + delete_previews(record.id)
+    db.execute(delete(JobOutputArtifact).where(JobOutputArtifact.file_id == record.id))
     db.execute(update(JobRecord).where(JobRecord.output_file_id == record.id).values(output_file_id=None))
     for archive in db.scalars(select(ArchiveRecord).where(ArchiveRecord.file_id == record.id)).all():
         db.delete(archive)
