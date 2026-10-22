@@ -64,6 +64,7 @@ def inspect_source_models(source):
             if enum is not None:
                 desc["enum"] = enum
             if item.value is not None and isinstance(item.value, ast.Call) and isinstance(item.value.func, ast.Name) and item.value.func.id == "Field":
+                desc["required"] = not any(keyword.arg == "default" for keyword in item.value.keywords)
                 arguments = {keyword.arg: literal(keyword.value) for keyword in item.value.keywords if keyword.arg and keyword.arg in {
                     "default", "ge", "le", "min_length", "max_length", "pattern"
                 }}
@@ -152,6 +153,8 @@ def validate(contract, capabilities, models, routes):
             if field.get("type") != source["type"] or field["required"] != source["required"]:
                 fail(context + ": parameter type/required drift " + name)
             for attribute in ("default", "minimum", "maximum", "min_length", "max_length", "pattern", "nullable"):
+                if field["type"] == "array" and attribute in {"min_length", "max_length"}:
+                    continue
                 if attribute == "nullable" and not source["nullable"] and attribute not in field:
                     continue
                 if field.get(attribute, object()) != source.get(attribute, object()):
