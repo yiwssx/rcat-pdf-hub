@@ -354,6 +354,7 @@ def bulk_delete_files(
     deleted = []
     for record in records:
         removed_bytes += delete_stored_name(record.stored_name) + delete_previews(record.id)
+        db.execute(delete(JobOutputArtifact).where(JobOutputArtifact.file_id == record.id))
         db.execute(update(JobRecord).where(JobRecord.output_file_id == record.id).values(output_file_id=None))
         for archive in db.scalars(select(ArchiveRecord).where(ArchiveRecord.file_id == record.id)).all():
             db.delete(archive)
