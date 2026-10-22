@@ -91,10 +91,14 @@ operations() {
     scripts/check-worker-pools.py \
     scripts/check-grafana-provisioning.py \
     scripts/validate-api-contract.py \
+    scripts/validate-tool-registry.py \
+    scripts/tests/test_tool_registry.py \
     scripts/backend-coverage.py
   bash scripts/test-ci-resource-cleanup.sh
   bash scripts/test-local-ci-result-cache.sh
   bash scripts/test-ci-nas-dir.sh
+  python3 scripts/validate-tool-registry.py
+  python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
   echo 'operations: PASS'
 }
 
