@@ -1,12 +1,12 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.audit import audit_event
 from app.config import get_settings
 from app.db import SessionLocal
-from app.models import FileRecord, JobRecord
+from app.models import FileRecord, JobOutputArtifact, JobRecord
 from app.storage import delete_previews, delete_stored_name, ensure_storage
 
 settings = get_settings()
@@ -45,6 +45,7 @@ def cleanup_once() -> dict[str, int]:
             if removed:
                 removed_files += 1
                 removed_bytes += removed
+            db.execute(delete(JobOutputArtifact).where(JobOutputArtifact.file_id == record.id))
             db.delete(record)
             removed_records += 1
         db.commit()
