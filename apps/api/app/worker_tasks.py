@@ -1,20 +1,23 @@
 import hashlib
 import json
 import time
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.audit import audit_event
 from app.config import get_settings
 from app.db import SessionLocal
 from app.integrations.paperless import archive_to_paperless
 from app.malware import MalwareDetected, scan_file
-from app.models import ArchiveRecord, FileRecord, JobRecord
+from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.observability import record_archive, record_job, record_job_duration, record_malware
 from app.policy import effective_policy, ensure_storage_quota
 from app.services import pdf_tools
+from app.services.output_artifacts import stage_raster_pages
 from app.storage import (
     default_expiry,
     delete_stored_name,
@@ -111,8 +114,10 @@ def process_job(job_id: str) -> str:
 
     suffix, content_type = _output_spec(job.operation)
     output = new_output_path(job.id, suffix=suffix)
-    record_created = False
-    stored_name: str | None = None
+    committed = False
+    stored_names: list[str] = []
+    staged_pages = []
+    staging: TemporaryDirectory | None = None
     started_monotonic = time.perf_counter()
     terminal_state: str | None = None
     try:
@@ -196,6 +201,15 @@ def process_job(job_id: str) -> str:
             raise RuntimeError(f"Unsupported operation: {job.operation}")
 
         _set_job(db, job, progress=80)
+        if job.operation == "pdf-to-images":
+            # Extract only self-generated, verified page images. Keep the
+            # original ZIP as the backward-compatible output_file_id.
+            staging = TemporaryDirectory(prefix="pdfhub-pages-", dir=output.parent)
+            staged_pages = stage_raster_pages(
+                output, Path(staging.name),
+                first_page=int(params.get("first_page", 1)),
+                max_bytes=settings.max_upload_mb * 5 * 1024 * 1024,
+            )
         try:
             scan_status = scan_file(output)
         except MalwareDetected as exc:
@@ -203,6 +217,17 @@ def process_job(job_id: str) -> str:
             audit_event("job.output_malware_rejected", job.requested_by, "job", job.id, {"signature": str(exc)[:500]})
             raise RuntimeError("Processed output was rejected by malware scanning") from exc
         record_malware(scan_status)
+        for staged in staged_pages:
+            try:
+                part_scan = scan_file(staged.path)
+            except MalwareDetected as exc:
+                record_malware("infected")
+                audit_event(
+                    "job.output_malware_rejected", job.requested_by, "job", job.id,
+                    {"signature": str(exc)[:500], "part": staged.ordinal},
+                )
+                raise RuntimeError("Processed output part was rejected by malware scanning") from exc
+            record_malware(part_scan)
 
         db.refresh(job)
         if job.status == "cancelled":
@@ -214,10 +239,11 @@ def process_job(job_id: str) -> str:
 
         digest = _output_hash(output)
         output_size = output.stat().st_size
+        total_output_bytes = output_size + sum(page.path.stat().st_size for page in staged_pages)
         if job.requested_by != "bootstrap-admin":
             policy = effective_policy(db, job.requested_by)
             try:
-                ensure_storage_quota(db, job.requested_by, policy.max_storage_mb, output_size)
+                ensure_storage_quota(db, job.requested_by, policy.max_storage_mb, total_output_bytes)
             except HTTPException as exc:
                 output.unlink(missing_ok=True)
                 audit_event(
@@ -230,6 +256,7 @@ def process_job(job_id: str) -> str:
                 raise RuntimeError(str(exc.detail)) from exc
 
         stored_name = store_staged_file(output, "processed", filename=f"{job.id}{suffix}")
+        stored_names.append(stored_name)
         record = FileRecord(
             original_name=f"{job.operation}-{job.id}{suffix}",
             stored_name=stored_name,
@@ -240,19 +267,57 @@ def process_job(job_id: str) -> str:
             expires_at=default_expiry(),
         )
         db.add(record)
+        db.flush()
+        db.add(JobOutputArtifact(
+            job_id=job.id, file_id=record.id,
+            role="bundle" if job.operation == "pdf-to-images" else "result",
+            ordinal=None,
+        ))
+        for page in staged_pages:
+            page_size = page.path.stat().st_size
+            page_digest = _output_hash(page.path)
+            page_name = store_staged_file(
+                page.path, "processed", filename=f"{job.id}-{page.display_name}"
+            )
+            stored_names.append(page_name)
+            part_record = FileRecord(
+                original_name=page.display_name,
+                stored_name=page_name,
+                content_type=page.content_type,
+                size=page_size,
+                sha256=page_digest,
+                source_system=job.requested_by,
+                expires_at=default_expiry(),
+            )
+            db.add(part_record)
+            db.flush()
+            db.add(JobOutputArtifact(
+                job_id=job.id, file_id=part_record.id, role="part",
+                ordinal=page.ordinal,
+            ))
+        db.flush()
+        # Do not overwrite a concurrently cancelled job. Stage the complete
+        # FileRecord/link set and completion state in ONE database transaction.
+        completed = db.execute(
+            update(JobRecord)
+            .where(JobRecord.id == job.id, JobRecord.status == "running")
+            .values(status="completed", progress=100, output_file_id=record.id, finished_at=_now())
+        )
+        if completed.rowcount != 1:
+            raise RuntimeError("Job was cancelled before output commit")
         db.commit()
-        db.refresh(record)
-        record_created = True
-        _set_job(db, job, status="completed", progress=100, output_file_id=record.id, finished_at=_now())
+        committed = True
     except Exception as exc:
         db.rollback()
         output.unlink(missing_ok=True)
-        if stored_name and not record_created:
-            try:
-                delete_stored_name(stored_name)
-            except Exception:
-                # Cleanup is best-effort and must not mask the original job-processing exception.
-                pass
+        if not committed:
+            for name in reversed(stored_names):
+                try:
+                    delete_stored_name(name)
+                except Exception:
+                    # Best effort: cleanup worker and storage reconciliation must
+                    # also handle orphaned objects after a crash.
+                    pass
         try:
             db.refresh(job)
             if job.status != "cancelled":
@@ -295,6 +360,8 @@ def process_job(job_id: str) -> str:
         _notify_job(db, job)
         return record.id
     finally:
+        if staging is not None:
+            staging.cleanup()
         if terminal_state is not None:
             record_job_duration(job.operation, terminal_state, time.perf_counter() - started_monotonic)
         db.close()
