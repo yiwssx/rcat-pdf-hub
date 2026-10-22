@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.audit import audit_event
-from app.models import FileRecord, JobRecord, WebhookDelivery
+from app.models import FileRecord, JobOutputArtifact, JobRecord, WebhookDelivery
 from app.policy import ensure_daily_job_quota
 from app.queue import enqueue_processing_job, redis_conn
 from app.schemas import JobOut
@@ -187,6 +187,7 @@ def clear_terminal_jobs(
         raise HTTPException(status_code=503, detail="Job action audit unavailable")
     if job_ids:
         db.execute(delete(WebhookDelivery).where(WebhookDelivery.job_id.in_(job_ids)))
+        db.execute(delete(JobOutputArtifact).where(JobOutputArtifact.job_id.in_(job_ids)))
         for job in rows:
             db.delete(job)
         db.commit()
