@@ -103,6 +103,24 @@ def _s3_key(area: str, filename: str) -> str:
     return "/".join(parts)
 
 
+
+def planned_processed_stored_name(filename: str) -> str:
+    """Resolve the exact destination BEFORE writing a worker-produced output.
+
+    A failed S3 upload can leave an object even when upload_file raises and
+    store_staged_file never returns. This name must match the normal write
+    path so the worker can attempt safe compensation.
+    """
+    if (
+        not filename or filename != Path(filename).name
+        or filename in {".", ".."} or "\\" in filename or ":" in filename
+    ):
+        raise ValueError("Invalid processed output filename")
+    if settings.storage_backend == "s3":
+        return S3_PREFIX + _s3_key("processed", filename)
+    return filename
+
+
 def store_staged_file(path: Path, area: str, filename: str | None = None) -> str:
     """Commit a staged local file to local/NAS storage or a self-hosted S3-compatible object store."""
     ensure_storage()
