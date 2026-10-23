@@ -109,7 +109,12 @@ def test_migration_backfill_constraints_and_safe_downgrade(tmp_path: Path, start
             "from app.db import engine; "
             "from app.models import ApiKey, ServicePolicy, FileRecord, JobRecord; "
             "tables = (ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__); "
-            "[(table.create(bind=engine, checkfirst=True)) for table in tables]"
+            "[(table.create(bind=engine, checkfirst=True)) for table in tables]; "
+            "from sqlalchemy import text; "
+            "with_block = engine.begin(); connection = with_block.__enter__(); "
+            "[connection.execute(text('ALTER TABLE jobs DROP COLUMN ' + name)) "
+            " for name in ('lease_epoch','lease_token','lease_expires_at')]; "
+            "with_block.__exit__(None, None, None)"
         ))
         with sqlite3.connect(database) as db:
             assert "alembic_version" not in {
