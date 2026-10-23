@@ -141,9 +141,11 @@ def process_job(job_id: str) -> str:
             db.close()
             return ""
         token = claimed
-    # Use the token confirmed by the atomic claim for the local work path.
-    output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
+    # Construct the local work path inside the guarded processing block:
+    # a storage initialization failure must not leave a claimed job running.
+    output = None
     try:
+        output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
         if not journal_enabled:
             _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
         else:
@@ -394,7 +396,8 @@ def process_job(job_id: str) -> str:
         committed = True
     except Exception as exc:
         db.rollback()
-        output.unlink(missing_ok=True)
+        if output is not None:
+            output.unlink(missing_ok=True)
         if not committed:
             cleanup_outcomes: dict[str, bool] = {}
             for name in reversed(stored_names):
