@@ -138,7 +138,8 @@ def _redis_rq_status(rq_id: str) -> str | None:
     from app.queue import redis_conn
     # Always fetch from Redis on this call; never trust a previous UI state.
     job = RQJob.fetch(rq_id, connection=redis_conn)
-    return str(job.get_status(refresh=True))
+    status = job.get_status(refresh=True)
+    return str(status.value if hasattr(status, "value") else status)
 
 
 def main() -> None:
