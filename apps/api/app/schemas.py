@@ -120,6 +120,11 @@ class JobArtifactFileOut(BaseModel):
     expires_at: datetime | None
 
 
+# A PDF-to-images job can produce 200 raster parts PLUS its legacy ZIP bundle.
+# Keep the root in this bound; do not confuse the page cap with total links.
+MAX_JOB_ARTIFACTS = 201
+
+
 class JobArtifactManifestOut(BaseModel):
     schema_version: Literal["1.0.0"] = "1.0.0"
     job_id: str
@@ -127,7 +132,7 @@ class JobArtifactManifestOut(BaseModel):
     requested_by: str
     generated_at: datetime
     primary_file_id: str
-    artifacts: list[JobArtifactFileOut] = Field(min_length=1, max_length=200)
+    artifacts: list[JobArtifactFileOut] = Field(min_length=1, max_length=MAX_JOB_ARTIFACTS)
 
 
 class AdminJobTriageItemOut(BaseModel):
