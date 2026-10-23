@@ -24,6 +24,7 @@ def claim_queued_job(db: Session, job: JobRecord, ttl_seconds: int) -> str | Non
     now = utcnow()
     result = db.execute(
         update(JobRecord)
+        .execution_options(synchronize_session=False)
         .where(JobRecord.id == job.id, JobRecord.status == "queued")
         .values(
             status="running", progress=10, started_at=now, error=None,
@@ -42,6 +43,7 @@ def claim_queued_job(db: Session, job: JobRecord, ttl_seconds: int) -> str | Non
 def fenced_progress(db: Session, job: JobRecord, token: str, progress: int) -> None:
     result = db.execute(
         update(JobRecord)
+        .execution_options(synchronize_session=False)
         .where(
             JobRecord.id == job.id, JobRecord.status == "running",
             JobRecord.lease_token == token,
