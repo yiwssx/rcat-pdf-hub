@@ -5,6 +5,7 @@ that needs a separate durable heartbeat/recovery decision. All mutations
 that could publish outputs are protected by the same token+deadline.
 """
 import uuid
+from threading import Event, Thread
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update
@@ -38,6 +39,37 @@ def claim_queued_job(db: Session, job: JobRecord, ttl_seconds: int) -> str | Non
     db.commit()
     db.refresh(job)
     return token
+
+
+def renew_lease(
+    db: Session, job_id: str, lease_token: str, lease_epoch: int,
+    ttl_seconds: int,
+) -> bool:
+    """Conditional heartbeat from a separate DB session, never resurrecting a job.
+
+    Do not renew an expired lease, cancelled/finished job, or a changed
+    attempt. The DB compares the deadline (SQL, not ORM timezone evaluation).
+    """
+    if ttl_seconds < 60:
+        raise ValueError("Execution lease must exceed 60 seconds")
+    now = utcnow()
+    result = db.execute(
+        update(JobRecord)
+        .execution_options(synchronize_session=False)
+        .where(
+            JobRecord.id == job_id,
+            JobRecord.status == "running",
+            JobRecord.lease_token == lease_token,
+            JobRecord.lease_epoch == lease_epoch,
+            JobRecord.lease_expires_at > now,
+        )
+        .values(lease_expires_at=now + timedelta(seconds=ttl_seconds))
+    )
+    if result.rowcount != 1:
+        db.rollback()
+        return False
+    db.commit()
+    return True
 
 
 def fenced_progress(db: Session, job: JobRecord, token: str, progress: int) -> None:
@@ -119,3 +151,84 @@ def compensate_writes(
         row.state = "compensated" if results.get(row.stored_name) else "needs_review"
         row.updated_at = utcnow()
     db.commit()
+
+
+def renew_execution_lease(
+    db: Session, job_id: str, token: str, ttl_seconds: int,
+    *, now: datetime | None = None,
+) -> bool:
+    """CAS heartbeat: only the live owner can extend an unexpired lease.
+
+    A failed/stale/cancelled worker cannot revive or acquire an expired job.
+    Use a dedicated database Session; never share the processing Session
+    across worker and heartbeat threads.
+    """
+    if ttl_seconds < 60:
+        raise ValueError("Execution lease must exceed 60 seconds")
+    moment = now or utcnow()
+    if moment.tzinfo is None or moment.utcoffset() is None:
+        raise ValueError("Heartbeat timestamp must be timezone-aware")
+    changed = db.execute(
+        update(JobRecord)
+        .execution_options(synchronize_session=False)
+        .where(
+            JobRecord.id == job_id,
+            JobRecord.status == "running",
+            JobRecord.lease_token == token,
+            JobRecord.lease_expires_at > moment,
+        )
+        .values(lease_expires_at=moment + timedelta(seconds=ttl_seconds))
+    )
+    if changed.rowcount != 1:
+        db.rollback()
+        return False
+    db.commit()
+    return True
+
+
+class LeaseHeartbeat:
+    """Daemon heartbeat with a separate transaction per renewal.
+
+    Temporary database errors are retried on the next tick. A definitive
+    CAS rejection sets lost; all publishing remains fenced in SQL.
+    No self-requeue, force termination, or automatic lease takeover.
+    """
+
+    def __init__(self, session_factory, job_id: str, token: str,
+                 ttl_seconds: int, interval_seconds: float):
+        if interval_seconds <= 0 or interval_seconds >= ttl_seconds / 3:
+            raise ValueError("Heartbeat cadence must be positive and under one third of lease TTL")
+        self.session_factory = session_factory
+        self.job_id = job_id
+        self.token = token
+        self.ttl_seconds = ttl_seconds
+        self.interval_seconds = interval_seconds
+        self._stop = Event()
+        self.lost = Event()
+        self._thread = Thread(
+            target=self._run, name="pdfhub-lease-heartbeat", daemon=True
+        )
+
+    def start(self):
+        self._thread.start()
+        return self
+
+    def _run(self):
+        while not self._stop.wait(self.interval_seconds):
+            try:
+                with self.session_factory() as db:
+                    if not renew_execution_lease(
+                        db, self.job_id, self.token, self.ttl_seconds
+                    ):
+                        self.lost.set()
+                        return
+            except Exception:
+                # The next heartbeat may succeed. The final fenced SQL
+                # transition will reject an actually expired lease.
+                continue
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread.is_alive():
+            self._thread.join(timeout=10)
+

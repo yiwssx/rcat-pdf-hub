@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     multi_output_artifacts_enabled: bool = False
     # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
     artifact_write_journal_enabled: bool = False
+    artifact_heartbeat_interval_seconds: int = Field(default=30, ge=5, le=300)
 
     default_rate_limit_per_minute: int = 120
     default_daily_job_limit: int = 1000
