@@ -367,6 +367,7 @@ def process_job(job_id: str) -> str:
         # FileRecord/link set and completion state in ONE database transaction.
         completed = db.execute(
             update(JobRecord)
+            .execution_options(synchronize_session=False)
             .where(
                 JobRecord.id == job.id, JobRecord.status == "running",
                 *((JobRecord.lease_token == token,
@@ -407,7 +408,7 @@ def process_job(job_id: str) -> str:
             if job.status != "cancelled":
                 if token:
                     changed = db.execute(
-                        update(JobRecord).where(
+                        update(JobRecord).execution_options(synchronize_session=False).where(
                             JobRecord.id == job.id, JobRecord.status == "running",
                             JobRecord.lease_token == token,
                             JobRecord.lease_expires_at > _now(),
