@@ -11,7 +11,7 @@ from app.audit import audit_event
 from app.models import FileRecord, JobOutputArtifact, JobRecord, WebhookDelivery
 from app.policy import ensure_daily_job_quota
 from app.queue import enqueue_processing_job, redis_conn
-from app.schemas import JobOut
+from app.schemas import JobArtifactFileOut, JobArtifactManifestOut, JobOut
 from app.security import Principal, require_scope
 from rq.command import send_stop_job_command
 from rq.job import Job as RQJob
@@ -62,6 +62,88 @@ def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
     if required and "*" not in principal.scopes and required not in principal.scopes:
         raise HTTPException(status_code=403, detail=f"Missing scope: {required}")
+
+
+@router.get("/{job_id}/artifacts", response_model=JobArtifactManifestOut)
+def get_job_artifacts(
+    job_id: str,
+    principal: Principal = Depends(require_scope("jobs:read")),
+    db: Session = Depends(get_db),
+):
+    """List only verified, owner-matched output records of a completed job.
+
+    This endpoint never grants download rights, signs URLs, or discloses
+    backend object paths. Download authorizes each file independently.
+    """
+    if "*" not in principal.scopes and "files:read" not in principal.scopes:
+        raise HTTPException(status_code=403, detail="Missing scope: files:read")
+    job = _owned_job(db, job_id, principal)
+    # The result listing is intentionally stricter than privileged job
+    # triage: wildcard/admin roles must not expose another tenant's files.
+    if job.requested_by != principal.name:
+        raise HTTPException(status_code=403, detail="Job belongs to another service")
+    if job.status != "completed":
+        raise HTTPException(status_code=409, detail="Job outputs are not available before completion")
+    if not job.output_file_id:
+        raise HTTPException(status_code=410, detail="Job output is no longer available")
+
+    links = db.scalars(
+        select(JobOutputArtifact)
+        .where(JobOutputArtifact.job_id == job.id)
+        .order_by(JobOutputArtifact.ordinal.asc(), JobOutputArtifact.file_id.asc())
+        .limit(201)
+    ).all()
+    if len(links) > 200:
+        raise HTTPException(status_code=409, detail="Job artifact count exceeds the allowed maximum")
+
+    # Fallback for pre-migration jobs without an association. Do not infer
+    # missing parts or hide a corrupted partially linked job.
+    if not links:
+        file = db.get(FileRecord, job.output_file_id)
+        if not file or file.source_system != job.requested_by:
+            raise HTTPException(status_code=410, detail="Job output is no longer available")
+        items = [(file, "bundle" if job.operation == "pdf-to-images" else "result", None)]
+    else:
+        items = []
+        for link in links:
+            file = db.get(FileRecord, link.file_id)
+            if file is None or file.source_system != job.requested_by:
+                raise HTTPException(status_code=410, detail="Job output is no longer available")
+            items.append((file, link.role, link.ordinal))
+
+    if job.output_file_id not in {file.id for file, _, _ in items}:
+        raise HTTPException(status_code=410, detail="Job primary output is no longer available")
+    roots = [(file.id, role) for file, role, _ in items if role in {"result", "bundle"}]
+    parts = sorted((ordinal for _, role, ordinal in items if role == "part"), key=lambda x: x if isinstance(x, int) else -1)
+    if (
+        len(roots) != 1
+        or roots[0][0] != job.output_file_id
+        or any(role not in {"result", "part", "bundle"} for _, role, _ in items)
+        or any(ordinal is not None for _, role, ordinal in items if role != "part")
+        or parts != list(range(1, len(parts) + 1))
+        or (roots[0][1] == "result" and len(items) != 1)
+        or (roots[0][1] == "bundle" and next((f.content_type for f, role, _ in items if role == "bundle"), "") != "application/zip")
+    ):
+        raise HTTPException(status_code=409, detail="Job output metadata is inconsistent")
+
+    artifacts = [
+        JobArtifactFileOut(
+            file_id=file.id, role=role, ordinal=ordinal, file_name=file.original_name,
+            content_type=file.content_type, size=file.size, sha256=file.sha256,
+            source_system=file.source_system, expires_at=file.expires_at,
+        )
+        for file, role, ordinal in sorted(
+            items,
+            key=lambda part: (0 if part[0].id == job.output_file_id else 1, part[2] or 0),
+        )
+    ]
+    generated_at = job.finished_at or datetime.now(timezone.utc)
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=timezone.utc)
+    return JobArtifactManifestOut(
+        job_id=job.id, requested_by=job.requested_by, generated_at=generated_at,
+        primary_file_id=job.output_file_id, artifacts=artifacts,
+    )
 
 
 @router.get("/{job_id}", response_model=JobOut)
