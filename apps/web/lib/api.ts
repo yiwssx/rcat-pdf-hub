@@ -45,6 +45,28 @@ export type Job = {
   requested_by: string;
 };
 
+export type JobArtifactFile = {
+  file_id: string;
+  role: "result" | "part" | "bundle";
+  ordinal: number | null;
+  file_name: string;
+  content_type: string;
+  size: number;
+  sha256: string;
+  source_system: string;
+  expires_at: string | null;
+};
+
+export type JobArtifactManifest = {
+  schema_version: "1.0.0";
+  job_id: string;
+  status: "completed";
+  requested_by: string;
+  generated_at: string;
+  primary_file_id: string;
+  artifacts: JobArtifactFile[];
+};
+
 export type AdminStorageHealth = {
   dry_run: true;
   backend: "local" | "s3";
@@ -387,6 +409,15 @@ export async function getJob(jobId: string, auth: string): Promise<Job> {
   });
   if (!res.ok) throw new JobLookupError(res.status);
   return res.json() as Promise<Job>;
+}
+
+export async function getJobArtifacts(jobId: string, auth: string): Promise<JobArtifactManifest> {
+  const res = await request(`/api/v1/jobs/${encodeURIComponent(jobId)}/artifacts`, {
+    headers: headers(auth),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new JobLookupError(res.status);
+  return res.json() as Promise<JobArtifactManifest>;
 }
 
 export type JobsListQuery = {
