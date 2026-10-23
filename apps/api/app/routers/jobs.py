@@ -11,7 +11,7 @@ from app.audit import audit_event
 from app.models import FileRecord, JobOutputArtifact, JobRecord, WebhookDelivery
 from app.policy import ensure_daily_job_quota
 from app.queue import enqueue_processing_job, redis_conn
-from app.schemas import JobArtifactFileOut, JobArtifactManifestOut, JobOut
+from app.schemas import MAX_JOB_ARTIFACTS, JobArtifactFileOut, JobArtifactManifestOut, JobOut
 from app.security import Principal, require_scope
 from rq.command import send_stop_job_command
 from rq.job import Job as RQJob
@@ -91,9 +91,9 @@ def get_job_artifacts(
         select(JobOutputArtifact)
         .where(JobOutputArtifact.job_id == job.id)
         .order_by(JobOutputArtifact.ordinal.asc(), JobOutputArtifact.file_id.asc())
-        .limit(201)
+        .limit(MAX_JOB_ARTIFACTS + 1)
     ).all()
-    if len(links) > 200:
+    if len(links) > MAX_JOB_ARTIFACTS:
         raise HTTPException(status_code=409, detail="Job artifact count exceeds the allowed maximum")
 
     # Fallback for pre-migration jobs without an association. Do not infer

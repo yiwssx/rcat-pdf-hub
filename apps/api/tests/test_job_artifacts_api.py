@@ -1,5 +1,9 @@
 """T90 secured job artifact listing and legacy result compatibility."""
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
+from pydantic import ValidationError
+from app.schemas import JobArtifactManifestOut, MAX_JOB_ARTIFACTS
 
 import pytest
 from fastapi.testclient import TestClient
@@ -160,3 +164,108 @@ def test_corrupt_part_ordinals_fail_closed():
 
 def test_lookup_unknown_job_returns_404():
     assert user_client().get("/api/v1/jobs/no-such-job/artifacts").status_code == 404
+
+
+@pytest.mark.parametrize("pages", [1, 199, 200])
+def test_raster_manifest_includes_zip_plus_full_bounded_page_count(pages):
+    """T90-0.12: 200 pages + one backwards-compatible ZIP is 201 items."""
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as db:
+        bundle = FileRecord(
+            original_name="200-pages.zip", stored_name=f"{uuid4()}.zip",
+            content_type="application/zip", size=4096, sha256="a" * 64,
+            source_system=OWNER, expires_at=now + timedelta(days=1),
+        )
+        db.add(bundle)
+        db.flush()
+        job = JobRecord(
+            operation="pdf-to-images", status="completed", progress=100,
+            requested_by=OWNER, input_file_ids_json="[]", params_json="{}",
+            output_file_id=bundle.id, finished_at=now,
+        )
+        db.add(job)
+        db.flush()
+        db.add(JobOutputArtifact(
+            job_id=job.id, file_id=bundle.id, role="bundle", ordinal=None,
+        ))
+        parts = [
+            FileRecord(
+                original_name=f"page-{index:04d}.png",
+                stored_name=f"{job.id}-page-{index:04d}.png",
+                content_type="image/png", size=100, sha256="b" * 64,
+                source_system=OWNER, expires_at=now + timedelta(days=1),
+            )
+            for index in range(1, pages + 1)
+        ]
+        db.add_all(parts)
+        db.flush()
+        db.add_all([
+            JobOutputArtifact(
+                job_id=job.id, file_id=record.id, role="part", ordinal=i,
+            )
+            for i, record in enumerate(parts, start=1)
+        ])
+        db.commit()
+        job_id, primary = job.id, bundle.id
+
+    response = user_client().get(f"/api/v1/jobs/{job_id}/artifacts")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    artifacts = body["artifacts"]
+    assert len(artifacts) == pages + 1
+    assert body["primary_file_id"] == primary
+    assert artifacts[0]["file_id"] == primary
+    assert artifacts[0]["role"] == "bundle"
+    assert [item["ordinal"] for item in artifacts] == [None, *range(1, pages + 1)]
+    assert all(item["source_system"] == OWNER for item in artifacts)
+    assert "stored_name" not in response.text and "download_url" not in response.text
+    assert MAX_JOB_ARTIFACTS == 201
+
+    if pages == 200:
+        # The Pydantic/OpenAPI contract must keep rejecting 202 items.
+        assert JobArtifactManifestOut.model_json_schema()["properties"]["artifacts"]["maxItems"] == 201
+        with pytest.raises(ValidationError):
+            JobArtifactManifestOut.model_validate({
+                **body, "artifacts": [*artifacts, artifacts[-1]],
+            })
+
+
+def test_full_size_raster_manifest_fails_closed_on_cross_owner_part():
+    """The expanded bound must not bypass per-file ownership checks."""
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as db:
+        root = FileRecord(
+            original_name="pages.zip", stored_name=f"{uuid4()}.zip",
+            content_type="application/zip", size=7, sha256="a" * 64,
+            source_system=OWNER, expires_at=now + timedelta(days=1),
+        )
+        db.add(root)
+        db.flush()
+        job = JobRecord(
+            operation="pdf-to-images", status="completed", requested_by=OWNER,
+            input_file_ids_json="[]", params_json="{}",
+            output_file_id=root.id, finished_at=now,
+        )
+        db.add(job)
+        db.flush()
+        db.add(JobOutputArtifact(job_id=job.id, file_id=root.id, role="bundle"))
+        parts = [
+            FileRecord(
+                original_name=f"page-{index:04d}.png",
+                stored_name=f"{job.id}-part-{index:04d}.png",
+                content_type="image/png", size=9, sha256="b" * 64,
+                source_system=OTHER if index == 200 else OWNER,
+            )
+            for index in range(1, 201)
+        ]
+        db.add_all(parts)
+        db.flush()
+        db.add_all([
+            JobOutputArtifact(job_id=job.id, file_id=record.id, role="part", ordinal=i)
+            for i, record in enumerate(parts, start=1)
+        ])
+        db.commit()
+        job_id = job.id
+    denied = user_client().get(f"/api/v1/jobs/{job_id}/artifacts")
+    assert denied.status_code == 410
+    assert "page-0200.png" not in denied.text

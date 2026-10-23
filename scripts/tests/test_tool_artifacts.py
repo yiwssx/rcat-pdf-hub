@@ -3,6 +3,7 @@ import copy
 import importlib.util
 import json
 import unittest
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -82,6 +83,36 @@ class ArtifactContractTests(unittest.TestCase):
             artifact(PART1_ID, "part", "page-0001.png", "image/png", 1),
             artifact(PART2_ID, "part", "page-0002.png", "image/png", 2),
         ], PART1_ID)))
+
+    def test_200_raster_parts_plus_zip_bundle_are_valid(self):
+        pages = [
+            artifact(
+                str(uuid.uuid5(uuid.NAMESPACE_DNS, f"t90-page-{i}")),
+                "part", f"page-{i:04d}.png", "image/png", i,
+            )
+            for i in range(1, 201)
+        ]
+        manifest = fixture([
+            artifact(ZIP_ID, "bundle", "pages.zip", "application/zip"), *pages,
+        ], ZIP_ID)
+        self.assertEqual(201, len(manifest[0]["artifacts"]))
+        self.assertEqual([], guard.validate_manifest(*manifest))
+        self.assertEqual(201, self.schema["properties"]["artifacts"]["maxItems"])
+
+    def test_201_raster_parts_and_invalid_page_201_rejected(self):
+        pages = [
+            artifact(
+                str(uuid.uuid5(uuid.NAMESPACE_DNS, f"t90-page-{i}")),
+                "part", f"page-{i:04d}.png", "image/png", i,
+            )
+            for i in range(1, 202)
+        ]
+        self.assert_bad(fixture([
+            artifact(ZIP_ID, "bundle", "pages.zip", "application/zip"), *pages,
+        ], ZIP_ID), "invalid artifact count")
+        self.assert_bad(fixture([
+            artifact(ZIP_ID, "bundle", "pages.zip", "application/zip"), pages[-1],
+        ], ZIP_ID), "invalid part ordinal")
 
     def test_reject_cross_user_artifact(self):
         p = list(fixture([artifact(PDF_ID, "result", "a.pdf", "application/pdf")], PDF_ID))
