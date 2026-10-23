@@ -1,9 +1,10 @@
 import hashlib
 import json
 import time
+import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
@@ -27,6 +28,7 @@ from app.storage import (
     store_staged_file,
 )
 from app.webhooks import queue_job_webhook
+from app import write_journal
 
 settings = get_settings()
 
@@ -113,16 +115,35 @@ def process_job(job_id: str) -> str:
         db.close()
         return ""
 
+    journal_enabled = settings.artifact_write_journal_enabled
+    token = str(uuid.uuid4()) if journal_enabled else None
     suffix, content_type = _output_spec(job.operation)
-    output = new_output_path(job.id, suffix=suffix)
+    # Every fenced attempt has a distinct temporary filename AND distinct
+    # destination object key, so a stale process cannot clobber a new attempt.
+    output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
     committed = False
     stored_names: list[str] = []
+    journal_files: dict[str, str] = {}
+    reserved_names: list[str] = []
     staged_pages = []
     staging: TemporaryDirectory | None = None
     started_monotonic = time.perf_counter()
     terminal_state: str | None = None
+    if journal_enabled:
+        lease_seconds = max(
+            settings.rq_interactive_job_timeout_seconds,
+            settings.rq_job_timeout_seconds,
+            settings.rq_heavy_job_timeout_seconds,
+        ) + 900
+        claimed = write_journal.claim_queued_job(db, job, lease_seconds)
+        if claimed is None:
+            # RQ duplicate deliveries must not touch storage or status.
+            db.close()
+            return ""
+        token = claimed
     try:
-        _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
+        if not journal_enabled:
+            _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
         record_job(job.operation, "running")
         audit_event("job.started", job.requested_by, "job", job.id, {"operation": job.operation})
         file_ids = json.loads(job.input_file_ids_json)
@@ -132,7 +153,10 @@ def process_job(job_id: str) -> str:
             raise RuntimeError("One or more input files no longer exist")
         inputs = [path_for_stored_name(item.stored_name) for item in files if item is not None]
 
-        _set_job(db, job, progress=25)
+        if token:
+            write_journal.fenced_progress(db, job, token, 25)
+        else:
+            _set_job(db, job, progress=25)
         if job.operation == "merge":
             pdf_tools.merge(inputs, output)
         elif job.operation == "images-to-pdf":
@@ -201,7 +225,10 @@ def process_job(job_id: str) -> str:
         else:
             raise RuntimeError(f"Unsupported operation: {job.operation}")
 
-        _set_job(db, job, progress=80)
+        if token:
+            write_journal.fenced_progress(db, job, token, 80)
+        else:
+            _set_job(db, job, progress=80)
         if job.operation == "pdf-to-images" and settings.multi_output_artifacts_enabled:
             # Extract only self-generated, verified page images. Keep the
             # original ZIP as the backward-compatible output_file_id.
@@ -256,7 +283,25 @@ def process_job(job_id: str) -> str:
                 )
                 raise RuntimeError(str(exc.detail)) from exc
 
-        primary_name = f"{job.id}{suffix}"
+        if token:
+            # Record ALL destinations durably before the first S3/local write.
+            # No FileRecord exists in this transaction yet, so committing the
+            # journal cannot prematurely publish a partial result.
+            reserved_names = [
+                planned_processed_stored_name(
+                    f"{job.id}-{token}{suffix}"
+                )
+            ]
+            reserved_names.extend(
+                planned_processed_stored_name(f"{job.id}-{token}-{page.display_name}")
+                for page in staged_pages
+            )
+            write_journal.reserve_writes(
+                db, job, token,
+                [(reserved_names[0], "bundle" if job.operation == "pdf-to-images" else "result")]
+                + [(name, "part") for name in reserved_names[1:]],
+            )
+        primary_name = f"{job.id}-{token}{suffix}" if token else f"{job.id}{suffix}"
         stored_name = planned_processed_stored_name(primary_name)
         # Record the planned object BEFORE calling upload_file: S3 may write an
         # object and then raise without returning the storage key.
@@ -277,6 +322,8 @@ def process_job(job_id: str) -> str:
         )
         db.add(record)
         db.flush()
+        if token:
+            journal_files[stored_name] = record.id
         db.add(JobOutputArtifact(
             job_id=job.id, file_id=record.id,
             role="bundle" if job.operation == "pdf-to-images" else "result",
@@ -285,7 +332,8 @@ def process_job(job_id: str) -> str:
         for page in staged_pages:
             page_size = page.path.stat().st_size
             page_digest = _output_hash(page.path)
-            part_filename = f"{job.id}-{page.display_name}"
+            part_filename = (f"{job.id}-{token}-{page.display_name}" if token
+                             else f"{job.id}-{page.display_name}")
             page_name = planned_processed_stored_name(part_filename)
             stored_names.append(page_name)
             if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == page_name)) is not None:
@@ -306,16 +354,24 @@ def process_job(job_id: str) -> str:
             )
             db.add(part_record)
             db.flush()
+            if token:
+                journal_files[page_name] = part_record.id
             db.add(JobOutputArtifact(
                 job_id=job.id, file_id=part_record.id, role="part",
                 ordinal=page.ordinal,
             ))
         db.flush()
+        if token:
+            write_journal.mark_committed(db, job, token, journal_files)
         # Do not overwrite a concurrently cancelled job. Stage the complete
         # FileRecord/link set and completion state in ONE database transaction.
         completed = db.execute(
             update(JobRecord)
-            .where(JobRecord.id == job.id, JobRecord.status == "running")
+            .where(
+                JobRecord.id == job.id, JobRecord.status == "running",
+                *((JobRecord.lease_token == token,
+                   JobRecord.lease_expires_at > _now()) if token else ()),
+            )
             .values(status="completed", progress=100, output_file_id=record.id, finished_at=_now())
         )
         if completed.rowcount != 1:
@@ -326,20 +382,47 @@ def process_job(job_id: str) -> str:
         db.rollback()
         output.unlink(missing_ok=True)
         if not committed:
+            cleanup_outcomes: dict[str, bool] = {}
             for name in reversed(stored_names):
                 try:
-                    # A partially failed re-run must never delete an already
-                    # committed FileRecord's object. Double-check after rollback.
+                    # Attempt-key isolation prevents one worker deleting another
+                    # worker's output. Never delete a committed FileRecord object.
                     if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == name)) is None:
                         delete_stored_name(name)
+                        cleanup_outcomes[name] = True
                 except Exception:
-                    # Best effort only. Hard crashes need a separately reviewed
-                    # recovery process; never silently auto-delete unknown files.
-                    pass
+                    cleanup_outcomes[name] = False
+            if token and reserved_names:
+                # Reservations not yet attempted are harmless: this is an
+                # explicit negative proof only for the unattempted locations.
+                for name in reserved_names:
+                    if name not in stored_names:
+                        cleanup_outcomes[name] = True
+                try:
+                    write_journal.compensate_writes(db, job, token, cleanup_outcomes)
+                except Exception:
+                    db.rollback()  # leave journal as 'planned' for operator review
         try:
             db.refresh(job)
             if job.status != "cancelled":
-                _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
+                if token:
+                    changed = db.execute(
+                        update(JobRecord).where(
+                            JobRecord.id == job.id, JobRecord.status == "running",
+                            JobRecord.lease_token == token,
+                            JobRecord.lease_expires_at > _now(),
+                        ).values(
+                            status="failed", progress=100,
+                            error=str(exc)[-4000:], finished_at=_now(),
+                        )
+                    )
+                    if changed.rowcount:
+                        db.commit()
+                    else:
+                        db.rollback()
+                    db.refresh(job)
+                else:
+                    _set_job(db, job, status="failed", progress=100, error=str(exc)[-4000:], finished_at=_now())
         except Exception:
             db.rollback()
         if job.status == "cancelled":
