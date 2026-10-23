@@ -29,6 +29,7 @@ from app.storage import (
 )
 from app.webhooks import queue_job_webhook
 from app import write_journal
+from app.worker_heartbeat import WorkerHeartbeat
 
 settings = get_settings()
 
@@ -129,12 +130,9 @@ def process_job(job_id: str) -> str:
     staging: TemporaryDirectory | None = None
     started_monotonic = time.perf_counter()
     terminal_state: str | None = None
+    heartbeat: WorkerHeartbeat | None = None
     if journal_enabled:
-        lease_seconds = max(
-            settings.rq_interactive_job_timeout_seconds,
-            settings.rq_job_timeout_seconds,
-            settings.rq_heavy_job_timeout_seconds,
-        ) + 900
+        lease_seconds = settings.lease_heartbeat_ttl_seconds
         claimed = write_journal.claim_queued_job(db, job, lease_seconds)
         if claimed is None:
             # RQ duplicate deliveries must not touch storage or status.
@@ -142,6 +140,13 @@ def process_job(job_id: str) -> str:
             return ""
         token = claimed
     try:
+        if token:
+            heartbeat = WorkerHeartbeat(
+                job_id=job.id, token=token, epoch=job.lease_epoch,
+                ttl_seconds=lease_seconds,
+                interval_seconds=settings.lease_heartbeat_interval_seconds,
+            )
+            heartbeat.start()
         if not journal_enabled:
             _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
         record_job(job.operation, "running")
@@ -462,6 +467,8 @@ def process_job(job_id: str) -> str:
         _notify_job(db, job)
         return record.id
     finally:
+        if heartbeat is not None:
+            heartbeat.stop()
         if staging is not None:
             staging.cleanup()
         if terminal_state is not None:
