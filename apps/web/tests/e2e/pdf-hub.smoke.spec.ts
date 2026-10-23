@@ -660,6 +660,69 @@ test("P7C.2 completed owned output opens durable result and downloads original f
   await expect(page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" })).toBeEnabled();
 });
 
+test("T90 multi-output result downloads owner-scoped image parts and keeps original ZIP", async ({ page }) => {
+  const jobId = "job-t90-raster-1";
+  const owner = "web-console:smoke-test";
+  const bundle = { ...initialFile, id: "file-output-1", original_name: "pages.zip",
+    content_type: "application/zip", size: 1300 };
+  const part = { file_id: "t90-page-1", role: "part", ordinal: 1,
+    file_name: "page-0001.png", content_type: "image/png", size: 700,
+    sha256: "b".repeat(64), source_system: owner, expires_at: null };
+  const expired = { ...part, file_id: "t90-page-2", ordinal: 2,
+    file_name: "page-0002.png", expires_at: "2020-01-01T00:00:00Z" };
+  await page.route(`**/api/v1/jobs/${jobId}`, (route) => route.fulfill({ json: {
+    id: jobId, operation: "pdf-to-images", status: "completed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: bundle.id,
+    params: {}, error: null, requested_by: owner,
+  } }));
+  await page.route(`**/api/v1/jobs/${jobId}/artifacts`, (route) => route.fulfill({ json: {
+    schema_version: "1.0.0", job_id: jobId, status: "completed",
+    requested_by: owner, generated_at: "2026-10-23T00:00:00Z",
+    primary_file_id: bundle.id,
+    artifacts: [{ file_id: bundle.id, role: "bundle", ordinal: null,
+      file_name: bundle.original_name, content_type: bundle.content_type,
+      size: bundle.size, sha256: "a".repeat(64), source_system: owner, expires_at: null },
+      part, expired],
+  } }));
+  await page.route("**/api/v1/files/file-output-1", (route) => route.fulfill({ json: bundle }));
+  await page.route("**/api/v1/files/file-output-1/download", (route) => route.fulfill({
+    status: 200, contentType: "application/zip", body: Buffer.from("PKmockZIP"),
+  }));
+  await page.route("**/api/v1/files/t90-page-1/download", (route) => route.fulfill({
+    status: 200, contentType: "image/png", body: pngPixel,
+  }));
+  await page.goto(`/jobs/${jobId}/result`);
+  await expect(page.getByRole("region", { name: "ดาวน์โหลดไฟล์ย่อย" })).toBeVisible();
+  await expect(page.getByText("page-0001.png")).toBeVisible();
+  await expect(page.getByRole("button", { name: "ดาวน์โหลดภาพหน้า 2" })).toBeDisabled();
+  const pageFile = page.waitForEvent("download");
+  await page.getByRole("button", { name: "ดาวน์โหลดภาพหน้า 1" }).click();
+  expect((await pageFile).suggestedFilename()).toBe("page-0001.png");
+  const zipFile = page.waitForEvent("download");
+  await page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" }).click();
+  expect((await zipFile).suggestedFilename()).toBe("pages.zip");
+});
+
+test("T90 legacy completed result still downloads when manifest API is unavailable", async ({ page }) => {
+  const jobId = "job-t90-legacy-1";
+  await page.route(`**/api/v1/jobs/${jobId}`, (route) => route.fulfill({ json: {
+    id: jobId, operation: "compress", status: "completed", progress: 100,
+    input_file_ids: ["file-pdf-1"], output_file_id: "file-output-1",
+    params: {}, error: null, requested_by: "web-console:smoke-test",
+  } }));
+  await page.route(`**/api/v1/jobs/${jobId}/artifacts`, (route) => route.fulfill({
+    status: 404, json: { detail: "Route not found" },
+  }));
+  await page.route("**/api/v1/files/file-output-1", (route) => route.fulfill({
+    json: { ...initialFile, id: "file-output-1", original_name: "legacy.pdf" },
+  }));
+  await page.goto(`/jobs/${jobId}/result`);
+  await expect(page.getByRole("region", { name: "ดาวน์โหลดไฟล์ย่อย" })).toHaveCount(0);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "ดาวน์โหลดผลลัพธ์" }).click();
+  expect((await download).suggestedFilename()).toBe("legacy.pdf");
+});
+
 test("P7C.2 unfinished jobs never expose output metadata or download", async ({ page }) => {
   let fileReads = 0;
   await page.route("**/api/v1/jobs/job-queued-2", (route) => route.fulfill({ json: {
