@@ -120,8 +120,8 @@ def process_job(job_id: str) -> str:
     suffix, content_type = _output_spec(job.operation)
     # Every fenced attempt has a distinct temporary filename AND distinct
     # destination object key, so a stale process cannot clobber a new attempt.
-    output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
     committed = False
+    heartbeat: write_journal.LeaseHeartbeat | None = None
     stored_names: list[str] = []
     journal_files: dict[str, str] = {}
     reserved_names: list[str] = []
@@ -141,9 +141,18 @@ def process_job(job_id: str) -> str:
             db.close()
             return ""
         token = claimed
+    # Use the token confirmed by the atomic claim for the local work path.
+    output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
     try:
         if not journal_enabled:
             _set_job(db, job, status="running", progress=10, started_at=_now(), error=None)
+        else:
+            # Separate DB Session: PDF tools are blocking; heartbeat keeps
+            # running while OCR, office conversion and S3 uploads execute.
+            heartbeat = write_journal.LeaseHeartbeat(
+                SessionLocal, job.id, token, lease_seconds,
+                settings.artifact_heartbeat_interval_seconds,
+            ).start()
         record_job(job.operation, "running")
         audit_event("job.started", job.requested_by, "job", job.id, {"operation": job.operation})
         file_ids = json.loads(job.input_file_ids_json)
@@ -284,6 +293,8 @@ def process_job(job_id: str) -> str:
                 raise RuntimeError(str(exc.detail)) from exc
 
         if token:
+            if heartbeat and heartbeat.lost.is_set():
+                raise RuntimeError("Job execution heartbeat lost its lease")
             # Record ALL destinations durably before the first S3/local write.
             # No FileRecord exists in this transaction yet, so committing the
             # journal cannot prematurely publish a partial result.
@@ -362,6 +373,8 @@ def process_job(job_id: str) -> str:
             ))
         db.flush()
         if token:
+            if heartbeat and heartbeat.lost.is_set():
+                raise RuntimeError("Job execution heartbeat lost its lease")
             write_journal.mark_committed(db, job, token, journal_files)
         # Do not overwrite a concurrently cancelled job. Stage the complete
         # FileRecord/link set and completion state in ONE database transaction.
@@ -462,6 +475,8 @@ def process_job(job_id: str) -> str:
         _notify_job(db, job)
         return record.id
     finally:
+        if heartbeat is not None:
+            heartbeat.stop()
         if staging is not None:
             staging.cleanup()
         if terminal_state is not None:
