@@ -106,6 +106,30 @@ class JobOut(BaseModel):
     requested_by: str
 
 
+
+
+class JobArtifactFileOut(BaseModel):
+    file_id: str
+    role: Literal["result", "part", "bundle"]
+    ordinal: int | None = None
+    file_name: str
+    content_type: str
+    size: int
+    sha256: str
+    source_system: str
+    expires_at: datetime | None
+
+
+class JobArtifactManifestOut(BaseModel):
+    schema_version: Literal["1.0.0"] = "1.0.0"
+    job_id: str
+    status: Literal["completed"] = "completed"
+    requested_by: str
+    generated_at: datetime
+    primary_file_id: str
+    artifacts: list[JobArtifactFileOut] = Field(min_length=1, max_length=200)
+
+
 class AdminJobTriageItemOut(BaseModel):
     id: str
     operation: str
