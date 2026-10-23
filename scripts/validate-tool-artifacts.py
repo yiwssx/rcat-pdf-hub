@@ -24,7 +24,8 @@ JOB_ROUTER = ROOT / "apps/api/app/routers/jobs.py"
 FILE_ROUTER = ROOT / "apps/api/app/routers/files.py"
 EXPECTED_KINDS = {"pdf-to-images": ("legacy_zip", ".zip", "application/zip")}
 VALID_ROLES = {"result", "part", "bundle"}
-MAX_ITEMS = 200
+MAX_RASTER_PAGES = 200
+MAX_ITEMS = MAX_RASTER_PAGES + 1
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 MIME = re.compile(r"^[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+*-]+$")
 
@@ -184,7 +185,7 @@ def validate_manifest(manifest, job, file_records, related_output_ids):
         elif isinstance(name, str):
             names.add(name.casefold())
         if role == "part":
-            if type(a.get("ordinal")) is not int or not 1 <= a["ordinal"] <= MAX_ITEMS:
+            if type(a.get("ordinal")) is not int or not 1 <= a["ordinal"] <= MAX_RASTER_PAGES:
                 errors.append(f"artifact {index}: missing/invalid part ordinal")
             else:
                 ordinals.append(a["ordinal"])
