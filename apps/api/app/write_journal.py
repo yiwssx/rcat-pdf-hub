@@ -41,6 +41,37 @@ def claim_queued_job(db: Session, job: JobRecord, ttl_seconds: int) -> str | Non
     return token
 
 
+def renew_lease(
+    db: Session, job_id: str, lease_token: str, lease_epoch: int,
+    ttl_seconds: int,
+) -> bool:
+    """Conditional heartbeat from a separate DB session, never resurrecting a job.
+
+    Do not renew an expired lease, cancelled/finished job, or a changed
+    attempt. The DB compares the deadline (SQL, not ORM timezone evaluation).
+    """
+    if ttl_seconds < 60:
+        raise ValueError("Execution lease must exceed 60 seconds")
+    now = utcnow()
+    result = db.execute(
+        update(JobRecord)
+        .execution_options(synchronize_session=False)
+        .where(
+            JobRecord.id == job_id,
+            JobRecord.status == "running",
+            JobRecord.lease_token == lease_token,
+            JobRecord.lease_epoch == lease_epoch,
+            JobRecord.lease_expires_at > now,
+        )
+        .values(lease_expires_at=now + timedelta(seconds=ttl_seconds))
+    )
+    if result.rowcount != 1:
+        db.rollback()
+        return False
+    db.commit()
+    return True
+
+
 def fenced_progress(db: Session, job: JobRecord, token: str, progress: int) -> None:
     result = db.execute(
         update(JobRecord)
