@@ -28,6 +28,14 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_job_output_artifacts_file_id", "job_output_artifacts", ["file_id"])
+    # Do not rely on NULL semantics of UNIQUE(job_id, role, ordinal):
+    # both SQLite and PostgreSQL allow multiple NULL ordinals by default.
+    op.create_index(
+        "uq_job_output_artifacts_one_primary", "job_output_artifacts",
+        ["job_id"], unique=True,
+        postgresql_where=sa.text("role IN ('result', 'bundle')"),
+        sqlite_where=sa.text("role IN ('result', 'bundle')"),
+    )
     # Backfill only historically completed jobs with an existing, same-owner
     # FileRecord; never create a cross-service association from stale metadata.
     op.execute(sa.text(
@@ -42,5 +50,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Drops the association table only; legacy jobs.output_file_id remains intact.
+    op.drop_index("uq_job_output_artifacts_one_primary", table_name="job_output_artifacts")
     op.drop_index("ix_job_output_artifacts_file_id", table_name="job_output_artifacts")
     op.drop_table("job_output_artifacts")
