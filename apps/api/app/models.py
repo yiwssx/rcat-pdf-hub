@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -74,6 +74,13 @@ class JobOutputArtifact(Base):
     __tablename__ = "job_output_artifacts"
     __table_args__ = (
         UniqueConstraint("job_id", "role", "ordinal", name="uq_job_output_artifact_order"),
+        # A nullable ordinal makes the compound UNIQUE insufficient for root
+        # artifacts on PostgreSQL and SQLite. Permit only one result/bundle.
+        Index(
+            "uq_job_output_artifacts_one_primary", "job_id", unique=True,
+            postgresql_where=text("role IN ('result', 'bundle')"),
+            sqlite_where=text("role IN ('result', 'bundle')"),
+        ),
         CheckConstraint(
             "(role = 'part' AND ordinal >= 1 AND ordinal <= 200) OR "
             "(role IN ('result', 'bundle') AND ordinal IS NULL)",
