@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     pdf_to_image_max_pages: int = Field(default=200, ge=1, le=5000)
     # Opt-in T90 storage expansion: disabled until explicit rollout and load QA.
     multi_output_artifacts_enabled: bool = False
+    # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
+    artifact_write_journal_enabled: bool = False
 
     default_rate_limit_per_minute: int = 120
     default_daily_job_limit: int = 1000
