@@ -114,7 +114,8 @@ jobs:
             -e AWS_ACCESS_KEY_ID=t90ci \
             -e AWS_SECRET_ACCESS_KEY=t90ci-ephemeral-key \
             chrislusf/seaweedfs:4.44 \
-            server -dir=/data -s3 -s3.port=8333
+            server -dir=/data -s3 -s3.port=8333 \
+            -master.volumeSizeLimitMB=64 -volume.max=32
           cleanup() {
             if [ "${1:-0}" -ne 0 ]; then
               docker logs --tail 100 pdfhub-t90-seaweedfs-ci || true
