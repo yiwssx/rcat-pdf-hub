@@ -170,6 +170,22 @@ def main() -> None:
     try:
         s3.create_bucket(Bucket=bucket)
         bucket_created = True
+        # Listing buckets can become healthy before SeaweedFS master/volume
+        # registration finishes. Require a real writable volume before chaos.
+        for attempt in range(25):
+            try:
+                s3.put_object(
+                    Bucket=bucket, Key="t90-ci/bootstrap-check",
+                    Body=b"volume-ready",
+                )
+                s3.delete_object(Bucket=bucket, Key="t90-ci/bootstrap-check")
+                break
+            except ClientError as exc:
+                if str(exc.response.get("Error", {}).get("Code", "")) != "InternalError":
+                    raise
+                if attempt == 24:
+                    raise RuntimeError("SeaweedFS has no writable CI volumes") from exc
+                time.sleep(1)
         dsn = URL.create(
             "postgresql+psycopg", username=admin["user"],
             password=admin["password"], host=admin["host"],
