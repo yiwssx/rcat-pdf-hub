@@ -17,7 +17,7 @@ import pytest
 
 API_ROOT = Path(__file__).resolve().parents[1]
 PRIOR_REVISION = "0004_phase6_file_library_indexes"
-T90_REVISION = "0005_t90_output_artifacts"
+T90_REVISION = "0006_t90_write_journal"
 
 
 def _invoke(db_path: Path, source: str) -> None:
