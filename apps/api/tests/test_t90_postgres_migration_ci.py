@@ -173,7 +173,12 @@ def test_postgres_migration_lifecycle_with_historical_rows(isolated_postgres, ba
             "from app.db import engine; "
             "from app.models import ApiKey, ServicePolicy, FileRecord, JobRecord; "
             "for_table = (ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__); "
-            "[item.create(bind=engine, checkfirst=True) for item in for_table]"
+            "[item.create(bind=engine, checkfirst=True) for item in for_table]; "
+            "from sqlalchemy import text; "
+            "trans = engine.begin(); connection = trans.__enter__(); "
+            "[connection.execute(text('ALTER TABLE jobs DROP COLUMN ' + col)) "
+            " for col in ('lease_epoch','lease_token','lease_expires_at')]; "
+            "trans.__exit__(None, None, None)"
         ))
 
     with psycopg.connect(**args, autocommit=True) as conn:
