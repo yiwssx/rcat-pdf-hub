@@ -140,8 +140,14 @@ backend() {
       PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<PY
 from app.db import engine
 from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy
+from sqlalchemy import text
 for table in [ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__]:
     table.create(bind=engine, checkfirst=True)
+# The adoption fixture must match the pre-Alembic jobs schema. New
+# lease columns belong exclusively to revision 0006 (not the baseline).
+with engine.begin() as connection:
+    for column in ("lease_epoch", "lease_token", "lease_expires_at"):
+        connection.execute(text("ALTER TABLE jobs DROP COLUMN " + column))
 PY
       PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python -c "from app.migrate import run_migrations; run_migrations()"
     '

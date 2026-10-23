@@ -62,6 +62,9 @@ class JobRecord(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     requested_by: Mapped[str] = mapped_column(String(120), index=True)
     rq_job_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    lease_epoch: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    lease_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -97,6 +100,37 @@ class JobOutputArtifact(Base):
     role: Mapped[str] = mapped_column(String(12), nullable=False)
     ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+
+
+
+class ArtifactWriteJournal(Base):
+    """Durable intention per attempt, persisted BEFORE storage operations.
+
+    job_id is deliberately not an FK: record remains available for operator
+    review even after terminal job history is cleared.
+    """
+    __tablename__ = "artifact_write_journal"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('planned','committed','compensated','needs_review')",
+            name="ck_artifact_write_journal_state",
+        ),
+        CheckConstraint(
+            "role IN ('result','bundle','part')",
+            name="ck_artifact_write_journal_role",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id: Mapped[str] = mapped_column(String(36), index=True)
+    lease_epoch: Mapped[int] = mapped_column(Integer, nullable=False)
+    lease_token: Mapped[str] = mapped_column(String(36), nullable=False)
+    stored_name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    role: Mapped[str] = mapped_column(String(12), nullable=False)
+    state: Mapped[str] = mapped_column(String(20), nullable=False, default="planned")
+    file_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class ArchiveRecord(Base):

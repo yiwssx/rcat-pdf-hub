@@ -20,7 +20,7 @@ from sqlalchemy.engine import make_url
 
 API_ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS = "0004_phase6_file_library_indexes"
-LATEST = "0005_t90_output_artifacts"
+LATEST = "0006_t90_write_journal"
 ENV_NAME = "PDFHUB_T90_POSTGRES_TEST_URL"
 CI_USER = "pdfhub_t90_ci"
 
@@ -173,7 +173,12 @@ def test_postgres_migration_lifecycle_with_historical_rows(isolated_postgres, ba
             "from app.db import engine; "
             "from app.models import ApiKey, ServicePolicy, FileRecord, JobRecord; "
             "for_table = (ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__); "
-            "[item.create(bind=engine, checkfirst=True) for item in for_table]"
+            "[item.create(bind=engine, checkfirst=True) for item in for_table]; "
+            "from sqlalchemy import text; "
+            "trans = engine.begin(); connection = trans.__enter__(); "
+            "[connection.execute(text('ALTER TABLE jobs DROP COLUMN ' + col)) "
+            " for col in ('lease_epoch','lease_token','lease_expires_at')]; "
+            "trans.__exit__(None, None, None)"
         ))
 
     with psycopg.connect(**args, autocommit=True) as conn:

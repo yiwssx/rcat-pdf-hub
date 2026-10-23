@@ -17,7 +17,7 @@ import pytest
 
 API_ROOT = Path(__file__).resolve().parents[1]
 PRIOR_REVISION = "0004_phase6_file_library_indexes"
-T90_REVISION = "0005_t90_output_artifacts"
+T90_REVISION = "0006_t90_write_journal"
 
 
 def _invoke(db_path: Path, source: str) -> None:
@@ -109,7 +109,12 @@ def test_migration_backfill_constraints_and_safe_downgrade(tmp_path: Path, start
             "from app.db import engine; "
             "from app.models import ApiKey, ServicePolicy, FileRecord, JobRecord; "
             "tables = (ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__); "
-            "[(table.create(bind=engine, checkfirst=True)) for table in tables]"
+            "[(table.create(bind=engine, checkfirst=True)) for table in tables]; "
+            "from sqlalchemy import text; "
+            "with_block = engine.begin(); connection = with_block.__enter__(); "
+            "[connection.execute(text('ALTER TABLE jobs DROP COLUMN ' + name)) "
+            " for name in ('lease_epoch','lease_token','lease_expires_at')]; "
+            "with_block.__exit__(None, None, None)"
         ))
         with sqlite3.connect(database) as db:
             assert "alembic_version" not in {
