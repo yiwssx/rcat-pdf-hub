@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchDownload, FileLookupError, getFile, getJob, Job, JobLookupError, UploadedFile } from "../../lib/api";
+import { fetchDownload, FileLookupError, getFile, getJob, getJobArtifacts, Job, JobArtifactManifest, JobLookupError, UploadedFile } from "../../lib/api";
 import { TaskJourneyNav } from "./task-journey";
 import { PDF_TOOLS } from "./tool-catalog";
 import { isEligibleToolFile, TOOL_INPUT_RULES } from "./tool-input-rules";
 
-type ResultState = { job: Job; file: UploadedFile | null };
+type ResultState = { job: Job; file: UploadedFile | null; manifest: JobArtifactManifest | null };
 type Props = { jobId: string; auth: string };
 
 function resultError(reason: unknown): string {
@@ -23,6 +23,8 @@ export function JobResultScreen({ jobId, auth }: Props) {
   const [data, setData] = useState<ResultState | null>(null);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [downloadingPart, setDownloadingPart] = useState<string | null>(null);
+  const [artifactError, setArtifactError] = useState("");
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
@@ -34,12 +36,31 @@ export function JobResultScreen({ jobId, auth }: Props) {
         const file = job.status === "completed" && job.output_file_id
           ? await getFile(job.output_file_id, auth)
           : null;
+        let manifest: JobArtifactManifest | null = null;
+        let artifactIssue = "";
+        if (job.status === "completed" && file) {
+          try {
+            manifest = await getJobArtifacts(job.id, auth);
+            if (!Array.isArray(manifest.artifacts) || manifest.primary_file_id !== file.id) {
+              manifest = null;
+              artifactIssue = "ข้อมูลรายการไฟล์ย่อยไม่ตรงกับผลลัพธ์หลัก กรุณาตรวจสอบใหม่";
+            }
+          } catch (reason) {
+            // Prior deployments may not yet provide the additive listing API.
+            // Keep the original ZIP/PDF download independently usable.
+            if (!(reason instanceof JobLookupError && reason.status === 404)) {
+              artifactIssue = resultError(reason);
+            }
+          }
+        }
         if (!live) return;
-        setData({ job, file });
+        setData({ job, file, manifest });
+        setArtifactError(artifactIssue);
         setError("");
       } catch (reason) {
         if (!live) return;
         setData(null);
+        setArtifactError("");
         setError(resultError(reason));
       }
     };
@@ -74,6 +95,29 @@ export function JobResultScreen({ jobId, auth }: Props) {
     }
   }
 
+  async function downloadPart(fileId: string, fileName: string) {
+    if (!ready || downloadingPart) return;
+    const item = data?.manifest?.artifacts.find((part) => part.file_id === fileId && part.role === "part");
+    if (!item || (item.expires_at && Date.parse(item.expires_at) <= Date.now())) return;
+    setDownloadingPart(fileId);
+    setArtifactError("");
+    try {
+      const blob = await fetchDownload(fileId, auth);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (reason) {
+      setArtifactError(resultError(reason));
+    } finally {
+      setDownloadingPart(null);
+    }
+  }
+
   return (
     <main className="v3Main v3JobResult" aria-label="ผลลัพธ์งาน PDF">
       <section className="v3HomeTitle">
@@ -104,6 +148,31 @@ export function JobResultScreen({ jobId, auth }: Props) {
               <a className="v3TextLink" href={`/files/${encodeURIComponent(data.file.id)}`}>ดูไฟล์ในคลัง →</a>
               <a className="v3TextLink" href="/files">ไฟล์ทั้งหมด</a>
             </div>
+            {artifactError && <div className="v3InfoBox" role="alert">{artifactError}</div>}
+            {data.manifest && data.manifest.artifacts.some((part) => part.role === "part") && (
+              <section className="v3FollowOn" aria-label="ดาวน์โหลดไฟล์ย่อย">
+                <div className="v3SectionHead">
+                  <div><span className="v3Kicker">INDIVIDUAL FILES</span><h2>ดาวน์โหลดภาพทีละหน้า</h2></div>
+                </div>
+                <p>ดาวน์โหลดภาพเฉพาะหน้าที่ต้องการ หรือใช้ปุ่มดาวน์โหลดผลลัพธ์เพื่อรับ ZIP ทั้งหมด</p>
+                {data.manifest.artifacts.filter((part) => part.role === "part").map((part) => {
+                  const expiredPart = Boolean(part.expires_at && Date.parse(part.expires_at) <= Date.now());
+                  return (
+                    <div className="v3TaskSummary" key={part.file_id}>
+                      <strong>{part.file_name}</strong>
+                      <small>หน้า {part.ordinal} • {Math.max(1, Math.ceil(part.size / 1024))} KB{expiredPart ? " • หมดอายุ" : ""}</small>
+                      <div className="v3JobDetailActions">
+                        <button type="button" className="v3SecondaryAction"
+                          disabled={expiredPart || downloadingPart !== null}
+                          onClick={() => void downloadPart(part.file_id, part.file_name)}>
+                          {downloadingPart === part.file_id ? "กำลังดาวน์โหลด…" : `ดาวน์โหลดภาพหน้า ${part.ordinal}`}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+            )}
             {eligibleTools.length > 0 && <section className="v3FollowOn" aria-label="ทำงานต่อด้วยเครื่องมืออื่น">
               <div className="v3SectionHead">
                 <div><span className="v3Kicker">NEXT TASK</span><h2>ใช้ไฟล์นี้ทำงานต่อ</h2></div>
