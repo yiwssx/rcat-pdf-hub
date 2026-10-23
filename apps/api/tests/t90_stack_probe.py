@@ -26,6 +26,7 @@ from sqlalchemy.engine import URL, make_url
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 WORKER = ROOT / "tests" / "t90_stack_worker.py"
 
 
