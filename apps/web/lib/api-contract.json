@@ -92,6 +92,12 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/jobs/{job_id}/artifacts",
+      "response": "JobArtifactManifestOut",
+      "client_marker": "`/api/v1/jobs/${encodeURIComponent(jobId)}/artifacts`"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/files/{file_id}",
       "response": "FileOut",
       "client_marker": "`/api/v1/files/${encodeURIComponent(fileId)}`"
