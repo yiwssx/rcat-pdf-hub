@@ -23,6 +23,7 @@ from app.storage import (
     delete_stored_name,
     new_output_path,
     path_for_stored_name,
+    planned_processed_stored_name,
     store_staged_file,
 )
 from app.webhooks import queue_job_webhook
@@ -255,8 +256,16 @@ def process_job(job_id: str) -> str:
                 )
                 raise RuntimeError(str(exc.detail)) from exc
 
-        stored_name = store_staged_file(output, "processed", filename=f"{job.id}{suffix}")
+        primary_name = f"{job.id}{suffix}"
+        stored_name = planned_processed_stored_name(primary_name)
+        # Record the planned object BEFORE calling upload_file: S3 may write an
+        # object and then raise without returning the storage key.
         stored_names.append(stored_name)
+        if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == stored_name)) is not None:
+            raise RuntimeError("Output storage destination already belongs to a saved file")
+        actual_name = store_staged_file(output, "processed", filename=primary_name)
+        if actual_name != stored_name:
+            raise RuntimeError("Storage returned an unexpected output destination")
         record = FileRecord(
             original_name=f"{job.operation}-{job.id}{suffix}",
             stored_name=stored_name,
@@ -276,10 +285,16 @@ def process_job(job_id: str) -> str:
         for page in staged_pages:
             page_size = page.path.stat().st_size
             page_digest = _output_hash(page.path)
-            page_name = store_staged_file(
-                page.path, "processed", filename=f"{job.id}-{page.display_name}"
-            )
+            part_filename = f"{job.id}-{page.display_name}"
+            page_name = planned_processed_stored_name(part_filename)
             stored_names.append(page_name)
+            if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == page_name)) is not None:
+                raise RuntimeError("Part storage destination already belongs to a saved file")
+            actual_name = store_staged_file(
+                page.path, "processed", filename=part_filename
+            )
+            if actual_name != page_name:
+                raise RuntimeError("Storage returned an unexpected part destination")
             part_record = FileRecord(
                 original_name=page.display_name,
                 stored_name=page_name,
@@ -313,10 +328,13 @@ def process_job(job_id: str) -> str:
         if not committed:
             for name in reversed(stored_names):
                 try:
-                    delete_stored_name(name)
+                    # A partially failed re-run must never delete an already
+                    # committed FileRecord's object. Double-check after rollback.
+                    if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == name)) is None:
+                        delete_stored_name(name)
                 except Exception:
-                    # Best effort: cleanup worker and storage reconciliation must
-                    # also handle orphaned objects after a crash.
+                    # Best effort only. Hard crashes need a separately reviewed
+                    # recovery process; never silently auto-delete unknown files.
                     pass
         try:
             db.refresh(job)
