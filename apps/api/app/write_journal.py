@@ -58,6 +58,37 @@ def fenced_progress(db: Session, job: JobRecord, token: str, progress: int) -> N
     db.refresh(job)
 
 
+def renew_execution_lease(
+    db: Session, *, job_id: str, token: str, epoch: int,
+    ttl_seconds: int, now: datetime | None = None,
+) -> bool:
+    """Renew only the current live attempt using an atomic SQL predicate.
+
+    A lost, expired, finished, cancelled, or superseded lease cannot revive.
+    No ORM in-memory evaluation: SQLite may return timezone-naive datetimes.
+    """
+    if ttl_seconds < 61 or ttl_seconds > 3600:
+        raise ValueError("Heartbeat TTL must be in [61, 3600] seconds")
+    now = now or utcnow()
+    updated = db.execute(
+        update(JobRecord)
+        .execution_options(synchronize_session=False)
+        .where(
+            JobRecord.id == job_id,
+            JobRecord.status == "running",
+            JobRecord.lease_token == token,
+            JobRecord.lease_epoch == epoch,
+            JobRecord.lease_expires_at > now,
+        )
+        .values(lease_expires_at=now + timedelta(seconds=ttl_seconds))
+    )
+    if updated.rowcount != 1:
+        db.rollback()
+        return False
+    db.commit()
+    return True
+
+
 def lease_is_current(db: Session, job: JobRecord, token: str) -> bool:
     return db.scalar(
         select(JobRecord.id).where(
