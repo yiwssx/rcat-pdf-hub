@@ -268,3 +268,78 @@ def test_ci_postgres_in_memory_new_schema_and_root_index(isolated_postgres):
             "AND indexname='uq_job_output_artifacts_one_primary'"
         ).fetchone()
         assert row is not None and "UNIQUE" in row[0] and "WHERE" in row[0]
+
+
+def test_ci_postgres_atomic_heartbeat_and_manual_terminal_recovery(isolated_postgres):
+    """Fencing, heartbeat and operator recovery use real PostgreSQL conditional updates."""
+    args = isolated_postgres
+    _phase(args, "from app.migrate import run_migrations; run_migrations()")
+    _phase(args, """
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
+from threading import Barrier
+from uuid import uuid4
+from app.db import SessionLocal
+from app.models import JobRecord, ArtifactWriteJournal
+from app import write_journal, lease_recovery
+
+job_id, rq_id = str(uuid4()), str(uuid4())
+with SessionLocal() as db:
+    db.add(JobRecord(
+        id=job_id, status="queued", operation="compress",
+        requested_by="pg-ci-test", progress=0, input_file_ids_json="[]",
+        params_json="{}", rq_job_id=rq_id,
+    ))
+    db.commit()
+barrier = Barrier(2)
+def claim(_):
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        barrier.wait(timeout=10)
+        return write_journal.claim_queued_job(db, job, 120)
+with ThreadPoolExecutor(max_workers=2) as pool:
+    claims = list(pool.map(claim, range(2)))
+assert len([x for x in claims if x]) == 1
+token = next(x for x in claims if x)
+with SessionLocal() as db:
+    job = db.get(JobRecord, job_id)
+    assert job.lease_epoch == 1 and job.lease_token == token
+    assert write_journal.renew_execution_lease(
+        db, job_id=job_id, token=token, epoch=1, ttl_seconds=240,
+    )
+    assert not write_journal.renew_execution_lease(
+        db, job_id=job_id, token="stale", epoch=1, ttl_seconds=240,
+    )
+    db.get(JobRecord, job_id).lease_expires_at = (
+        datetime.now(timezone.utc) - timedelta(minutes=15)
+    )
+    db.add(ArtifactWriteJournal(
+        id=str(uuid4()), job_id=job_id, lease_epoch=1,
+        lease_token=token, stored_name=f"{job_id}-{token}.pdf",
+        role="result", state="planned",
+    ))
+    db.commit()
+class RQ:
+    id, func_name, args = rq_id, "app.worker_tasks.process_job", (job_id,)
+    def get_status(self, refresh=False):
+        assert refresh
+        return "stopped"
+with SessionLocal() as db:
+    dry = lease_recovery.inspect_or_recover_expired_job(
+        db, job_id=job_id, expected_epoch=1,
+        rq_job=RQ(), actor="pg-ci", apply=False,
+    )
+    assert dry["dry_run"]
+    lease_recovery.audit_event = lambda *a, **k: True
+    applied = lease_recovery.inspect_or_recover_expired_job(
+        db, job_id=job_id, expected_epoch=1,
+        rq_job=RQ(), actor="pg-ci", apply=True,
+    )
+    assert not applied["dry_run"] and not applied["auto_requeued"]
+with SessionLocal() as db:
+    job = db.get(JobRecord, job_id)
+    assert job.status == "failed" and job.lease_token is None and job.lease_epoch == 1
+    assert not write_journal.renew_execution_lease(
+        db, job_id=job_id, token=token, epoch=1, ttl_seconds=120,
+    )
+""")
