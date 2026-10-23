@@ -101,5 +101,34 @@ jobs:
             -e PDFHUB_T90_POSTGRES_TEST_URL="postgresql+psycopg://pdfhub_t90_ci:ci-t90-ephemeral-not-a-production-password@127.0.0.1:5432/postgres" \
             -w /app rcat-pdf-hub-api-test \
             python -m pytest -q -p no:cacheprovider tests/test_t90_postgres_migration_ci.py
+      - name: Exercise real Valkey/RQ and self-hosted SeaweedFS crash scenarios
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          # Disposable CI services; never use RCAT Production Redis or S3.
+          docker run -d --name pdfhub-t90-valkey-ci \
+            -p 127.0.0.1:6379:6379 valkey/valkey:8.1.9-alpine3.24 \
+            valkey-server --save "" --appendonly no
+          docker run -d --name pdfhub-t90-seaweedfs-ci \
+            -p 127.0.0.1:8333:8333 \
+            -e AWS_ACCESS_KEY_ID=t90ci \
+            -e AWS_SECRET_ACCESS_KEY=t90ci-ephemeral-key \
+            chrislusf/seaweedfs:4.44 \
+            server -dir=/data -s3 -s3.port=8333
+          cleanup() {
+            if [ "${1:-0}" -ne 0 ]; then
+              docker logs --tail 100 pdfhub-t90-seaweedfs-ci || true
+              docker logs --tail 70 pdfhub-t90-valkey-ci || true
+            fi
+            docker rm -f pdfhub-t90-seaweedfs-ci pdfhub-t90-valkey-ci || true
+          }
+          trap 'cleanup "$?"' EXIT
+          docker run --rm --network host \
+            -e GITHUB_ACTIONS=true \
+            -e PDFHUB_T90_STACK_ENABLED=yes \
+            -e PDFHUB_T90_STACK_POSTGRES_ADMIN_URL="postgresql+psycopg://pdfhub_t90_ci:ci-t90-ephemeral-not-a-production-password@127.0.0.1:5432/postgres" \
+            -e PDFHUB_T90_STACK_S3_ENDPOINT="http://127.0.0.1:8333" \
+            -w /app rcat-pdf-hub-api-test \
+            python tests/t90_stack_probe.py
       - name: Exercise full backend validation in the pinned image
         run: bash scripts/validate-free.sh backend
