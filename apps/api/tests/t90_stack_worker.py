@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import sys
 import time
+import os
+import json
 from pathlib import Path
 
 # Direct script execution sets sys.path[0] to /app/tests rather than /app.
@@ -34,6 +36,34 @@ def main() -> int:
         queue = Queue(name, connection=redis_conn)
         worker = Worker([queue], connection=redis_conn, name=f"t90-{name}-{sys.argv[3]}")
         worker.work(burst=True, logging_level="ERROR")
+        return 0
+
+    if mode == "rq-kill-workhorse":
+        # Run a REAL RQ parent worker. Its forked work-horse writes to S3
+        # and signals its own PID to the controller, which kills only the
+        # work-horse. Parent RQ must reap and classify the failed queue job.
+        from rq import Queue, Worker
+
+        name, marker = sys.argv[2], Path(sys.argv[3])
+        actual_store = worker_tasks.store_staged_file
+
+        def upload_then_wait(path, area, filename=None):
+            stored_name = actual_store(path, area, filename=filename)
+            temporary_marker = marker.with_suffix(".writing")
+            temporary_marker.write_text(json.dumps({
+                "pid": os.getpid(), "ppid": os.getppid(),
+                "stored_name": stored_name,
+            }), encoding="utf-8")
+            temporary_marker.replace(marker)
+            while True:
+                time.sleep(1)
+
+        worker_tasks.store_staged_file = upload_then_wait
+        queue = Queue(name, connection=redis_conn)
+        Worker([queue], connection=redis_conn,
+               name=f"t90-reap-{name}").work(
+                   burst=True, logging_level="ERROR",
+               )
         return 0
 
     if mode == "stall-after-s3":

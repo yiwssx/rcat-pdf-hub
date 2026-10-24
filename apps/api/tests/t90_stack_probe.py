@@ -7,6 +7,7 @@ Never accept a remote endpoint or an existing Production database.
 """
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -330,7 +331,123 @@ def main() -> None:
                 ack_key = _assert_result(db, ack_id, status="failed", journal_status="compensated")
             assert not _object_exists(s3, bucket, ack_key)
             print("PASS: self-hosted S3 failure compensation and DB journal consistency", flush=True)
-            print("T90 real-stack rehearsal: 3/3 scenarios passed (synthetic data only)", flush=True)
+            # Remove the deliberately held RQ reference from T90/2 so its
+            # queued delivery cannot interfere with this real work-horse test.
+            held_rq.cancel()
+            print("T90/4: SIGKILL actual RQ forked work-horse, verify live queue failure", flush=True)
+            horse_input = "t90-ci/originals/horse-" + token + ".pdf"
+            s3.put_object(
+                Bucket=bucket, Key=horse_input,
+                Body=b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n",
+            )
+            with SessionLocal() as db:
+                horse_id = _seed(db, bucket, horse_input, owner)
+            horse_rq = queue.enqueue(
+                "app.worker_tasks.process_job", horse_id,
+                job_timeout=120, result_ttl=600, failure_ttl=600,
+            )
+            with SessionLocal() as db:
+                db.get(JobRecord, horse_id).rq_job_id = horse_rq.id
+                db.commit()
+            horse_marker = Path(data_dir) / "rq-workhorse-uploaded.json"
+            supervisor = subprocess.Popen(
+                [sys.executable, str(WORKER), "rq-kill-workhorse", queue_name, str(horse_marker)],
+                env=env, cwd=ROOT, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, text=True,
+            )
+            children.append(supervisor)
+            deadline = time.monotonic() + 40
+            while (
+                not horse_marker.exists()
+                and supervisor.poll() is None
+                and time.monotonic() < deadline
+            ):
+                time.sleep(0.2)
+            assert horse_marker.exists(), "Real RQ work-horse did not reach S3 PUT"
+            marker_info = json.loads(horse_marker.read_text(encoding="utf-8"))
+            horse_pid, horse_ppid = marker_info["pid"], marker_info["ppid"]
+            assert horse_pid != supervisor.pid and horse_ppid == supervisor.pid, (
+                "Fault injection must target RQ's FORKED work-horse, not the supervisor",
+                marker_info, supervisor.pid,
+            )
+            horse_key = marker_info["stored_name"].removeprefix("s3:")
+            assert _object_exists(s3, bucket, horse_key)
+            assert horse_rq.get_status(refresh=True).value == "started", (
+                "RQ job must be actively running when its work-horse is killed",
+                horse_rq.get_status(refresh=True),
+            )
+            with SessionLocal() as db:
+                _assert_result(db, horse_id, status="running", journal_status="planned")
+            os.kill(horse_pid, signal.SIGKILL)
+            supervisor_output, _ = supervisor.communicate(timeout=70)
+            children.remove(supervisor)
+            assert supervisor.returncode == 0, (
+                "RQ parent failed to reap dead work-horse", supervisor_output[-2400:],
+            )
+            from app.lease_recovery import TERMINAL_RQ_STATUSES
+            refreshed = RQJob.fetch(horse_rq.id, connection=r)
+            rq_state = refreshed.get_status(refresh=True)
+            rq_state = getattr(rq_state, "value", rq_state)
+            assert rq_state in TERMINAL_RQ_STATUSES, (
+                "RQ failed to mark SIGKILLed forked work-horse terminal",
+                rq_state, supervisor_output[-2400:],
+            )
+            from app.models import FileRecord, JobOutputArtifact
+            with SessionLocal() as db:
+                _assert_result(db, horse_id, status="running", journal_status="planned")
+                record = db.get(JobRecord, horse_id)
+                observed_epoch = record.lease_epoch
+                # Before lease expiry, even terminal RQ evidence must NOT
+                # authorize an operator-controlled recovery.
+                try:
+                    inspect_or_recover_expired_job(
+                        db, job_id=horse_id, expected_epoch=observed_epoch,
+                        rq_job=refreshed, actor="t90-ci-operator", apply=True,
+                    )
+                except ValueError as exc:
+                    assert "expired" in str(exc).lower() or "lease" in str(exc).lower()
+                else:
+                    raise AssertionError("Recovery accepted a still-valid lease")
+                db.rollback()
+                # Simulate waiting for expiry+grace WITHOUT lengthening CI by
+                # 5+ minutes. This only modifies the disposable CI database.
+                record = db.get(JobRecord, horse_id)
+                record.lease_expires_at = datetime.now(timezone.utc) - timedelta(minutes=12)
+                db.commit()
+                preview = inspect_or_recover_expired_job(
+                    db, job_id=horse_id, expected_epoch=observed_epoch,
+                    rq_job=refreshed, actor="t90-ci-operator", apply=False,
+                )
+                assert preview["dry_run"] is True
+                applied = inspect_or_recover_expired_job(
+                    db, job_id=horse_id, expected_epoch=observed_epoch,
+                    rq_job=refreshed, actor="t90-ci-operator", apply=True,
+                )
+                assert applied["dry_run"] is False and applied["auto_deleted"] is False
+                db.expire_all()
+                recovered = db.get(JobRecord, horse_id)
+                assert recovered.status == "failed" and recovered.lease_token is None
+                journal_key = _assert_result(
+                    db, horse_id, status="failed", journal_status="planned",
+                )
+                assert journal_key == horse_key
+                assert not db.scalar(select(FileRecord.id).where(
+                    FileRecord.stored_name == "s3:" + horse_key
+                ))
+                assert not db.scalar(select(JobOutputArtifact.job_id).where(
+                    JobOutputArtifact.job_id == horse_id
+                ))
+            from app.audit import read_audit_events
+            assert any(
+                event.get("event") == "job.lease_recovery_requested"
+                and event.get("resource_id") == horse_id
+                for event in read_audit_events(limit=100)
+            ), "Recovery approval was not durably audited"
+            assert _object_exists(s3, bucket, horse_key), (
+                "Supervised recovery must NOT delete the orphaned object",
+            )
+            print("PASS: actual RQ work-horse SIGKILL, terminal RQ status, audited fenced recovery", flush=True)
+            print("T90 real-stack rehearsal: 4/4 scenarios passed (synthetic data only)", flush=True)
     finally:
         for child in children:
             if child.poll() is None:
