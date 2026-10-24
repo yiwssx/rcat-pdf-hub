@@ -392,6 +392,7 @@ def main() -> None:
                 "RQ failed to mark SIGKILLed forked work-horse terminal",
                 rq_state, supervisor_output[-2400:],
             )
+            from app.models import FileRecord, JobOutputArtifact
             with SessionLocal() as db:
                 _assert_result(db, horse_id, status="running", journal_status="planned")
                 record = db.get(JobRecord, horse_id)
@@ -436,7 +437,6 @@ def main() -> None:
                 assert not db.scalar(select(JobOutputArtifact.job_id).where(
                     JobOutputArtifact.job_id == horse_id
                 ))
-            from app.models import FileRecord, JobOutputArtifact
             from app.audit import read_audit_events
             assert any(
                 event.get("event") == "job.lease_recovery_requested"
