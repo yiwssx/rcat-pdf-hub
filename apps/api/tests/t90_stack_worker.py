@@ -49,9 +49,12 @@ def main() -> int:
 
         def upload_then_wait(path, area, filename=None):
             stored_name = actual_store(path, area, filename=filename)
-            marker.write_text(json.dumps({
-                "pid": os.getpid(), "stored_name": stored_name,
+            temporary_marker = marker.with_suffix(".writing")
+            temporary_marker.write_text(json.dumps({
+                "pid": os.getpid(), "ppid": os.getppid(),
+                "stored_name": stored_name,
             }), encoding="utf-8")
+            temporary_marker.replace(marker)
             while True:
                 time.sleep(1)
 
