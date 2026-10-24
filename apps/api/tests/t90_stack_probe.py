@@ -331,11 +331,14 @@ def main() -> None:
                 ack_key = _assert_result(db, ack_id, status="failed", journal_status="compensated")
             assert not _object_exists(s3, bucket, ack_key)
             print("PASS: self-hosted S3 failure compensation and DB journal consistency", flush=True)
+            # Remove the deliberately held RQ reference from T90/2 so its
+            # queued delivery cannot interfere with this real work-horse test.
+            held_rq.cancel()
             print("T90/4: SIGKILL actual RQ forked work-horse, verify live queue failure", flush=True)
             horse_input = "t90-ci/originals/horse-" + token + ".pdf"
             s3.put_object(
                 Bucket=bucket, Key=horse_input,
-                Body=b"%PDF-1.4\\n1 0 obj\\n<<>>\\nendobj\\n%%EOF\\n",
+                Body=b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n",
             )
             with SessionLocal() as db:
                 horse_id = _seed(db, bucket, horse_input, owner)
@@ -433,6 +436,7 @@ def main() -> None:
                 assert not db.scalar(select(JobOutputArtifact.job_id).where(
                     JobOutputArtifact.job_id == horse_id
                 ))
+            from app.models import FileRecord, JobOutputArtifact
             from app.audit import read_audit_events
             assert any(
                 event.get("event") == "job.lease_recovery_requested"
