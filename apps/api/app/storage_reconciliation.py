@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import select
@@ -37,6 +38,7 @@ def _scan_s3_objects() -> dict[str, dict]:
                 "stored_name": stored_name,
                 "location": key,
                 "size": int(item.get("Size") or 0),
+                "modified_at": item.get("LastModified"),
             }
         if not page.get("IsTruncated"):
             break
@@ -61,6 +63,7 @@ def _scan_local_objects() -> tuple[list[dict], dict[str, list[dict]]]:
                 "stored_name": path.name,
                 "location": f"{area}/{path.name}",
                 "size": path.stat().st_size,
+                "modified_at": datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc),
             }
             objects.append(item)
             by_name[path.name].append(item)

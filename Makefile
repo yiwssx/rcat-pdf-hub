@@ -1,4 +1,4 @@
-.PHONY: upload-dns-doctor office-font-doctor office-font-install office-font-bundle-doctor up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-contract validate-coverage validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
+.PHONY: upload-dns-doctor office-font-doctor office-font-install office-font-bundle-doctor up up-nas up-prod up-prod-nas down down-prod logs ps test build prod-config lock-python validate-supply-chain-source validate-supply-chain-images validate-supply-chain config secrets local-admin-hash cleanup migrate scale-workers scale-prod-workers up-s3 up-security up-observability up-archive validate-free validate-policy validate-ops validate-backend validate-contract validate-tool-registry validate-coverage validate-frontend validate-e2e validate-compose validate-observability validate-runtime validate-dependency install-e2e-browser local-ci-cycle local-ci-doctor install-local-ci uninstall-local-ci local-ci-status backup backup-verify restore dr-drill load-smoke install-backup uninstall-backup backup-status release-readiness
 
 upload-dns-doctor:
 	bash scripts/doctor-upload-dns.sh
@@ -78,6 +78,15 @@ validate-backend:
 
 validate-contract:
 	python3 scripts/validate-api-contract.py
+	$(MAKE) validate-tool-registry
+
+validate-tool-registry:
+	python3 scripts/validate-tool-registry.py
+	python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
+	python3 scripts/validate-tool-parameters.py
+	python3 -m unittest discover -s scripts/tests -p 'test_tool_parameters.py'
+	python3 scripts/validate-tool-artifacts.py
+	python3 -m unittest discover -s scripts/tests -p 'test_tool_artifacts.py'
 
 validate-coverage:
 	python3 scripts/backend-coverage.py

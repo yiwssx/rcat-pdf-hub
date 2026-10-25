@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     cleanup_temporary_hours: int = 6
     preview_max_width: int = 1600
     pdf_to_image_max_pages: int = Field(default=200, ge=1, le=5000)
+    # Opt-in T90 storage expansion: disabled until explicit rollout and load QA.
+    multi_output_artifacts_enabled: bool = False
+    # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
+    artifact_write_journal_enabled: bool = False
+    # Heartbeats only start when artifact_write_journal_enabled=true.
+    lease_heartbeat_interval_seconds: int = Field(default=20, ge=5, le=300)
+    lease_heartbeat_ttl_seconds: int = Field(default=180, ge=61, le=3600)
+    # Recovery is manual and requires RQ terminal-state proof; no auto-requeue.
+    lease_recovery_grace_seconds: int = Field(default=300, ge=60, le=86400)
 
     default_rate_limit_per_minute: int = 120
     default_daily_job_limit: int = 1000

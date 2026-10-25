@@ -1,0 +1,428 @@
+{
+  "schema_version": "1.0.0",
+  "status": "source-mapped-planning-only",
+  "source": "apps/api/app/schemas.py and apps/api/app/routers/pdf.py",
+  "security": "Metadata is not executed, imported, or consumed by production workers.",
+  "request_extra_behavior": "Legacy Pydantic model defaults apply; this is not a new strict runtime validation policy.",
+  "operations": {
+    "merge": {
+      "route": "/api/v1/pdf/merge",
+      "request_model": "MergeRequest",
+      "selector_fields": [
+        "file_ids"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {},
+      "notes": [
+        "API model limits merge to 2–50 files."
+      ]
+    },
+    "organize": {
+      "route": "/api/v1/pdf/organize",
+      "request_model": "OrganizeRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "pages": {
+          "type": "array",
+          "required": true,
+          "min_items": 1,
+          "max_items": 1000,
+          "items": {
+            "type": "object",
+            "required_properties": [
+              "page"
+            ],
+            "properties": {
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "rotation": {
+                "type": "integer",
+                "default": 0,
+                "enum": [
+                  0,
+                  90,
+                  180,
+                  270
+                ]
+              }
+            }
+          }
+        }
+      },
+      "notes": [
+        "Rotation normalizes modulo 360 in the route."
+      ]
+    },
+    "split": {
+      "route": "/api/v1/pdf/split",
+      "request_model": "SplitRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "pages": {
+          "type": "string",
+          "required": true,
+          "pattern": "^[0-9z,\\-]+$"
+        }
+      },
+      "notes": [
+        "Page-range syntax is not semantic page-count validation."
+      ]
+    },
+    "rotate": {
+      "route": "/api/v1/pdf/rotate",
+      "request_model": "RotateRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "degrees": {
+          "type": "integer",
+          "required": false,
+          "default": 90,
+          "enum": [
+            -270,
+            -180,
+            -90,
+            90,
+            180,
+            270
+          ]
+        },
+        "pages": {
+          "type": "string",
+          "required": false,
+          "default": "1-z",
+          "pattern": "^[0-9z,\\-]+$"
+        }
+      },
+      "notes": [
+        "Allowed degrees enforced by route; signed angles supported."
+      ]
+    },
+    "compress": {
+      "route": "/api/v1/pdf/compress",
+      "request_model": "SingleFileRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {},
+      "notes": []
+    },
+    "ocr": {
+      "route": "/api/v1/pdf/ocr",
+      "request_model": "OcrRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "languages": {
+          "type": "string",
+          "required": false,
+          "default": "tha+eng",
+          "pattern": "^[a-z0-9+_-]+$"
+        },
+        "deskew": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        "rotate_pages": {
+          "type": "boolean",
+          "required": false,
+          "default": true
+        }
+      },
+      "notes": []
+    },
+    "pdfa": {
+      "route": "/api/v1/pdf/pdfa",
+      "request_model": "OcrRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [
+        "deskew",
+        "rotate_pages"
+      ],
+      "parameters": {
+        "languages": {
+          "type": "string",
+          "required": false,
+          "default": "tha+eng",
+          "pattern": "^[a-z0-9+_-]+$"
+        }
+      },
+      "notes": [
+        "The PDF/A route currently ignores OcrRequest deskew/rotate_pages; no change in this PR."
+      ]
+    },
+    "office-to-pdf": {
+      "route": "/api/v1/pdf/office-to-pdf",
+      "request_model": "SingleFileRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {},
+      "notes": []
+    },
+    "watermark": {
+      "route": "/api/v1/pdf/watermark",
+      "request_model": "WatermarkRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 240
+        },
+        "font_size": {
+          "type": "number",
+          "required": false,
+          "default": 48,
+          "minimum": 8,
+          "maximum": 160
+        },
+        "opacity": {
+          "type": "number",
+          "required": false,
+          "default": 0.18,
+          "minimum": 0.02,
+          "maximum": 1
+        },
+        "rotation": {
+          "type": "number",
+          "required": false,
+          "default": 45,
+          "minimum": -180,
+          "maximum": 180
+        },
+        "position": {
+          "type": "string",
+          "required": false,
+          "default": "center",
+          "enum": [
+            "center",
+            "top-left",
+            "top-center",
+            "top-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right"
+          ]
+        },
+        "margin": {
+          "type": "number",
+          "required": false,
+          "default": 36,
+          "minimum": 0,
+          "maximum": 240
+        }
+      },
+      "notes": []
+    },
+    "page-numbers": {
+      "route": "/api/v1/pdf/page-numbers",
+      "request_model": "PageNumberRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "format": {
+          "type": "string",
+          "required": false,
+          "default": "{page} / {total}",
+          "max_length": 120,
+          "min_length": 1
+        },
+        "start_number": {
+          "type": "integer",
+          "required": false,
+          "default": 1,
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "font_size": {
+          "type": "number",
+          "required": false,
+          "default": 10,
+          "minimum": 6,
+          "maximum": 36
+        },
+        "position": {
+          "type": "string",
+          "required": false,
+          "default": "bottom-center",
+          "enum": [
+            "center",
+            "top-left",
+            "top-center",
+            "top-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right"
+          ]
+        },
+        "margin": {
+          "type": "number",
+          "required": false,
+          "default": 24,
+          "minimum": 0,
+          "maximum": 240
+        }
+      },
+      "notes": [
+        "Worker accepts only {page} and {total} placeholders; format placeholders are not fully checked at API boundary."
+      ]
+    },
+    "stamp": {
+      "route": "/api/v1/pdf/stamp",
+      "request_model": "StampRequest",
+      "selector_fields": [
+        "file_id",
+        "stamp_file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "position": {
+          "type": "string",
+          "required": false,
+          "default": "bottom-right",
+          "enum": [
+            "center",
+            "top-left",
+            "top-center",
+            "top-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right"
+          ]
+        },
+        "scale": {
+          "type": "number",
+          "required": false,
+          "default": 0.2,
+          "minimum": 0.03,
+          "maximum": 0.8
+        },
+        "margin": {
+          "type": "number",
+          "required": false,
+          "default": 24,
+          "minimum": 0,
+          "maximum": 240
+        }
+      },
+      "notes": [
+        "Route rejects same file_id and stamp_file_id."
+      ]
+    },
+    "images-to-pdf": {
+      "route": "/api/v1/pdf/images-to-pdf",
+      "request_model": "ImageToPdfRequest",
+      "selector_fields": [
+        "file_ids"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "page_size": {
+          "type": "string",
+          "required": false,
+          "default": "auto",
+          "enum": [
+            "auto",
+            "a4",
+            "letter"
+          ]
+        },
+        "fit": {
+          "type": "string",
+          "required": false,
+          "default": "contain",
+          "enum": [
+            "contain",
+            "cover"
+          ]
+        },
+        "margin": {
+          "type": "number",
+          "required": false,
+          "default": 18,
+          "minimum": 0,
+          "maximum": 240
+        },
+        "dpi": {
+          "type": "integer",
+          "required": false,
+          "default": 150,
+          "minimum": 72,
+          "maximum": 600
+        }
+      },
+      "notes": [
+        "API model limits 1–100 files; MIME authorization is separate from this parameter manifest."
+      ]
+    },
+    "pdf-to-images": {
+      "route": "/api/v1/pdf/pdf-to-images",
+      "request_model": "PdfToImagesRequest",
+      "selector_fields": [
+        "file_id"
+      ],
+      "ignored_request_fields": [],
+      "parameters": {
+        "format": {
+          "type": "string",
+          "required": false,
+          "default": "png",
+          "enum": [
+            "png",
+            "jpeg"
+          ]
+        },
+        "dpi": {
+          "type": "integer",
+          "required": false,
+          "default": 150,
+          "minimum": 72,
+          "maximum": 600
+        },
+        "first_page": {
+          "type": "integer",
+          "required": false,
+          "default": 1,
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "last_page": {
+          "type": "integer",
+          "required": false,
+          "default": null,
+          "nullable": true,
+          "minimum": 1,
+          "maximum": 100000
+        }
+      },
+      "notes": [
+        "Route applies page-count bound from server configuration and last_page >= first_page."
+      ]
+    }
+  }
+}

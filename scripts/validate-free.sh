@@ -91,10 +91,22 @@ operations() {
     scripts/check-worker-pools.py \
     scripts/check-grafana-provisioning.py \
     scripts/validate-api-contract.py \
+    scripts/validate-tool-registry.py \
+    scripts/tests/test_tool_registry.py \
+    scripts/validate-tool-parameters.py \
+    scripts/tests/test_tool_parameters.py \
+    scripts/validate-tool-artifacts.py \
+    scripts/tests/test_tool_artifacts.py \
     scripts/backend-coverage.py
   bash scripts/test-ci-resource-cleanup.sh
   bash scripts/test-local-ci-result-cache.sh
   bash scripts/test-ci-nas-dir.sh
+  python3 scripts/validate-tool-registry.py
+  python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
+  python3 scripts/validate-tool-parameters.py
+  python3 -m unittest discover -s scripts/tests -p 'test_tool_parameters.py'
+  python3 scripts/validate-tool-artifacts.py
+  python3 -m unittest discover -s scripts/tests -p 'test_tool_artifacts.py'
   echo 'operations: PASS'
 }
 
@@ -128,8 +140,14 @@ backend() {
       PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python - <<PY
 from app.db import engine
 from app.models import ApiKey, FileRecord, JobRecord, ServicePolicy
+from sqlalchemy import text
 for table in [ApiKey.__table__, ServicePolicy.__table__, FileRecord.__table__, JobRecord.__table__]:
     table.create(bind=engine, checkfirst=True)
+# The adoption fixture must match the pre-Alembic jobs schema. New
+# lease columns belong exclusively to revision 0006 (not the baseline).
+with engine.begin() as connection:
+    for column in ("lease_epoch", "lease_token", "lease_expires_at"):
+        connection.execute(text("ALTER TABLE jobs DROP COLUMN " + column))
 PY
       PDFHUB_DATABASE_URL=sqlite+pysqlite:////tmp/pdfhub-migrate-adopt.db python -c "from app.migrate import run_migrations; run_migrations()"
     '

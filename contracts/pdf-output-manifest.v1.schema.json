@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yiwssx/rcat-pdf-hub/blob/main/contracts/pdf-output-manifest.v1.schema.json",
+  "title": "RCAT PDF HUB future completed-job output manifest (planning only)",
+  "description": "Non-runtime proposal. Only completed jobs may yield output manifests. No signed URLs, stored object keys, filesystem paths or embedded content; downloads require independent owner and file checks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_id",
+    "status",
+    "requested_by",
+    "generated_at",
+    "primary_file_id",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "status": {
+      "const": "completed"
+    },
+    "requested_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "primary_file_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 201,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file_id",
+          "role",
+          "file_name",
+          "content_type",
+          "size",
+          "sha256",
+          "source_system",
+          "expires_at"
+        ],
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "role": {
+            "enum": [
+              "result",
+              "part",
+              "bundle"
+            ]
+          },
+          "ordinal": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "file_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Display-only safe basename. No path separators/control chars; never used as a filesystem path."
+          },
+          "content_type": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+*-]+$"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "source_system": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "expires_at": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "x-contract-safety": [
+    "Job owner requested_by and every artifact source_system must match before creating or listing a result manifest.",
+    "Every file_id is a previously stored FileRecord associated with this job; never trust client-supplied IDs.",
+    "Manifest file_name is display-only; never store stored_name, signed URLs or arbitrary filesystem paths.",
+    "Authorize every artifact download via existing authenticated file endpoint and expiry checks; never authorize solely by manifest membership.",
+    "No manifest for queued/running/failed/cancelled jobs; partial writes must be rolled back or GC cleaned.",
+    "The primary artifact must exist; bundle output is optional and must not weaken individual-file ownership.",
+    "Quota counts total bytes of all persisted artifacts (including bundle); scan each stored artifact; prevent zip bombs in generated/composed archives.",
+    "Expiry is independently verified at download; explicitly retained files may have null expires_at."
+  ]
+}
