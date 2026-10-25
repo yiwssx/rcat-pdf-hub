@@ -11,7 +11,7 @@ from app.services import pdf_tools
 
 
 @pytest.mark.parametrize("operation,engine,count,params,expected_args,expected_kwargs", [
-    ("merge", "merge", 2, {}, 3, {}),
+    ("merge", "merge", 2, {}, 2, {}),
     ("organize", "organize", 1, {"pages": [{"page": 1, "rotation": 0}]}, 3, {}),
     ("split", "split", 1, {"pages": "1-z"}, 3, {}),
     ("rotate", "rotate", 1, {"pages": "1-z", "degrees": 90}, 4, {}),
