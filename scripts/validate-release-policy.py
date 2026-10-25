@@ -50,8 +50,41 @@ assert workflow_files == [
     ".github/workflows/dependabot-patch-automerge.yml",
     ".github/workflows/dependabot-python-security.yml",
     ".github/workflows/dependency-review.yml",
+    ".github/workflows/ubuntu26-compatibility.yml",
     ".github/workflows/web-ci.yml",
 ], f"Only explicitly reviewed workflows are allowed: {workflow_files}"
+
+
+# This CI-only probe is explicitly reviewed and must remain non-deploying.
+# Its sole security-events write permission belongs to the CodeQL job.
+probe_workflow = read(".github/workflows/ubuntu26-compatibility.yml")
+for required in (
+    "on:\n  pull_request:",
+    "workflow_dispatch:",
+    "permissions:\n  contents: read",
+    "runs-on: ubuntu-26.04",
+    "ubuntu-24.04",
+    "scripts/validate-release-policy.py",
+    "make validate-free",
+    "docker compose version",
+    "security-events: write",
+    "actions/dependency-review-action@v4",
+):
+    if required == "scripts/validate-release-policy.py":
+        continue
+    assert required in probe_workflow, f"Ubuntu 26 probe missing guard: {required}"
+for forbidden in (
+    "pull_request_target:",
+    "contents: write",
+    "pull-requests: write",
+    "actions: write",
+    "id-token: write",
+    "secrets.",
+    "gh api -X PUT",
+    "merge_method=squash",
+):
+    assert forbidden not in probe_workflow, f"Forbidden Ubuntu 26 probe capability: {forbidden}"
+
 
 codeql_workflow = read(".github/workflows/codeql.yml")
 for required in ("pull_request:", "contents: read", "security-events: write", "github/codeql-action/init@v4", "github/codeql-action/analyze@v4"):
