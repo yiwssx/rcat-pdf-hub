@@ -92,6 +92,10 @@ jobs:
         run: |
           python3 scripts/validate-tool-artifacts.py
           python3 -m unittest discover -s scripts/tests -p 'test_tool_artifacts.py'
+      - name: Validate T90 Phase 0 architecture and no-activation gates
+        run: |
+          python3 scripts/validate-t90-phase-zero.py
+          python3 -m unittest discover -s scripts/tests -p 'test_t90_phase_zero.py'
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
       - name: Validate OpenAPI frontend contract
