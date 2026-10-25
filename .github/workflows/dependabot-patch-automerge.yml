@@ -14,7 +14,7 @@ concurrency:
 jobs:
   validate:
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     env:
@@ -57,7 +57,7 @@ jobs:
   merge:
     needs: validate
     if: needs.validate.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       pull-requests: write
