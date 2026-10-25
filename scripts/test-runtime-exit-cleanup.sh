@@ -17,6 +17,9 @@ if [[ "${1:-}" == "compose" ]]; then
   if [[ " $* " == *" down "* ]]; then
     if [[ "${MOCK_DOWN_FAIL:-0}" == "1" ]]; then exit 27; fi
     rm -f -- "${MOCK_RESOURCE_DIR}/container" "${MOCK_RESOURCE_DIR}/volume"
+    if [[ "${TEST_EXIT_CASE}" != "network-remains" ]]; then
+      rm -f -- "${MOCK_RESOURCE_DIR}/network"
+    fi
     exit 0
   fi
   if [[ " $* " == *" up "* ]]; then
@@ -28,6 +31,8 @@ elif [[ "${1:-}" == "ps" && "${2:-}" == "-aq" ]]; then
   [[ ! -f "${MOCK_RESOURCE_DIR}/container" ]] || printf 'mock-container\n'
 elif [[ "${1:-}" == "volume" && "${2:-}" == "ls" ]]; then
   [[ ! -f "${MOCK_RESOURCE_DIR}/volume" ]] || printf 'mock-volume\n'
+elif [[ "${1:-}" == "network" && "${2:-}" == "ls" ]]; then
+  [[ ! -f "${MOCK_RESOURCE_DIR}/network" ]] || printf 'mock-network\n'
 else
   echo "Unexpected Docker command: $*" >&2
   exit 99
@@ -43,6 +48,7 @@ run_case() {
   mkdir -p "${workspace}"
   printf 'partial container\n' > "${workspace}/container"
   printf 'partial named volume\n' > "${workspace}/volume"
+  printf 'partial network\n' > "${workspace}/network"
   export PATH="${tmp}/bin:${PATH}"
   export MOCK_RESOURCE_DIR="${workspace}"
   export MOCK_DOCKER_LOG="${workspace}/docker.log"
@@ -62,7 +68,7 @@ run_case() {
       printf "%s\n" "$nas_dir" > "$MOCK_RESOURCE_DIR/nas_path"
       bash scripts/ci-nas-dir.sh create "$nas_dir"
       runtime_cleanup_install "$project" "$nas_dir"
-      if [[ "$TEST_EXIT_CASE" == "success" ]]; then
+      if [[ "$TEST_EXIT_CASE" == "success" || "$TEST_EXIT_CASE" == "network-remains" ]]; then
         runtime_cleanup_finish "$project" "$nas_dir"
       else
         # Simulate a failed Compose up *after* resources were partially created.
@@ -86,10 +92,15 @@ run_case() {
   if [[ "${case_name}" == "down-fails" ]]; then
     grep -q -- 'runtime: CI resource cleanup failed' "${workspace}/output" ||
       fail_test "${case_name}: cleanup failure was not reported"
-    [[ -e "${workspace}/container" && -e "${workspace}/volume" ]] ||
+    [[ -e "${workspace}/container" && -e "${workspace}/volume" && -e "${workspace}/network" ]] ||
       fail_test "${case_name}: failed down unexpectedly altered evidence"
+  elif [[ "${case_name}" == "network-remains" ]]; then
+    grep -q -- 'Networks:' "${workspace}/output" ||
+      fail_test "${case_name}: residual network was not reported"
+    [[ -e "${workspace}/network" && ! -e "${workspace}/container" && ! -e "${workspace}/volume" ]] ||
+      fail_test "${case_name}: unexpected residual resource state"
   else
-    [[ ! -e "${workspace}/container" && ! -e "${workspace}/volume" ]] ||
+    [[ ! -e "${workspace}/container" && ! -e "${workspace}/volume" && ! -e "${workspace}/network" ]] ||
       fail_test "${case_name}: mock Compose resources remain after cleanup"
   fi
 }
@@ -97,5 +108,7 @@ run_case() {
 run_case early-up-failure 32
 run_case down-fails 32
 run_case success 0
+run_case network-remains 1
 
-echo "runtime EXIT cleanup (missing image, failed down, normal success): PASS"
+echo "runtime EXIT cleanup (missing image, failed down, normal success, residual network): PASS"
+

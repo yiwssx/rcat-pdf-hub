@@ -17,6 +17,8 @@ if [[ "$1" == "compose" ]]; then
   exit 0
 elif [[ "$1" == "ps" && "$2" == "-aq" ]]; then
   printf '%s' "${MOCK_REFS:-}"
+elif [[ "$1" == "network" && "$2" == "ls" ]]; then
+  printf '%s' "${MOCK_REMAINING_NETWORKS:-}"
 elif [[ "$1" == "volume" && "$2" == "ls" ]]; then
   if [[ " $* " == *" --filter "* ]]; then
     printf '%s' "${MOCK_REMAINING_VOLUMES:-}"
@@ -84,6 +86,12 @@ export MOCK_REFS=container-id
 expect_failure bash scripts/cleanup-ci-project.sh pdfhub-validation-456 runtime
 unset MOCK_REFS
 
+# A successful Compose down must not conceal an owned network left behind.
+export MOCK_REMAINING_NETWORKS=orphan-network
+expect_failure bash scripts/cleanup-ci-project.sh pdfhub-validation-456 runtime
+grep -q -- 'Networks:' "${tmp}/case.out" || fail_test "residual network was not reported"
+unset MOCK_REMAINING_NETWORKS
+
 # Historical orphan cleanup: preview-only by default and strict name/labels.
 export MOCK_VOLUME_LIST=$'pdfhub-promtool-100_prometheus_data\npdf-hub_pdf_data\n'
 : > "${MOCK_DOCKER_LOG}"
@@ -116,3 +124,4 @@ if grep -q -- 'volume rm pdf-hub_pdf_data' "${MOCK_DOCKER_LOG}"; then
 fi
 
 echo "CI resource cleanup regression: PASS"
+
