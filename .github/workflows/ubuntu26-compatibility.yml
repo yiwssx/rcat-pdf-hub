@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/ubuntu26-compatibility.yml"
       - "docs/workstreams/ubuntu26-runner-migration.md"
+      - "scripts/rehearse-dependabot-policies.py"
   workflow_dispatch:
 
 permissions:
@@ -256,3 +257,23 @@ jobs:
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+
+  bot-policy-rehearsal:
+    name: Offline Dependabot policy and stale-SHA guards (26.04)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Runner fingerprint
+        run: |
+          cat /etc/os-release
+          python3 --version
+          git --version
+          jq --version
+      - name: Exercise trusted policies and exact merge shell offline
+        run: python3 scripts/rehearse-dependabot-policies.py
