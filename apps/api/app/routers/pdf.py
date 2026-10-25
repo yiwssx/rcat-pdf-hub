@@ -31,6 +31,21 @@ from app.security import Principal, require_scope
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
 settings = get_settings()
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"}
+# Enforce persisted upload MIME for every operation; filenames are display-only.
+PDF_INPUT_OPERATIONS = frozenset({
+    "merge", "organize", "split", "rotate", "compress", "ocr", "pdfa",
+    "pdf-to-images", "watermark", "page-numbers", "stamp",
+})
+OFFICE_INPUT_TYPES = frozenset({
+    "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "application/vnd.oasis.opendocument.presentation",
+    "application/rtf",
+})
 
 
 def _is_expired(record: FileRecord) -> bool:
@@ -43,7 +58,7 @@ def _is_expired(record: FileRecord) -> bool:
 
 
 def _is_pdf(record: FileRecord) -> bool:
-    return record.content_type == "application/pdf" or record.original_name.lower().endswith(".pdf")
+    return record.content_type == "application/pdf"
 
 
 def _is_image(record: FileRecord) -> bool:
@@ -61,8 +76,10 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
         raise HTTPException(status_code=403, detail="One or more files belong to another service")
     if operation == "images-to-pdf" and any(not _is_image(item) for item in records):
         raise HTTPException(status_code=415, detail="images-to-pdf accepts JPEG, PNG, WebP, TIFF, or BMP files only")
-    if operation == "pdf-to-images" and any(not _is_pdf(item) for item in records):
-        raise HTTPException(status_code=415, detail="pdf-to-images accepts PDF files only")
+    if operation in PDF_INPUT_OPERATIONS and any(not _is_pdf(item) for item in records):
+        raise HTTPException(status_code=415, detail=f"{operation} accepts PDF files only")
+    if operation == "office-to-pdf" and any(item.content_type not in OFFICE_INPUT_TYPES for item in records):
+        raise HTTPException(status_code=415, detail="office-to-pdf accepts supported Office files only")
     if not principal.is_bootstrap_admin:
         ensure_daily_job_quota(db, principal.name, principal.daily_job_limit)
 
