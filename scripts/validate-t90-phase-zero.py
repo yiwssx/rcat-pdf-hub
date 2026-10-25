@@ -45,11 +45,14 @@ def assigned(module: ast.Module, name: str):
 def static_strings(node: ast.AST) -> set[str]:
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "frozenset" and len(node.args) == 1 and not node.keywords:
         node = node.args[0]
-    raw = ast.literal_eval(node)
-    if not isinstance(raw, (set, frozenset, tuple, list, dict)):
-        raise ValueError("Unexpected static collection type")
-    if isinstance(raw, dict):
-        raw = raw.keys()
+    # Static registry values intentionally contain constructor calls; inspect
+    # only literal dictionary keys without executing or evaluating callables.
+    if isinstance(node, ast.Dict):
+        raw = [ast.literal_eval(key) for key in node.keys]
+    else:
+        raw = ast.literal_eval(node)
+        if not isinstance(raw, (set, frozenset, tuple, list)):
+            raise ValueError("Unexpected static collection type")
     if not all(isinstance(value, str) and value for value in raw):
         raise ValueError("Non-string operation key")
     return set(raw)
