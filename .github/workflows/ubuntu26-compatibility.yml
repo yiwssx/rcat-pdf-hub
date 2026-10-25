@@ -1,0 +1,256 @@
+name: Ubuntu 26.04 compatibility probe (no deploy)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/ubuntu26-compatibility.yml"
+      - "docs/workstreams/ubuntu26-runner-migration.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ubuntu26-probe-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-python:
+    name: Host Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Runner fingerprint
+        run: |
+          cat /etc/os-release
+          uname -a
+          python3 --version
+          docker version
+          docker compose version
+          openssl version
+      - name: Host Python and operator validation
+        run: |
+          python3 scripts/check-host-python.py
+          make validate-ops
+          python3 -m unittest discover -s scripts/tests -p "test_office_font_bundle.py"
+          python3 -m unittest discover -s scripts/tests -p "test_upload_dns_doctor.py"
+          bash -n scripts/doctor-upload-dns.sh
+
+  core-images:
+    name: Compose, API and Thai Office images (26.04)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Runner fingerprint
+        run: |
+          cat /etc/os-release
+          uname -a
+          python3 --version
+          docker version
+          docker compose version
+          gh --version
+          openssl version
+      - name: Validate release, lock, configs and T90 non-activation
+        run: |
+          python3 scripts/validate-release-policy.py
+          python3 scripts/check-python-lock.py
+          make validate-compose
+          make validate-observability
+          python3 scripts/validate-tool-artifacts.py
+          python3 -m unittest discover -s scripts/tests -p test_tool_artifacts.py
+          python3 scripts/validate-t90-phase-zero.py
+          python3 -m unittest discover -s scripts/tests -p test_t90_phase_zero.py
+      - name: Build and inspect Gotenberg Thai fonts
+        run: |
+          docker build -t rcat-ubuntu26-gotenberg ops/gotenberg
+          docker run --rm --entrypoint fc-list rcat-ubuntu26-gotenberg -f '%{family}\\n' > /tmp/gotenberg-fonts.txt
+          grep -Eiq '(^|, ?)(Garuda|Kinnari|Loma|Norasi|Purisa|Umpush|Waree)(,|$)' /tmp/gotenberg-fonts.txt
+          test "$(docker run --rm --entrypoint id rcat-ubuntu26-gotenberg -u)" = "1001"
+      - name: Build and validate pinned API image
+        run: |
+          docker build -t rcat-ubuntu26-api apps/api
+          docker run --rm -e PDFHUB_CONTRACT_ARTIFACT=/tmp/openapi.json -v "$PWD:/repo" -w /repo rcat-ubuntu26-api python scripts/validate-api-contract.py
+          docker run --rm -e PDFHUB_COVERAGE_ARTIFACT=/tmp/backend-coverage.json -v "$PWD:/repo" -w /repo rcat-ubuntu26-api python scripts/backend-coverage.py
+
+  t90-stack:
+    name: PostgreSQL 18, Valkey/RQ and SeaweedFS (26.04)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_USER: pdfhub_t90_ci
+          POSTGRES_PASSWORD: ci-t90-ephemeral-not-a-production-password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pdfhub_t90_ci -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v5
+      - name: Runner fingerprint and Valkey precondition
+        run: |
+          cat /etc/os-release
+          docker version
+          sudo sysctl -w vm.overcommit_memory=1
+          test "$(sysctl -n vm.overcommit_memory)" = "1"
+      - name: Build pinned API image
+        run: docker build -t rcat-ubuntu26-api apps/api
+      - name: Rehearse T90 PostgreSQL 18 migration
+        run: |
+          docker run --rm --network host \
+            -e GITHUB_ACTIONS=true \
+            -e PDFHUB_T90_POSTGRES_TEST_URL="postgresql+psycopg://pdfhub_t90_ci:ci-t90-ephemeral-not-a-production-password@127.0.0.1:5432/postgres" \
+            -w /app rcat-ubuntu26-api \
+            python -m pytest -q -p no:cacheprovider tests/test_t90_postgres_migration_ci.py
+      - name: Rehearse disposable real-stack crash/recovery
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          cleanup() {
+            rc="$?"
+            if [ "$rc" -ne 0 ]; then
+              docker logs --tail 100 pdfhub-t90-seaweedfs-ci || true
+              docker logs --tail 70 pdfhub-t90-valkey-ci || true
+            fi
+            docker rm -f pdfhub-t90-seaweedfs-ci pdfhub-t90-valkey-ci || true
+          }
+          trap cleanup EXIT
+          docker run -d --name pdfhub-t90-valkey-ci \
+            -p 127.0.0.1:6379:6379 valkey/valkey:8.1.9-alpine3.24 \
+            valkey-server --save "" --appendonly no
+          docker run -d --name pdfhub-t90-seaweedfs-ci \
+            -p 127.0.0.1:8333:8333 \
+            -e AWS_ACCESS_KEY_ID=t90ci \
+            -e AWS_SECRET_ACCESS_KEY=t90ci-ephemeral-key \
+            chrislusf/seaweedfs:4.44 \
+            server -dir=/data -s3 -s3.port=8333 \
+            -master.volumeSizeLimitMB=64 -volume.max=32
+          docker run --rm --network host \
+            -e GITHUB_ACTIONS=true \
+            -e PDFHUB_T90_STACK_ENABLED=yes \
+            -e PDFHUB_T90_STACK_POSTGRES_ADMIN_URL="postgresql+psycopg://pdfhub_t90_ci:ci-t90-ephemeral-not-a-production-password@127.0.0.1:5432/postgres" \
+            -e PDFHUB_T90_STACK_S3_ENDPOINT="http://127.0.0.1:8333" \
+            -w /app rcat-ubuntu26-api \
+            python tests/t90_stack_probe.py
+
+  web:
+    name: Node 24, Next.js and Playwright (26.04)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Runner fingerprint
+        run: |
+          cat /etc/os-release
+          node --version
+          npm --version
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Execute E2E suite
+        run: npm run test:e2e
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
+      - name: Capture baseline gallery
+        run: npx playwright test tests/e2e/pdf-hub.smoke.spec.ts --grep "Candy UI baseline capture"
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
+          PDFHUB_UI_CAPTURE: "1"
+      - name: Upload screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ubuntu26-candy-ui-gallery
+          path: apps/web/test-results/candy-ui-baseline/
+          retention-days: 14
+          if-no-files-found: warn
+
+  full-runtime:
+    name: Full zero-cost runtime validation (26.04)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Runner fingerprint and Valkey prerequisite
+        run: |
+          cat /etc/os-release
+          python3 --version
+          node --version
+          npm --version
+          docker version
+          docker compose version
+          sudo sysctl -w vm.overcommit_memory=1
+          test "$(sysctl -n vm.overcommit_memory)" = "1"
+      - name: Run all release and disposable-stack gates
+        run: make validate-free
+
+  codeql:
+    name: CodeQL ${{ matrix.language }} (26.04)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Runner fingerprint
+        run: cat /etc/os-release
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/ubuntu26/${{ matrix.language }}"
+
+  dependency-review:
+    name: Dependency review (26.04)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 12
+    steps:
+      - name: Runner fingerprint
+        run: cat /etc/os-release
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
