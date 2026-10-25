@@ -87,6 +87,10 @@ assert "pull_request_target:" not in core_api_ci_workflow
 dependency_workflow = read(".github/workflows/dependabot-patch-automerge.yml")
 for required in (
     "pull_request:",
+    "pull_request_review:",
+    "github.event.review.state == 'approved'",
+    "check-dependabot-approval.py",
+    "steps.approval.outputs.approved == 'true'",
     "paths:\n      - 'apps/web/package.json'\n      - 'apps/web/package-lock.json'",
     "github.event.pull_request.user.login == 'dependabot[bot]'",
     'git show "${HEAD_SHA}:apps/web/package-lock.json" > apps/web/package-lock.json',
