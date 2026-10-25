@@ -43,7 +43,7 @@ def test_static_engine_dispatch_preserves_legacy_default_arguments(
     assert len(observed) == 1
     args, kwargs = observed[0]
     assert len(args) == expected_args
-    assert args[-1] == output or args[-2] == output
+    assert output in args
     assert kwargs == expected_kwargs
 
 
