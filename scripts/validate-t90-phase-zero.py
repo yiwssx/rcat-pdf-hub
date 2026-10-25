@@ -58,6 +58,19 @@ def static_strings(node: ast.AST) -> set[str]:
     return set(raw)
 
 
+def positive_static_int(node: ast.AST) -> int:
+    """Parse literal integer constants and bounded multiplication, never eval."""
+    if isinstance(node, ast.Constant) and type(node.value) is int and node.value > 0:
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        lhs = positive_static_int(node.left)
+        rhs = positive_static_int(node.right)
+        result = lhs * rhs
+        if result <= 1024 * 1024 * 1024:
+            return result
+    raise ValueError("Unexpected or unbounded integer expression")
+
+
 def inspect_phase_zero() -> list[str]:
     errors: list[str] = []
     registry = json.loads((ROOT / "contracts/pdf-tools.v1.json").read_text(encoding="utf-8"))
@@ -114,7 +127,7 @@ def inspect_phase_zero() -> list[str]:
 
     for cap, value in EXPECTED_OFFICE_ZIP_CAPS.items():
         try:
-            if ast.literal_eval(assigned(types, cap)) != value:
+            if positive_static_int(assigned(types, cap)) != value:
                 errors.append(f"Unsafe or changed Office ZIP bound: {cap}")
         except ValueError:
             errors.append(f"Office ZIP bound is not static: {cap}")
