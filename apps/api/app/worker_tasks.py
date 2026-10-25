@@ -18,6 +18,7 @@ from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.observability import record_archive, record_job, record_job_duration, record_malware
 from app.policy import effective_policy, ensure_storage_quota
 from app.operation_adapters import execute_operation
+from app.services import pdf_tools  # Retain legacy test/extension patch target.
 from app.services.output_artifacts import stage_raster_pages
 from app.storage import (
     default_expiry,
