@@ -4,7 +4,7 @@ import time
 import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
@@ -18,7 +18,10 @@ from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.observability import record_archive, record_job, record_job_duration, record_malware
 from app.policy import effective_policy, ensure_storage_quota
 from app.operation_adapters import execute_operation
-from app.services import pdf_tools  # Retain legacy test/extension patch target.
+from app.services import pdf_tools as _pdf_tools
+
+# Compatibility alias: tests and integrations still patch worker_tasks.pdf_tools.
+pdf_tools = _pdf_tools
 from app.services.output_artifacts import stage_raster_pages
 from app.storage import (
     default_expiry,
@@ -118,12 +121,12 @@ def process_job(job_id: str) -> str:
         return ""
 
     journal_enabled = settings.artifact_write_journal_enabled
+    lease_seconds = settings.lease_heartbeat_ttl_seconds
     token = str(uuid.uuid4()) if journal_enabled else None
     suffix, content_type = _output_spec(job.operation)
     # Every fenced attempt has a distinct temporary filename AND distinct
     # destination object key, so a stale process cannot clobber a new attempt.
     output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
-    committed = False
     stored_names: list[str] = []
     journal_files: dict[str, str] = {}
     reserved_names: list[str] = []
@@ -133,7 +136,6 @@ def process_job(job_id: str) -> str:
     terminal_state: str | None = None
     heartbeat: WorkerHeartbeat | None = None
     if journal_enabled:
-        lease_seconds = settings.lease_heartbeat_ttl_seconds
         claimed = write_journal.claim_queued_job(db, job, lease_seconds)
         if claimed is None:
             # RQ duplicate deliveries must not touch storage or status.
@@ -318,31 +320,29 @@ def process_job(job_id: str) -> str:
         if completed.rowcount != 1:
             raise RuntimeError("Job was cancelled before output commit")
         db.commit()
-        committed = True
     except Exception as exc:
         db.rollback()
         output.unlink(missing_ok=True)
-        if not committed:
-            cleanup_outcomes: dict[str, bool] = {}
-            for name in reversed(stored_names):
-                try:
-                    # Attempt-key isolation prevents one worker deleting another
-                    # worker's output. Never delete a committed FileRecord object.
-                    if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == name)) is None:
-                        delete_stored_name(name)
-                        cleanup_outcomes[name] = True
-                except Exception:
-                    cleanup_outcomes[name] = False
-            if token and reserved_names:
-                # Reservations not yet attempted are harmless: this is an
-                # explicit negative proof only for the unattempted locations.
-                for name in reserved_names:
-                    if name not in stored_names:
-                        cleanup_outcomes[name] = True
-                try:
-                    write_journal.compensate_writes(db, job, token, cleanup_outcomes)
-                except Exception:
-                    db.rollback()  # leave journal as 'planned' for operator review
+        cleanup_outcomes: dict[str, bool] = {}
+        for name in reversed(stored_names):
+            try:
+                # Attempt-key isolation prevents one worker deleting another
+                # worker's output. Never delete a committed FileRecord object.
+                if db.scalar(select(FileRecord.id).where(FileRecord.stored_name == name)) is None:
+                    delete_stored_name(name)
+                    cleanup_outcomes[name] = True
+            except Exception:
+                cleanup_outcomes[name] = False
+        if token and reserved_names:
+            # Reservations not yet attempted are harmless: this is an
+            # explicit negative proof only for the unattempted locations.
+            for name in reserved_names:
+                if name not in stored_names:
+                    cleanup_outcomes[name] = True
+            try:
+                write_journal.compensate_writes(db, job, token, cleanup_outcomes)
+            except Exception:
+                db.rollback()  # leave journal as 'planned' for operator review
         try:
             db.refresh(job)
             if job.status != "cancelled":
