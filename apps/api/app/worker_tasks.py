@@ -17,7 +17,7 @@ from app.malware import MalwareDetected, scan_file
 from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.observability import record_archive, record_job, record_job_duration, record_malware
 from app.policy import effective_policy, ensure_storage_quota
-from app.services import pdf_tools
+from app.operation_adapters import execute_operation
 from app.services.output_artifacts import stage_raster_pages
 from app.storage import (
     default_expiry,
@@ -162,73 +162,7 @@ def process_job(job_id: str) -> str:
             write_journal.fenced_progress(db, job, token, 25)
         else:
             _set_job(db, job, progress=25)
-        if job.operation == "merge":
-            pdf_tools.merge(inputs, output)
-        elif job.operation == "images-to-pdf":
-            pdf_tools.images_to_pdf(
-                inputs,
-                output,
-                page_size=params.get("page_size", "auto"),
-                fit=params.get("fit", "contain"),
-                margin=float(params.get("margin", 18)),
-                dpi=int(params.get("dpi", 150)),
-            )
-        elif job.operation == "pdf-to-images":
-            pdf_tools.pdf_to_images(
-                inputs[0],
-                output,
-                image_format=params.get("format", "png"),
-                dpi=int(params.get("dpi", 150)),
-                first_page=int(params.get("first_page", 1)),
-                last_page=params.get("last_page"),
-            )
-        elif job.operation == "organize":
-            pdf_tools.organize(inputs[0], params["pages"], output)
-        elif job.operation == "split":
-            pdf_tools.split(inputs[0], params["pages"], output)
-        elif job.operation == "rotate":
-            pdf_tools.rotate(inputs[0], int(params["degrees"]), params["pages"], output)
-        elif job.operation == "compress":
-            pdf_tools.compress(inputs[0], output)
-        elif job.operation == "ocr":
-            pdf_tools.ocr(
-                inputs[0], output,
-                params.get("languages", "tha+eng"),
-                bool(params.get("deskew", True)),
-                bool(params.get("rotate_pages", True)),
-            )
-        elif job.operation == "pdfa":
-            pdf_tools.pdfa(inputs[0], output, params.get("languages", "tha+eng"))
-        elif job.operation == "office-to-pdf":
-            pdf_tools.office_to_pdf(inputs[0], output)
-        elif job.operation == "watermark":
-            pdf_tools.watermark_text(
-                inputs[0], output,
-                text=params["text"],
-                font_size=float(params.get("font_size", 48)),
-                opacity=float(params.get("opacity", 0.18)),
-                rotation=float(params.get("rotation", 45)),
-                position=params.get("position", "center"),
-                margin=float(params.get("margin", 36)),
-            )
-        elif job.operation == "page-numbers":
-            pdf_tools.add_page_numbers(
-                inputs[0], output,
-                format_text=params.get("format", "{page} / {total}"),
-                start_number=int(params.get("start_number", 1)),
-                font_size=float(params.get("font_size", 10)),
-                position=params.get("position", "bottom-center"),
-                margin=float(params.get("margin", 24)),
-            )
-        elif job.operation == "stamp":
-            pdf_tools.stamp_pdf(
-                inputs[0], inputs[1], output,
-                position=params.get("position", "bottom-right"),
-                scale=float(params.get("scale", 0.20)),
-                margin=float(params.get("margin", 24)),
-            )
-        else:
-            raise RuntimeError(f"Unsupported operation: {job.operation}")
+        execute_operation(job.operation, inputs, output, params)
 
         if token:
             write_journal.fenced_progress(db, job, token, 80)
