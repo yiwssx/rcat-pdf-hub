@@ -66,9 +66,11 @@ def test_office_archive_path_hazards_rejected(tmp_path, bad_member):
 
 
 def test_duplicate_zip_members_rejected(tmp_path):
-    p = package(tmp_path / "duplicate.docx", docx_entries() + [
-        ("word/document.xml", b"replacement"),
-    ])
+    # Python zipfile warns when constructing a deliberate duplicate ZIP entry.
+    with pytest.warns(UserWarning, match="Duplicate name"):
+        p = package(tmp_path / "duplicate.docx", docx_entries() + [
+            ("word/document.xml", b"replacement"),
+        ])
     with pytest.raises(HTTPException) as exc:
         validate_uploaded_file(p, p.name)
     assert exc.value.status_code == 415
