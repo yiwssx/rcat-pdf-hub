@@ -35,7 +35,7 @@ jobs:
           PDFHUB_UI_CAPTURE: "1"
       - name: Upload Candy UI baseline gallery
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: candy-ui-baseline
           path: apps/web/test-results/candy-ui-baseline/
