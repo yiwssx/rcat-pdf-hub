@@ -105,6 +105,7 @@ operations() {
   bash scripts/test-ci-nas-dir.sh
   bash scripts/test-runtime-exit-cleanup.sh
   python3 -m unittest discover -s scripts/tests -p 'test_dependabot_required_checks.py'
+  python3 -m unittest discover -s scripts/tests -p 'test_dependabot_python_lock_artifact.py'
   python3 scripts/validate-tool-registry.py
   python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
   python3 scripts/validate-tool-parameters.py

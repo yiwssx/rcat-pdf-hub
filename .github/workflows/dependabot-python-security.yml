@@ -72,3 +72,50 @@ jobs:
             exit 1
           fi
           echo "Full zero-cost validation: PASS"
+
+  lock-artifact:
+    name: Generate read-only Python dependency lock review artifact
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Check out exact trusted main base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate immutable Dependabot head and one direct requirement change
+        run: |
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head:refs/remotes/origin/dependabot-lock-pr"
+          test "$(git rev-parse refs/remotes/origin/dependabot-lock-pr)" = "${HEAD_SHA}"
+          python3 scripts/check-python-security-dependency.py "${BASE_SHA}" "${HEAD_SHA}"
+          git show "${HEAD_SHA}:apps/api/requirements.txt" > apps/api/requirements.txt
+
+      - name: Resolve and hash-lock only verified requirements in pinned Python image
+        run: |
+          bash scripts/compile-python-lock.sh
+          python3 scripts/check-python-lock.py
+          # Fail rather than publish an artifact if any unrelated tracked file changed.
+          while IFS= read -r path; do
+            case "${path}" in
+              apps/api/requirements.txt|apps/api/requirements.lock) ;;
+              *) echo "Unexpected modified path: ${path}" >&2; exit 1 ;;
+            esac
+          done < <(git diff --name-only)
+          sha256sum apps/api/requirements.txt apps/api/requirements.lock
+
+      - name: Upload review-only full hashed Python lockfile
+        uses: actions/upload-artifact@v6
+        with:
+          name: python-hashed-lock-pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: apps/api/requirements.lock
+          if-no-files-found: error
+          retention-days: 14

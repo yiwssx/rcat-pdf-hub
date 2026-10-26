@@ -122,6 +122,18 @@ assert "pull_request_target:" not in python_security_workflow, "Python security 
 assert "contents: write" not in python_security_workflow, "Python security workflow must stay read-only"
 assert "pull-requests: write" not in python_security_workflow, "Python security workflow must not gain PR write permission"
 assert "merge_method" not in python_security_workflow, "Python security workflow must never auto-merge"
+# Generate a reviewable artifact for bot manifest-only changes without executing PR code,
+# elevating the token, or treating artifact generation as permission to merge.
+for required in ("lock-artifact:", "Check out exact trusted main base",
+                 "persist-credentials: false",
+                 "check-python-security-dependency.py",
+                 "bash scripts/compile-python-lock.sh",
+                 "python3 scripts/check-python-lock.py",
+                 "actions/upload-artifact@v6",
+                 "if-no-files-found: error"):
+    assert required in python_security_workflow, f"Python lock artifact missing guard: {required}"
+assert python_security_workflow.index("Validate immutable Dependabot head") < python_security_workflow.index("Resolve and hash-lock only verified requirements"), "Untrusted dependency state must be validated before lock compilation"
+assert python_security_workflow.index("Resolve and hash-lock only verified requirements") < python_security_workflow.index("Upload review-only full hashed Python lockfile"), "Lock artifact must be resolved before upload"
 
 # Version-update automation remains direct npm patch-only. Security/nonstandard PRs use full validation.
 dependabot = read(".github/dependabot.yml")
