@@ -119,3 +119,64 @@ jobs:
           path: apps/api/requirements.lock
           if-no-files-found: error
           retention-days: 14
+
+  manual-pillow-lock-probe:
+    name: Temporary trusted Pillow 13 lock generation (DO NOT MERGE)
+    if: github.event.pull_request.user.login == 'yiwssx' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Checkout exact trusted main base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the exact one-pin Pillow 13 proposal
+        run: |
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head:refs/remotes/origin/pillow-lock-probe"
+          test "$(git rev-parse refs/remotes/origin/pillow-lock-probe)" = "${HEAD_SHA}"
+          python3 - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          base, head = os.environ['BASE_SHA'], os.environ['HEAD_SHA']
+          names = set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          assert names == {'apps/api/requirements.txt', '.github/workflows/dependabot-python-security.yml'}, names
+          before = subprocess.check_output(['git','show',base+':apps/api/requirements.txt'],text=True)
+          after = subprocess.check_output(['git','show',head+':apps/api/requirements.txt'],text=True)
+          assert before.count('Pillow==12.3.0') == 1
+          assert after == before.replace('Pillow==12.3.0', 'Pillow==13.0.0'), 'Unreviewed dependency mutation'
+          Path('apps/api/requirements.txt').write_text(after)
+          print('Trusted exactly one Pillow major pin change: PASS')
+          PY
+      - name: Generate full Pillow 13 hashed dependency lock in pinned Docker
+        run: |
+          bash scripts/compile-python-lock.sh
+          python3 scripts/check-python-lock.py
+          # Do not waive/modify the existing Pillow 12.x release-policy bound in main.
+          # The clean follow-up PR will separately review its 13.x policy change.
+          sha256sum apps/api/requirements.lock
+      - name: Emit public Pillow lockfile base64 chunks for reviewed handoff
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          b64 = base64.b64encode(Path('apps/api/requirements.lock').read_bytes()).decode()
+          print('PILLOW_LOCK_B64_BEGIN')
+          for i in range(0, len(b64), 1000):
+              print('PILLOW_LOCK_B64_CHUNK:' + b64[i:i+1000])
+          print('PILLOW_LOCK_B64_END')
+          PY
+      - name: Upload review-only Pillow hashed lock
+        uses: actions/upload-artifact@v6
+        with:
+          name: verified-pillow13-lock-pr-${{ github.event.pull_request.number }}
+          path: apps/api/requirements.lock
+          if-no-files-found: error
+          retention-days: 7
