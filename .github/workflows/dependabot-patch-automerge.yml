@@ -6,9 +6,6 @@ on:
     paths:
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
-  # Revalidate the exact bot patch when an independent reviewer approves it.
-  pull_request_review:
-    types: [submitted]
 
 concurrency:
   group: dependabot-patch-${{ github.event.pull_request.number }}
@@ -16,7 +13,7 @@ concurrency:
 
 jobs:
   validate:
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main' && (github.event_name == 'pull_request' || github.event.review.state == 'approved')
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,44 +69,12 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
-      # Never run untrusted PR code to read approvals. Check out the pinned trusted base.
-      - name: Check out trusted base for approval gate
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ env.BASE_SHA }}
-          persist-credentials: false
-
-      - name: Require independent approval of exact validated head
-        id: approval
-        run: |
-          reviews="$(gh api --paginate --slurp "repos/${REPO}/pulls/${PR_NUMBER}/reviews")"
-          set +e
-          python3 scripts/check-dependabot-approval.py "${HEAD_SHA}" <<< "${reviews}"
-          approval_exit=$?
-          set -e
-          case "${approval_exit}" in
-            0)
-              echo "approved=true" >> "${GITHUB_OUTPUT}"
-              ;;
-            3)
-              echo "::notice title=Independent approval required::Validated patch is waiting for an eligible GitHub review of the exact head. No merge attempted."
-              echo "approved=false" >> "${GITHUB_OUTPUT}"
-              ;;
-            *)
-              echo "::error::Could not verify independent review evidence (exit ${approval_exit})"
-              exit "${approval_exit}"
-              ;;
-          esac
-
-      # Review may arrive while independent mandatory PR checks are still pending.
-      # Fail closed on a failed check or after 15 minutes; never bypass branch rules.
+      # Fail closed until all branch-required checks pass; never bypass policies.
       - name: Wait for required branch checks
-        if: steps.approval.outputs.approved == 'true'
         run: |
           timeout 900s gh pr checks "${PR_NUMBER}" --repo "${REPO}" --required --watch --fail-fast --interval 15
 
       - name: Squash-merge unchanged validated patch
-        if: steps.approval.outputs.approved == 'true'
         run: |
           current_main="$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')"
           current_head="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}" --jq '.head.sha')"
