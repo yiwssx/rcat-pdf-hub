@@ -112,8 +112,8 @@ class DependabotApprovalTests(unittest.TestCase):
                 "printf '%s\\n' \"$*\" >> \"$MOCK_GH_LOG\"\n"
                 "if [[ \"$1\" == pr && \"$2\" == checks ]]; then exit \"$MOCK_CHECKS_EXIT\"; fi\n"
                 "if [[ \"$1\" == api && \"$2\" == -X && \"$3\" == PUT ]]; then echo '{\"merged\":true}'; exit 0; fi\n"
-                "if [[ \"$1\" == api && \"$2\" == *'/git/ref/heads/main' ]]; then echo \"$BASE_SHA\"; exit 0; fi\n"
-                "if [[ \"$1\" == api && \"$2\" == *'/pulls/'* ]]; then echo \"$HEAD_SHA\"; exit 0; fi\n"
+                "if [[ \"$1\" == api && \"$2\" == *'/git/ref/heads/main' ]]; then echo \"${MOCK_CURRENT_MAIN:-$BASE_SHA}\"; exit 0; fi\n"
+                "if [[ \"$1\" == api && \"$2\" == *'/pulls/'* ]]; then echo \"${MOCK_CURRENT_HEAD:-$HEAD_SHA}\"; exit 0; fi\n"
                 "exit 99\n",
                 encoding="utf-8",
             )
@@ -122,14 +122,21 @@ class DependabotApprovalTests(unittest.TestCase):
             jq.write_text("#!/usr/bin/env bash\necho true\n", encoding="utf-8")
             jq.chmod(0o755)
 
-            for check_exit in (1, 8, 0):
-                with self.subTest(check_exit=check_exit):
+            # Even after all required checks turn green, a changed base or
+            # Dependabot head must be refused before contacting the merge API.
+            for check_exit, live_base, live_head in (
+                (1, OLD, HEAD), (8, OLD, HEAD), (0, OLD, HEAD),
+                (0, "c" * 40, HEAD), (0, OLD, "d" * 40),
+            ):
+                with self.subTest(check_exit=check_exit, live_base=live_base, live_head=live_head):
                     gh_log.write_text("", encoding="utf-8")
                     env = os.environ.copy()
                     env.update({
                         "PATH": f"{bin_dir}:{env['PATH']}",
                         "MOCK_GH_LOG": str(gh_log),
                         "MOCK_CHECKS_EXIT": str(check_exit),
+                        "MOCK_CURRENT_MAIN": live_base,
+                        "MOCK_CURRENT_HEAD": live_head,
                         "REPO": "example/repo",
                         "PR_NUMBER": "42",
                         "BASE_SHA": OLD,
@@ -144,6 +151,9 @@ class DependabotApprovalTests(unittest.TestCase):
                     if check_exit:
                         self.assertEqual(result.returncode, check_exit, result.stderr)
                         self.assertNotIn("api -X PUT", calls, "Merge API called on failed/pending checks")
+                    elif live_base != OLD or live_head != HEAD:
+                        self.assertEqual(result.returncode, 1, result.stderr)
+                        self.assertNotIn("api -X PUT", calls, "Stale SHA reached merge API")
                     else:
                         self.assertEqual(result.returncode, 0, result.stderr)
                         self.assertIn("api -X PUT", calls)
