@@ -45,11 +45,14 @@ fi
 # using Compose labels, not a broad name prefix or global Docker prune.
 remaining_containers="$(docker ps -aq --filter "label=com.docker.compose.project=${project}")"
 remaining_volumes="$(docker volume ls -q --filter "label=com.docker.compose.project=${project}")"
-if [[ -n "${remaining_containers}" || -n "${remaining_volumes}" ]]; then
+remaining_networks="$(docker network ls -q --filter "label=com.docker.compose.project=${project}")"
+if [[ -n "${remaining_containers}" || -n "${remaining_volumes}" || -n "${remaining_networks}" ]]; then
   echo "ci-cleanup: residual resources for ${project}" >&2
   [[ -z "${remaining_containers}" ]] || printf 'Containers:\n%s\n' "${remaining_containers}" >&2
   [[ -z "${remaining_volumes}" ]] || printf 'Volumes:\n%s\n' "${remaining_volumes}" >&2
+  [[ -z "${remaining_networks}" ]] || printf 'Networks:\n%s\n' "${remaining_networks}" >&2
   exit 1
 fi
 
-echo "ci-cleanup: PASS ${project} (containers and named volumes absent)"
+echo "ci-cleanup: PASS ${project} (containers, named volumes and networks absent)"
+

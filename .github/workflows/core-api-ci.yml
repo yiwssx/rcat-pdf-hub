@@ -2,21 +2,6 @@ name: Core API CI
 
 on:
   pull_request:
-    paths:
-      - "apps/api/**"
-      - "docker-compose*.yml"
-      - ".env.example"
-      - "scripts/**"
-      - "contracts/**"
-      - "docs/workstreams/pdf-90-tools-master-tracker.md"
-      - "ops/prometheus/**"
-      - "ops/gotenberg/**"
-      - "ops/alertmanager/**"
-      - "ops/otel/**"
-      - "ops/tempo/**"
-      - "ops/grafana/**"
-      - "Makefile"
-      - ".github/workflows/core-api-ci.yml"
   workflow_dispatch:
 
 permissions:

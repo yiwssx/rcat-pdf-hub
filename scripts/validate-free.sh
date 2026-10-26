@@ -77,7 +77,8 @@ operations() {
     scripts/test-ci-resource-cleanup.sh \
     scripts/local-ci-result-cache.sh scripts/local-ci-retry-pr.sh \
     scripts/test-local-ci-result-cache.sh scripts/local-ci-prs.sh \
-    scripts/ci-nas-dir.sh scripts/test-ci-nas-dir.sh; do
+    scripts/ci-nas-dir.sh scripts/test-ci-nas-dir.sh \
+    scripts/runtime-exit-cleanup.sh scripts/test-runtime-exit-cleanup.sh; do
     bash -n "${script}"
   done
   python3 -m py_compile \
@@ -101,6 +102,7 @@ operations() {
   bash scripts/test-ci-resource-cleanup.sh
   bash scripts/test-local-ci-result-cache.sh
   bash scripts/test-ci-nas-dir.sh
+  bash scripts/test-runtime-exit-cleanup.sh
   python3 scripts/validate-tool-registry.py
   python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
   python3 scripts/validate-tool-parameters.py
@@ -262,39 +264,15 @@ runtime() {
   # Create this Docker bind-mount source as the CI user *before* Compose runs.
   # Otherwise Docker may create it as root, leaving /tmp cleanup impossible.
   bash scripts/ci-nas-dir.sh create "${PDFHUB_NAS_PATH}"
-  local cleanup_attempted=0
+  # EXIT traps outlive function-local variables: capture both immutable CI
+  # resource identities when the trap is registered.
+  # shellcheck source=scripts/runtime-exit-cleanup.sh
+  source scripts/runtime-exit-cleanup.sh
+  runtime_cleanup_install "${project}" "${PDFHUB_NAS_PATH}"
 
   dc() {
     docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml "$@"
   }
-
-  cleanup_runtime() {
-    cleanup_attempted=1
-    local failed=0
-    if ! bash scripts/cleanup-ci-project.sh "${project}" runtime; then
-      echo "runtime: CI resource cleanup failed for ${project}" >&2
-      failed=1
-    fi
-    # Fail on unexpected files or ownership; never sudo/rm -rf a bind mount.
-    if ! bash scripts/ci-nas-dir.sh remove "${PDFHUB_NAS_PATH}"; then
-      echo "runtime: failed to remove temporary NAS directory" >&2
-      failed=1
-    fi
-    return "${failed}"
-  }
-  cleanup_runtime_on_exit() {
-    local result=$?
-    trap - EXIT
-    # Explicit cleanup already ran; do not repeat an identical failure.
-    if [[ "${cleanup_attempted}" -eq 0 ]]; then
-      if ! cleanup_runtime; then result=1; fi
-    fi
-    exit "${result}"
-  }
-  trap cleanup_runtime_on_exit EXIT
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-  trap 'exit 129' HUP
 
   dc build --pull api worker-interactive worker worker-heavy cleanup webhook web 2>&1 | tee "${build_log}"
   check_clean_log "${build_log}"
@@ -339,8 +317,7 @@ runtime() {
 
   dc logs --no-color >"${service_log}" 2>&1
   check_clean_log "${service_log}"
-  if ! cleanup_runtime; then exit 1; fi
-  trap - EXIT INT TERM HUP
+  if ! runtime_cleanup_finish "${project}" "${PDFHUB_NAS_PATH}"; then exit 1; fi
   echo 'runtime: PASS'
 }
 
