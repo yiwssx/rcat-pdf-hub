@@ -91,6 +91,10 @@ for required in (
     "github.event.review.state == 'approved'",
     "check-dependabot-approval.py",
     "steps.approval.outputs.approved == 'true'",
+    "Wait for required branch checks",
+    "checks: read",
+    "timeout 900s gh pr checks",
+    "--required --watch --fail-fast --interval 15",
     "paths:\n      - 'apps/web/package.json'\n      - 'apps/web/package-lock.json'",
     "github.event.pull_request.user.login == 'dependabot[bot]'",
     'git show "${HEAD_SHA}:apps/web/package-lock.json" > apps/web/package-lock.json',
@@ -102,6 +106,7 @@ for required in (
 ):
     assert required in dependency_workflow, f"Dependabot npm workflow missing guard: {required}"
 assert "pull_request_target:" not in dependency_workflow, "Dependabot npm workflow must not use pull_request_target"
+assert dependency_workflow.index("Wait for required branch checks") < dependency_workflow.index("Squash-merge unchanged validated patch"), "Required checks must finish before any merge call"
 
 python_security_workflow = read(".github/workflows/dependabot-python-security.yml")
 for required in (
