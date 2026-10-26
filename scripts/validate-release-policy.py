@@ -7,8 +7,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CURRENT_RELEASE = "0.6.0"
-NEXT_SECURITY_MIN = (16, 3, 3)
-NEXT_SECURITY_MAX_EXCLUSIVE = (16, 4, 0)
+# Reviewed security floor for October 2026 upstream RCE fixes. Keep the 16.4.x
+# minor bounded until a separate security/compatibility review of 16.5.x.
+NEXT_SECURITY_MIN = (16, 4, 1)
+NEXT_SECURITY_MAX_EXCLUSIVE = (16, 5, 0)
 PILLOW_MIN = (12, 3, 0)
 PILLOW_MAX_EXCLUSIVE = (13, 0, 0)
 
@@ -151,7 +153,7 @@ for section in ("dependencies", "devDependencies"):
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), f"{name} must be exact x.y.z: {version}"
 next_version = semver_version(package["dependencies"].get("next", ""), "Next.js")
 assert NEXT_SECURITY_MIN <= next_version < NEXT_SECURITY_MAX_EXCLUSIVE, (
-    "Next.js must stay on the reviewed 16.3.x patch line "
+    "Next.js must stay on the reviewed secure 16.4.x line "
     f">={'.'.join(map(str, NEXT_SECURITY_MIN))}; found {'.'.join(map(str, next_version))}"
 )
 assert "@playwright/test" in package.get("devDependencies", {}), "Playwright smoke coverage is required"
