@@ -64,6 +64,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      checks: read
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
@@ -99,6 +100,13 @@ jobs:
               exit "${approval_exit}"
               ;;
           esac
+
+      # Review may arrive while independent mandatory PR checks are still pending.
+      # Fail closed on a failed check or after 15 minutes; never bypass branch rules.
+      - name: Wait for required branch checks
+        if: steps.approval.outputs.approved == 'true'
+        run: |
+          timeout 900s gh pr checks "${PR_NUMBER}" --repo "${REPO}" --required --watch --fail-fast --interval 15
 
       - name: Squash-merge unchanged validated patch
         if: steps.approval.outputs.approved == 'true'
