@@ -119,3 +119,73 @@ jobs:
           path: apps/api/requirements.lock
           if-no-files-found: error
           retention-days: 14
+
+  manual-coordinated-lock-probe:
+    name: Temporary trusted OpenTelemetry lock generation (DO NOT MERGE)
+    if: github.event.pull_request.user.login == 'yiwssx' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Checkout exact trusted main base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact probe SHA and only expected four pins
+        run: |
+          git fetch --no-tags origin "pull/${PR_NUMBER}/head:refs/remotes/origin/otel-lock-probe"
+          test "$(git rev-parse refs/remotes/origin/otel-lock-probe)" = "${HEAD_SHA}"
+          python3 - <<'PY'
+          import os, subprocess
+          from pathlib import Path
+          base, head = os.environ['BASE_SHA'], os.environ['HEAD_SHA']
+          files = set(subprocess.check_output(['git','diff','--name-only',base,head],text=True).splitlines())
+          assert files == {'apps/api/requirements.txt', '.github/workflows/dependabot-python-security.yml'}, files
+          previous = subprocess.check_output(['git','show',base+':apps/api/requirements.txt'],text=True)
+          proposed = subprocess.check_output(['git','show',head+':apps/api/requirements.txt'],text=True)
+          updates = [
+              ('opentelemetry-api==1.44.0','opentelemetry-api==1.45.1'),
+              ('opentelemetry-sdk==1.44.0','opentelemetry-sdk==1.45.1'),
+              ('opentelemetry-exporter-otlp-proto-http==1.44.0','opentelemetry-exporter-otlp-proto-http==1.45.1'),
+              ('opentelemetry-instrumentation-fastapi==0.65b0','opentelemetry-instrumentation-fastapi==0.66b1'),
+          ]
+          expected = previous
+          for old, new in updates:
+              assert expected.count(old) == 1, old
+              expected = expected.replace(old, new)
+          assert proposed == expected, 'Unreviewed changes in dependency requirements'
+          Path('apps/api/requirements.txt').write_text(proposed)
+          print('Trusted OpenTelemetry four-pin delta: PASS')
+          PY
+      - name: Generate official hashed dependency lock in pinned Docker image
+        run: |
+          bash scripts/compile-python-lock.sh
+          python3 scripts/check-python-lock.py
+          python3 scripts/validate-release-policy.py
+          sha256sum apps/api/requirements.lock
+      - name: Export base64 lock chunks for deterministic reviewer handoff
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          data = Path('apps/api/requirements.lock').read_bytes()
+          encoded = base64.b64encode(data).decode('ascii')
+          print('LOCK_B64_BEGIN')
+          for i in range(0, len(encoded), 1000):
+              print('LOCK_B64_CHUNK:' + encoded[i:i+1000])
+          print('LOCK_B64_END')
+          PY
+      - name: Upload review-only coordinated OpenTelemetry hashed lock
+        uses: actions/upload-artifact@v6
+        with:
+          name: verified-otel-lock-pr-${{ github.event.pull_request.number }}
+          path: apps/api/requirements.lock
+          if-no-files-found: error
+          retention-days: 7
