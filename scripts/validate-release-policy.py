@@ -11,8 +11,9 @@ CURRENT_RELEASE = "0.6.0"
 # minor bounded until a separate security/compatibility review of 16.5.x.
 NEXT_SECURITY_MIN = (16, 4, 1)
 NEXT_SECURITY_MAX_EXCLUSIVE = (16, 5, 0)
-PILLOW_MIN = (12, 3, 0)
-PILLOW_MAX_EXCLUSIVE = (13, 0, 0)
+# Reviewed Pillow 13 major line; requires Python >=3.11 and full OCR/PDF tests.
+PILLOW_MIN = (13, 0, 0)
+PILLOW_MAX_EXCLUSIVE = (14, 0, 0)
 
 
 def read(path: str) -> str:
@@ -246,7 +247,7 @@ for raw in requirements.splitlines():
     assert re.search(pattern, python_lock), f"Python lock is missing direct pin {line}"
 pillow_version = pinned_requirement_version(requirements, "Pillow")
 assert PILLOW_MIN <= pillow_version < PILLOW_MAX_EXCLUSIVE, (
-    f"Pillow must remain on the reviewed secure 12.x line >= {'.'.join(map(str, PILLOW_MIN))}; "
+    f"Pillow must remain on the reviewed secure 13.x line >= {'.'.join(map(str, PILLOW_MIN))}; "
     f"found {'.'.join(map(str, pillow_version))}"
 )
 api_dockerfile = read("apps/api/Dockerfile")
