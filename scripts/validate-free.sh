@@ -86,6 +86,7 @@ operations() {
     scripts/validate-release-policy.py \
     scripts/check-host-python.py \
     scripts/check-direct-dependency.py \
+    scripts/tests/test_dependabot_required_checks.py \
     scripts/check-python-security-dependency.py \
     scripts/check-python-lock.py \
     scripts/check-production-network.py \
@@ -103,6 +104,7 @@ operations() {
   bash scripts/test-local-ci-result-cache.sh
   bash scripts/test-ci-nas-dir.sh
   bash scripts/test-runtime-exit-cleanup.sh
+  python3 -m unittest discover -s scripts/tests -p 'test_dependabot_required_checks.py'
   python3 scripts/validate-tool-registry.py
   python3 -m unittest discover -s scripts/tests -p 'test_tool_registry.py'
   python3 scripts/validate-tool-parameters.py

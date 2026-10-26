@@ -92,12 +92,18 @@ for required in (
     'git show "${HEAD_SHA}:apps/web/package-lock.json" > apps/web/package-lock.json',
     "contents: read",
     "pull-requests: write",
+    "checks: read",
+    "Wait for required branch checks",
+    "timeout 900s gh pr checks",
+    "--required --watch --fail-fast --interval 15",
     "check-direct-dependency.py",
     "validate-direct-dependency.sh",
     "merge_method=squash",
 ):
     assert required in dependency_workflow, f"Dependabot npm workflow missing guard: {required}"
 assert "pull_request_target:" not in dependency_workflow, "Dependabot npm workflow must not use pull_request_target"
+assert "pull_request_review:" not in dependency_workflow, "Solo maintainer workflow must not depend on independent review events"
+assert dependency_workflow.index("Wait for required branch checks") < dependency_workflow.index("Squash-merge unchanged validated patch"), "Required checks must finish before merge"
 
 python_security_workflow = read(".github/workflows/dependabot-python-security.yml")
 for required in (

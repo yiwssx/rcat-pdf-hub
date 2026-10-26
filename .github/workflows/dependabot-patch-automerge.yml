@@ -61,6 +61,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      checks: read
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
@@ -68,6 +69,11 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
+      # Fail closed until all branch-required checks pass; never bypass policies.
+      - name: Wait for required branch checks
+        run: |
+          timeout 900s gh pr checks "${PR_NUMBER}" --repo "${REPO}" --required --watch --fail-fast --interval 15
+
       - name: Squash-merge unchanged validated patch
         run: |
           current_main="$(gh api "repos/${REPO}/git/ref/heads/main" --jq '.object.sha')"
