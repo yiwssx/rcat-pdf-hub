@@ -82,6 +82,10 @@ if settings.document_data_tools_enabled:
 if settings.geometry_tools_enabled:
     from app.routers import geometry
     app.include_router(geometry.router)
+# T90-2 experimental tools never appear in default OpenAPI.
+if settings.to_pdf_tools_enabled:
+    from app.routers import to_pdf
+    app.include_router(to_pdf.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 

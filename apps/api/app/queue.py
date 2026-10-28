@@ -7,6 +7,7 @@ from rq.job import Job as RQJob
 from app.config import get_settings
 from app.staged_document_adapters import STAGED_DOCUMENT_OPERATIONS
 from app.staged_geometry_adapters import STAGED_GEOMETRY_OPERATIONS
+from app.staged_to_pdf_adapters import STAGED_TO_PDF_OPERATIONS
 
 
 QueueClass = Literal["interactive", "pdf", "heavy"]
@@ -53,6 +54,8 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.to_pdf_tools_enabled and operation in STAGED_TO_PDF_OPERATIONS:
+        return "heavy"
     if settings.document_data_tools_enabled and operation in STAGED_DOCUMENT_OPERATIONS:
         return "interactive" if operation == "edit-metadata" else "pdf"
     if settings.geometry_tools_enabled and operation in STAGED_GEOMETRY_OPERATIONS:

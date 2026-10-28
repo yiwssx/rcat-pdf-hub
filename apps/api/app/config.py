@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     document_data_tools_enabled: bool = False
     # T90-1.5 M11/M28: opt-in geometry API/worker; default OFF for all deployments.
     geometry_tools_enabled: bool = False
+    # T90-2: bounded TXT/CSV/JFIF/GIF/TIFF converters; default OFF.
+    to_pdf_tools_enabled: bool = False
     # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
     artifact_write_journal_enabled: bool = False
     # Heartbeats only start when artifact_write_journal_enabled=true.
