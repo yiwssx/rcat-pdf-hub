@@ -1635,7 +1635,7 @@ test("T90-1.3 organizer extracts selected thumbnails without editing the origina
     status: 503, json: { detail: "CI-only: no real queued jobs" },
   }));
   await page.goto("/");
-  await page.getByRole("button", { name: /example\\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
   await page.getByRole("button", { name: /จัดหน้า PDF/ }).click();
   await expect(page.locator(".v3PageThumb")).toHaveCount(3);
 
@@ -1657,7 +1657,7 @@ test("T90-1.3 organizer extracts selected thumbnails without editing the origina
 
 test("T90-1.3 page range UI rejects malformed entries before calling API", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /example\\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
   await page.getByRole("button", { name: /จัดหน้า PDF/ }).click();
   await expect(page.locator(".v3PageThumb")).toHaveCount(3);
   await page.getByText("เลือกหน้าด้วยช่วงตัวเลข").click();
