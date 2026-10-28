@@ -233,6 +233,10 @@ def test_staged_worker_persists_owner_scoped_txt_and_signed_download(
     from urllib.parse import urlsplit
 
     monkeypatch.setattr(get_settings(), "document_data_tools_enabled", True)
+    # The stand-alone API test runner does not have live Redis rate limiting;
+    # only the HTTP middleware dependency is isolated, not authorization,
+    # Job/Artifact SQL persistence, or output delivery/signature validation.
+    monkeypatch.setattr(security, "ensure_rate_limit", lambda *a, **kw: None)
     job_id, input_id, source = _queued_txt_job(monkeypatch, tmp_path)
     original = hashlib.sha256(source.read_bytes()).hexdigest()
 
