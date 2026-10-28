@@ -174,6 +174,29 @@ def test_text_encoding_csv_limits_and_mismatched_dispatch(monkeypatch, tmp_path)
     assert not (tmp_path / "bad.pdf").exists()
 
 
+@pytest.mark.parametrize("kind,extension,fmt", [
+    ("gif", ".gif", "GIF"), ("tiff", ".tiff", "TIFF"), ("jfif", ".jfif", "JPEG"),
+])
+def test_in_place_conversion_refused_without_modifying_source(tmp_path, kind, extension, fmt):
+    source = tmp_path / ("original" + extension)
+    _frames(source, fmt, 2 if kind != "jfif" else 1)
+    before = source.read_bytes()
+    with pytest.raises(ValueError, match="differ"):
+        to_pdf_engine.image_frames_to_pdf(source, source, kind=kind)
+    assert source.read_bytes() == before
+
+
+def test_text_csv_in_place_conversion_refused(tmp_path):
+    for kind in ("txt", "csv"):
+        source = tmp_path / ("original." + kind)
+        source.write_text("RCAT,ภาษาไทย", encoding="utf-8")
+        before = source.read_bytes()
+        method = to_pdf_engine.text_to_pdf if kind == "txt" else to_pdf_engine.csv_to_pdf
+        with pytest.raises(ValueError, match="differ"):
+            method(source, source)
+        assert source.read_bytes() == before
+
+
 def _session(actor: str, scopes: list[str]) -> str:
     return create_session_token({
         "name": actor, "subject": "test:" + actor, "display_name": actor,
