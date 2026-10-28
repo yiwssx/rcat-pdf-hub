@@ -169,8 +169,9 @@ def test_staged_adapter_real_outputs_and_original_unchanged(
             assert pdf.metadata == {}
     assert hashlib.sha256(source.read_bytes()).hexdigest() == before
     monkeypatch.setattr(settings, "document_data_tools_enabled", False)
-    with pytest.raises(RuntimeError, match="disabled"):
-        worker_tasks._output_spec_for_job(operation)
+    # Output MIME resolution is pure; disabled jobs fail inside the worker's
+    # guarded try/finally so they can reach a terminal state and clean up.
+    assert worker_tasks._output_spec_for_job(operation) == (ext, mime)
     with pytest.raises(RuntimeError, match="disabled"):
         execute_staged_document_operation(operation, [source], output, params)
 
