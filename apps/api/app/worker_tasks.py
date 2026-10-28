@@ -24,6 +24,9 @@ from app.staged_document_adapters import (
 from app.staged_geometry_adapters import (
     STAGED_GEOMETRY_OPERATIONS, execute_staged_geometry_operation, geometry_output_spec,
 )
+from app.staged_to_pdf_adapters import (
+    STAGED_TO_PDF_OPERATIONS, execute_staged_to_pdf_operation,
+)
 from app.services import pdf_tools as _pdf_tools
 
 # Compatibility alias: tests and integrations still patch worker_tasks.pdf_tools.
@@ -183,7 +186,19 @@ def process_job(job_id: str) -> str:
             write_journal.fenced_progress(db, job, token, 25)
         else:
             _set_job(db, job, progress=25)
-        if job.operation in STAGED_DOCUMENT_OPERATIONS:
+        if job.operation in STAGED_TO_PDF_OPERATIONS:
+            from app.routers.pdf import _is_expired
+            if (not settings.to_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])):
+                raise ValueError("Staged conversion input is unavailable or unauthorized")
+            execute_staged_to_pdf_operation(
+                job.operation, inputs, output, params,
+                original_name=files[0].original_name,
+                content_type=files[0].content_type,
+            )
+        elif job.operation in STAGED_DOCUMENT_OPERATIONS:
             # Revalidate DB ownership, persisted MIME and expiry at dispatch.
             from app.routers.pdf import _is_expired
             if (not settings.document_data_tools_enabled
