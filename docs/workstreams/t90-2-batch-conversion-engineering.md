@@ -11,7 +11,7 @@ Five separate **staged HTTP/API/worker operation identities**, implemented witho
 - T27 GIF: `gif-to-pdf` (all frames; strict 64-frame/50MP aggregate bounds).
 - T13 TIFF: `tiff-to-pdf` (all frames; no modification to legacy one-image-per-file behavior).
 
-`PDFHUB_TO_PDF_TOOLS_ENABLED=false` by default; new endpoint paths are absent from production OpenAPI. Isolated staging opt-in endpoints live under `/api/v1/pdf/to-pdf/{txt,csv,jfif,gif,tiff}`; they require existing `pdf:convert` scope and owner-verified persisted input MIME/extension, quota, job, queue, worker owner/expiry and revalidation, scan and artifact handling. No arbitrary URL/HTML/JS/archive conversion. This is NOT five end-user features released or deployed, and no UI card, migration or production config was changed.
+`PDFHUB_TO_PDF_TOOLS_ENABLED=false` by default; new endpoint paths are absent from production OpenAPI. Isolated staging opt-in endpoints live under `/api/v1/pdf/to-pdf/{txt,csv,jfif,gif,tiff}`; TXT/CSV require existing `pdf:convert` scope; JFIF/GIF/TIFF require existing `pdf:image-to-pdf` scope and owner-verified persisted input MIME/extension, quota, job, queue, worker owner/expiry and revalidation, scan and artifact handling. No arbitrary URL/HTML/JS/archive conversion. This is NOT five end-user features released or deployed, and no UI card, migration or production config was changed.
 
 ### Defensive limits
 
