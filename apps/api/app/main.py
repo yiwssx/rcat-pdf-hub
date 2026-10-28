@@ -79,6 +79,9 @@ app.include_router(pdf.router)
 if settings.document_data_tools_enabled:
     from app.routers import document_data
     app.include_router(document_data.router)
+if settings.geometry_tools_enabled:
+    from app.routers import geometry
+    app.include_router(geometry.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
