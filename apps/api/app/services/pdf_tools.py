@@ -16,11 +16,11 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from app.config import get_settings
+from app.page_ranges import validated_page_range
 
 settings = get_settings()
 FONT_NAME = "Helvetica"
 ALLOWED_PAGE_FIELDS = {"page", "total"}
-PAGE_RANGE_RE = re.compile(r"^[0-9z,\-]+$")
 LANGUAGE_LIST_RE = re.compile(r"^[a-z0-9+_-]+$")
 TRUSTED_EXECUTABLES = {"qpdf", "gs", "ocrmypdf", "pdftoppm"}
 
@@ -42,12 +42,6 @@ def _register_font() -> str:
             FONT_NAME = name
             return FONT_NAME
     return FONT_NAME
-
-
-def _validated_page_range(value: str) -> str:
-    if not PAGE_RANGE_RE.fullmatch(value):
-        raise ValueError("page range contains unsupported characters")
-    return value
 
 
 def _validated_languages(value: str) -> str:
@@ -82,7 +76,7 @@ def merge(inputs: list[Path], output: Path) -> None:
 
 
 def split(input_file: Path, pages: str, output: Path) -> None:
-    safe_pages = _validated_page_range(pages)
+    safe_pages = validated_page_range(pages)
     _run(["qpdf", str(input_file), "--pages", ".", safe_pages, "--", str(output)])
 
 
@@ -109,7 +103,7 @@ def organize(input_file: Path, pages: list[dict], output: Path) -> None:
 def rotate(input_file: Path, degrees: int, pages: str, output: Path) -> None:
     if degrees not in {-270, -180, -90, 90, 180, 270}:
         raise ValueError("degrees must be one of ±90, ±180, ±270")
-    safe_pages = _validated_page_range(pages)
+    safe_pages = validated_page_range(pages)
     sign = "+" if degrees > 0 else ""
     _run(["qpdf", str(input_file), str(output), f"--rotate={sign}{degrees}:{safe_pages}"])
 
