@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     pdf_to_image_max_pages: int = Field(default=200, ge=1, le=5000)
     # Opt-in T90 storage expansion: disabled until explicit rollout and load QA.
     multi_output_artifacts_enabled: bool = False
+    # T90-1.4b staged API/worker; never enabled in production without gated acceptance.
+    document_data_tools_enabled: bool = False
     # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
     artifact_write_journal_enabled: bool = False
     # Heartbeats only start when artifact_write_journal_enabled=true.
