@@ -38,6 +38,16 @@ jobs:
           PDFHUB_E2E_SERVER_MODE: production
           PDFHUB_STAGED_DOCUMENT_WEB_ENABLED: "true"
           PDFHUB_DOCUMENT_DATA_TOOLS_ENABLED: "true"
+      - name: T90-1.5 staged geometry route default-off 404
+        run: npx playwright test tests/e2e/t90-1-5-default-off.spec.ts
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
+      - name: T90-1.5 opt-in geometry browser acceptance
+        run: npx playwright test tests/e2e/t90-1-5-staged-ui.spec.ts
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
+          PDFHUB_STAGED_GEOMETRY_WEB_ENABLED: "true"
+          PDFHUB_GEOMETRY_TOOLS_ENABLED: "true"
       - name: Capture Candy UI mocked visual baseline
         run: npx playwright test tests/e2e/pdf-hub.smoke.spec.ts --grep "Candy UI baseline capture"
         env:

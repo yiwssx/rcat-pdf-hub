@@ -66,6 +66,11 @@ def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
             raise HTTPException(status_code=404, detail="Staged operation is disabled")
         required = ("pdf:extract-text" if job.operation == "extract-text"
                     else "pdf:metadata")
+    if job.operation in {"crop-pdf", "resize-pdf"}:
+        from app.config import get_settings
+        if not get_settings().geometry_tools_enabled:
+            raise HTTPException(status_code=404, detail="Staged geometry operation is disabled")
+        required = "pdf:crop" if job.operation == "crop-pdf" else "pdf:resize"
     if required and "*" not in principal.scopes and required not in principal.scopes:
         raise HTTPException(status_code=403, detail=f"Missing scope: {required}")
 
