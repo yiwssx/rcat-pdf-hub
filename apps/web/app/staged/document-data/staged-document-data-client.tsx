@@ -184,7 +184,7 @@ export function StagedDocumentDataClient({ requestedFileId }: { requestedFileId?
 
         {submitted && (
           <div className="t90DocumentStageResult" role="status" aria-live="polite">
-            <strong>รับงาน {OPERATION_NAMES[operation]} แล้ว</strong>
+            <strong>รับงาน {OPERATION_NAMES[submitted.operation as Operation] ?? submitted.operation} แล้ว</strong>
             <span>รหัสงาน: {submitted.id} · สถานะ: {submitted.status}</span>
             <a href={"/jobs/" + encodeURIComponent(submitted.id) + "/result"}>เปิดดูผลและดาวน์โหลดจากหน้าผลงาน</a>
           </div>
