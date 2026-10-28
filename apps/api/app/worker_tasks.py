@@ -68,8 +68,9 @@ def _output_spec(operation: str) -> tuple[str, str]:
 def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
     if operation in STAGED_DOCUMENT_OPERATIONS:
-        if not settings.document_data_tools_enabled:
-            raise RuntimeError("Staged document-data tools are disabled")
+        # Format identification must not raise before process_job's exception
+        # handler; the execution-time gate below marks disabled queued jobs
+        # failed and performs normal cleanup.
         return staged_output_spec(operation)
     return _output_spec(operation)
 
