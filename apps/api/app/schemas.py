@@ -181,7 +181,7 @@ class SingleFileRequest(BaseModel):
 
 class SplitRequest(BaseModel):
     file_id: str
-    pages: str = Field(min_length=1, max_length=256)
+    pages: str = Field(min_length=1, max_length=256, pattern=r"^[0-9z,\-]+$")
 
     @field_validator("pages")
     @classmethod
@@ -192,7 +192,7 @@ class SplitRequest(BaseModel):
 class RotateRequest(BaseModel):
     file_id: str
     degrees: int = Field(default=90)
-    pages: str = Field(default="1-z", min_length=1, max_length=256)
+    pages: str = Field(default="1-z", min_length=1, max_length=256, pattern=r"^[0-9z,\-]+$")
 
     @field_validator("pages")
     @classmethod
