@@ -26,7 +26,8 @@ def test_aes256_encrypt_and_unlock_content_preservation(tmp_path: Path):
     assert locked.is_encrypted
     assert int(locked.trailer["/Encrypt"]["/V"]) == 5
     assert int(locked.trailer["/Encrypt"]["/R"]) == 6
-    assert locked.decrypt("user:ภาษาไทย") != 0
+    authenticated = locked.decrypt("user:ภาษาไทย")
+    assert authenticated != 0
     assert "SECRET PDF" in locked.pages[0].extract_text()
     unlock_pdf(encrypted, clear, password="user:ภาษาไทย")
     result = PdfReader(str(clear), strict=True)
