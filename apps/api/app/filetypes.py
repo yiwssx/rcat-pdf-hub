@@ -115,7 +115,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="Staged conversion upload type is disabled")
         if suffix in {".gif", ".jfif"}:
             valid = (head.startswith((b"GIF87a", b"GIF89a")) if suffix == ".gif"
-                     else head.startswith(b"\\xff\\xd8\\xff"))
+                     else head.startswith(b"\xff\xd8\xff"))
             if not valid:
                 raise HTTPException(status_code=415, detail="Image signature does not match extension")
             return "image/gif" if suffix == ".gif" else "image/jpeg"
@@ -125,7 +125,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             text = path.read_bytes().decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise HTTPException(status_code=415, detail="Only UTF-8 text is supported") from exc
-        if any(ord(char) < 32 and char not in "\\n\\r\\t" for char in text):
+        if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
             raise HTTPException(status_code=415, detail="Unsafe text control character")
         return "text/plain" if suffix == ".txt" else "text/csv"
 
