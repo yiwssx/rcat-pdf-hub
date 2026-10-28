@@ -246,7 +246,12 @@ def test_flagged_api_requires_owner_scope_mime_then_enqueues(
     endpoint = "/api/v1/pdf/to-pdf/" + operation.removesuffix("-to-pdf")
     client.cookies.set("pdfhub_session", _session(actor, ["jobs:read"]))
     assert client.post(endpoint, json={"file_id": ids[0]}).status_code == 403
-    client.cookies.set("pdfhub_session", _session(actor, ["pdf:convert"]))
+    expected_scope = ("pdf:convert" if operation in {"txt-to-pdf", "csv-to-pdf"}
+                      else "pdf:image-to-pdf")
+    if expected_scope != "pdf:convert":
+        client.cookies.set("pdfhub_session", _session(actor, ["pdf:convert"]))
+        assert client.post(endpoint, json={"file_id": ids[0]}).status_code == 403
+    client.cookies.set("pdfhub_session", _session(actor, [expected_scope]))
     assert client.post(endpoint, json={"file_id": ids[1]}).status_code == 415
     assert client.post(endpoint, json={"file_id": ids[2]}).status_code == 403
     assert client.post(endpoint, json={"file_id": ids[0], "url": "http://127.0.0.1"}).status_code == 422
