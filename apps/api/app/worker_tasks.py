@@ -60,13 +60,18 @@ def _output_hash(path) -> str:
 
 
 def _output_spec(operation: str) -> tuple[str, str]:
+    if operation == "pdf-to-images":
+        return ".zip", "application/zip"
+    return ".pdf", "application/pdf"
+
+
+def _output_spec_for_job(operation: str) -> tuple[str, str]:
+    """Keep legacy two-branch output contract unchanged for T90-0 validation."""
     if operation in STAGED_DOCUMENT_OPERATIONS:
         if not settings.document_data_tools_enabled:
             raise RuntimeError("Staged document-data tools are disabled")
         return staged_output_spec(operation)
-    if operation == "pdf-to-images":
-        return ".zip", "application/zip"
-    return ".pdf", "application/pdf"
+    return _output_spec(operation)
 
 
 def _notify_job(db, job: JobRecord) -> None:
@@ -130,7 +135,7 @@ def process_job(job_id: str) -> str:
     journal_enabled = settings.artifact_write_journal_enabled
     lease_seconds = settings.lease_heartbeat_ttl_seconds
     token = str(uuid.uuid4()) if journal_enabled else None
-    suffix, content_type = _output_spec(job.operation)
+    suffix, content_type = _output_spec_for_job(job.operation)
     # Every fenced attempt has a distinct temporary filename AND distinct
     # destination object key, so a stale process cannot clobber a new attempt.
     output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
