@@ -289,3 +289,31 @@ def test_feature_kill_switch_marks_queued_txt_job_failed_without_output(
         assert len(db.scalars(select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)).all()) == 0
     assert source.read_bytes() == before
     assert not list((tmp_path / "processed").iterdir())
+
+
+@pytest.mark.parametrize("mutation", ["wrong-owner", "wrong-mime", "expired"])
+def test_worker_rechecks_persisted_pdf_source_before_engine(
+    monkeypatch, tmp_path: Path, mutation: str
+):
+    from datetime import datetime, timedelta, timezone
+    from app.models import JobOutputArtifact
+    from sqlalchemy import select
+
+    monkeypatch.setattr(get_settings(), "document_data_tools_enabled", True)
+    job_id, file_id, source = _queued_txt_job(monkeypatch, tmp_path)
+    with SessionLocal() as db:
+        file = db.get(FileRecord, file_id)
+        if mutation == "wrong-owner":
+            file.source_system = "another-principal"
+        elif mutation == "wrong-mime":
+            file.content_type = "image/png"
+        else:
+            file.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        db.commit()
+    with pytest.raises(ValueError, match="unavailable or unauthorized"):
+        worker_tasks.process_job(job_id)
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        assert job.status == "failed" and job.output_file_id is None
+        assert not db.scalars(select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)).all()
+    assert not list((tmp_path / "processed").iterdir())
