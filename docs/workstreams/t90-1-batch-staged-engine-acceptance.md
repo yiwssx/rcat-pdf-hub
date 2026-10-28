@@ -1,7 +1,7 @@
 # T90-1 batch engineering: M11/M28, M08/M09, M18/M30 (STAGED, not released)
 
 ## Delivery boundary
-This PR introduces **only six static internal engines and deterministic binary tests**.
+This PR introduces **only seven static internal engines, existing presentation parity tests and deterministic binary tests**.
 It does not mount a new API route, register a new worker operation, modify the
 reviewed 13 legacy tools, enable any environment flag, alter user scopes,
 change Docker topology or introduce a new artifact storage contract.
@@ -13,6 +13,8 @@ change Docker topology or introduce a new artifact storage contract.
 | T90-1.6 | M08 Unlock | Correct user/owner password only, reject incorrect password, decrypt to valid PDF | **Secret transport without persisting credentials to DB/RQ/audit**, signed downloads, authenticated lifecycle, service threat review |
 | T90-1.6 | M09 Protect | User + distinct owner password, PDF AES-256 (/V=5, /R=6), correct-password round trip | Secret handoff, password UX/validation, output permission review, live stack |
 | T90-1.7 | M18 Extract images | Original embedded XObject image bytes in deterministic ZIP; not screenshots | Limits on image decompression, color profiles/unsupported image formats, multi-artifacts/ZIP UX |
+| T90-1.7 | M31 Header/footer | Thai-font header + ASCII page-count footer, bounds/template validation, mixed page dimensions and /Rotate normalization | Visual golden for Thai glyphs, signed PDF and annotations, API/worker/Web integration |
+| T90-1.7 | M19/M20/M21 parity | Real current page-number and watermark binary overlays plus distinct page-preview raster, regression tests on the existing implementation | Production-sized Thai/corpus visual and multi-device QA |
 | T90-1.7 | M30 Grayscale | Real Ghostscript generated PDF, text and gray raster visual proof | Form/signature warning, complex Thai/glyph/vector fidelity and visual QA, worker/API/UI |
 
 All outputs are written atomically, no source is overwritten, and encrypted
