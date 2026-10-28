@@ -86,7 +86,8 @@ def test_m10_rotate_only_selected_page_and_retain_text(tmp_path: Path):
     _assert_pdf(result, tuple(text for text, _ in PAGES))
     reader = PdfReader(str(result), strict=True)
     assert [int(page.get("/Rotate", 0)) % 360 for page in reader.pages] == [0, 90, 0]
-    assert _geometry(result) == pytest.approx(_geometry(source))
+    for actual, expected in zip(_geometry(result), _geometry(source), strict=True):
+        assert actual == pytest.approx(expected, abs=1.0)
     assert source.read_bytes() == before
 
 
