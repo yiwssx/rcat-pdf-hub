@@ -106,9 +106,9 @@ test("staged controls fail closed when identity lacks metadata and text scopes",
   });
   await page.goto("/staged/document-data");
   await expect(page.getByRole("button", { name: "สร้างงานทดลอง" })).toBeDisabled();
-  await expect(page.locator(".t90DocumentStageCard p[role='alert']")).toContainText("pdf:extract-text");
+  await expect(page.locator(".t90DocumentStageCard p[role='alert']").filter({ hasText: "pdf:extract-text" })).toBeVisible();
   await page.getByRole("radio", { name: "แก้ไขข้อมูลเอกสาร" }).check();
-  await expect(page.locator(".t90DocumentStageCard p[role='alert']")).toContainText("pdf:metadata");
+  await expect(page.locator(".t90DocumentStageCard p[role='alert']").filter({ hasText: "pdf:metadata" })).toBeVisible();
   await expect(page.getByRole("button", { name: "สร้างงานทดลอง" })).toBeDisabled();
   expect(requests).toEqual([]);
 });
