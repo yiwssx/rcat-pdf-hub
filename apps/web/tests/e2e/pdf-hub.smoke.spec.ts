@@ -1,4 +1,6 @@
 import { expect, Page, Route, test } from "@playwright/test";
+import { validatePdfPageRange } from "../../app/components/pdf-page-range";
+import { isEligibleToolFile, validateToolInputs } from "../../app/components/tool-input-rules";
 import { authConfigFixture, integrationStatusFixture, operatorIdentityFixture } from "./api-fixtures";
 
 const pngPixel = Buffer.from(
@@ -1617,4 +1619,81 @@ test("Candy UI baseline capture uses mock-only routes across user and Admin jour
     `<!doctype html><html lang="th"><meta charset="utf-8"><title>Candy UI mock baseline</title><style>body{font:15px system-ui;background:#f5f5fb;color:#1c2445;margin:2rem}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:20px}figure{margin:0;background:white;border:1px solid #e5e5ef;border-radius:14px;padding:12px}img{width:100%;height:auto;border:1px solid #eee}figcaption{padding:10px}small{color:#666}</style><h1>RCAT PDF Hub — Mocked UI Baseline</h1><p>2026-10-19 · synthetic data only; screenshot collection is NOT a visual pass/fail claim.</p><small>${screenshots.length} screenshots · Review before accepting Phase A3</small><main>${cards}</main></html>`,
     "utf8");
   expect(screenshots.length).toBe(42);
+});
+
+
+test("T90-1.3 selected-page range preflight checks actual PDF bounds", () => {
+  for (const expression of ["1", "z", "1-z", "3-1", "1,3"]) {
+    expect(validatePdfPageRange(expression, 3), expression).toBeNull();
+  }
+  for (const expression of ["", "0", "1,,2", "1-0", "4", "1-4", "1;2", "100001", "z--1"]) {
+    expect(validatePdfPageRange(expression, 3), expression).not.toBeNull();
+  }
+});
+
+test("T90-1.3 organizer extracts selected thumbnails without editing the original", async ({ page }) => {
+  await page.route("**/api/v1/pdf/organize", (route) => route.fulfill({
+    status: 503, json: { detail: "CI-only: no real queued jobs" },
+  }));
+  await page.goto("/");
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /จัดหน้า PDF/ }).click();
+  await expect(page.locator(".v3PageThumb")).toHaveCount(3);
+
+  await page.getByRole("button", { name: "ลบหน้า 2" }).click();
+  await expect(page.locator(".v3PageThumb")).toHaveCount(2);
+  await page.getByRole("button", { name: "คืนค่าหน้าทั้งหมด" }).click();
+  await expect(page.locator(".v3PageThumb")).toHaveCount(3);
+
+  const extract = page.getByRole("button", { name: /สร้าง PDF เฉพาะหน้าที่เลือก/ });
+  await expect(extract).toBeDisabled();
+  await page.getByRole("button", { name: "เลือกหน้า 3 สำหรับแยก" }).click();
+  await expect(extract).toBeEnabled();
+  const request = page.waitForRequest("**/api/v1/pdf/organize");
+  await extract.click();
+  expect((await request).postDataJSON()).toMatchObject({
+    file_id: initialFile.id, pages: [{ page: 3, rotation: 0 }],
+  });
+});
+
+test("T90-1.3 page range UI rejects malformed entries before calling API", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /example\.pdf/ }).first().click();
+  await page.getByRole("button", { name: /จัดหน้า PDF/ }).click();
+  await expect(page.locator(".v3PageThumb")).toHaveCount(3);
+  await page.getByText("เลือกหน้าด้วยช่วงตัวเลข").click();
+  const field = page.getByLabel("หน้าที่ต้องการ");
+  const submit = page.getByRole("button", { name: /สร้าง PDF จากช่วงหน้าที่ระบุ/ });
+  await field.fill("1,,2");
+  await expect(submit).toBeDisabled();
+  await expect(page.locator(".v3AdvancedDetails [role=\"alert\"]")).toContainText("รูปแบบช่วงหน้า");
+  await field.fill("4");
+  await expect(submit).toBeDisabled();
+  await expect(page.locator(".v3AdvancedDetails [role=\"alert\"]")).toContainText("ไม่มีหน้าที่ 4");
+  await field.fill("1,3");
+  await expect(submit).toBeEnabled();
+});
+
+// T90-1: front-end PDF preflight must match the persisted MIME gate at the API.
+// A filename alone must never make a non-PDF eligible for any PDF-only tool.
+test("T90-1 PDF tool preflight rejects renamed non-PDF MIME", () => {
+  const renamedImage = {
+    ...initialFile,
+    id: "renamed-non-pdf",
+    original_name: "pretends-to-be-pdf.pdf",
+    content_type: "image/png",
+  };
+  const pdfWithUnusualName = {
+    ...initialFile,
+    id: "verified-pdf",
+    original_name: "document-without-pdf-extension.dat",
+    content_type: "application/pdf",
+  };
+
+  for (const tool of ["ocr", "merge-pdf", "split-rotate", "compress", "watermark", "page-numbers", "pdfa", "pdf-stamp", "pdf-to-images"]) {
+    expect(isEligibleToolFile(tool, renamedImage), tool).toBe(false);
+    expect(isEligibleToolFile(tool, pdfWithUnusualName), tool).toBe(true);
+  }
+  expect(validateToolInputs("compress", [renamedImage])).toContain("ไม่รองรับ");
+  expect(validateToolInputs("compress", [pdfWithUnusualName])).toBeNull();
 });

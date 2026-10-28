@@ -60,6 +60,12 @@ def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
 
 def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
+    if job.operation in {"edit-metadata", "remove-metadata", "extract-text"}:
+        from app.config import get_settings
+        if not get_settings().document_data_tools_enabled:
+            raise HTTPException(status_code=404, detail="Staged operation is disabled")
+        required = ("pdf:extract-text" if job.operation == "extract-text"
+                    else "pdf:metadata")
     if required and "*" not in principal.scopes and required not in principal.scopes:
         raise HTTPException(status_code=403, detail=f"Missing scope: {required}")
 

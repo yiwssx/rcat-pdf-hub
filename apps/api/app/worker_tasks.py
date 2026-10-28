@@ -18,6 +18,9 @@ from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.observability import record_archive, record_job, record_job_duration, record_malware
 from app.policy import effective_policy, ensure_storage_quota
 from app.operation_adapters import execute_operation
+from app.staged_document_adapters import (
+    STAGED_DOCUMENT_OPERATIONS, execute_staged_document_operation, staged_output_spec,
+)
 from app.services import pdf_tools as _pdf_tools
 
 # Compatibility alias: tests and integrations still patch worker_tasks.pdf_tools.
@@ -60,6 +63,16 @@ def _output_spec(operation: str) -> tuple[str, str]:
     if operation == "pdf-to-images":
         return ".zip", "application/zip"
     return ".pdf", "application/pdf"
+
+
+def _output_spec_for_job(operation: str) -> tuple[str, str]:
+    """Keep legacy two-branch output contract unchanged for T90-0 validation."""
+    if operation in STAGED_DOCUMENT_OPERATIONS:
+        # Format identification must not raise before process_job's exception
+        # handler; the execution-time gate below marks disabled queued jobs
+        # failed and performs normal cleanup.
+        return staged_output_spec(operation)
+    return _output_spec(operation)
 
 
 def _notify_job(db, job: JobRecord) -> None:
@@ -123,7 +136,7 @@ def process_job(job_id: str) -> str:
     journal_enabled = settings.artifact_write_journal_enabled
     lease_seconds = settings.lease_heartbeat_ttl_seconds
     token = str(uuid.uuid4()) if journal_enabled else None
-    suffix, content_type = _output_spec(job.operation)
+    suffix, content_type = _output_spec_for_job(job.operation)
     # Every fenced attempt has a distinct temporary filename AND distinct
     # destination object key, so a stale process cannot clobber a new attempt.
     output = new_output_path(f"{job.id}-{token}" if token else job.id, suffix=suffix)
@@ -165,7 +178,19 @@ def process_job(job_id: str) -> str:
             write_journal.fenced_progress(db, job, token, 25)
         else:
             _set_job(db, job, progress=25)
-        execute_operation(job.operation, inputs, output, params)
+        if job.operation in STAGED_DOCUMENT_OPERATIONS:
+            # Revalidate DB ownership, persisted MIME and expiry at dispatch.
+            from app.routers.pdf import _is_expired
+            if (not settings.document_data_tools_enabled
+                    or len(files) != 1
+                    or files[0] is None
+                    or files[0].source_system != job.requested_by
+                    or files[0].content_type != "application/pdf"
+                    or _is_expired(files[0])):
+                raise ValueError("Staged PDF input is unavailable or unauthorized")
+            execute_staged_document_operation(job.operation, inputs, output, params)
+        else:
+            execute_operation(job.operation, inputs, output, params)
 
         if token:
             write_journal.fenced_progress(db, job, token, 80)

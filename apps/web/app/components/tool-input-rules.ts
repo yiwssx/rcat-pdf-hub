@@ -42,7 +42,7 @@ export function isEligibleToolFile(tool: string, file: UploadedFile): boolean {
   if (file.expires_at && Date.parse(file.expires_at) <= Date.now()) return false;
   const type = file.content_type.toLowerCase();
   switch (rule.kind) {
-    case "pdf": return type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf");
+    case "pdf": return type === "application/pdf";
     case "image": return images.has(type);
     case "office": return officeExtensions.test(file.original_name);
     case "any": return true;

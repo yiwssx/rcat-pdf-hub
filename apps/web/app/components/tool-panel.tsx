@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { getPageInfo, IntegrationStatus, UploadedFile } from "../../lib/api";
 import { ToolIcon, ToolIconName } from "./tool-icons";
+import { validatePdfPageRange } from "./pdf-page-range";
 import { ToolWorkspaceSettings } from "./tool-workspace-state";
 
 const positionOptions = [
@@ -59,6 +60,9 @@ function Summary({ target, note }: { target: UploadedFile; note: string }) {
 export function ToolPanel(props: Props) {
   const [pageItems, setPageItems] = useState<Array<{ page: number; rotation: number }>>([]);
   const [pagesLoading, setPagesLoading] = useState(false);
+  const [pagesError, setPagesError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState<number | null>(null);
+  const [selectedPageIds, setSelectedPageIds] = useState<number[]>([]);
   const mergeFiles = useMemo(() => {
     const byId = new Map(props.pdfFiles.map((file) => [file.id, file]));
     return props.settings.mergeOrder.map((id) => byId.get(id)).filter((file): file is UploadedFile => Boolean(file));
@@ -72,10 +76,21 @@ export function ToolPanel(props: Props) {
     if (props.tool !== "split-rotate" || !props.targetIsPdf) return;
     let live = true;
     setPagesLoading(true);
+    setPagesError(null);
+    setTotalPages(null);
+    setPageItems([]);
+    setSelectedPageIds([]);
     void getPageInfo(props.target.id, props.auth)
       .then((info) => {
-        if (live) setPageItems(Array.from({ length: info.pages }, (_, index) => ({ page: index + 1, rotation: 0 })));
+        if (!live) return;
+        setTotalPages(info.pages);
+        if (info.pages > 1000) {
+          setPagesError("ตัวจัดหน้าแสดงได้ไม่เกิน 1,000 หน้า กรุณาใช้ช่วงเลขหน้าเพื่อแยกไฟล์");
+          return;
+        }
+        setPageItems(Array.from({ length: info.pages }, (_, index) => ({ page: index + 1, rotation: 0 })));
       })
+      .catch(() => { if (live) setPagesError("ไม่สามารถอ่านจำนวนหน้า PDF ได้ กรุณาตรวจสอบเอกสาร"); })
       .finally(() => { if (live) setPagesLoading(false); });
     return () => { live = false; };
   }, [props.tool, props.target.id, props.targetIsPdf, props.auth]);
@@ -106,6 +121,15 @@ export function ToolPanel(props: Props) {
   function rotatePage(page: number) {
     setPageItems((old) => old.map((item) => item.page === page ? { ...item, rotation: (item.rotation + 90) % 360 } : item));
   }
+
+  function resetPages() {
+    if (totalPages === null || totalPages > 1000) return;
+    setPageItems(Array.from({ length: totalPages }, (_, index) => ({ page: index + 1, rotation: 0 })));
+    setSelectedPageIds([]);
+  }
+
+  const selectedPages = pageItems.filter((item) => selectedPageIds.includes(item.page));
+  const splitError = validatePdfPageRange(props.settings.splitPages, totalPages);
 
   const info = meta[props.tool] || { title: "เครื่องมือ", subtitle: "", icon: "organize" as ToolIconName, tone: "violet" };
   const {
@@ -151,7 +175,8 @@ export function ToolPanel(props: Props) {
         </>}
 
         {tool === "split-rotate" && <>
-          <div className="v3FieldNote">ลาก thumbnail เพื่อเรียงหน้าใหม่ • ↻ เพื่อหมุน • × เพื่อตัดหน้าออก</div>
+          <div className="v3FieldNote">ลาก thumbnail เพื่อเรียงหน้าใหม่ • ↻ เพื่อหมุน • × เพื่อตัดหน้าออก (ต้นฉบับไม่เปลี่ยน)</div>
+          {pagesError && <div role="alert" className="v3FieldNote">{pagesError}</div>}
           {pagesLoading ? <div className="v3OrganizerLoading">กำลังอ่านจำนวนหน้า…</div> : <div className="v3PageOrganizer">
             {pageItems.map((item, index) => <div
               className="v3PageThumb"
@@ -166,13 +191,18 @@ export function ToolPanel(props: Props) {
               </div>
               <div><strong>{index + 1}</strong><small>เดิม {item.page}</small></div>
               <button type="button" onClick={() => rotatePage(item.page)} aria-label={`หมุนหน้า ${item.page}`}>↻</button>
-              <button type="button" className="danger" onClick={() => setPageItems((old) => old.filter((page) => page.page !== item.page))} aria-label={`ลบหน้า ${item.page}`}>×</button>
+              <button type="button" aria-pressed={selectedPageIds.includes(item.page)} aria-label={`เลือกหน้า ${item.page} สำหรับแยก`} onClick={() => setSelectedPageIds((old) => old.includes(item.page) ? old.filter((n) => n !== item.page) : [...old, item.page])}>{selectedPageIds.includes(item.page) ? "☑" : "☐"}</button>
+              <button type="button" className="danger" onClick={() => { setPageItems((old) => old.filter((page) => page.page !== item.page)); setSelectedPageIds((old) => old.filter((n) => n !== item.page)); }} aria-label={`ลบหน้า ${item.page}`} disabled={pageItems.length <= 1}>×</button>
             </div>)}
           </div>}
-          <button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</button>
+          <div className="v3FieldNote">ลบหน้าแล้วบันทึกเพื่อสร้าง PDF ฉบับใหม่ หรือเลือก ☑ เพื่อสร้าง PDF เฉพาะหน้าที่ต้องการ</div>
+          <button type="button" className="v3SecondaryAction" onClick={resetPages} disabled={busy || pagesLoading || !totalPages || totalPages > 1000}>คืนค่าหน้าทั้งหมด</button>
+          <button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || !!pagesError || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</button>
+          <button className="v3SecondaryAction" onClick={() => props.onOrganize(selectedPages)} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1}>สร้าง PDF เฉพาะหน้าที่เลือก {selectedPages.length} หน้า (ไฟล์เดียว)</button>
           <details className="v3AdvancedDetails"><summary>เลือกหน้าด้วยช่วงตัวเลข</summary>
-            <label className="v3Field">หน้าที่ต้องการ<input value={props.settings.splitPages} onChange={(e) => props.onSettingChange("splitPages", e.target.value)} placeholder="1-3,5"/></label>
-            <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf}>สร้าง PDF จากหน้าที่เลือก</button>
+            <label className="v3Field">หน้าที่ต้องการ<input value={props.settings.splitPages} onChange={(e) => props.onSettingChange("splitPages", e.target.value)} placeholder="1-3,5 หรือ 1-z"/></label>
+            {splitError && <div className="v3FieldNote" role="alert">{splitError}</div>}
+            <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf || !!splitError}>สร้าง PDF จากช่วงหน้าที่ระบุ (ไฟล์เดียว)</button>
           </details>
         </>}
 
