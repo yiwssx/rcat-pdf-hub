@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.page_ranges import validated_page_range
 
 Position = Literal[
     "center",
@@ -179,13 +181,23 @@ class SingleFileRequest(BaseModel):
 
 class SplitRequest(BaseModel):
     file_id: str
-    pages: str = Field(pattern=r"^[0-9z,\-]+$")
+    pages: str = Field(min_length=1, max_length=256)
+
+    @field_validator("pages")
+    @classmethod
+    def check_pages(cls, value: str) -> str:
+        return validated_page_range(value)
 
 
 class RotateRequest(BaseModel):
     file_id: str
     degrees: int = Field(default=90)
-    pages: str = Field(default="1-z", pattern=r"^[0-9z,\-]+$")
+    pages: str = Field(default="1-z", min_length=1, max_length=256)
+
+    @field_validator("pages")
+    @classmethod
+    def check_pages(cls, value: str) -> str:
+        return validated_page_range(value)
 
 
 class OcrRequest(BaseModel):
