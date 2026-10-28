@@ -88,3 +88,41 @@ test("staged extract-text and remove-metadata use separate approved endpoints", 
   await expect(page.getByText("รหัสงาน: stage-remove-metadata")).toBeVisible();
   expect(endpoints).toEqual(["extract-text", "remove-metadata"]);
 });
+
+
+test("staged controls fail closed when identity lacks metadata and text scopes", async ({ page }) => {
+  await stageMocks(page);
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({
+    json: {
+      name: owner, display_name: "Scoped viewer", subject: "stage:viewer",
+      scopes: ["files:read", "jobs:read"], groups: [],
+      roles: ["viewer"], auth_source: "session", is_admin: false,
+    },
+  }));
+  const requests: string[] = [];
+  await page.route("**/api/v1/pdf/document-data/**", (route) => {
+    requests.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto("/staged/document-data");
+  await expect(page.getByRole("button", { name: "สร้างงานทดลอง" })).toBeDisabled();
+  await expect(page.getByRole("alert")).toContainText("pdf:extract-text");
+  await page.getByRole("radio", { name: "แก้ไขข้อมูลเอกสาร" }).check();
+  await expect(page.getByRole("alert")).toContainText("pdf:metadata");
+  await expect(page.getByRole("button", { name: "สร้างงานทดลอง" })).toBeDisabled();
+  expect(requests).toEqual([]);
+});
+
+test("staged editing demands selected metadata fields before submitting", async ({ page }) => {
+  await stageMocks(page);
+  const requests: string[] = [];
+  await page.route("**/api/v1/pdf/document-data/edit-metadata", (route) => {
+    requests.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto("/staged/document-data");
+  await page.getByRole("radio", { name: "แก้ไขข้อมูลเอกสาร" }).check();
+  await page.getByRole("button", { name: "สร้างงานทดลอง" }).click();
+  await expect(page.getByRole("alert")).toContainText("กรุณาเลือกอย่างน้อยหนึ่งฟิลด์");
+  expect(requests).toEqual([]);
+});
