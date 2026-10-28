@@ -8,6 +8,7 @@ import hashlib
 from pathlib import Path
 
 import pytest
+from pypdf.errors import PdfReadError
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DecodedStreamObject, NameObject
 from reportlab.pdfbase import pdfmetrics
@@ -171,7 +172,7 @@ def test_m17_scanned_pdf_needs_ocr_and_has_no_blank_success(tmp_path: Path):
 @pytest.mark.parametrize("method", [
     "edit", "remove", "text",
 ])
-def test_m14_staged_operations_reject_same_source_and_output(tmp_path: Path, method: str):
+def test_t90_1_4_staged_operations_reject_same_source_and_output(tmp_path: Path, method: str):
     source = make_source(tmp_path / "source.pdf")
     original = digest(source)
     with pytest.raises(ValueError, match="must differ"):
@@ -195,7 +196,7 @@ def test_rejects_corrupt_and_encrypted_without_leaving_outputs(tmp_path: Path):
     for source in (corrupt, encrypted):
         for operation, suffix in (("edit", "pdf"), ("remove", "pdf"), ("text", "txt")):
             target = tmp_path / (source.stem + "-" + operation + "." + suffix)
-            with pytest.raises((ValueError, Exception)):
+            with pytest.raises((ValueError, PdfReadError, EOFError)):
                 if operation == "edit":
                     edit_document_info(source, target, {"title": "new"})
                 elif operation == "remove":
