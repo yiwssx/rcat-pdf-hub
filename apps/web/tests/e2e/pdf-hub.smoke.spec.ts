@@ -1,4 +1,5 @@
 import { expect, Page, Route, test } from "@playwright/test";
+import { isEligibleToolFile, validateToolInputs } from "../../app/components/tool-input-rules";
 import { validatePdfPageRange } from "../../app/components/pdf-page-range";
 import { authConfigFixture, integrationStatusFixture, operatorIdentityFixture } from "./api-fixtures";
 
@@ -1671,4 +1672,28 @@ test("T90-1.3 page range UI rejects malformed entries before calling API", async
   await expect(page.locator(".v3AdvancedDetails [role=\"alert\"]")).toContainText("ไม่มีหน้าที่ 4");
   await field.fill("1,3");
   await expect(submit).toBeEnabled();
+});
+
+// T90-1: front-end PDF preflight must match the persisted MIME gate at the API.
+// A filename alone must never make a non-PDF eligible for any PDF-only tool.
+test("T90-1 PDF tool preflight rejects renamed non-PDF MIME", () => {
+  const renamedImage = {
+    ...initialFile,
+    id: "renamed-non-pdf",
+    original_name: "pretends-to-be-pdf.pdf",
+    content_type: "image/png",
+  };
+  const pdfWithUnusualName = {
+    ...initialFile,
+    id: "verified-pdf",
+    original_name: "document-without-pdf-extension.dat",
+    content_type: "application/pdf",
+  };
+
+  for (const tool of ["ocr", "merge-pdf", "split-rotate", "compress", "watermark", "page-numbers", "pdfa", "pdf-stamp", "pdf-to-images"]) {
+    expect(isEligibleToolFile(tool, renamedImage), tool).toBe(false);
+    expect(isEligibleToolFile(tool, pdfWithUnusualName), tool).toBe(true);
+  }
+  expect(validateToolInputs("compress", [renamedImage])).toContain("ไม่รองรับ");
+  expect(validateToolInputs("compress", [pdfWithUnusualName])).toBeNull();
 });
