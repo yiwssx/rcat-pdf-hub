@@ -11,6 +11,12 @@ Tracks [#225](https://github.com/yiwssx/rcat-pdf-hub/issues/225) and depends on 
   - M17 `POST /api/v1/pdf/document-data/extract-text`, existing searchable text to UTF-8 TXT; scanned-only PDFs require OCR.
 - Explicit job result link after HTTP 202, and scope, MIME, empty-file, expired-file and owner-side preflight messages. Backend remains the security authority. No catalog, public slug, API rule, 90-tool release state or production flag is modified.
 
+## Follow-on integration test added for this review
+- `apps/api/tests/t90_stack_probe.py` now has a fifth, independent **real Thai PDF** scenario. Under `GITHUB_ACTIONS=true` on disposable PostgreSQL 18, Valkey/RQ and SeaweedFS S3, it temporarily enables only the staged backend flag, creates an owner-owned searchable Thai PDF in storage, authenticates through the **real opt-in API**, and enqueues an actual RQ worker process.
+- It inspects the persisted TXT `text/plain; charset=utf-8` S3 object, original input immutability, JobOutputArtifact relation, owner-only download, signed URL and rejection of a different owner.
+- This is a **CI-only ephemeral stack rehearsal**, not the full deployed Compose Browser journey, production quota/AV proof or manual Thai visual acceptance. A new test is **not a PASS until the exact commit's Core API CI is green**.
+- Additional Playwright scenarios verify fail-closed missing scopes and omitted metadata field selection; result label is tied to actual submitted operation.
+
 ## Evidence gates
 - [ ] Web CI main production-build typecheck and standard Playwright suite, including default-OFF 404.
 - [ ] Independent opt-in Playwright scenario in Web CI with both flags scoped to that single test step; owner/MIME filtering, metadata Thai/null, distinct operations, result link.
