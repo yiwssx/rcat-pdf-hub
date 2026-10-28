@@ -27,6 +27,7 @@ from app.schemas import (
     WatermarkRequest,
 )
 from app.security import Principal, require_scope
+from app.staged_to_pdf_adapters import STAGED_TO_PDF_INPUTS
 
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
 settings = get_settings()
@@ -80,6 +81,14 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
         raise HTTPException(status_code=415, detail=f"{operation} accepts PDF files only")
     if operation == "office-to-pdf" and any(item.content_type not in OFFICE_INPUT_TYPES for item in records):
         raise HTTPException(status_code=415, detail="office-to-pdf accepts supported Office files only")
+    if operation in STAGED_TO_PDF_INPUTS:
+        if not settings.to_pdf_tools_enabled:
+            raise HTTPException(status_code=404, detail="Staged conversion is disabled")
+        expected_mime, expected_suffix = STAGED_TO_PDF_INPUTS[operation]
+        suffixes = {".tif", ".tiff"} if expected_suffix == ".tiff" else {expected_suffix}
+        if (len(records) != 1 or records[0].content_type != expected_mime
+                or not any(records[0].original_name.lower().endswith(ext) for ext in suffixes)):
+            raise HTTPException(status_code=415, detail="Staged converter accepts its verified format only")
     if not principal.is_bootstrap_admin:
         ensure_daily_job_quota(db, principal.name, principal.daily_job_limit)
 
