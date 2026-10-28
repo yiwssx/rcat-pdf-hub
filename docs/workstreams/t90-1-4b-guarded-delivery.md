@@ -22,6 +22,25 @@ Stacked on [T90-1.4a engine PR #230](https://github.com/yiwssx/rcat-pdf-hub/pull
 - [ ] Disabled-by-default proof and no drift in the 13 legacy static route/adapters/scopes
 - [ ] Real staging flag-ON worker → storage → owner-scoped signed TXT download with cancellation/expiry is **not yet fully integration tested** (T90-1.4c).
 
+## Current test coverage and review limitations
+
+- CI runs the staged `process_job` synchronously with real SQLAlchemy,
+  real local FileRecord/JobOutputArtifact persistence and file routes, but
+  substitutes the unavailable Redis rate-limiter and output malware service.
+  It verifies ordinary owner-scoped authenticated TXT download, one signed
+  download URL, and foreign-identity denial.
+- The pre-existing `files._owned_file` grants cross-owner access to wildcard
+  principals, unlike the stricter human-owner behavior in `jobs._owned_job`.
+  The new **staged create/worker path itself forbids cross-owner inputs even for
+  wildcard principals**. **Cross-tenant wildcard file-reader authorization
+  needs a distinct compatibility/security review before declaring complete
+  identity isolation.** Nothing here certifies general privileged-file access.
+- Full live-Redis/RQ/AV/S3 or NAS cross-service run, browser UI and
+  Thai-document visual inspection still belong to T90-1.4c / T90-1.8.
+- CI on a stacked PR with non-default base did not schedule CodeQL or
+  Dependency Review; the Draft was retargeted to `main` for complete checks
+  against the combined 1.4a+1.4b diff. No merge occurred.
+
 ## Deployment decisions
 
 The flag must **not** be turned on by this PR, no production migrations, production deployment, or changes to the 90 registry. M13/M17/M27 remain `PLANNED` and runtime disabled in the canonical tool registry (0/90 RELEASED). Further QA and release controls are mandatory before merging/activating new tools.
