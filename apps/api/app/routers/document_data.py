@@ -5,7 +5,6 @@ are added to the reviewed 13-tool legacy route or adapter dictionaries.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -54,12 +53,9 @@ def _staged_owner_pdf(
     record = db.get(FileRecord, file_id)
     if record is None:
         raise HTTPException(status_code=404, detail="File not found")
-    # Human sessions are ALWAYS owner scoped, even with a wildcard scope.
-    allowed_cross_owner = (
-        principal.auth_source in {"api_key", "bootstrap"}
-        and "*" in principal.scopes
-    )
-    if not allowed_cross_owner and record.source_system != principal.name:
+    # T90 staging is stricter than legacy operations: *all* principal types
+    # must own the file; worker revalidates ownership before processing.
+    if record.source_system != principal.name:
         raise HTTPException(status_code=403, detail="File belongs to another owner")
     if _is_expired(record):
         raise HTTPException(status_code=410, detail="File data has expired")
