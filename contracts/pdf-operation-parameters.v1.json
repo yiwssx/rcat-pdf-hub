@@ -70,11 +70,14 @@
         "pages": {
           "type": "string",
           "required": true,
-          "pattern": "^[0-9z,\\-]+$"
+          "pattern": "^[0-9z,\\-]+$",
+          "min_length": 1,
+          "max_length": 256
         }
       },
       "notes": [
-        "Page-range syntax is not semantic page-count validation."
+        "Page-range syntax is not semantic page-count validation.",
+        "T90-1.3: API and qpdf reject zero, malformed or oversized page ranges before enqueue/execution; actual PDF page existence remains runtime-checked."
       ]
     },
     "rotate": {
@@ -102,11 +105,14 @@
           "type": "string",
           "required": false,
           "default": "1-z",
-          "pattern": "^[0-9z,\\-]+$"
+          "pattern": "^[0-9z,\\-]+$",
+          "min_length": 1,
+          "max_length": 256
         }
       },
       "notes": [
-        "Allowed degrees enforced by route; signed angles supported."
+        "Allowed degrees enforced by route; signed angles supported.",
+        "T90-1.3: API and qpdf reject zero, malformed or oversized page ranges before enqueue/execution; actual PDF page existence remains runtime-checked."
       ]
     },
     "compress": {
