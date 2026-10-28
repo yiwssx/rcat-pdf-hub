@@ -35,7 +35,8 @@ def test_extract_real_embedded_object_not_raster(tmp_path: Path):
         assert archive.namelist() == ["page-0001-image-0001.png"]
         data = archive.read(archive.namelist()[0])
         assert data.startswith(b"\x89PNG\r\n")
-        assert Image.open(BytesIO(data)).size == (20, 10)
+        with Image.open(BytesIO(data)) as extracted:
+            assert extracted.size == (20, 10)
 
 
 def test_no_embedded_images_never_creates_empty_zip(tmp_path: Path):
