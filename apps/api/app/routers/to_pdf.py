@@ -52,18 +52,18 @@ def csv_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope
 
 
 @router.post("/jfif", response_model=JobOut, status_code=202)
-def jfif_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:convert")),
+def jfif_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
                 db: Session = Depends(get_db)):
     return _submit(req, principal, db, "jfif-to-pdf")
 
 
 @router.post("/gif", response_model=JobOut, status_code=202)
-def gif_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:convert")),
+def gif_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
                db: Session = Depends(get_db)):
     return _submit(req, principal, db, "gif-to-pdf")
 
 
 @router.post("/tiff", response_model=JobOut, status_code=202)
-def tiff_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:convert")),
+def tiff_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
                 db: Session = Depends(get_db)):
     return _submit(req, principal, db, "tiff-to-pdf")
