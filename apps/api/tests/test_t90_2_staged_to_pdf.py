@@ -82,7 +82,7 @@ def test_new_upload_signatures_flagged_and_fail_closed(monkeypatch, tmp_path, su
     assert filetypes.validate_uploaded_file(path, path.name) == mime
     original = path.read_bytes()
     # Arbitrary UTF-8 text is valid TXT; use invalid UTF-8 to test rejection.
-    invalid = b"\\xff\\xfeinvalid" if suffix in (".txt", ".csv") else b"not a valid " + suffix.encode()
+    invalid = b"\xff\xfeinvalid" if suffix in (".txt", ".csv") else b"not a valid " + suffix.encode()
     path.write_bytes(invalid)
     with pytest.raises(Exception):
         filetypes.validate_uploaded_file(path, path.name)
