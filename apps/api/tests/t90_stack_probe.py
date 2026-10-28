@@ -206,6 +206,8 @@ def main() -> None:
                 "PDFHUB_S3_AUTO_CREATE_BUCKET": "false",
                 "PDFHUB_ARTIFACT_WRITE_JOURNAL_ENABLED": "true",
                 "PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED": "false",
+                "PDFHUB_DOCUMENT_DATA_TOOLS_ENABLED": "true",
+                "PDFHUB_RQ_QUEUE": queue_name,
                 "PDFHUB_LEASE_HEARTBEAT_INTERVAL_SECONDS": "5",
                 "PDFHUB_LEASE_HEARTBEAT_TTL_SECONDS": "120",
                 "PDFHUB_DATA_DIR": data_dir,
@@ -447,7 +449,107 @@ def main() -> None:
                 "Supervised recovery must NOT delete the orphaned object",
             )
             print("PASS: actual RQ work-horse SIGKILL, terminal RQ status, audited fenced recovery", flush=True)
-            print("T90 real-stack rehearsal: 4/4 scenarios passed (synthetic data only)", flush=True)
+            print("T90/5: actual staged Thai PDF -> RQ/SeaweedFS TXT artifact", flush=True)
+            from io import BytesIO
+            import hashlib
+            from fastapi.testclient import TestClient
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            from reportlab.pdfgen import canvas
+            from app.identity import create_session_token
+            from app.main import app as api_app
+            from app.models import FileRecord, JobOutputArtifact
+            from sqlalchemy import select
+
+            # Real, search-layer PDF and an actual owned FileRecord in disposable
+            # S3/PostgreSQL. This is not the old stubbed compress operation.
+            pdf_content = BytesIO()
+            document = canvas.Canvas(pdf_content, pagesize=(595, 842))
+            thai_font = Path("/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf")
+            assert thai_font.exists(), "Pinned API image must include Noto Sans Thai"
+            if "T90StackThai" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("T90StackThai", str(thai_font)))
+            document.setFont("T90StackThai", 15)
+            document.drawString(72, 720, "ข้อมูลภาษาไทยทดสอบ")
+            document.showPage()
+            document.save()
+            source_bytes = pdf_content.getvalue()
+            assert source_bytes.startswith(b"%PDF-")
+            thai_key = "t90-ci/originals/thai-" + token + ".pdf"
+            s3.put_object(Bucket=bucket, Key=thai_key, Body=source_bytes)
+            with SessionLocal() as db:
+                source_record = FileRecord(
+                    original_name="thai.pdf",
+                    stored_name="s3:" + thai_key,
+                    content_type="application/pdf",
+                    size=len(source_bytes),
+                    sha256=hashlib.sha256(source_bytes).hexdigest(),
+                    source_system=owner,
+                    expires_at=datetime.now(timezone.utc) + timedelta(hours=3),
+                )
+                db.add(source_record)
+                db.commit()
+                input_id = source_record.id
+
+            def _session_for(person: str) -> str:
+                return create_session_token({
+                    "name": person, "subject": "ci:" + person,
+                    "display_name": person, "groups": [], "roles": [],
+                    "scopes": ["files:read", "jobs:read", "pdf:extract-text"],
+                    "source": "session", "is_identity_admin": False,
+                })
+
+            with TestClient(api_app) as client:
+                client.cookies.set("pdfhub_session", _session_for(owner))
+                response = client.post(
+                    "/api/v1/pdf/document-data/extract-text",
+                    json={"file_id": input_id},
+                )
+                assert response.status_code == 202, response.text[-1200:]
+                thai_job_id = response.json()["id"]
+                worker = subprocess.Popen(
+                    [sys.executable, str(WORKER), "rq", queue_name, "thai"],
+                    env=env, cwd=ROOT, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, text=True,
+                )
+                children.append(worker)
+                worker_log, _ = worker.communicate(timeout=90)
+                children.remove(worker)
+                assert worker.returncode == 0, worker_log[-2000:]
+                with SessionLocal() as db:
+                    db.expire_all()
+                    job = db.get(JobRecord, thai_job_id)
+                    assert job is not None and job.status == "completed", (
+                        job.status if job else "missing",
+                        job.error if job else "",
+                    )
+                    result = db.get(FileRecord, job.output_file_id)
+                    assert result is not None
+                    assert result.content_type == "text/plain; charset=utf-8"
+                    assert result.original_name.endswith(".txt")
+                    assert result.source_system == owner
+                    artifacts = list(db.scalars(select(JobOutputArtifact).where(
+                        JobOutputArtifact.job_id == thai_job_id
+                    )))
+                    assert len(artifacts) == 1 and artifacts[0].file_id == result.id
+                    text_key = result.stored_name.removeprefix("s3:")
+                    output_id = result.id
+                txt_bytes = s3.get_object(Bucket=bucket, Key=text_key)["Body"].read()
+                assert "ข้อมูลภาษาไทยทดสอบ" in txt_bytes.decode("utf-8")
+                assert s3.get_object(Bucket=bucket, Key=thai_key)["Body"].read() == source_bytes
+                own_download = client.get("/api/v1/files/" + output_id + "/download")
+                assert own_download.status_code == 200
+                assert "ข้อมูลภาษาไทยทดสอบ" in own_download.text
+                signed = client.post("/api/v1/files/" + output_id + "/signed-download")
+                assert signed.status_code == 200, signed.text[-1200:]
+                from urllib.parse import urlsplit
+                url = urlsplit(signed.json()["url"])
+                assert client.get(url.path + "?" + url.query).status_code == 200
+                client.cookies.set("pdfhub_session", _session_for("foreign-t90-ci"))
+                assert client.get("/api/v1/files/" + output_id + "/download").status_code == 403
+                assert client.get("/api/v1/jobs/" + thai_job_id + "/artifacts").status_code == 403
+            print("PASS: real Thai text -> authenticated API/RQ/S3/TXT/signed-download ownership", flush=True)
+            print("T90 real-stack rehearsal: 5/5 scenarios passed (synthetic CI only)", flush=True)
     finally:
         for child in children:
             if child.poll() is None:

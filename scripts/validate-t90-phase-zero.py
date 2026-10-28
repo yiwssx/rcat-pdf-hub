@@ -17,6 +17,7 @@ EXPECTED_CATEGORY_COUNTS = {"manage": 33, "to_pdf": 40, "from_pdf": 17}
 DEFAULT_DISABLED_FLAGS = {
     "multi_output_artifacts_enabled",
     "artifact_write_journal_enabled",
+    "document_data_tools_enabled",
 }
 EXPECTED_OFFICE_ZIP_CAPS = {
     "MAX_OFFICE_ZIP_ENTRIES": 2048,

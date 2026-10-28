@@ -28,6 +28,16 @@ jobs:
       - run: npm run test:e2e
         env:
           PDFHUB_E2E_SERVER_MODE: production
+      - name: T90-1.4c staging route default-off 404 acceptance
+        run: npx playwright test tests/e2e/t90-1-4c-default-off.spec.ts
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
+      - name: T90-1.4c staged document UI opt-in browser acceptance
+        run: npx playwright test tests/e2e/t90-1-4c-staged-ui.spec.ts
+        env:
+          PDFHUB_E2E_SERVER_MODE: production
+          PDFHUB_STAGED_DOCUMENT_WEB_ENABLED: "true"
+          PDFHUB_DOCUMENT_DATA_TOOLS_ENABLED: "true"
       - name: Capture Candy UI mocked visual baseline
         run: npx playwright test tests/e2e/pdf-hub.smoke.spec.ts --grep "Candy UI baseline capture"
         env:

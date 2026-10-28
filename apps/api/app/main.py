@@ -74,6 +74,11 @@ app.include_router(internal.router)
 app.include_router(files.router)
 app.include_router(jobs.router)
 app.include_router(pdf.router)
+# New T90-1.4 routes are absent from OpenAPI and return 404 in default config.
+# Independent staging activation requires explicit operator approval.
+if settings.document_data_tools_enabled:
+    from app.routers import document_data
+    app.include_router(document_data.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
