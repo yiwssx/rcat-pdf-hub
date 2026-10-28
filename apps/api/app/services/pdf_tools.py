@@ -44,6 +44,14 @@ def _register_font() -> str:
     return FONT_NAME
 
 
+def _validated_page_range(value: str) -> str:
+    """Compatibility seam for existing PDF tooling and regression tests."""
+    try:
+        return validated_page_range(value)
+    except ValueError as exc:
+        raise ValueError(f"page range invalid: {exc}") from exc
+
+
 def _validated_languages(value: str) -> str:
     if not LANGUAGE_LIST_RE.fullmatch(value):
         raise ValueError("languages contains unsupported characters")
@@ -76,7 +84,7 @@ def merge(inputs: list[Path], output: Path) -> None:
 
 
 def split(input_file: Path, pages: str, output: Path) -> None:
-    safe_pages = validated_page_range(pages)
+    safe_pages = _validated_page_range(pages)
     _run(["qpdf", str(input_file), "--pages", ".", safe_pages, "--", str(output)])
 
 
@@ -103,7 +111,7 @@ def organize(input_file: Path, pages: list[dict], output: Path) -> None:
 def rotate(input_file: Path, degrees: int, pages: str, output: Path) -> None:
     if degrees not in {-270, -180, -90, 90, 180, 270}:
         raise ValueError("degrees must be one of ±90, ±180, ±270")
-    safe_pages = validated_page_range(pages)
+    safe_pages = _validated_page_range(pages)
     sign = "+" if degrees > 0 else ""
     _run(["qpdf", str(input_file), str(output), f"--rotate={sign}{degrees}:{safe_pages}"])
 
