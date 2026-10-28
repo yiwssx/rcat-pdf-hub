@@ -1,8 +1,6 @@
 """T90-1.5 opt-in HTTP intake. Disabled routes are absent from OpenAPI."""
 from __future__ import annotations
 
-from math import isfinite
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
