@@ -35,6 +35,11 @@ thead{display:table-header-group}tr{break-inside:avoid}</style></head><body>"""
 _END = "</body></html>"
 
 
+def _distinct(source: Path, output: Path) -> None:
+    if source.resolve() == output.resolve():
+        raise ValueError("Converter source and destination must differ")
+
+
 def _read_utf8(source: Path) -> str:
     if source.stat().st_size > MAX_TEXT_BYTES:
         raise ValueError("Text source exceeds the staged 2 MiB limit")
@@ -71,6 +76,7 @@ def _html_to_pdf(body: str, output: Path) -> None:
 
 
 def text_to_pdf(source: Path, output: Path) -> None:
+    _distinct(source, output)
     text = _read_utf8(source)
     if not text.strip():
         raise ValueError("Empty text cannot be converted")
@@ -78,6 +84,7 @@ def text_to_pdf(source: Path, output: Path) -> None:
 
 
 def csv_to_pdf(source: Path, output: Path) -> None:
+    _distinct(source, output)
     text = _read_utf8(source)
     reader = csv.reader(StringIO(text, newline=""), delimiter=",", strict=True)
     rows: list[list[str]] = []
@@ -101,6 +108,7 @@ def csv_to_pdf(source: Path, output: Path) -> None:
 
 
 def image_frames_to_pdf(source: Path, output: Path, *, kind: str) -> None:
+    _distinct(source, output)
     allowed = {"jfif": "JPEG", "gif": "GIF", "tiff": "TIFF"}
     if kind not in allowed:
         raise ValueError("Unknown staged image format")
