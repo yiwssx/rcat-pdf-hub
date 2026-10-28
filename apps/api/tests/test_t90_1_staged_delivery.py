@@ -187,3 +187,105 @@ def test_t90_staged_queue_map_default_off_and_opt_in(monkeypatch):
     assert queue_class_for_operation("remove-metadata") == "pdf"
     with pytest.raises(ValueError, match="Unsupported"):
         queue_class_for_operation("arbitrary-client-code")
+
+
+def _queued_txt_job(monkeypatch, tmp_path: Path, owner: str = "t90-b-worker-owner"):
+    """Real stored input and SQL job; run process_job synchronously in the CI host."""
+    from datetime import datetime, timedelta, timezone
+    from app import storage
+    from app.models import ServicePolicy
+
+    monkeypatch.setattr(storage.settings, "data_dir", tmp_path)
+    monkeypatch.setattr(storage.settings, "storage_backend", "local")
+    monkeypatch.setattr(worker_tasks, "scan_file", lambda _path: "clean")
+    storage.ensure_storage()
+    source = _make_pdf(tmp_path / "originals" / "source.pdf")
+    with SessionLocal() as db:
+        db.add(ServicePolicy(
+            service_name=owner, rate_limit_per_minute=120,
+            daily_job_limit=100, max_storage_mb=100,
+            webhook_url=None,
+        ))
+        file = FileRecord(
+            original_name="source.pdf", stored_name="source.pdf",
+            content_type="application/pdf", size=source.stat().st_size,
+            sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+            source_system=owner,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        db.add(file)
+        db.flush()
+        job = JobRecord(
+            operation="extract-text", status="queued", requested_by=owner,
+            input_file_ids_json='["' + file.id + '"]', params_json="{}",
+        )
+        db.add(job)
+        db.commit()
+        return job.id, file.id, source
+
+
+def test_staged_worker_persists_owner_scoped_txt_and_signed_download(
+    monkeypatch, tmp_path: Path
+):
+    from app.models import JobOutputArtifact
+    from app import storage
+    from sqlalchemy import select
+    from urllib.parse import urlsplit
+
+    monkeypatch.setattr(get_settings(), "document_data_tools_enabled", True)
+    job_id, input_id, source = _queued_txt_job(monkeypatch, tmp_path)
+    original = hashlib.sha256(source.read_bytes()).hexdigest()
+
+    result_id = worker_tasks.process_job(job_id)
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        output = db.get(FileRecord, result_id)
+        links = db.scalars(select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)).all()
+        assert job.status == "completed" and job.output_file_id == result_id
+        assert output.content_type == "text/plain; charset=utf-8"
+        assert output.original_name.endswith(".txt")
+        assert output.source_system == "t90-b-worker-owner"
+        assert len(links) == 1 and links[0].file_id == result_id
+        assert links[0].role == "result"
+        assert storage.path_for_stored_name(output.stored_name).read_bytes().startswith(b"RCAT")
+
+    client = TestClient(production_app)
+    client.cookies.set("pdfhub_session", _session("t90-b-worker-owner", ["files:read", "jobs:read"]))
+    file_response = client.get("/api/v1/files/" + result_id + "/download")
+    assert file_response.status_code == 200
+    assert "text/plain" in file_response.headers["content-type"]
+    assert "RCAT SEARCHABLE TEXT" in file_response.text
+    artifact = client.get("/api/v1/jobs/" + job_id + "/artifacts")
+    assert artifact.status_code == 200
+    assert artifact.json()["artifacts"][0]["content_type"] == "text/plain; charset=utf-8"
+
+    signed = client.post("/api/v1/files/" + result_id + "/signed-download")
+    assert signed.status_code == 200, signed.text
+    token_url = urlsplit(signed.json()["url"])
+    signed_result = client.get(token_url.path + "?" + token_url.query)
+    assert signed_result.status_code == 200
+    assert "RCAT SEARCHABLE TEXT" in signed_result.text
+
+    client.cookies.set("pdfhub_session", _session("t90-b-foreign-owner", ["files:read", "jobs:read"]))
+    assert client.get("/api/v1/files/" + result_id + "/download").status_code == 403
+    assert client.get("/api/v1/jobs/" + job_id + "/artifacts").status_code == 403
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == original
+
+
+def test_feature_kill_switch_marks_queued_txt_job_failed_without_output(
+    monkeypatch, tmp_path: Path
+):
+    from app.models import JobOutputArtifact
+    from sqlalchemy import select
+
+    monkeypatch.setattr(get_settings(), "document_data_tools_enabled", False)
+    job_id, input_id, source = _queued_txt_job(monkeypatch, tmp_path)
+    before = source.read_bytes()
+    with pytest.raises(ValueError, match="unavailable or unauthorized"):
+        worker_tasks.process_job(job_id)
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        assert job.status == "failed" and job.output_file_id is None
+        assert len(db.scalars(select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)).all()) == 0
+    assert source.read_bytes() == before
+    assert not list((tmp_path / "processed").iterdir())
