@@ -31,7 +31,7 @@ export function createToolWorkspaceSettings(): ToolWorkspaceSettings {
     signedUrl: null,
     signedTargetId: null,
     signedTtl: 300,
-    splitPages: "1-3",
+    splitPages: "1-z",
     rotateDegrees: 90,
     rotatePages: "1-z",
     watermarkText: "เอกสารภายใน",

@@ -1,0 +1,89 @@
+.t90DocumentStage {
+  width: min(860px, calc(100% - 32px));
+  margin: 28px auto 64px;
+  color: var(--v3-ink);
+}
+.t90DocumentStageHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  color: var(--v3-muted);
+  font-size: 12px;
+}
+.t90DocumentStageHeader a { color: #5358c8; font-weight: 800; }
+.t90DocumentStageCard {
+  border: 1px solid var(--v3-line);
+  border-radius: 22px;
+  padding: clamp(20px, 5vw, 36px);
+  background: white;
+  box-shadow: var(--v3-shadow-soft);
+}
+.t90DocumentStageKicker {
+  font-size: 11px;
+  letter-spacing: .09em;
+  color: #585ee2;
+  font-weight: 800;
+}
+.t90DocumentStageCard h1 { font-size: clamp(23px, 4vw, 32px); margin: 12px 0; }
+.t90DocumentStageCard p { line-height: 1.7; }
+.t90DocumentStageNotice {
+  border-inline-start: 4px solid #be8732;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #fff8e9;
+  color: #674612;
+}
+.t90DocumentStageField { display: grid; gap: 7px; margin: 18px 0; }
+.t90DocumentStageField > label,
+.t90DocumentStageFieldset legend { font-weight: 800; }
+.t90DocumentStage select, .t90DocumentStageMetadata input[type="text"], .t90DocumentStageMetadata input:not([type]) {
+  width: 100%;
+  border: 1px solid #c9cfe1;
+  border-radius: 10px;
+  background: white;
+  min-height: 42px;
+  padding: 9px 12px;
+}
+.t90DocumentStageFieldset {
+  border: 1px solid var(--v3-line);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 18px 0;
+}
+.t90DocumentStageFieldset > label { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.t90DocumentStageFieldset input[type="radio"], .t90DocumentStageFieldset input[type="checkbox"] {
+  accent-color: #575dde;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.t90DocumentStageMetadata {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) 1.5fr;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.t90DocumentStageMetadata label { display: flex; gap: 9px; align-items: center; }
+.t90DocumentStageError { color: #a82435; }
+.t90DocumentStageSubmit {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 22px;
+  background: #555cda;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+.t90DocumentStageSubmit:disabled { opacity: .45; cursor: not-allowed; }
+.t90DocumentStageResult { display: grid; gap: 8px; margin-top: 20px; border: 1px solid #b5d9bc; padding: 16px; border-radius: 12px; background: #f0fbf2; overflow-wrap: anywhere; }
+.t90DocumentStageResult a { color: #2253a5; text-decoration: underline; }
+@media (max-width: 650px) {
+  .t90DocumentStageMetadata { grid-template-columns: 1fr; }
+  .t90DocumentStageCard { padding: 20px; }
+  .t90DocumentStageSubmit { width: 100%; }
+}

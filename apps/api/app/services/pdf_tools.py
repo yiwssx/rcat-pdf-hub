@@ -16,11 +16,11 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from app.config import get_settings
+from app.page_ranges import validated_page_range
 
 settings = get_settings()
 FONT_NAME = "Helvetica"
 ALLOWED_PAGE_FIELDS = {"page", "total"}
-PAGE_RANGE_RE = re.compile(r"^[0-9z,\-]+$")
 LANGUAGE_LIST_RE = re.compile(r"^[a-z0-9+_-]+$")
 TRUSTED_EXECUTABLES = {"qpdf", "gs", "ocrmypdf", "pdftoppm"}
 
@@ -45,9 +45,11 @@ def _register_font() -> str:
 
 
 def _validated_page_range(value: str) -> str:
-    if not PAGE_RANGE_RE.fullmatch(value):
-        raise ValueError("page range contains unsupported characters")
-    return value
+    """Compatibility seam for existing PDF tooling and regression tests."""
+    try:
+        return validated_page_range(value)
+    except ValueError as exc:
+        raise ValueError(f"page range invalid: {exc}") from exc
 
 
 def _validated_languages(value: str) -> str:
