@@ -106,9 +106,9 @@ test("staged controls fail closed when identity lacks metadata and text scopes",
   });
   await page.goto("/staged/document-data");
   await expect(page.getByRole("button", { name: "สร้างงานทดลอง" })).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("pdf:extract-text");
+  await expect(page.locator("p[role=\"alert\"]")).toContainText("pdf:extract-text");
   await page.getByRole("radio", { name: "แก้ไขข้อมูลเอกสาร" }).check();
-  await expect(page.getByRole("alert")).toContainText("pdf:metadata");
+  await expect(page.locator("p[role=\"alert\"]")).toContainText("pdf:metadata");
   await expect(page.getByRole("button", { name: "สร้างงานทดลอง" })).toBeDisabled();
   expect(requests).toEqual([]);
 });
@@ -123,6 +123,6 @@ test("staged editing demands selected metadata fields before submitting", async 
   await page.goto("/staged/document-data");
   await page.getByRole("radio", { name: "แก้ไขข้อมูลเอกสาร" }).check();
   await page.getByRole("button", { name: "สร้างงานทดลอง" }).click();
-  await expect(page.getByRole("alert")).toContainText("กรุณาเลือกอย่างน้อยหนึ่งฟิลด์");
+  await expect(page.locator("p[role=\"alert\"]")).toContainText("กรุณาเลือกอย่างน้อยหนึ่งฟิลด์");
   expect(requests).toEqual([]);
 });
