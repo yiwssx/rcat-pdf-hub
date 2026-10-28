@@ -156,7 +156,7 @@ def test_staged_adapter_real_outputs_and_original_unchanged(
     before = hashlib.sha256(source.read_bytes()).hexdigest()
     output = tmp_path / ("result" + ext)
     assert staged_output_spec(operation) == (ext, mime)
-    assert worker_tasks._output_spec(operation) == (ext, mime)
+    assert worker_tasks._output_spec_for_job(operation) == (ext, mime)
     execute_staged_document_operation(operation, [source], output, params)
     if operation == "extract-text":
         assert "RCAT SEARCHABLE TEXT" in output.read_text(encoding="utf-8")
@@ -170,7 +170,7 @@ def test_staged_adapter_real_outputs_and_original_unchanged(
     assert hashlib.sha256(source.read_bytes()).hexdigest() == before
     monkeypatch.setattr(settings, "document_data_tools_enabled", False)
     with pytest.raises(RuntimeError, match="disabled"):
-        worker_tasks._output_spec(operation)
+        worker_tasks._output_spec_for_job(operation)
     with pytest.raises(RuntimeError, match="disabled"):
         execute_staged_document_operation(operation, [source], output, params)
 
