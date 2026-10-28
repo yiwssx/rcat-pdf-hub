@@ -110,7 +110,9 @@ def test_geometry_api_owner_scope_validation_and_revocation(monkeypatch, operati
     monkeypatch.setattr(get_settings(), "geometry_tools_enabled", False)
     client.cookies.set("pdfhub_session", session(owner, [scope, "jobs:read"]))
     assert client.post(url, json={"file_id": ids[0], **payload}).status_code == 404
-    assert client.get("/api/v1/jobs/" + data["id"]).status_code == 404
+    # The feature kill switch stops new execution, not owner-visible job history.
+    history = client.get("/api/v1/jobs/" + data["id"])
+    assert history.status_code == 200 and history.json()["requested_by"] == owner
 
 
 @pytest.mark.parametrize("operation,params,expected", [
