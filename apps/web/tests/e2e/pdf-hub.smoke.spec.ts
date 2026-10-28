@@ -1665,10 +1665,10 @@ test("T90-1.3 page range UI rejects malformed entries before calling API", async
   const submit = page.getByRole("button", { name: /สร้าง PDF จากช่วงหน้าที่ระบุ/ });
   await field.fill("1,,2");
   await expect(submit).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("รูปแบบช่วงหน้า");
+  await expect(page.locator(".v3AdvancedDetails [role=\"alert\"]")).toContainText("รูปแบบช่วงหน้า");
   await field.fill("4");
   await expect(submit).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("ไม่มีหน้าที่ 4");
+  await expect(page.locator(".v3AdvancedDetails [role=\"alert\"]")).toContainText("ไม่มีหน้าที่ 4");
   await field.fill("1,3");
   await expect(submit).toBeEnabled();
 });
