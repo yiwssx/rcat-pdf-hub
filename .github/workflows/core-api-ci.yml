@@ -91,6 +91,8 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_t90_phase_zero.py'
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
+      - name: Probe genuine Microsoft Works 3–6 extraction in networkless API image
+        run: bash scripts/test-t90-2-real-works-libwps.sh
       - name: Validate OpenAPI frontend contract
         run: docker run --rm -e PDFHUB_CONTRACT_ARTIFACT=/tmp/openapi.json -v "$PWD:/repo" -w /repo rcat-pdf-hub-api-test python scripts/validate-api-contract.py
       - name: Run API tests with backend coverage gate
