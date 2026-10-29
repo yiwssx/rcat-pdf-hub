@@ -44,6 +44,14 @@ jobs:
       - name: Verify converter starts unprivileged
         run: |
           test "$(docker run --rm --entrypoint id rcat-pdf-hub-gotenberg-ci -u)" = '1001'
+      - name: Install disposable PDF text-inspection CLI
+        run: |
+          if ! command -v pdfinfo >/dev/null || ! command -v pdftotext >/dev/null || ! command -v pdffonts >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends poppler-utils
+          fi
+      - name: Smoke-test real Thai Chromium PDF output and embedded font
+        run: bash scripts/test-t90-2-thai-gotenberg.sh
   api:
     runs-on: ubuntu-latest
     timeout-minutes: 25

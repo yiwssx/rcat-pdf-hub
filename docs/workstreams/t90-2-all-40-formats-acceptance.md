@@ -106,3 +106,9 @@
 - Real pinned Chromium/Gotenberg QA exposed a prior output-fidelity defect: the renderer used Gotenberg's Letter-size default even though the bounded HTML template specified `@page { size:A4 }`. The `preferCssPageSize` form parameter defaults to false.
 - The shared `_html_to_pdf` adapter now submits `preferCssPageSize=true` alongside the sanitized `index.html`, so bounded TXT/CSV/Markdown/HTML/XML/EML/EPUB/FB2/SVG HTML-based rendering follows the project's own A4 CSS page policy. All call-boundary tests explicitly assert the opt-in parameter.
 - No permission, network, public UI, legacy 13-operation dispatch, source content, printer margin, or production feature-flag changes. Real pinned Thai/A4 smoke is independently tracked; print-fidelity goldens remain required.
+
+## T90-2.5 real pinned Gotenberg Thai smoke acceptance
+
+- Added an isolated CI step in the existing converter-image build job. The job starts the **actual pinned, Thai-font-enabled Gotenberg container** on a random loopback port and posts a version-controlled Thai HTML fixture to Chromium. It must return one strictly PDF-signed A4 page, extract all selected Thai phrases without replacement glyphs, and embed a known installed Thai font.
+- The container and temporary PDF are disposed after the CI check. The script has no Production credentials, network mounts, database or deployment access. It does not switch on `PDFHUB_TO_PDF_TOOLS_ENABLED`.
+- This is a **functional Thai text smoke**, not a pixel-perfect visual golden, and not DOCX/PPTX/XLSX source-layout comparison. Those independent manual and programmatic goldens, owner-signed downloads, browser/accessibility tests, performance and production T90-5 checks remain open before any VERIFIED/RELEASED status.
