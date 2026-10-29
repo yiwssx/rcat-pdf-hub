@@ -154,7 +154,7 @@ def mobi_to_safe_html(source: Path) -> str:
             or 16 + mobi_header_length > len(header)):
         raise ValueError("Only DRM-free, classic UTF-8 MOBI4-6 is supported")
     if (not 1 <= text_records <= MAX_RECORDS
-            or count < text_records + 1
+            or count != text_records + 1
             or not 0 < total_length <= MAX_TEXT_BYTES
             or record_size != RECORD_MAX):
         raise ValueError("MOBI text size or record count exceeds bounds")
@@ -166,8 +166,8 @@ def mobi_to_safe_html(source: Path) -> str:
             or drm_count not in (0, 0xFFFFFFFF)
             or drm_size or drm_flags):
         raise ValueError("MOBI DRM metadata is unsupported")
-    # Ignore no hidden record-level trailer metadata, selectors or KF8 extras.
-    if _u32(header, 16 + 0xE0) != 0:
+    # Reject EXTH and trailer extensions: this subset has no hidden assets.
+    if _u32(header, 16 + 0x80) != 0 or _u32(header, 16 + 0xE0) != 0:
         raise ValueError("MOBI trailing record flags or unsupported layout")
     chunks = []
     produced = 0
