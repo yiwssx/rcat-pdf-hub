@@ -260,6 +260,15 @@ def epub_to_pdf(
     return _submit(req, principal, db, "epub-to-pdf")
 
 
+@router.post("/pub", response_model=JobOut, status_code=202)
+def publisher_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "pub-to-pdf")
+
+
 @router.post("/mobi", response_model=JobOut, status_code=202)
 def restricted_mobi_to_pdf(
     req: ConvertRequest,
