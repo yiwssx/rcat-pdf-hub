@@ -114,7 +114,8 @@ def test_flagged_upload_and_binary_pdf_output(monkeypatch, tmp_path, suffix, mim
             assert kwargs["timeout"] == 180.0
         def __enter__(self): return self
         def __exit__(self, *args): return False
-        def post(self, url, *, files):
+        def post(self, url, *, files, data):
+            assert data == {"preferCssPageSize": "true"}
             assert url.endswith("/forms/chromium/convert/html")
             markup = files["files"][1].decode("utf-8")
             assert "Content-Security-Policy" in markup

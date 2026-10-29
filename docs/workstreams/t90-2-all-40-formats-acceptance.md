@@ -100,3 +100,9 @@
 - A bounded 1 MiB/2,000-entity/20,000-pair parser runs at upload and again in the worker. Vector primitives are drawn on one A4 PDF page by pinned ReportLab. Positions are fit-to-page without original engineering units, annotations or color semantics; **not a dimension-accurate CAD plotting tool**. Source immutable and PDF strict-parse checked.
 - The new `/api/v1/pdf/to-pdf/dxf` route is authenticated with `pdf:convert`, owner-scoped and behind the existing production-default-off switch. Negative tests cover binary injection, XREF/INSERT, malformed group codes, out-of-range/3D geometry, and disabled upload/worker paths. Does not alter legacy operations or production deployment.
 - Engineering inventory: **26 STAGED / 14 BLOCKED / 30 explicit guarded endpoint variants**. Not VERIFIED or RELEASED: representative engineering drawing corpus, page scaling/units, layers and colors, external CAD review, real Compose/auth/download/Thai golden/AV/load proof and full CI are separate gates. `0/90 RELEASED`.
+
+## 2026-10-29 A4 CSS page-size correctness
+
+- Real pinned Chromium/Gotenberg QA exposed a prior output-fidelity defect: the renderer used Gotenberg's Letter-size default even though the bounded HTML template specified `@page { size:A4 }`. The `preferCssPageSize` form parameter defaults to false.
+- The shared `_html_to_pdf` adapter now submits `preferCssPageSize=true` alongside the sanitized `index.html`, so bounded TXT/CSV/Markdown/HTML/XML/EML/EPUB/FB2/SVG HTML-based rendering follows the project's own A4 CSS page policy. All call-boundary tests explicitly assert the opt-in parameter.
+- No permission, network, public UI, legacy 13-operation dispatch, source content, printer margin, or production feature-flag changes. Real pinned Thai/A4 smoke is independently tracked; print-fidelity goldens remain required.
