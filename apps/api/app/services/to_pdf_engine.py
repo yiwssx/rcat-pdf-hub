@@ -336,6 +336,13 @@ def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
             raise
 
 
+def svg_to_pdf(source: Path, output: Path) -> None:
+    """Render only an allowlisted SVG geometry/text subset, default OFF."""
+    from app.services.to_pdf_svg import safe_svg_markup
+    _distinct(source, output)
+    _html_to_pdf(safe_svg_markup(source), output)
+
+
 def epub_to_pdf(source: Path, output: Path) -> None:
     """Convert bounded EPUB text spine; no remote resources, CSS or DRM."""
     from app.services.to_pdf_ebooks import epub_to_safe_html
