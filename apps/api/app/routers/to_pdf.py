@@ -267,3 +267,11 @@ def fb2_to_pdf(
     db: Session = Depends(get_db),
 ):
     return _submit(req, principal, db, "fb2-to-pdf")
+
+@router.post("/svg", response_model=JobOut, status_code=202)
+def svg_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "svg-to-pdf")

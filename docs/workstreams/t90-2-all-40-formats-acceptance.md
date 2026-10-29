@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **24 canonical formats STAGED** via **28 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **16 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **25 canonical formats STAGED** via **29 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **15 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -27,7 +27,7 @@
 | T13 | TIFF | P0 | **STAGED (flag OFF)** | `tiff-to-pdf` | multi-frame image fidelity |
 | T14 | TXT | P1 | **STAGED (flag OFF)** | `txt-to-pdf` | UTF-8 Thai text and page wrapping |
 | T15 | ODT | P0 | **STAGED (flag OFF)** | `odt-to-pdf` | OpenDocument fonts and page layout |
-| T16 | SVG | P1 | **BLOCKED** | — | safe vector subset, external fetch, fonts and script blocking |
+| T16 | SVG | P1 | **STAGED (flag OFF)** | `svg-to-pdf` | allowlisted vector/text geometry only; no gradients, CSS, image assets, transforms or fonts |
 | T17 | CSV | P1 | **STAGED (flag OFF)** | `csv-to-pdf` | UTF-8 rows, wide tables and print scaling |
 | T18 | RTF | P0 | **STAGED (flag OFF)** | `rtf-to-pdf` | legacy RTF parser and font fidelity |
 | T19 | MOBI | P3 | **BLOCKED** | — | licensed native reader and DRM |
@@ -59,7 +59,7 @@
 
 **Thai + typography**: Sarabun/Noto Sans Thai licensed fonts present inside the actual pinned Gotenberg container, not only on the API host; complex Thai grapheme shaping/combining characters; no missing glyphs, text cut-off or swapped glyphs; DOCX/XLSX/PPTX layout goldens; spreadsheet print areas/page breaks/formula fidelity; markdown table wrapping and plain-text line breaks; comparison against source through actual files, not mocks.
 
-**Dangerous or proprietary formats**: URL tool requires a separate design for pinned resolver, SSRF/DNS rebinding, private-network and metadata-IP blocks, proxy enforcement, redirect refusal, rate limits and egress firewall; ZIP/CBZ strictly images-only with no filesystem extraction and anti-bomb limits; SVG requires vetted vector library with script, remote reference and font isolation; XPS/CHM/DjVu/MOBI/WPS/HWP/DWG/DXF/PUB/AI/CBR/PAGES/HEIF/HEIC require decoder/license and representative binary goldens before enabling. Do not accept blind ZIP extraction/LibreOffice "try everything" as an implementation.
+**Dangerous or proprietary formats**: URL tool requires a separate design for pinned resolver, SSRF/DNS rebinding, private-network and metadata-IP blocks, proxy enforcement, redirect refusal, rate limits and egress firewall; ZIP/CBZ strictly images-only with no filesystem extraction and anti-bomb limits; SVG is a closed-schema, regenerated vector subset; rich SVG still needs dedicated secure rendering acceptance; XPS/CHM/DjVu/MOBI/WPS/HWP/DWG/DXF/PUB/AI/CBR/PAGES/HEIF/HEIC require decoder/license and representative binary goldens before enabling. Do not accept blind ZIP extraction/LibreOffice "try everything" as an implementation.
 
 **Rollout/operations**: production flag `PDFHUB_TO_PDF_TOOLS_ENABLED=false` until signed T90-5 activation; preserve previous routes and Docker networks; no silent DB migration; exact-HEAD CI six Core API jobs, Web CI, CodeQL Python/JS, Dependency Review; Compose integration in an isolated stack; page-by-page manual and automated document-quality acceptance; T90-5 release checklist and rollback test. A merged PR is engineering only.
 
@@ -86,3 +86,10 @@
 - T31 FB2: bounded `FictionBook` XML with `defusedxml` refusing DTD and entities; book title and section paragraphs are escaped and printed. Embedded images, covers, styling, poetry/footnotes and original layout intentionally omitted.
 - Both use existing `pdf:convert` scope, owner/expiry/MIME checks, worker artefact retention, strict PDF parser, feature flag OFF and immutable input. The new code must pass CI and owner-bound worker tests; these formats remain **STAGED, not VERIFIED or RELEASED** without real Thai font and document-fidelity acceptance.
 - Added `tests/test_t90_2_ebooks.py`, worker integration and input abuse tests. Another 16 formats still need vetted engines.
+
+## 2026-10-29 T16 restricted SVG continuation
+
+- **T16 SVG**: A closed-schema `defusedxml` validator reads only UTF-8 SVG XML, allows a bounded set of primitives (`g`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text`, `tspan`) and vetted numeric/color attributes; it **creates new SVG markup** instead of passing untrusted source bytes into Chromium.
+- All external/network references, namespaced attributes, events, `<script>`, `<style>`, `<foreignObject>`, `<use>`, `<image>`, `<defs>`, gradients, filters, arbitrary transforms, CSS and XML processing instructions/DTD/XXE are refused. Caps: 2 MiB source, 600 elements, depth 20, 20k text characters; strict PDF validation and owner-scoped worker artifact apply.
+- **Excluded**: original fonts, complex fill/stroke gradients, filters, rich paths requiring styling, embedded images, external links, transforms and advanced SVG animation. Gotenberg Thai text shaping, vector content comparisons and representative document goldens are still needed before VERIFIED.
+- Registry now records **25 STAGED / 15 BLOCKED / 29 API variants**; production still `PDFHUB_TO_PDF_TOOLS_ENABLED=false`. T90 release count remains **0/90**.

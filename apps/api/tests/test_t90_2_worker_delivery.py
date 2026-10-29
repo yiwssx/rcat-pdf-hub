@@ -197,3 +197,50 @@ def test_t90_2_ebook_worker_owner_and_artifact(monkeypatch, tmp_path, kind, mime
                              strict=True).pages) == 1
     assert len(rendered) == 1 and "สวัสดี" in rendered[0]
     assert before == source.read_bytes()
+
+
+def test_t90_2_svg_owner_bound_worker_result_and_immutability(monkeypatch, tmp_path):
+    """Exercise DB/storage worker and strict upload validation, mock Gotenberg only."""
+    from reportlab.pdfgen import canvas
+    from app.services import to_pdf_engine
+
+    _setup(monkeypatch, tmp_path)
+    monkeypatch.setattr(get_settings(), "to_pdf_tools_enabled", True)
+    source = tmp_path / "originals" / "diagram.svg"
+    source.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">'
+        '<rect x="20" y="20" width="50" height="100" fill="blue"/>'
+        '<text x="35" y="240">ภาษาไทย RCAT</text></svg>',
+        encoding="utf-8",
+    )
+    before = source.read_bytes()
+    rendered = []
+
+    def fake_html_converter(html, output):
+        rendered.append(html)
+        c = canvas.Canvas(str(output))
+        c.drawString(38, 750, "RCAT SVG")
+        c.showPage()
+        c.save()
+
+    monkeypatch.setattr(to_pdf_engine, "_html_to_pdf", fake_html_converter)
+    owner = "user:t90-2-safe-svg"
+    job_id = _job(
+        source, owner, "svg-to-pdf", "image/svg+xml",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    output_id = worker_tasks.process_job(job_id)
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        artifact = db.get(FileRecord, output_id)
+        links = db.scalars(
+            select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)
+        ).all()
+        assert job.status == "completed" and job.output_file_id == output_id
+        assert artifact.content_type == "application/pdf"
+        assert artifact.source_system == owner
+        assert len(links) == 1 and links[0].role == "result"
+        assert len(PdfReader(str(storage.path_for_stored_name(artifact.stored_name)),
+                             strict=True).pages) == 1
+    assert rendered and "<svg" in rendered[0] and "ภาษาไทย" in rendered[0]
+    assert before == source.read_bytes()
