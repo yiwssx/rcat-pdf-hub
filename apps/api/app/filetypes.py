@@ -109,6 +109,19 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="File extension is PDF but the file signature is not PDF")
         return PDF
 
+    # SVG is decoded only by a closed-schema safe renderer at worker dispatch.
+    if suffix == ".svg":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged SVG conversion is disabled")
+        if not 0 < path.stat().st_size <= 2 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="SVG source exceeds 2 MiB")
+        from app.services.to_pdf_svg import safe_svg_markup
+        try:
+            safe_svg_markup(path)
+        except ValueError as exc:
+            raise HTTPException(status_code=415, detail="SVG contains invalid or unsafe markup") from exc
+        return "image/svg+xml"
+
     # EPUB and FB2 ebooks are opt-in text-only converters. The worker performs
     # full bounded ZIP/XML inspection; upload verifies only lightweight type.
     if suffix in {".epub", ".fb2"}:
