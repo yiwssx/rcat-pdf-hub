@@ -72,6 +72,7 @@ def _html_to_pdf(body: str, output: Path) -> None:
         response = client.post(
             get_settings().gotenberg_url.rstrip("/") + "/forms/chromium/convert/html",
             files={"files": ("index.html", markup, "text/html")},
+            data={"preferCssPageSize": "true"},
         )
     response.raise_for_status()
     _checked_pdf(response.content, output)
