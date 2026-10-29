@@ -111,7 +111,7 @@ def restricted_djvu_to_pdf(source: Path, output: Path) -> None:
                 env={"PATH": "/usr/bin:/bin", "LANG": "C", "HOME": str(folder),
                      "TMPDIR": str(folder)},
                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE, timeout=MAX_TIME_SECONDS,
+                stderr=subprocess.DEVNULL, timeout=MAX_TIME_SECONDS,
                 check=False, start_new_session=True, preexec_fn=_set_decoder_limits,
             )
         except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as exc:
