@@ -288,6 +288,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail=f"OpenDocument type does not match {suffix}")
         return ODF_TYPES[suffix]
 
+    # Legacy HWP3 only. The 30-byte version header and documented 16-bit
+    # password flag are rechecked at upload and in the worker.
+    if suffix == ".hwp":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged HWP3 conversion disabled")
+        from app.services.to_pdf_hwp3 import validate_hwp3
+        try:
+            validate_hwp3(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or protected HWP3 document") from exc
+        return "application/x-hwp"
+
     # T90-2 guarded Publisher route: strict bounded CFB structural validation;
     # converter fidelity is assessed separately using real pinned .pub QA corpus.
     if suffix == ".pub":
