@@ -35,7 +35,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T13", "TIFF", ("tiff-to-pdf",), "P0", "multi-frame image fidelity"),
     FormatCapability("T14", "TXT", ("txt-to-pdf",), "P1", "UTF-8 Thai text and page wrapping"),
     FormatCapability("T15", "ODT", ("odt-to-pdf",), "P0", "OpenDocument fonts and page layout"),
-    FormatCapability("T16", "SVG", (), "P1", "safe vector subset, external fetch, fonts and script blocking"),
+    FormatCapability("T16", "SVG", ("svg-to-pdf",), "P1", "restricted geometry/text only; no CSS, remote links, gradients, filters, images or fonts"),
     FormatCapability("T17", "CSV", ("csv-to-pdf",), "P1", "UTF-8 rows, wide tables and print scaling"),
     FormatCapability("T18", "RTF", ("rtf-to-pdf",), "P0", "legacy RTF parser and font fidelity"),
     FormatCapability("T19", "MOBI", (), "P3", "licensed native reader and DRM"),
