@@ -6,6 +6,7 @@ work="$2"
 revision="fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4"
 mkdir -p "$work/works-pages"
 passed=0
+pages_passed=0
 not_supported=0
 while IFS='|' read -r member expected_sha expected_bytes; do
   test -n "$member" || continue
@@ -70,6 +71,7 @@ print(f"PASS REAL {pdf.name}: {pages} pages, {w} x {h} pt, nonblank")
 PY
   then
     passed=$((passed + 1))
+    case "$name" in Pages_4.pages|Pages_5.pages) pages_passed=$((pages_passed + 1));; esac
   else
     echo "UNSUPPORTED: $name converted blank or invalid"
     not_supported=$((not_supported + 1))
@@ -85,4 +87,4 @@ writer/libetonyek/pass/Pages_5.pages|cd4438a34b451518a8547a8670fc96154255ace8|57
 FIXTURES
 
 echo "REAL WORKS/PAGES import corpus: $passed nonblank PASS, $not_supported UNSUPPORTED"
-test "$passed" -gt 0
+test "$pages_passed" -eq 2
