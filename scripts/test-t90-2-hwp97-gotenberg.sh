@@ -11,6 +11,14 @@ curl --fail --silent --show-error --location --retry 3 --max-time 45 \
   --proto '=https' --proto-redir '=https' "$url" -o "$source"
 test "$(git hash-object "$source")" = "68ff2f51269f3ab619f6465073518cd84694300c"
 test "$(wc -c < "$source")" -eq 11537
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+PYTHONPATH="$repo_root/apps/api" python3 - "$source" <<'PY'
+from pathlib import Path
+import sys
+from app.services.to_pdf_hwp3 import validate_hwp3
+validate_hwp3(Path(sys.argv[1]))
+print("PASS: real HWP97 signature/password preflight")
+PY
 digest="$(sha256sum "$source" | cut -d' ' -f1)"
 echo "HWP97 real header=$(head -c 64 "$source" | od -An -tx1 | tr -d ' \n')"
 pdf="$work/hwp-real.pdf"
