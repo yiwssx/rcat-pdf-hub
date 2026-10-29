@@ -80,7 +80,8 @@ echo "PASS: real pinned Gotenberg Chromium Thai text, A4 page, embedded Thai fon
 # Live LibreOffice conversion follows the Chromium check in the same disposable
 # Gotenberg container. No extra dependencies, container network or prod credentials.
 python3 "$repo_root/scripts/make-t90-2-office-fixtures.py" "$tmp/office"
-for format in docx xlsx pptx; do
+python3 "$repo_root/scripts/make-t90-2-odf-fixtures.py" "$tmp/office"
+for format in docx xlsx pptx odt ods odp rtf; do
   file="$tmp/office/thai.$format"
   result="$tmp/$format.pdf"
   original_hash="$(sha256sum "$file" | cut -d' ' -f1)"
@@ -113,21 +114,28 @@ if not size:
 width, height = map(float, size.groups())
 expect = {"docx": (1, 595.28, 841.89),
           "xlsx": (1, 841.89, 595.28),
-          "pptx": (2, 960.0, 540.0)}[kind]
+          "pptx": (2, 960.0, 540.0),
+          "odt": (1, 595.28, 841.89),
+          "ods": (1, 841.89, 595.28),
+          "odp": (2, 960.0, 540.0),
+          "rtf": (1, 595.28, 841.89)}[kind]
 if pages != expect[0] or abs(width - expect[1]) > 3 or abs(height - expect[2]) > 3:
     raise SystemExit(f"{kind}: wrong page count or geometry: {pages}, {width} x {height}")
 thai = "วิทยาลัยเกษตรและเทคโนโลยีร้อยเอ็ด"
 second = "ทดสอบสระ วรรณยุกต์ และภาษาไทย"
 if thai not in text or second not in text or "\ufffd" in text:
     raise SystemExit(f"{kind}: expected Thai text missing, mangled or replacement glyph")
-if kind == "xlsx" and ("RCAT" not in text or "123" not in text):
+if kind in {"xlsx", "ods"} and ("RCAT" not in text or "123" not in text):
     raise SystemExit("xlsx: missing cell or numeric value")
-if kind == "pptx":
+if kind in {"pptx", "odp"}:
     slides = text.split("\f")
     if len(slides) < 2 or thai not in slides[0] or second not in slides[1]:
         raise SystemExit("pptx: slide order or content is wrong")
-if not re.search(r"Garuda", fonts, re.IGNORECASE):
-    raise SystemExit(f"{kind}: expected Garuda Thai font was not embedded")
-print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded Garuda")
+# LibreOffice Impress/RTF use Loma as a Thai complex-script fallback in these fixtures.
+# Require an embedded known Thai font; do not assert full source-font fidelity.
+font_pattern = r"Garuda|Loma" if kind in {"odp", "rtf"} else r"Garuda"
+if not re.search(font_pattern, fonts, re.IGNORECASE):
+    raise SystemExit(f"{kind}: embedded Thai font missing ({font_pattern}); actual pdffonts:\n{fonts}")
+print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded approved Thai font")
 PY
 done
