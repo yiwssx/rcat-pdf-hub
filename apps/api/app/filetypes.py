@@ -109,6 +109,17 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="File extension is PDF but the file signature is not PDF")
         return PDF
 
+    # Only the restricted ASCII ENTITIES / LINE+CIRCLE CAD subset is accepted.
+    if suffix == ".dxf":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged DXF conversion is disabled")
+        from app.services.to_pdf_dxf import parse_dxf
+        try:
+            parse_dxf(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or unsafe DXF drawing") from exc
+        return "image/vnd.dxf"
+
     # SVG is decoded only by a closed-schema safe renderer at worker dispatch.
     if suffix == ".svg":
         if not get_settings().to_pdf_tools_enabled:
