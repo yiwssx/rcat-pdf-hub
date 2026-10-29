@@ -23,6 +23,17 @@ test "$(git hash-object "$fixture")" = "$fixture_sha"
 test "$(wc -c < "$fixture")" -eq 10752
 test "$(head -c 8 "$fixture" | od -An -tx1 | tr -d ' \n')" = "d0cf11e0a1b11ae1"
 
+# Validate the exact upstream binary through the same stdlib-only OLE preflight
+# the application applies during upload and worker execution.
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHONPATH="$repo_root/apps/api" python3 - "$fixture" <<'PY'
+from pathlib import Path
+import sys
+from app.services.to_pdf_publisher import validate_publisher_ole
+names = validate_publisher_ole(Path(sys.argv[1]))
+print("PASS: real Publisher CFB bounded header and streams:", names)
+PY
+
 sha_before="$(sha256sum "$fixture" | cut -d' ' -f1)"
 curl --fail --silent --show-error --max-time 100 \
   -F "files=@$fixture;filename=fdo59355-1.pub;type=application/octet-stream" \
@@ -44,8 +55,8 @@ size = re.search(r"^Page size:\s*([\d.]+) x ([\d.]+) pts", metadata, re.M)
 if not pages or not size:
     raise SystemExit("Publisher: converter returned unreadable PDF metadata")
 width, height = map(float, size.groups())
-if (not 1 <= int(pages.group(1)) <= 30
-        or not 100 < width < 2000 or not 100 < height < 2000
+if (int(pages.group(1)) != 2
+        or abs(width - 595.28) > 3 or abs(height - 841.89) > 3
         or pdf.stat().st_size <= 1000):
     raise SystemExit(f"Publisher: unexpected PDF result: {metadata}")
 # Rendered first page must contain meaningful nonwhite pixels. This detects
