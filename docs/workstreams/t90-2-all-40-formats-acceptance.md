@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **30 canonical formats STAGED** via **34 guarded format-specific variants** (26 earlier, restricted XPS+Illustrator, classic MOBI transcript, and bounded Publisher OLE import). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **10 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **31 canonical formats STAGED** via **35 guarded format-specific variants** (30 earlier plus a single-page, self-contained DjVu native decoder under strict controls). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **9 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -22,7 +22,7 @@
 | T08 | PPTX | P0 | **STAGED (flag OFF)** | `pptx-to-pdf`, `odp-to-pdf` | slides and embedded font fidelity |
 | T09 | HEIC | P2 | **BLOCKED** | — | licensed bounded HEIF image codec absent |
 | T10 | HTML | P1 | **STAGED (flag OFF)** | `html-to-pdf` | staged sanitized content-only, styling and assets intentionally omitted |
-| T11 | DjVu | P3 | **BLOCKED** | — | untrusted native decoder and compression safety |
+| T11 | DjVu | P3 | **STAGED (flag OFF)** | `djvu-to-pdf` | 1-page self-contained DJVU IFF (no multipage/INCL) with patched Debian DjVuLibre; native subprocess CPU/AS/FSIZE/no-file limits, 20s timeout; raster-only PDF, not searchable text or full fidelity |
 | T12 | Pages | P3 | **BLOCKED** | — | proprietary Apple container and layout converter |
 | T13 | TIFF | P0 | **STAGED (flag OFF)** | `tiff-to-pdf` | multi-frame image fidelity |
 | T14 | TXT | P1 | **STAGED (flag OFF)** | `txt-to-pdf` | UTF-8 Thai text and page wrapping |
@@ -148,3 +148,11 @@
 - Binary evidence: disposable pinned Gotenberg CI downloads **one 10,752-byte upstream LibreOffice writerperfect/libmspub QA `.pub` test fixture**, pinned to immutable LibreOffice core revision `fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4` and git blob SHA `607a07ae2d362e4a1f6e779dfff88726fe74f910`. It verifies the upstream binary's authenticity, input SHA-256 unchanged, actual Gotenberg LibreOffice PDF response, precisely **2 A4 pages**, and a nonblank first-page raster via Poppler. No binary sample or proprietary font is added to Git; CI fixture retrieved only inside a disposable job.
 - Original format support is **not** universal: some Publisher OLE variants and modern proprietary layouts may fail; full text/object/fonts/layout fidelity needs a diverse representative real-document golden corpus, print-area comparisons and further security validation. The OLE structural preflight is not an AV scan. This is STAGED only, not per-format VERIFIED nor production RELEASED. No change to feature toggle `PDFHUB_TO_PDF_TOOLS_ENABLED=false`, existing public UI, production image/network or legacy 13.
 - **Current count after PR success:** 30 STAGED / 10 BLOCKED / 34 guarded route variants, 0 independently VERIFIED / RELEASED. Remaining formats: HEIC, HEIF, DjVu, Pages, DWG, HWP, CHM, URL, WPS, CBR.
+
+## 2026-10-30 — DjVuLibre dependency and restricted self-contained single-page DjVu
+
+- Added Debian bookworm `djvulibre-bin` (Debian-security-maintained package 3.5.28-2.2~deb12u1) to the existing non-root API/worker image. Both API upload and background worker check size ≤8 MiB and exact `AT&TFORM`/`DJVU` IFF signature, full declared FORM length, INFO dimensions ≤4096 and ≤8M pixels, limited chunk count/payload, and require a real inline raster data chunk. `DJVM` multipage, nested FORM, `INCL` external dependencies and `DIRM` directory files fail closed; never fetches external resources.
+- Decoder `/usr/bin/ddjvu` runs with **fixed argv, no shell, strict 20s wall/12s CPU limit, 768MiB RLIMIT_AS, 40MiB RLIMIT_FSIZE, 32 file descriptors, no core dumps, private temporary working directory**; rechecks source on worker, runs only behind disabled-by-default `PDFHUB_TO_PDF_TOOLS_ENABLED`, validates output with existing strict PDF parser. Debian DjVuLibre binaries remain separate from Python package lock; native code retains residual parser attack surface and this is not a kernel-level network/seccomp sandbox. Separate decoder container, AV adversarial fuzzing and institution's representative files remain mandatory before production.
+- CI runs genuine `cjb2` → `ddjvu` one-page raster-to-PDF regression with immutable upload source plus invalid header, indirect/DJVM and geometry rejection. This intentionally **does not** assert full multipage support, searchable/OCR text, font fidelity, page-layout goldens or PDF/A.
+- HEIC/HEIF decoder rollout **deferred**: upstream libheif had successive 2026 security releases including v1.23.7 on 26 Oct 2026, while Debian bookworm `libheif-examples` base is 1.15.1. Installing the old native decoder into current API image without patched/sandboxed isolation would bypass safe signoff. Later implement a separately isolated, patched libheif 1.23.7+ decoder with explicit codec allowlist, true real-image tests, licence review and resource limits.
+- Count after this merge and CI success only: **31 STAGED / 9 BLOCKED / 35 guarded route variants / 0 independently VERIFIED or RELEASED**; remaining blocked HEIC, HEIF, Pages, DWG, HWP, CHM, URL, WPS, CBR. No production deployment or UI release; T90-2 and master issues remain open.
