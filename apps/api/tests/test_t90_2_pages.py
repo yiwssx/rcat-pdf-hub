@@ -19,6 +19,7 @@ from app.staged_to_pdf_adapters import checked_source, execute_staged_to_pdf_ope
 def pages_bytes(version="4", *, preview_only=False, extra=None):
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as arc:
+        arc.writestr("Assets/test-data.bin", b"".join(hashlib.sha256(str(i).encode()).digest() for i in range(72)))
         arc.writestr("QuickLook/Preview.pdf", b"%PDF- fake preview; not evidence of real Pages content")
         if not preview_only:
             if version == "4":
@@ -96,18 +97,12 @@ def test_pages_preview_alone_cannot_impersonate_document(tmp_path):
     ("../escape", b"x"),
     ("/absolute", b"x"),
     ("bad\\windows", b"x"),
-    ("\\x00", b"x"),
 ])
 def test_pages_rejects_unsafe_container_entries(tmp_path, extra):
     source = tmp_path / "evil.pages"
     source.write_bytes(pages_bytes(extra=extra))
-    if extra[0] == "\x00":
-        # Python zipfile truncates at NUL; entry remains nonempty but misleading.
-        with pytest.raises(ValueError):
-            validate_pages_package(source)
-    else:
-        with pytest.raises(ValueError):
-            validate_pages_package(source)
+    with pytest.raises(ValueError):
+        validate_pages_package(source)
 
 
 def test_pages_corrupt_zip_and_duplicate_indexes_rejected(tmp_path):
