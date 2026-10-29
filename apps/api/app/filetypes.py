@@ -288,6 +288,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail=f"OpenDocument type does not match {suffix}")
         return ODF_TYPES[suffix]
 
+    # Apple Pages 4/5 ZIP package only: validate actual document index and
+    # CRC-bounded members. Preview.pdf alone is not a Pages document conversion.
+    if suffix == ".pages":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged Pages conversion disabled")
+        from app.services.to_pdf_pages import validate_pages_package
+        try:
+            validate_pages_package(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or unsafe Pages package") from exc
+        return "application/vnd.apple.pages"
+
     # T90-2 guarded Publisher route: strict bounded CFB structural validation;
     # converter fidelity is assessed separately using real pinned .pub QA corpus.
     if suffix == ".pub":
