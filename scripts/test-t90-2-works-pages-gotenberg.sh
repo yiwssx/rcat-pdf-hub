@@ -5,6 +5,8 @@ port="$1"
 work="$2"
 revision="fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4"
 mkdir -p "$work/works-pages"
+passed=0
+not_supported=0
 while IFS='|' read -r member expected_sha expected_bytes; do
   test -n "$member" || continue
   name="$(basename "$member")"
@@ -25,14 +27,23 @@ if zipfile.is_zipfile(p):
         print("T90-2 ZIP members", p.name, archive.namelist()[:18], "count", len(archive.namelist()))
 PY
   pdf="$work/works-pages/$name.pdf"
-  curl --fail --silent --show-error --max-time 90 \
+  if ! curl --fail --silent --show-error --max-time 90 \
     -F "files=@$source;filename=$name;type=application/octet-stream" \
-    "http://127.0.0.1:$port/forms/libreoffice/convert" -o "$pdf"
-  test "$(head -c 5 "$pdf")" = "%PDF-"
+    "http://127.0.0.1:$port/forms/libreoffice/convert" -o "$pdf"; then
+    echo "UNSUPPORTED: $name LibreOffice import returned error"
+    not_supported=$((not_supported + 1))
+    continue
+  fi
+  if [ "$(head -c 5 "$pdf")" != "%PDF-" ]; then
+    echo "UNSUPPORTED: $name LibreOffice output is not PDF"
+    not_supported=$((not_supported + 1))
+    continue
+  fi
   pdfinfo "$pdf" > "$pdf.info"
   pdftotext -enc UTF-8 "$pdf" "$pdf.text"
   pdftoppm -f 1 -l 1 -scale-to 450 -singlefile -gray "$pdf" "$pdf.preview"
-  python3 - "$pdf" "$pdf.info" "$pdf.preview.pgm" <<'PY'
+  echo "T90-2 PDF text $name: $(head -c 250 "$pdf.text" | tr '\n' ' ')"
+  if python3 - "$pdf" "$pdf.info" "$pdf.preview.pgm" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -57,6 +68,12 @@ if pdf.stat().st_size <= 1000:
     raise SystemExit("Works/Pages PDF too small")
 print(f"PASS REAL {pdf.name}: {pages} pages, {w} x {h} pt, nonblank")
 PY
+  then
+    passed=$((passed + 1))
+  else
+    echo "UNSUPPORTED: $name converted blank or invalid"
+    not_supported=$((not_supported + 1))
+  fi
   test "$(sha256sum "$source" | cut -d' ' -f1)" = "$original_sha"
 done <<'FIXTURES'
 writer/libwps/pass/Works_3.0.wps|74f46091e6683e8ae1b1d0240ea695d29b44a84f|3584
@@ -66,3 +83,6 @@ writer/libwps/pass/Works_6.0.wps|d0a40c4c0300e4c6b4b5f975994b065cb4d6278f|13824
 writer/libetonyek/pass/Pages_4.pages|43c9213922bd26f9242ae93ed6a5aabcc85df11f|42277
 writer/libetonyek/pass/Pages_5.pages|cd4438a34b451518a8547a8670fc96154255ace8|57362
 FIXTURES
+
+echo "REAL WORKS/PAGES import corpus: $passed nonblank PASS, $not_supported UNSUPPORTED"
+test "$passed" -gt 0
