@@ -15,6 +15,7 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "txt-to-pdf": ("text/plain", ".txt"),
     "csv-to-pdf": ("text/csv", ".csv"),
     "md-to-pdf": ("text/markdown", ".md"),
+    "svg-to-pdf": ("image/svg+xml", ".svg"),
     "epub-to-pdf": ("application/epub+zip", ".epub"),
     "fb2-to-pdf": ("application/x-fictionbook+xml", ".fb2"),
     "html-to-pdf": ("text/html", ".html"),
@@ -81,6 +82,8 @@ def execute_staged_to_pdf_operation(
         to_pdf_engine.csv_to_pdf(inputs[0], output)
     elif operation == "md-to-pdf":
         to_pdf_engine.markdown_to_pdf(inputs[0], output)
+    elif operation == "svg-to-pdf":
+        to_pdf_engine.svg_to_pdf(inputs[0], output)
     elif operation == "epub-to-pdf":
         to_pdf_engine.epub_to_pdf(inputs[0], output)
     elif operation == "fb2-to-pdf":
