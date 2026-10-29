@@ -131,8 +131,11 @@ if kind in {"pptx", "odp"}:
     slides = text.split("\f")
     if len(slides) < 2 or thai not in slides[0] or second not in slides[1]:
         raise SystemExit("pptx: slide order or content is wrong")
-if not re.search(r"Garuda", fonts, re.IGNORECASE):
-    raise SystemExit(f"{kind}: expected Garuda Thai font was not embedded; actual pdffonts:\n{fonts}")
-print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded Garuda")
+# LibreOffice Impress uses Loma as a Thai complex-script fallback in ODP.
+# Require an embedded known Thai font; do not assert full source-font fidelity.
+font_pattern = r"Garuda|Loma" if kind == "odp" else r"Garuda"
+if not re.search(font_pattern, fonts, re.IGNORECASE):
+    raise SystemExit(f"{kind}: embedded Thai font missing ({font_pattern}); actual pdffonts:\n{fonts}")
+print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded approved Thai font")
 PY
 done
