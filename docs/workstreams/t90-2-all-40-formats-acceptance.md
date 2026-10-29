@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **28 canonical formats STAGED** via **32 guarded format-specific variants** (26 previous plus restricted XPS transcript and PDF-compatible Illustrator). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **12 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **29 canonical formats STAGED** via **33 guarded format-specific variants** (26 earlier, restricted XPS+Illustrator, and DRM-free classic MOBI text). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **11 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -30,7 +30,7 @@
 | T16 | SVG | P1 | **STAGED (flag OFF)** | `svg-to-pdf` | allowlisted vector/text geometry only; no gradients, CSS, image assets, transforms or fonts |
 | T17 | CSV | P1 | **STAGED (flag OFF)** | `csv-to-pdf` | UTF-8 rows, wide tables and print scaling |
 | T18 | RTF | P0 | **STAGED (flag OFF)** | `rtf-to-pdf` | legacy RTF parser and font fidelity |
-| T19 | MOBI | P3 | **BLOCKED** | — | licensed native reader and DRM |
+| T19 | MOBI | P3 | **STAGED (flag OFF)** | `mobi-to-pdf` | restricted DRM-free, classic UTF-8 MOBI4–6 BOOKMOBI, compression 1 or bounded PalmDOC compression 2; *text transcript only*; rejects rich HTML/images/CSS/DRM/KF8/HUFF |
 | T20 | DWG | P3 | **BLOCKED** | — | CAD binary licensing, layers and model scale |
 | T21 | PUB | P3 | **BLOCKED** | — | Publisher proprietary parser and layouts |
 | T22 | XPS | P2 | **STAGED (flag OFF)** | `xps-to-pdf` | Restricted ZIP/XML Glyphs Unicode-only **text transcription** onto A4; rejects images/vectors; original XPS page geometry/fonts not preserved |
@@ -135,3 +135,9 @@
 - **T22 XPS**: reads only ZIP-bounded Microsoft XPS FixedDocumentSequence/FixedDocument/FixedPage entries with direct UnicodeString Glyphs. Prevents XML entity expansion, ZIP bombs, traversal, duplicate/case collisions, remote references and unhandled vector/image/canvas/complex text commands. Renders a page-separated **A4 text transcription** through the existing static Chromium renderer. **Does not preserve** original XPS geometric page size, font, vector layout, overlays or embedded images. Unsupported files fail closed.
 - Both use the existing opt-in upload/worker revalidation, static authenticated owner/scope-scoped route, standard output custody and retained `PDFHUB_TO_PDF_TOOLS_ENABLED=false` default. They are intentionally **STAGED**, not visually **VERIFIED** or production **RELEASED**; no new dependency, network or deployment topology. The other 12 specialist formats remain blocked pending codec sandbox and licensing proof.
 - Original 26/14 status in older dated checkpoint sections is historical, not the current ledger. Pending: representative real AI/XPS golden corpus, all institutional font/layout goldens, Compose E2E, malware/load/accessibility and T90-5 signoff.
+
+## 2026-10-29 — strict legacy MOBI text-only feasibility
+
+- Added `T19 mobi-to-pdf` as a safe limited **classic MOBI4-6 UTF-8 transcript**, not a general Kindle/Mobipocket reader. Pure standard-library PalmDB record parser with `BOOKMOBI` signature, bounded monotonic offsets, exactly one record-0 and 1–64 data records, explicit MOBI header/version and UTF-8, 192 KiB decoded text limit, PalmDOC no-compression or manually bounded LZ77 compression-2. No third-party native decoder or new dependencies.
+- **Security gates:** Rejects DRM metadata/encryption, KF8, HUFF/CDIC, EXTH, trailer extension flags, extra media records, invalid UTF-8, HTML resources/scripts/styles/attributes/links and bidi control chars. HTML transcript output is escaped; renders A4 in the existing no-network Chromium path. Synthetic fixture tests prove English/Thai text, LZ77 regression, unmodified upload source, disallowed types, malformed metadata and flag-OFF behavior.
+- **Limitations**: No complete original typography, chapters, images, CSS, Amazon Kindle versions or DRM removal. Published as **STAGED** only, default `PDFHUB_TO_PDF_TOOLS_ENABLED=false`. True institutional golden corpus, Gotenberg visual output, full API/worker/download/security/load and T90-5 production signoff are still required. Other **11** specialist formats remain BLOCKED; **0 independently VERIFIED/RELEASED**.
