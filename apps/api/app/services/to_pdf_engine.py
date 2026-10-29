@@ -336,6 +336,20 @@ def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
             raise
 
 
+def epub_to_pdf(source: Path, output: Path) -> None:
+    """Convert bounded EPUB text spine; no remote resources, CSS or DRM."""
+    from app.services.to_pdf_ebooks import epub_to_safe_html
+    _distinct(source, output)
+    _html_to_pdf(epub_to_safe_html(source), output)
+
+
+def fb2_to_pdf(source: Path, output: Path) -> None:
+    """Convert bounded FictionBook XML body; images intentionally omitted."""
+    from app.services.to_pdf_ebooks import fb2_to_safe_html
+    _distinct(source, output)
+    _html_to_pdf(fb2_to_safe_html(source), output)
+
+
 def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) -> None:
     """Forward validated Office bytes with original extension to pinned Gotenberg.
 
