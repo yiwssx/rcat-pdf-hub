@@ -80,11 +80,11 @@ def excel(path: Path) -> None:
     )
     styles = (
         f'<styleSheet xmlns="{ns}">'
-        '<fonts count="1"><font><sz val="13"/><name val="Garuda"/></font></fonts>'
+        '<fonts count="2"><font><sz val="11"/><name val="Liberation Sans"/></font><font><sz val="13"/><name val="Garuda"/></font></fonts>'
         '<fills count="1"><fill><patternFill patternType="none"/></fill></fills>'
         '<borders count="1"><border/></borders>'
         '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-        '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>'
+        '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
         '</styleSheet>'
     )
     sheet = f'''<worksheet xmlns="{ns}">
@@ -93,8 +93,8 @@ def excel(path: Path) -> None:
     <sheetFormatPr defaultRowHeight="24"/>
     <cols><col min="1" max="1" width="55" customWidth="1"/><col min="2" max="2" width="28" customWidth="1"/></cols>
     <sheetData>
-    <row r="1"><c r="A1" t="inlineStr"><is><t>{THAI}</t></is></c><c r="B1" t="inlineStr"><is><t>RCAT</t></is></c></row>
-    <row r="2"><c r="A2" t="inlineStr"><is><t>{TEXT}</t></is></c><c r="B2"><v>123</v></c></row>
+    <row r="1"><c r="A1" s="1" t="inlineStr"><is><t>{THAI}</t></is></c><c r="B1" t="inlineStr"><is><t>RCAT</t></is></c></row>
+    <row r="2"><c r="A2" s="1" t="inlineStr"><is><t>{TEXT}</t></is></c><c r="B2"><v>123</v></c></row>
     </sheetData>
     <pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.1" footer="0.1"/>
     <pageSetup paperSize="9" orientation="landscape"/>
