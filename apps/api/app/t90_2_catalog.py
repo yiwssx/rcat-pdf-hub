@@ -56,7 +56,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T34", "WPS", (), "P3", "proprietary WPS/Kingsoft parser and licensing"),
     FormatCapability("T35", "EML", ("eml-to-pdf",), "P2", "staged plain-text email only; rich HTML/attachments excluded"),
     FormatCapability("T36", "Markdown", ("md-to-pdf",), "P1", "CommonMark safe subset, remote content forbidden"),
-    FormatCapability("T37", "DXF", (), "P3", "CAD parser precision and dangerous external references"),
+    FormatCapability("T37", "DXF", ("dxf-to-pdf",), "P3", "strict ASCII DXF LINE/CIRCLE vectors only; no colors, fonts, XREF, BLOCK or 3D"),
     FormatCapability("T38", "CBZ", ("cbz-to-pdf",), "P2", "images-only safe comic archive, page order"),
     FormatCapability("T39", "AI", (), "P3", "Illustrator AI/PDF dual-mode licensing and embedded resources"),
     FormatCapability("T40", "CBR", (), "P3", "RAR decoder licensing, archive bombs and extraction isolation"),
