@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import os
 import resource
 import struct
 import subprocess
