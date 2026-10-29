@@ -29,7 +29,8 @@ def validate_pages_package(source: Path) -> str:
             if total > MAX_PAGES_UNCOMPRESSED:
                 raise ValueError("Pages ZIP uncompressed content exceeds bound")
             old = members.get("index.xml")
-            modern = members.get("Index/Document.iwa")
+            # _checked_office_members normalizes keys with casefold().
+            modern = members.get("index/document.iwa")
             if bool(old) == bool(modern):
                 raise ValueError("Pages 4/5 document index missing or ambiguous")
             main = old or modern
