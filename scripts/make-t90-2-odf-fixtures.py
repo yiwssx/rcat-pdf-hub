@@ -57,14 +57,16 @@ def page_layout(kind: str) -> str:
 
 def odf(path: Path, kind: str, body: str, styles: str, automatic: str) -> None:
     root = {"odt": "text", "ods": "spreadsheet", "odp": "presentation"}[kind]
+    font_decls = ('<office:font-face-decls><style:font-face style:name="Garuda" '
+                  'svg:font-family="Garuda"/></office:font-face-decls>')
     content = (f'<?xml version="1.0" encoding="UTF-8"?>'
                f'<office:document-content {NS} office:version="1.2">'
-               f'<office:automatic-styles>{automatic}</office:automatic-styles>'
+               f'{font_decls}<office:automatic-styles>{automatic}</office:automatic-styles>'
                f'<office:body><office:{root}>{body}</office:{root}>'
                '</office:body></office:document-content>')
     styles_xml = (f'<?xml version="1.0" encoding="UTF-8"?>'
                   f'<office:document-styles {NS} office:version="1.2">'
-                  f'<office:styles>{styles}</office:styles>'
+                  f'{font_decls}<office:styles>{styles}</office:styles>'
                   f'<office:automatic-styles>{page_layout(kind)}</office:automatic-styles>'
                   '<office:master-styles>'
                   '<style:master-page style:name="Standard" style:page-layout-name="pm1"/>'
