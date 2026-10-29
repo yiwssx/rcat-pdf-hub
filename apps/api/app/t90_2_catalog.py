@@ -59,7 +59,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T37", "DXF", ("dxf-to-pdf",), "P3", "strict ASCII DXF LINE/CIRCLE vectors only; no colors, fonts, XREF, BLOCK or 3D"),
     FormatCapability("T38", "CBZ", ("cbz-to-pdf",), "P2", "images-only safe comic archive, page order"),
     FormatCapability("T39", "AI", ("ai-to-pdf",), "P3", "PDF-compatible Illustrator subset only; PostScript/EPS and native Illustrator streams blocked"),
-    FormatCapability("T40", "CBR", (), "P3", "RAR decoder licensing, archive bombs and extraction isolation"),
+    FormatCapability("T40", "CBR", ("cbr-to-pdf",), "P3", "strict single-volume RAR4 *stored* image entries only; RAR5/compressed/encrypted RAR intentionally blocked"),
 )
 
 FORMAT_BY_ID = {item.item_id: item for item in FORMAT_CAPABILITIES}

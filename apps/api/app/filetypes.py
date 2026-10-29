@@ -211,6 +211,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
         return "application/x-fictionbook+xml"
 
     # T90-2 high-risk archives are never extracted during upload inspection.
+    # RAR4 stored/unencrypted *image only* is supported as a separate narrow
+    # CBR subset. No native RAR decoder, no RAR5, no decompression bombs.
+    if suffix == ".cbr":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged CBR conversion disabled")
+        from app.services.to_pdf_cbr import read_stored_rar4_images
+        try:
+            read_stored_rar4_images(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsafe or unsupported CBR RAR archive") from exc
+        return "application/vnd.comicbook-rar"
+
     if suffix in {".zip", ".cbz"}:
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged archive conversion disabled")
@@ -288,8 +300,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail=f"OpenDocument type does not match {suffix}")
         return ODF_TYPES[suffix]
 
-    # Legacy HWP3 only. The 30-byte version header and documented 16-bit
-    # password flag are rechecked at upload and in the worker.
+    # Legacy HWP3 only, documented version and password/protection revalidation.
     if suffix == ".hwp":
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged HWP3 conversion disabled")

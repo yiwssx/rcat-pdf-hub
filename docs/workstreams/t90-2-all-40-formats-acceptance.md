@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **32 canonical formats STAGED** via **36 guarded format-specific variants** (31 earlier plus specifically legacy HWP 3.0/1997 import via pinned LibreOffice/hwpfilter). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **8 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **33 canonical formats STAGED** via **37 guarded format-specific variants** (31 baseline plus RAR4 stored CBR and restricted Korean HWP3 true document imports). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **7 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -40,7 +40,7 @@
 | T26 | JFIF | P1 | **STAGED (flag OFF)** | `jfif-to-pdf` | JPEG/JFIF signature and color accuracy |
 | T27 | GIF | P1 | **STAGED (flag OFF)** | `gif-to-pdf` | multi-frame animation page policy |
 | T28 | BMP | P0 | **STAGED (flag OFF)** | `bmp-to-pdf` | raster encoding and color |
-| T29 | HWP | P3 | **STAGED (flag OFF)** | `hwp-to-pdf` | Legacy HWP 3.0/97 exact identity, password/protected flag rejection; actual nonblank 1-page A4 Korean text CI; HWP5/HWPX excluded |
+| T29 | HWP | P3 | **STAGED (flag OFF)** | `hwp-to-pdf` | Legacy HWP 3.0/97 exact 30-byte magic and password/protected rejection; real Korean text A4 import; HWP5/HWPX excluded |
 | T30 | CHM | P3 | **BLOCKED** | — | CHM extraction sandbox and HTML cross-links |
 | T31 | FB2 | P3 | **STAGED (flag OFF)** | `fb2-to-pdf` | text-only FictionBook body; no embedded images or exact typography |
 | T32 | ZIP | P2 | **STAGED (flag OFF)** | `zip-to-pdf` | staged images-only; other ZIP contents deliberately rejected |
@@ -51,7 +51,7 @@
 | T37 | DXF | P3 | **STAGED (flag OFF)** | `dxf-to-pdf` | restrictive ASCII ENTITIES LINE/CIRCLE 2D only; no XREF/BLOCK/text/units/color/layer fidelity |
 | T38 | CBZ | P2 | **STAGED (flag OFF)** | `cbz-to-pdf` | images-only safe comic archive, page order |
 | T39 | AI | P3 | **STAGED (flag OFF)** | `ai-to-pdf` | PDF-compatible Illustrator file subset only; strict PDF parse+rewrite, no actions/annotations/encryption; native PostScript/EPS .ai rejected |
-| T40 | CBR | P3 | **BLOCKED** | — | RAR decoder licensing, archive bombs and extraction isolation |
+| T40 | CBR | P3 | **STAGED (flag OFF)** | `cbr-to-pdf` | Only uncompressed RAR4 STORE single-volume image entries, verified CRC & bounds; RAR5, compressed/encrypted/split RAR excluded |
 
 ## Acceptance criteria before individual VERIFIED promotion
 
@@ -157,9 +157,16 @@
 - HEIC/HEIF decoder rollout **deferred**: upstream libheif had successive 2026 security releases including v1.23.7 on 26 Oct 2026, while Debian bookworm `libheif-examples` base is 1.15.1. Installing the old native decoder into current API image without patched/sandboxed isolation would bypass safe signoff. Later implement a separately isolated, patched libheif 1.23.7+ decoder with explicit codec allowlist, true real-image tests, licence review and resource limits.
 - Count after this merge and CI success only: **31 STAGED / 9 BLOCKED / 35 guarded route variants / 0 independently VERIFIED or RELEASED**; remaining blocked HEIC, HEIF, Pages, DWG, HWP, CHM, URL, WPS, CBR. No production deployment or UI release; T90-2 and master issues remain open.
 
+## 2026-10-30 — CBR genuine RAR4 stored image-only subset
+
+- Added `T40 cbr-to-pdf` as **strict RAR4 stored-only** (method `0x30`) document pages encoded as JPEG, PNG, WebP or BMP. The standard-library RAR4 parser validates the actual archive signature `Rar!\\x1a\\x07\\x00`, CRC16 of all block headers, single-volume nonencrypted main header, exact file-header lengths/CRC32, no splitting/compression/unknown flags, file count ≤64, file ≤12MiB, total images ≤24MiB and archive ≤25MiB. RAR5, compressed RAR4 and password-protected archives are **not** supported and must fail closed.
+- Only unique safe ASCII base filenames are allowed, with no path traversal, symlinks or device paths. Image members are copied into a private temporary ZIP and passed to the pre-existing tested CBZ image-to-PDF engine which performs image signature/decompression/pixel/frame and PDF output-page validation. No shell or native/third-party RAR decoder, no archive extraction to user-chosen paths. Synthetic spec-conforming RAR4 archives have also been parsed successfully with an independent `rarfile` implementation (development verification; no runtime reliance).
+- STAGED only with explicit `.cbr` and persisted `application/vnd.comicbook-rar`, authenticated owner scope, upload and worker validation, default OFF. Needs representative real CBR corpus, anti-malware/fuzz, production network isolation/security review and visual/comics golden before independent VERIFIED/RELEASED.
+- Standalone branch evidence target: 32 STAGED / 8 BLOCKED / 36 guarded variants. When merged with simultaneous Pages PR #251, reconcile counts to 33 STAGED / 7 BLOCKED / 37 guarded variants. No release and T90-5 remains pending.
+
 ## 2026-10-30 — real Hangul 97/HWP 3.0 nonblank document acceptance
 
 - Authentic upstream LibreOffice `hwpfilter/qa/cppunit/data/pass/hangul97-3.0.hwp` (immutable core revision `fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4`, git blob SHA `68ff2f51269f3ab619f6465073518cd84694300c`, 11,537 bytes) converted with actual pinned Gotenberg LibreOffice/hwpfilter to **1 nonblank A4 page** with successfully extracted **'Hello OpenOffice.org!' and '안녕하세요 오픈오피스!'**. Source SHA-256 remains unchanged. This is meaningful file import; not a blank fallback.
 - Implemented **HWP V3.00 1997 *only***, from public Hangul 3.0 on-disk spec: exact 30-byte magic `HWP Document File V3.00 ` followed by `0x1A0102030405`; 30+128+1008 minimum source and ≤8MiB; Document Info +24 document-protection dword=0 and +96 password flag=0. Reject HWP5 OLE, HWPX ZIP, modern variants, passworded/protected files. Static `POST /api/v1/pdf/to-pdf/hwp` requires `pdf:convert`, owner/expiry and exact `.hwp` / `application/x-hwp`. Existing worker rechecks at dispatch; forwards temporary `document.hwp` to pinned LibreOffice and validates resulting PDF. No new decoder/dependency needed.
 - STAGED only, default `PDFHUB_TO_PDF_TOOLS_ENABLED=false`, no public/production rollout. HWP3 fonts, tables, print geometry and larger complex Korean documents remain unverified, no HWP5 or HWPX support. Security, AV/fuzz/native converter isolation and independent full Compose acceptance pending.
-- Engineering count on standalone branch: 32 STAGED / 8 BLOCKED / 36 guarded variants; reconcile with concurrent Pages/CBR PRs before merging. Never count it as VERIFIED/RELEASED.
+- Engineering count on standalone branch: 33 STAGED / 7 BLOCKED / 37 guarded variants; reconcile with concurrent Pages/CBR PRs before merging. Never count it as VERIFIED/RELEASED.

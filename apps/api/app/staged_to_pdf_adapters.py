@@ -28,6 +28,7 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "eml-to-pdf": ("message/rfc822", ".eml"),
     "zip-to-pdf": ("application/zip", ".zip"),
     "cbz-to-pdf": ("application/vnd.comicbook+zip", ".cbz"),
+    "cbr-to-pdf": ("application/vnd.comicbook-rar", ".cbr"),
     "jfif-to-pdf": ("image/jpeg", ".jfif"),
     "gif-to-pdf": ("image/gif", ".gif"),
     "tiff-to-pdf": ("image/tiff", ".tiff"),
@@ -116,6 +117,9 @@ def execute_staged_to_pdf_operation(
         to_pdf_engine.xml_to_pdf(source=inputs[0], output=output)
     elif operation == "eml-to-pdf":
         to_pdf_engine.eml_to_pdf(source=inputs[0], output=output)
+    elif operation == "cbr-to-pdf":
+        from app.services.to_pdf_cbr import rar4_stored_cbr_to_pdf
+        rar4_stored_cbr_to_pdf(inputs[0], output)
     elif operation in {"zip-to-pdf", "cbz-to-pdf"}:
         to_pdf_engine.archive_images_to_pdf(
             inputs[0], output, kind=operation.split("-", 1)[0]
