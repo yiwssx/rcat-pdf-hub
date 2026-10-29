@@ -13,14 +13,14 @@ def test_exactly_40_real_capability_decisions_none_implied_released():
     assert set(FORMAT_BY_ID) == {f"T{number:02d}" for number in range(1, 41)}
     assert len({item.item_id for item in FORMAT_CAPABILITIES}) == 40
     assert {item.engineering_state for item in FORMAT_CAPABILITIES} == {"STAGED", "BLOCKED"}
-    assert sum(item.engineering_state == "STAGED" for item in FORMAT_CAPABILITIES) == 22
-    assert sum(item.engineering_state == "BLOCKED" for item in FORMAT_CAPABILITIES) == 18
+    assert sum(item.engineering_state == "STAGED" for item in FORMAT_CAPABILITIES) == 24
+    assert sum(item.engineering_state == "BLOCKED" for item in FORMAT_CAPABILITIES) == 16
 
 
 def test_no_undocumented_stage_route_or_blocked_fake_engine():
     allowed = {op for item in FORMAT_CAPABILITIES for op in item.operations}
     assert allowed == STAGED_TO_PDF_OPERATIONS == set(STAGED_TO_PDF_INPUTS)
-    assert len(allowed) == 26
+    assert len(allowed) == 28
     actual_routes = {
         route.path.rsplit("/", 1)[-1] + "-to-pdf"
         for route in to_pdf.router.routes
