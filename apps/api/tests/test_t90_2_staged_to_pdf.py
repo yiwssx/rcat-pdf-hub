@@ -138,7 +138,8 @@ def test_text_csv_escaped_html_and_pdf_binary(monkeypatch, tmp_path, format_name
             assert kwargs["follow_redirects"] is False
         def __enter__(self): return self
         def __exit__(self, *a): return False
-        def post(self, url, *, files):
+        def post(self, url, *, files, data):
+            assert data == {"preferCssPageSize": "true"}
             assert url.endswith("/forms/chromium/convert/html")
             sent.append(files["files"][1].decode("utf-8"))
             return Response()
