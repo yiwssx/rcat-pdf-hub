@@ -51,6 +51,12 @@ def csv_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope
     return _submit(req, principal, db, "csv-to-pdf")
 
 
+@router.post("/md", response_model=JobOut, status_code=202)
+def md_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:convert")),
+              db: Session = Depends(get_db)):
+    return _submit(req, principal, db, "md-to-pdf")
+
+
 @router.post("/jfif", response_model=JobOut, status_code=202)
 def jfif_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
                 db: Session = Depends(get_db)):
