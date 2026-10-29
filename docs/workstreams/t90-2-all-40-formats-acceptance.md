@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **26 canonical formats STAGED** via **30 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **14 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **28 canonical formats STAGED** via **32 guarded format-specific variants** (26 previous plus restricted XPS transcript and PDF-compatible Illustrator). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **12 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -33,7 +33,7 @@
 | T19 | MOBI | P3 | **BLOCKED** | — | licensed native reader and DRM |
 | T20 | DWG | P3 | **BLOCKED** | — | CAD binary licensing, layers and model scale |
 | T21 | PUB | P3 | **BLOCKED** | — | Publisher proprietary parser and layouts |
-| T22 | XPS | P2 | **BLOCKED** | — | ZIP/XML font resource sandbox and converter |
+| T22 | XPS | P2 | **STAGED (flag OFF)** | `xps-to-pdf` | Restricted ZIP/XML Glyphs Unicode-only **text transcription** onto A4; rejects images/vectors; original XPS page geometry/fonts not preserved |
 | T23 | XML | P2 | **STAGED (flag OFF)** | `xml-to-pdf` | staged plain source-listing only; no XSLT or document styling |
 | T24 | WebP | P0 | **STAGED (flag OFF)** | `webp-to-pdf` | animation and alpha fidelity |
 | T25 | HEIF | P2 | **BLOCKED** | — | licensed bounded HEIF codec absent |
@@ -50,7 +50,7 @@
 | T36 | Markdown | P1 | **STAGED (flag OFF)** | `md-to-pdf` | CommonMark safe subset, remote content forbidden |
 | T37 | DXF | P3 | **STAGED (flag OFF)** | `dxf-to-pdf` | restrictive ASCII ENTITIES LINE/CIRCLE 2D only; no XREF/BLOCK/text/units/color/layer fidelity |
 | T38 | CBZ | P2 | **STAGED (flag OFF)** | `cbz-to-pdf` | images-only safe comic archive, page order |
-| T39 | AI | P3 | **BLOCKED** | — | Illustrator AI/PDF dual-mode licensing and embedded resources |
+| T39 | AI | P3 | **STAGED (flag OFF)** | `ai-to-pdf` | PDF-compatible Illustrator file subset only; strict PDF parse+rewrite, no actions/annotations/encryption; native PostScript/EPS .ai rejected |
 | T40 | CBR | P3 | **BLOCKED** | — | RAR decoder licensing, archive bombs and extraction isolation |
 
 ## Acceptance criteria before individual VERIFIED promotion
@@ -128,3 +128,10 @@
 - **Caveat:** baseline smoke is not representative THSarabunPSK/Sarabun or institution's real document fidelity; no DOC/XLS/PPT legacy binary evidence, per-format visual pixel goldens, formula/chart fidelity, real Compose workflow, malware/load/accessibility signoff or production release. States remain 26 STAGED / 14 BLOCKED, 0 independently VERIFIED/RELEASED, flag OFF.
 
 - **CI typography observation:** the actual Gotenberg/LibreOffice Impress converter substituted embedded Loma for explicitly declared Garuda in synthetic ODP/RTF, even though Thai text/slide geometry were intact; checking a recognized embedded Thai font in that one format is NOT a font-fidelity signoff. Dedicated visual golden comparison remains a hard release gate.
+
+## 2026-10-29 — safely restricted AI/XPS decoder feasibility
+
+- **T39 AI**: accepts only Illustrator files explicitly saved in PDF-compatible mode and beginning with a genuine PDF signature; strict bounded PDF parse, no encryption, scripts/actions, attached resources or annotations. Rewrites printable pages via existing pypdf without cloning the original document catalog and validates the resulting PDF. **Does not support** native PostScript/EPS/old Illustrator, editable layer semantics, or original Illustrator project features.
+- **T22 XPS**: reads only ZIP-bounded Microsoft XPS FixedDocumentSequence/FixedDocument/FixedPage entries with direct UnicodeString Glyphs. Prevents XML entity expansion, ZIP bombs, traversal, duplicate/case collisions, remote references and unhandled vector/image/canvas/complex text commands. Renders a page-separated **A4 text transcription** through the existing static Chromium renderer. **Does not preserve** original XPS geometric page size, font, vector layout, overlays or embedded images. Unsupported files fail closed.
+- Both use the existing opt-in upload/worker revalidation, static authenticated owner/scope-scoped route, standard output custody and retained `PDFHUB_TO_PDF_TOOLS_ENABLED=false` default. They are intentionally **STAGED**, not visually **VERIFIED** or production **RELEASED**; no new dependency, network or deployment topology. The other 12 specialist formats remain blocked pending codec sandbox and licensing proof.
+- Original 26/14 status in older dated checkpoint sections is historical, not the current ledger. Pending: representative real AI/XPS golden corpus, all institutional font/layout goldens, Compose E2E, malware/load/accessibility and T90-5 signoff.
