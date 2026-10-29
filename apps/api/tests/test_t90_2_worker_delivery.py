@@ -135,3 +135,65 @@ def test_t90_2_markdown_worker_owner_and_artifact(monkeypatch, tmp_path):
                              strict=True).pages) == 1
     assert len(rendered) == 1 and "<table>" in rendered[0]
     assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("kind,mime", [
+    ("fb2", "application/x-fictionbook+xml"),
+    ("epub", "application/epub+zip"),
+])
+def test_t90_2_ebook_worker_owner_and_artifact(monkeypatch, tmp_path, kind, mime):
+    """Real queue-worker DB/storage, only external Gotenberg transport mocked."""
+    from io import BytesIO
+    import zipfile
+    from reportlab.pdfgen import canvas
+    from app.services import to_pdf_engine
+
+    _setup(monkeypatch, tmp_path)
+    monkeypatch.setattr(get_settings(), "to_pdf_tools_enabled", True)
+    source = tmp_path / "originals" / ("lesson." + kind)
+    if kind == "fb2":
+        source.write_text(
+            '<FictionBook><description><title-info><book-title>ภาษาไทย</book-title>'
+            '</title-info></description><body><section><p>สวัสดี</p>'
+            '</section></body></FictionBook>', encoding="utf-8",
+        )
+    else:
+        with zipfile.ZipFile(source, "w") as archive:
+            archive.writestr("mimetype", "application/epub+zip")
+            archive.writestr("META-INF/container.xml",
+                             '<container><rootfile full-path="OPS/book.opf"/></container>')
+            archive.writestr("OPS/book.opf",
+                             '<package><manifest><item id="c" href="chapter.xhtml" '
+                             'media-type="application/xhtml+xml"/></manifest>'
+                             '<spine><itemref idref="c"/></spine></package>')
+            archive.writestr("OPS/chapter.xhtml",
+                             '<html><body><h1>ภาษาไทย</h1><p>สวัสดี</p></body></html>')
+    before = source.read_bytes()
+    rendered = []
+
+    def fake_gotenberg(html, output):
+        rendered.append(html)
+        c = canvas.Canvas(str(output))
+        c.drawString(36, 800, "RCAT safe ebook")
+        c.showPage()
+        c.save()
+
+    monkeypatch.setattr(to_pdf_engine, "_html_to_pdf", fake_gotenberg)
+    owner = "user:t90-2-book-" + kind
+    job_id = _job(source, owner, kind + "-to-pdf", mime,
+                  expires_at=datetime.now(timezone.utc) + timedelta(hours=1))
+    result_id = worker_tasks.process_job(job_id)
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        artifact = db.get(FileRecord, result_id)
+        links = db.scalars(
+            select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)
+        ).all()
+        assert job.status == "completed" and job.output_file_id == result_id
+        assert artifact.source_system == owner
+        assert artifact.content_type == "application/pdf"
+        assert len(links) == 1 and links[0].role == "result"
+        assert len(PdfReader(str(storage.path_for_stored_name(artifact.stored_name)),
+                             strict=True).pages) == 1
+    assert len(rendered) == 1 and "สวัสดี" in rendered[0]
+    assert before == source.read_bytes()
