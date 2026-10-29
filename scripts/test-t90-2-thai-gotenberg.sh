@@ -132,7 +132,7 @@ if kind in {"pptx", "odp"}:
     if len(slides) < 2 or thai not in slides[0] or second not in slides[1]:
         raise SystemExit("pptx: slide order or content is wrong")
 if not re.search(r"Garuda", fonts, re.IGNORECASE):
-    raise SystemExit(f"{kind}: expected Garuda Thai font was not embedded")
+    raise SystemExit(f"{kind}: expected Garuda Thai font was not embedded; actual pdffonts:\n{fonts}")
 print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded Garuda")
 PY
 done
