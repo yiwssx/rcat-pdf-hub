@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **29 canonical formats STAGED** via **33 guarded format-specific variants** (26 earlier, restricted XPS+Illustrator, and DRM-free classic MOBI text). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **11 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **30 canonical formats STAGED** via **34 guarded format-specific variants** (26 earlier, restricted XPS+Illustrator, classic MOBI transcript, and bounded Publisher OLE import). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **10 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -32,7 +32,7 @@
 | T18 | RTF | P0 | **STAGED (flag OFF)** | `rtf-to-pdf` | legacy RTF parser and font fidelity |
 | T19 | MOBI | P3 | **STAGED (flag OFF)** | `mobi-to-pdf` | restricted DRM-free, classic UTF-8 MOBI4–6 BOOKMOBI, compression 1 or bounded PalmDOC compression 2; *text transcript only*; rejects rich HTML/images/CSS/DRM/KF8/HUFF |
 | T20 | DWG | P3 | **BLOCKED** | — | CAD binary licensing, layers and model scale |
-| T21 | PUB | P3 | **BLOCKED** | — | Publisher proprietary parser and layouts |
+| T21 | PUB | P3 | **STAGED (flag OFF)** | `pub-to-pdf` | Strict size/CFB v3 FAT-directory preflight; pinned real Gotenberg/libmspub Publisher sample yields 2 nonblank A4 pages; arbitrary Publisher page/font fidelity unverified |
 | T22 | XPS | P2 | **STAGED (flag OFF)** | `xps-to-pdf` | Restricted ZIP/XML Glyphs Unicode-only **text transcription** onto A4; rejects images/vectors; original XPS page geometry/fonts not preserved |
 | T23 | XML | P2 | **STAGED (flag OFF)** | `xml-to-pdf` | staged plain source-listing only; no XSLT or document styling |
 | T24 | WebP | P0 | **STAGED (flag OFF)** | `webp-to-pdf` | animation and alpha fidelity |
@@ -141,3 +141,10 @@
 - Added `T19 mobi-to-pdf` as a safe limited **classic MOBI4-6 UTF-8 transcript**, not a general Kindle/Mobipocket reader. Pure standard-library PalmDB record parser with `BOOKMOBI` signature, bounded monotonic offsets, exactly one record-0 and 1–64 data records, explicit MOBI header/version and UTF-8, 192 KiB decoded text limit, PalmDOC no-compression or manually bounded LZ77 compression-2. No third-party native decoder or new dependencies.
 - **Security gates:** Rejects DRM metadata/encryption, KF8, HUFF/CDIC, EXTH, trailer extension flags, extra media records, invalid UTF-8, HTML resources/scripts/styles/attributes/links and bidi control chars. HTML transcript output is escaped; renders A4 in the existing no-network Chromium path. Synthetic fixture tests prove English/Thai text, LZ77 regression, unmodified upload source, disallowed types, malformed metadata and flag-OFF behavior.
 - **Limitations**: No complete original typography, chapters, images, CSS, Amazon Kindle versions or DRM removal. Published as **STAGED** only, default `PDFHUB_TO_PDF_TOOLS_ENABLED=false`. True institutional golden corpus, Gotenberg visual output, full API/worker/download/security/load and T90-5 production signoff are still required. Other **11** specialist formats remain BLOCKED; **0 independently VERIFIED/RELEASED**.
+
+## 2026-10-30 — genuine Publisher binary import acceptance (PR #249)
+
+- T21 Microsoft Publisher `.pub` now has a **real format-specific, default-OFF** route using existing Gotenberg/LibreOffice (libmspub). Source upload + worker both enforce original `.pub` / `application/x-mspublisher`, and the new standard-library restricted CFB v3 parser checks OLE signature, byte order, FAT allocation table, directory chain/UTF-16 names, at least one root and regular stream, ≤7 MiB and sector alignment. Other CFB variants fail closed. Conversion preserves the original suffix when forwarding bytes to pinned Gotenberg; existing auth/owner/expiry and output custody remain unchanged.
+- Binary evidence: disposable pinned Gotenberg CI downloads **one 10,752-byte upstream LibreOffice writerperfect/libmspub QA `.pub` test fixture**, pinned to immutable LibreOffice core revision `fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4` and git blob SHA `607a07ae2d362e4a1f6e779dfff88726fe74f910`. It verifies the upstream binary's authenticity, input SHA-256 unchanged, actual Gotenberg LibreOffice PDF response, precisely **2 A4 pages**, and a nonblank first-page raster via Poppler. No binary sample or proprietary font is added to Git; CI fixture retrieved only inside a disposable job.
+- Original format support is **not** universal: some Publisher OLE variants and modern proprietary layouts may fail; full text/object/fonts/layout fidelity needs a diverse representative real-document golden corpus, print-area comparisons and further security validation. The OLE structural preflight is not an AV scan. This is STAGED only, not per-format VERIFIED nor production RELEASED. No change to feature toggle `PDFHUB_TO_PDF_TOOLS_ENABLED=false`, existing public UI, production image/network or legacy 13.
+- **Current count after PR success:** 30 STAGED / 10 BLOCKED / 34 guarded route variants, 0 independently VERIFIED / RELEASED. Remaining formats: HEIC, HEIF, DjVu, Pages, DWG, HWP, CHM, URL, WPS, CBR.
