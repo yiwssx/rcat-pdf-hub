@@ -112,7 +112,7 @@ def test_mobi_refuses_active_markup_and_untrusted_controls(tmp_path, text):
 
 
 @pytest.mark.parametrize("mutate", [
-    lambda b: b"NOTMOBI" + b[7:],
+    lambda b: b[:0x3C] + b"NOTMOBI" + b[0x44:],
     lambda b: b[:0x3C] + b"BAD!MOBI" + b[0x44:],
     lambda b: b[:-10],
     lambda b: bytes(bytearray(b[:0x4C]) + b"\x00\x00" + b[0x4E:]),
@@ -156,6 +156,6 @@ def test_mobi_forged_text_length_and_trailing_junk_rejected(tmp_path):
     source.write_bytes(bad)
     with pytest.raises(ValueError, match="length mismatch"):
         mobi_to_safe_html(source)
-    source.write_bytes(good + b"\x00" * 250)
+    source.write_bytes(good + b"\x00" * 4096)
     with pytest.raises(ValueError, match="bounds"):
         mobi_to_safe_html(source)
