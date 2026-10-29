@@ -110,7 +110,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
         return PDF
 
     # T90-2 staged formats are rejected at upload until an operator opts in.
-    if suffix in {".txt", ".csv", ".gif", ".jfif"}:
+    if suffix in {".txt", ".csv", ".md", ".gif", ".jfif"}:
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged conversion upload type is disabled")
         if suffix in {".gif", ".jfif"}:
@@ -127,7 +127,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="Only UTF-8 text is supported") from exc
         if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
             raise HTTPException(status_code=415, detail="Unsafe text control character")
-        return "text/plain" if suffix == ".txt" else "text/csv"
+        return {".txt": "text/plain", ".csv": "text/csv", ".md": "text/markdown"}[suffix]
 
     if suffix in SIGNATURE_TYPES:
         media_type, signatures = SIGNATURE_TYPES[suffix]
