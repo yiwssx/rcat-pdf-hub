@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 from io import BytesIO
-from pathlib import Path
 
 import pytest
 from markdown_it import MarkdownIt
