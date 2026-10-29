@@ -76,3 +76,58 @@ if ! grep -Eiq '(Garuda|Kinnari|Loma|Norasi|Waree)' "$tmp/fonts.txt"; then
   exit 1
 fi
 echo "PASS: real pinned Gotenberg Chromium Thai text, A4 page, embedded Thai font"
+
+# Live LibreOffice conversion follows the Chromium check in the same disposable
+# Gotenberg container. No extra dependencies, container network or prod credentials.
+python3 "$repo_root/scripts/make-t90-2-office-fixtures.py" "$tmp/office"
+for format in docx xlsx pptx; do
+  file="$tmp/office/thai.$format"
+  result="$tmp/$format.pdf"
+  original_hash="$(sha256sum "$file" | cut -d' ' -f1)"
+  curl --fail --silent --show-error --max-time 90 \
+    -F "files=@$file;filename=thai.$format;type=application/octet-stream" \
+    "http://127.0.0.1:$port/forms/libreoffice/convert" > "$result"
+  test "$(head -c 5 "$result")" = "%PDF-"
+  pdfinfo "$result" > "$tmp/$format.info"
+  pdftotext -enc UTF-8 -layout "$result" "$tmp/$format.txt"
+  pdffonts "$result" > "$tmp/$format.fonts"
+  test "$(sha256sum "$file" | cut -d' ' -f1)" = "$original_hash"
+  python3 - "$format" "$tmp/$format.info" "$tmp/$format.txt" "$tmp/$format.fonts" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+kind = sys.argv[1]
+info = Path(sys.argv[2]).read_text(encoding="utf-8")
+text = Path(sys.argv[3]).read_text(encoding="utf-8")
+fonts = Path(sys.argv[4]).read_text(encoding="utf-8")
+def match(pattern: str) -> str:
+    found = re.search(pattern, info, re.M)
+    if not found:
+        raise SystemExit(f"{kind}: PDF metadata missing {pattern!r}")
+    return found.group(1)
+pages = int(match(r"^Pages:\s*(\d+)"))
+size = re.search(r"^Page size:\s*([0-9.]+) x ([0-9.]+) pts", info, re.M)
+if not size:
+    raise SystemExit(f"{kind}: PDF page geometry missing")
+width, height = map(float, size.groups())
+expect = {"docx": (1, 595.28, 841.89),
+          "xlsx": (1, 841.89, 595.28),
+          "pptx": (2, 960.0, 540.0)}[kind]
+if pages != expect[0] or abs(width - expect[1]) > 3 or abs(height - expect[2]) > 3:
+    raise SystemExit(f"{kind}: wrong page count or geometry: {pages}, {width} x {height}")
+thai = "วิทยาลัยเกษตรและเทคโนโลยีร้อยเอ็ด"
+second = "ทดสอบสระ วรรณยุกต์ และภาษาไทย"
+if thai not in text or second not in text or "\ufffd" in text:
+    raise SystemExit(f"{kind}: expected Thai text missing, mangled or replacement glyph")
+if kind == "xlsx" and ("RCAT" not in text or "123" not in text):
+    raise SystemExit("xlsx: missing cell or numeric value")
+if kind == "pptx":
+    slides = text.split("\f")
+    if len(slides) < 2 or thai not in slides[0] or second not in slides[1]:
+        raise SystemExit("pptx: slide order or content is wrong")
+if not re.search(r"Garuda", fonts, re.IGNORECASE):
+    raise SystemExit(f"{kind}: expected Garuda Thai font was not embedded")
+print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded Garuda")
+PY
+done
