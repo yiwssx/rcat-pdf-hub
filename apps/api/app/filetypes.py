@@ -158,6 +158,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="SVG contains invalid or unsafe markup") from exc
         return "image/svg+xml"
 
+    # Narrow DRM-free classic MOBI text-only route: full bounded parser at both
+    # upload and worker, so spoofed BOOKMOBI/PDB payloads fail closed.
+    if suffix == ".mobi":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged MOBI conversion is disabled")
+        from app.services.to_pdf_mobi import mobi_to_safe_html
+        try:
+            mobi_to_safe_html(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or unsafe MOBI document") from exc
+        return "application/x-mobipocket-ebook"
+
     # EPUB and FB2 ebooks are opt-in text-only converters. The worker performs
     # full bounded ZIP/XML inspection; upload verifies only lightweight type.
     if suffix in {".epub", ".fb2"}:
