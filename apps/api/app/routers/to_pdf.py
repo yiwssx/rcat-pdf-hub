@@ -73,3 +73,139 @@ def gif_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope
 def tiff_to_pdf(req: ConvertRequest, principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
                 db: Session = Depends(get_db)):
     return _submit(req, principal, db, "tiff-to-pdf")
+
+
+@router.post("/doc", response_model=JobOut, status_code=202)
+def doc_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "doc-to-pdf")
+
+
+@router.post("/docx", response_model=JobOut, status_code=202)
+def docx_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "docx-to-pdf")
+
+
+@router.post("/xls", response_model=JobOut, status_code=202)
+def xls_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "xls-to-pdf")
+
+
+@router.post("/xlsx", response_model=JobOut, status_code=202)
+def xlsx_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "xlsx-to-pdf")
+
+
+@router.post("/ppt", response_model=JobOut, status_code=202)
+def ppt_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "ppt-to-pdf")
+
+
+@router.post("/pptx", response_model=JobOut, status_code=202)
+def pptx_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "pptx-to-pdf")
+
+
+@router.post("/odt", response_model=JobOut, status_code=202)
+def odt_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "odt-to-pdf")
+
+
+@router.post("/ods", response_model=JobOut, status_code=202)
+def ods_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "ods-to-pdf")
+
+
+@router.post("/odp", response_model=JobOut, status_code=202)
+def odp_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "odp-to-pdf")
+
+
+@router.post("/rtf", response_model=JobOut, status_code=202)
+def rtf_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "rtf-to-pdf")
+
+
+@router.post("/jpg", response_model=JobOut, status_code=202)
+def jpg_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "jpg-to-pdf")
+
+
+@router.post("/jpeg", response_model=JobOut, status_code=202)
+def jpeg_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "jpeg-to-pdf")
+
+
+@router.post("/png", response_model=JobOut, status_code=202)
+def png_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "png-to-pdf")
+
+
+@router.post("/webp", response_model=JobOut, status_code=202)
+def webp_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "webp-to-pdf")
+
+
+@router.post("/bmp", response_model=JobOut, status_code=202)
+def bmp_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:image-to-pdf")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "bmp-to-pdf")
+
