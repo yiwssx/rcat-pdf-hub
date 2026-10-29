@@ -7,7 +7,7 @@ The pinned LibreOffice/libetonyek converter imports the document itself.
 from pathlib import Path
 import zipfile
 
-from app.filetypes import _checked_office_members
+from app.services.zip_preflight import _checked_office_members
 
 MAX_PAGES_BYTES = 16 * 1024 * 1024
 MAX_PAGES_ENTRIES = 128
