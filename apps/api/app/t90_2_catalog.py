@@ -30,7 +30,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T08", "PPTX", ("pptx-to-pdf", "odp-to-pdf",), "P0", "slides and embedded font fidelity"),
     FormatCapability("T09", "HEIC", (), "P2", "licensed bounded HEIF image codec absent"),
     FormatCapability("T10", "HTML", ("html-to-pdf",), "P1", "staged sanitized content-only, styling and assets intentionally omitted"),
-    FormatCapability("T11", "DjVu", (), "P3", "untrusted native decoder and compression safety"),
+    FormatCapability("T11", "DjVu", ("djvu-to-pdf",), "P3", "single-page inline DJVU IFF only; bounded patched Debian DjVuLibre subprocess; no multipage, external INCL, exact layout/text fidelity"),
     FormatCapability("T12", "Pages", (), "P3", "proprietary Apple container and layout converter"),
     FormatCapability("T13", "TIFF", ("tiff-to-pdf",), "P0", "multi-frame image fidelity"),
     FormatCapability("T14", "TXT", ("txt-to-pdf",), "P1", "UTF-8 Thai text and page wrapping"),

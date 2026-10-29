@@ -17,6 +17,7 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "md-to-pdf": ("text/markdown", ".md"),
     "svg-to-pdf": ("image/svg+xml", ".svg"),
     "dxf-to-pdf": ("image/vnd.dxf", ".dxf"),
+    "djvu-to-pdf": ("image/vnd.djvu", ".djvu"),
     "xps-to-pdf": ("application/vnd.ms-xpsdocument", ".xps"),
     "ai-to-pdf": ("application/vnd.adobe.illustrator", ".ai"),
     "epub-to-pdf": ("application/epub+zip", ".epub"),
@@ -92,6 +93,9 @@ def execute_staged_to_pdf_operation(
     elif operation == "dxf-to-pdf":
         from app.services.to_pdf_dxf import restricted_dxf_to_pdf
         restricted_dxf_to_pdf(inputs[0], output)
+    elif operation == "djvu-to-pdf":
+        from app.services.to_pdf_djvu import restricted_djvu_to_pdf
+        restricted_djvu_to_pdf(inputs[0], output)
     elif operation == "xps-to-pdf":
         from app.services.to_pdf_special import restricted_xps_to_pdf
         restricted_xps_to_pdf(inputs[0], output)
