@@ -109,6 +109,31 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="File extension is PDF but the file signature is not PDF")
         return PDF
 
+    # AI is accepted ONLY as an inert, strictly parsed PDF-compatible stream.
+    # Native Illustrator PostScript/EPS is deliberately unsupported.
+    if suffix == ".ai":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged Illustrator conversion disabled")
+        from app.services.to_pdf_special import _ai_pdf_reader
+        try:
+            _ai_pdf_reader(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported Illustrator PDF-compatible file") from exc
+        return "application/vnd.adobe.illustrator"
+
+    # XPS is a restricted, offline Glyphs-only text transcription, not a renderer.
+    if suffix == ".xps":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged XPS transcription disabled")
+        if not head.startswith(b"PK\\x03\\x04".replace(b"\\x03", b"\x03").replace(b"\\x04", b"\x04")):
+            raise HTTPException(status_code=415, detail="Invalid XPS ZIP signature")
+        from app.services.to_pdf_special import xps_to_safe_html
+        try:
+            xps_to_safe_html(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or unsafe XPS document") from exc
+        return "application/vnd.ms-xpsdocument"
+
     # Only the restricted ASCII ENTITIES / LINE+CIRCLE CAD subset is accepted.
     if suffix == ".dxf":
         if not get_settings().to_pdf_tools_enabled:
