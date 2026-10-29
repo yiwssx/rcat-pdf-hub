@@ -41,7 +41,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T19", "MOBI", (), "P3", "licensed native reader and DRM"),
     FormatCapability("T20", "DWG", (), "P3", "CAD binary licensing, layers and model scale"),
     FormatCapability("T21", "PUB", (), "P3", "Publisher proprietary parser and layouts"),
-    FormatCapability("T22", "XPS", (), "P2", "ZIP/XML font resource sandbox and converter"),
+    FormatCapability("T22", "XPS", ("xps-to-pdf",), "P2", "restricted ZIP FixedDocument/Glyphs Unicode transcript; no vector, image, page-size or original font fidelity"),
     FormatCapability("T23", "XML", ("xml-to-pdf",), "P2", "staged plain source-listing only; no XSLT or document styling"),
     FormatCapability("T24", "WebP", ("webp-to-pdf",), "P0", "animation and alpha fidelity"),
     FormatCapability("T25", "HEIF", (), "P2", "licensed bounded HEIF codec absent"),
@@ -58,7 +58,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T36", "Markdown", ("md-to-pdf",), "P1", "CommonMark safe subset, remote content forbidden"),
     FormatCapability("T37", "DXF", ("dxf-to-pdf",), "P3", "strict ASCII DXF LINE/CIRCLE vectors only; no colors, fonts, XREF, BLOCK or 3D"),
     FormatCapability("T38", "CBZ", ("cbz-to-pdf",), "P2", "images-only safe comic archive, page order"),
-    FormatCapability("T39", "AI", (), "P3", "Illustrator AI/PDF dual-mode licensing and embedded resources"),
+    FormatCapability("T39", "AI", ("ai-to-pdf",), "P3", "PDF-compatible Illustrator subset only; PostScript/EPS and native Illustrator streams blocked"),
     FormatCapability("T40", "CBR", (), "P3", "RAR decoder licensing, archive bombs and extraction isolation"),
 )
 

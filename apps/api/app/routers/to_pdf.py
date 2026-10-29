@@ -284,3 +284,21 @@ def svg_to_pdf(
     db: Session = Depends(get_db),
 ):
     return _submit(req, principal, db, "svg-to-pdf")
+
+
+@router.post("/xps", response_model=JobOut, status_code=202)
+def restricted_xps_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "xps-to-pdf")
+
+
+@router.post("/ai", response_model=JobOut, status_code=202)
+def pdf_compatible_ai_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "ai-to-pdf")

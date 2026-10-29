@@ -17,6 +17,8 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "md-to-pdf": ("text/markdown", ".md"),
     "svg-to-pdf": ("image/svg+xml", ".svg"),
     "dxf-to-pdf": ("image/vnd.dxf", ".dxf"),
+    "xps-to-pdf": ("application/vnd.ms-xpsdocument", ".xps"),
+    "ai-to-pdf": ("application/vnd.adobe.illustrator", ".ai"),
     "epub-to-pdf": ("application/epub+zip", ".epub"),
     "fb2-to-pdf": ("application/x-fictionbook+xml", ".fb2"),
     "html-to-pdf": ("text/html", ".html"),
@@ -88,6 +90,12 @@ def execute_staged_to_pdf_operation(
     elif operation == "dxf-to-pdf":
         from app.services.to_pdf_dxf import restricted_dxf_to_pdf
         restricted_dxf_to_pdf(inputs[0], output)
+    elif operation == "xps-to-pdf":
+        from app.services.to_pdf_special import restricted_xps_to_pdf
+        restricted_xps_to_pdf(inputs[0], output)
+    elif operation == "ai-to-pdf":
+        from app.services.to_pdf_special import pdf_compatible_ai_to_pdf
+        pdf_compatible_ai_to_pdf(inputs[0], output)
     elif operation == "epub-to-pdf":
         to_pdf_engine.epub_to_pdf(inputs[0], output)
     elif operation == "fb2-to-pdf":
