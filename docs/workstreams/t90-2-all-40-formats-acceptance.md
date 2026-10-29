@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **25 canonical formats STAGED** via **29 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **15 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **26 canonical formats STAGED** via **30 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **14 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -48,7 +48,7 @@
 | T34 | WPS | P3 | **BLOCKED** | — | proprietary WPS/Kingsoft parser and licensing |
 | T35 | EML | P2 | **STAGED (flag OFF)** | `eml-to-pdf` | staged plain-text email only; rich HTML/attachments excluded |
 | T36 | Markdown | P1 | **STAGED (flag OFF)** | `md-to-pdf` | CommonMark safe subset, remote content forbidden |
-| T37 | DXF | P3 | **BLOCKED** | — | CAD parser precision and dangerous external references |
+| T37 | DXF | P3 | **STAGED (flag OFF)** | `dxf-to-pdf` | restrictive ASCII ENTITIES LINE/CIRCLE 2D only; no XREF/BLOCK/text/units/color/layer fidelity |
 | T38 | CBZ | P2 | **STAGED (flag OFF)** | `cbz-to-pdf` | images-only safe comic archive, page order |
 | T39 | AI | P3 | **BLOCKED** | — | Illustrator AI/PDF dual-mode licensing and embedded resources |
 | T40 | CBR | P3 | **BLOCKED** | — | RAR decoder licensing, archive bombs and extraction isolation |
@@ -92,4 +92,11 @@
 - **T16 SVG**: A closed-schema `defusedxml` validator reads only UTF-8 SVG XML, allows a bounded set of primitives (`g`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text`, `tspan`) and vetted numeric/color attributes; it **creates new SVG markup** instead of passing untrusted source bytes into Chromium.
 - All external/network references, namespaced attributes, events, `<script>`, `<style>`, `<foreignObject>`, `<use>`, `<image>`, `<defs>`, gradients, filters, arbitrary transforms, CSS and XML processing instructions/DTD/XXE are refused. Caps: 2 MiB source, 600 elements, depth 20, 20k text characters; strict PDF validation and owner-scoped worker artifact apply.
 - **Excluded**: original fonts, complex fill/stroke gradients, filters, rich paths requiring styling, embedded images, external links, transforms and advanced SVG animation. Gotenberg Thai text shaping, vector content comparisons and representative document goldens are still needed before VERIFIED.
-- Registry now records **25 STAGED / 15 BLOCKED / 29 API variants**; production still `PDFHUB_TO_PDF_TOOLS_ENABLED=false`. T90 release count remains **0/90**.
+- Registry after SVG staged **25 STAGED / 15 BLOCKED / 29 API variants**; production still `PDFHUB_TO_PDF_TOOLS_ENABLED=false`. T90 release count remains **0/90**.
+
+## 2026-10-29 restricted ASCII DXF engineering follow-on
+
+- T37 is a **closed-schema ASCII DXF 2D subset**: one `ENTITIES` section, literal `LINE` and `CIRCLE` geometry, optional strictly bounded layer/handle labels, no file/network access, nested objects, XREF, INSERT, BLOCK, SPLINE, TEXT, 3D, images, proprietary decoders or subprocesses. Unknown groups and sections fail closed instead of silently dropping design elements.
+- A bounded 1 MiB/2,000-entity/20,000-pair parser runs at upload and again in the worker. Vector primitives are drawn on one A4 PDF page by pinned ReportLab. Positions are fit-to-page without original engineering units, annotations or color semantics; **not a dimension-accurate CAD plotting tool**. Source immutable and PDF strict-parse checked.
+- The new `/api/v1/pdf/to-pdf/dxf` route is authenticated with `pdf:convert`, owner-scoped and behind the existing production-default-off switch. Negative tests cover binary injection, XREF/INSERT, malformed group codes, out-of-range/3D geometry, and disabled upload/worker paths. Does not alter legacy operations or production deployment.
+- Engineering inventory: **26 STAGED / 14 BLOCKED / 30 explicit guarded endpoint variants**. Not VERIFIED or RELEASED: representative engineering drawing corpus, page scaling/units, layers and colors, external CAD review, real Compose/auth/download/Thai golden/AV/load proof and full CI are separate gates. `0/90 RELEASED`.
