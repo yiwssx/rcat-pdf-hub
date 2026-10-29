@@ -10,6 +10,7 @@ from html import escape
 from io import BytesIO, StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import shutil
 
 import httpx
 from markdown_it import MarkdownIt
@@ -132,9 +133,38 @@ def markdown_to_pdf(source: Path, output: Path) -> None:
     _html_to_pdf(body, output)
 
 
+def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) -> None:
+    """Forward validated Office bytes with original extension to pinned Gotenberg.
+
+    Stored upload names are randomized and may lack the original extension.
+    LibreOffice format detection needs the checked source extension preserved.
+    """
+    _distinct(source, output)
+    if original_suffix not in {
+        ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ".odt", ".ods", ".odp", ".rtf",
+    }:
+        raise ValueError("Unsupported Office document extension")
+    if source.stat().st_size > MAX_IMAGE_BYTES:
+        raise ValueError("Office input exceeds staged file-size limit")
+    with TemporaryDirectory(prefix="pdfhub-office-to-pdf-") as folder:
+        copy = Path(folder) / ("document" + original_suffix)
+        shutil.copyfile(source, copy)
+        with copy.open("rb") as fh:
+            with httpx.Client(timeout=300.0, follow_redirects=False) as client:
+                response = client.post(
+                    get_settings().gotenberg_url.rstrip("/") + "/forms/libreoffice/convert",
+                    files={"files": (copy.name, fh, "application/octet-stream")},
+                )
+        response.raise_for_status()
+        _checked_pdf(response.content, output)
+
+
 def image_frames_to_pdf(source: Path, output: Path, *, kind: str) -> None:
     _distinct(source, output)
-    allowed = {"jfif": "JPEG", "gif": "GIF", "tiff": "TIFF"}
+    allowed = {"jfif": "JPEG", "gif": "GIF", "tiff": "TIFF",
+               "jpg": "JPEG", "jpeg": "JPEG", "png": "PNG",
+               "webp": "WEBP", "bmp": "BMP"}
     if kind not in allowed:
         raise ValueError("Unknown staged image format")
     if source.stat().st_size > MAX_IMAGE_BYTES:
