@@ -15,7 +15,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
       qpdf ghostscript poppler-utils \
       tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng \
       fonts-noto-core \
-      unpaper pngquant jbig2dec djvulibre-bin curl \
+      unpaper pngquant jbig2dec djvulibre-bin libwps-tools curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
