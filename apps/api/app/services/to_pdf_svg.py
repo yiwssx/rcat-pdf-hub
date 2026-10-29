@@ -120,6 +120,10 @@ def safe_svg_markup(source: Path) -> str:
         raise ValueError("SVG must be UTF-8 XML") from exc
     if any(ord(c) < 32 and c not in "\t\r\n" for c in text):
         raise ValueError("SVG has invalid control characters")
+    # ElementTree silently drops processing instructions. Reject before parse
+    # so XML-stylesheet references are never accepted, even if unrendered.
+    if re.search(r"<\?(?!xml(?:\s|\?>))", text, flags=re.IGNORECASE):
+        raise ValueError("SVG processing instructions are not supported")
     try:
         root = SafeET.fromstring(text)
     except (SafeET.ParseError, DefusedXmlException, UnicodeError, ValueError) as exc:
