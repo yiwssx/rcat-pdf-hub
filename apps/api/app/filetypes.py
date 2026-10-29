@@ -276,6 +276,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail=f"OpenDocument type does not match {suffix}")
         return ODF_TYPES[suffix]
 
+    # T90-2 guarded Publisher route: strict bounded CFB structural validation;
+    # converter fidelity is assessed separately using real pinned .pub QA corpus.
+    if suffix == ".pub":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged Publisher conversion is disabled")
+        from app.services.to_pdf_publisher import validate_publisher_ole
+        try:
+            validate_publisher_ole(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsafe or unsupported Publisher OLE container") from exc
+        return "application/x-mspublisher"
+
     if suffix in OLE_TYPES:
         if not head.startswith(OLE_SIGNATURE):
             raise HTTPException(status_code=415, detail=f"Invalid legacy Office document: {suffix}")
