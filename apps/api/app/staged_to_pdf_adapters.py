@@ -14,6 +14,7 @@ from app.services import to_pdf_engine
 STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "txt-to-pdf": ("text/plain", ".txt"),
     "csv-to-pdf": ("text/csv", ".csv"),
+    "md-to-pdf": ("text/markdown", ".md"),
     "jfif-to-pdf": ("image/jpeg", ".jfif"),
     "gif-to-pdf": ("image/gif", ".gif"),
     "tiff-to-pdf": ("image/tiff", ".tiff"),
@@ -51,6 +52,8 @@ def execute_staged_to_pdf_operation(
         to_pdf_engine.text_to_pdf(inputs[0], output)
     elif operation == "csv-to-pdf":
         to_pdf_engine.csv_to_pdf(inputs[0], output)
+    elif operation == "md-to-pdf":
+        to_pdf_engine.markdown_to_pdf(inputs[0], output)
     else:
         to_pdf_engine.image_frames_to_pdf(
             inputs[0], output, kind=operation.split("-", 1)[0]
