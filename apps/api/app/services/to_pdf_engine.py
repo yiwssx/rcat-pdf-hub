@@ -12,6 +12,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import httpx
+from markdown_it import MarkdownIt
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pypdf import PdfReader
 
@@ -31,7 +32,7 @@ _STYLE = """<!doctype html><html lang="th"><head><meta charset="utf-8">
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit}
 table{border-collapse:collapse;width:100%;table-layout:fixed}
 td,th{border:1px solid #999;padding:5px;vertical-align:top;overflow-wrap:anywhere}
-thead{display:table-header-group}tr{break-inside:avoid}</style></head><body>"""
+thead{display:table-header-group}tr{break-inside:avoid}</style><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;; connect-src &#39;none&#39;; img-src &#39;none&#39;; font-src &#39;none&#39;; base-uri &#39;none&#39;; form-action &#39;none&#39;"></head><body>"""
 _END = "</body></html>"
 
 
@@ -104,6 +105,30 @@ def csv_to_pdf(source: Path, output: Path) -> None:
         ) + "</tr>"
     body = "<table><thead>" + cells(rows[0], "th") + "</thead><tbody>"
     body += "".join(cells(row, "td") for row in rows[1:]) + "</tbody></table>"
+    _html_to_pdf(body, output)
+
+
+def markdown_to_pdf(source: Path, output: Path) -> None:
+    """Safe CommonMark and tables; render external links and images as text only.
+
+    Parsing has no raw HTML or autolink support. Input never introduces
+    fetchable browser URLs, scripts, resource tags, or arbitrary attributes.
+    """
+    _distinct(source, output)
+    text = _read_utf8(source)
+    if not text.strip():
+        raise ValueError("Empty Markdown cannot be converted")
+    parser = MarkdownIt("commonmark", {
+        "html": False, "linkify": False, "typographer": False,
+    }).enable("table").disable(["link", "autolink", "image"])
+    body = parser.render(text)
+    # Fail closed if a future Markdown plugin unexpectedly emits active tags.
+    import re
+    if re.search(
+        r"<\s*(?:a|img|script|iframe|link|object|embed|video|audio|source|form)\b",
+        body, flags=re.IGNORECASE,
+    ):
+        raise ValueError("Rendered Markdown contained forbidden markup")
     _html_to_pdf(body, output)
 
 
