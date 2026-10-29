@@ -14,11 +14,37 @@ from app.services import to_pdf_engine
 STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "txt-to-pdf": ("text/plain", ".txt"),
     "csv-to-pdf": ("text/csv", ".csv"),
+    "md-to-pdf": ("text/markdown", ".md"),
+    "html-to-pdf": ("text/html", ".html"),
+    "xml-to-pdf": ("application/xml", ".xml"),
+    "eml-to-pdf": ("message/rfc822", ".eml"),
+    "zip-to-pdf": ("application/zip", ".zip"),
+    "cbz-to-pdf": ("application/vnd.comicbook+zip", ".cbz"),
     "jfif-to-pdf": ("image/jpeg", ".jfif"),
     "gif-to-pdf": ("image/gif", ".gif"),
     "tiff-to-pdf": ("image/tiff", ".tiff"),
+    "doc-to-pdf": ("application/msword", ".doc"),
+    "docx-to-pdf": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+    "xls-to-pdf": ("application/vnd.ms-excel", ".xls"),
+    "xlsx-to-pdf": ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
+    "ppt-to-pdf": ("application/vnd.ms-powerpoint", ".ppt"),
+    "pptx-to-pdf": ("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"),
+    "odt-to-pdf": ("application/vnd.oasis.opendocument.text", ".odt"),
+    "ods-to-pdf": ("application/vnd.oasis.opendocument.spreadsheet", ".ods"),
+    "odp-to-pdf": ("application/vnd.oasis.opendocument.presentation", ".odp"),
+    "rtf-to-pdf": ("application/rtf", ".rtf"),
+    "jpg-to-pdf": ("image/jpeg", ".jpg"),
+    "jpeg-to-pdf": ("image/jpeg", ".jpeg"),
+    "png-to-pdf": ("image/png", ".png"),
+    "webp-to-pdf": ("image/webp", ".webp"),
+    "bmp-to-pdf": ("image/bmp", ".bmp"),
 }
 STAGED_TO_PDF_OPERATIONS = frozenset(STAGED_TO_PDF_INPUTS)
+OFFICE_TO_PDF_OPERATIONS = frozenset({
+    "doc-to-pdf", "docx-to-pdf", "xls-to-pdf", "xlsx-to-pdf",
+    "ppt-to-pdf", "pptx-to-pdf", "odt-to-pdf", "ods-to-pdf",
+    "odp-to-pdf", "rtf-to-pdf",
+})
 
 
 def checked_source(operation: str, path: Path, *, name: str, mime: str) -> None:
@@ -51,6 +77,22 @@ def execute_staged_to_pdf_operation(
         to_pdf_engine.text_to_pdf(inputs[0], output)
     elif operation == "csv-to-pdf":
         to_pdf_engine.csv_to_pdf(inputs[0], output)
+    elif operation == "md-to-pdf":
+        to_pdf_engine.markdown_to_pdf(inputs[0], output)
+    elif operation == "html-to-pdf":
+        to_pdf_engine.html_to_pdf(source=inputs[0], output=output)
+    elif operation == "xml-to-pdf":
+        to_pdf_engine.xml_to_pdf(source=inputs[0], output=output)
+    elif operation == "eml-to-pdf":
+        to_pdf_engine.eml_to_pdf(source=inputs[0], output=output)
+    elif operation in {"zip-to-pdf", "cbz-to-pdf"}:
+        to_pdf_engine.archive_images_to_pdf(
+            inputs[0], output, kind=operation.split("-", 1)[0]
+        )
+    elif operation in OFFICE_TO_PDF_OPERATIONS:
+        to_pdf_engine.office_document_to_pdf(
+            inputs[0], output, original_suffix=Path(original_name).suffix.lower()
+        )
     else:
         to_pdf_engine.image_frames_to_pdf(
             inputs[0], output, kind=operation.split("-", 1)[0]

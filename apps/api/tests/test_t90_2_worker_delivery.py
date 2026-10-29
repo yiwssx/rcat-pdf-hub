@@ -98,3 +98,40 @@ def test_t90_2_worker_rejects_unauthorized_queued_jobs(monkeypatch, tmp_path, ca
         assert db.get(JobRecord, job_id).status == "failed"
         assert db.scalar(select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)) is None
     assert source.read_bytes() == original
+
+
+def test_t90_2_markdown_worker_owner_and_artifact(monkeypatch, tmp_path):
+    """Exercise real storage/db/audit worker with only external Gotenberg mocked."""
+    from reportlab.pdfgen import canvas
+    from app.services import to_pdf_engine
+
+    _setup(monkeypatch, tmp_path)
+    monkeypatch.setattr(get_settings(), "to_pdf_tools_enabled", True)
+    source = tmp_path / "originals" / "lesson.md"
+    source.write_text("# การแปลงไฟล์\n\n|วิชา|คะแนน|\n|---|---|\n|PHP|95|", encoding="utf-8")
+    original = source.read_bytes()
+    rendered = []
+
+    def fake_gotenberg(html, output):
+        rendered.append(html)
+        c = canvas.Canvas(str(output))
+        c.drawString(36, 800, "RCAT Markdown")
+        c.showPage()
+        c.save()
+
+    monkeypatch.setattr(to_pdf_engine, "_html_to_pdf", fake_gotenberg)
+    owner = "user:t90-2-markdown-worker"
+    job_id = _job(source, owner, "md-to-pdf", "text/markdown",
+                  expires_at=datetime.now(timezone.utc) + timedelta(hours=1))
+    result_id = worker_tasks.process_job(job_id)
+    with SessionLocal() as db:
+        job = db.get(JobRecord, job_id)
+        artifact = db.get(FileRecord, result_id)
+        links = db.scalars(select(JobOutputArtifact).where(JobOutputArtifact.job_id == job_id)).all()
+        assert job.status == "completed" and job.output_file_id == result_id
+        assert artifact.source_system == owner and artifact.content_type == "application/pdf"
+        assert len(links) == 1 and links[0].role == "result"
+        assert len(PdfReader(str(storage.path_for_stored_name(artifact.stored_name)),
+                             strict=True).pages) == 1
+    assert len(rendered) == 1 and "<table>" in rendered[0]
+    assert source.read_bytes() == original

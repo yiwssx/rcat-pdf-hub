@@ -109,8 +109,35 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="File extension is PDF but the file signature is not PDF")
         return PDF
 
+    # T90-2 high-risk archives are never extracted during upload inspection.
+    if suffix in {".zip", ".cbz"}:
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged archive conversion disabled")
+        if not head.startswith(b"PK\x03\x04") or path.stat().st_size > 30 * 1024 * 1024:
+            raise HTTPException(status_code=415, detail="Invalid or oversized archive signature")
+        if not zipfile.is_zipfile(path):
+            raise HTTPException(status_code=415, detail="Invalid image ZIP archive")
+        return "application/zip" if suffix == ".zip" else "application/vnd.comicbook+zip"
+
+    if suffix in {".html", ".xml", ".eml"}:
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged document conversion disabled")
+        if path.stat().st_size > 2 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Staged document exceeds 2 MiB")
+        try:
+            text = path.read_bytes().decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=415, detail="Only UTF-8 documents are supported") from exc
+        if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
+            raise HTTPException(status_code=415, detail="Unsafe staged document control character")
+        if suffix == ".xml" and not text.lstrip().startswith("<"):
+            raise HTTPException(status_code=415, detail="XML source does not contain markup")
+        if suffix == ".eml" and ":" not in text[:2000]:
+            raise HTTPException(status_code=415, detail="EML missing message headers")
+        return {".html": "text/html", ".xml": "application/xml", ".eml": "message/rfc822"}[suffix]
+
     # T90-2 staged formats are rejected at upload until an operator opts in.
-    if suffix in {".txt", ".csv", ".gif", ".jfif"}:
+    if suffix in {".txt", ".csv", ".md", ".gif", ".jfif"}:
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged conversion upload type is disabled")
         if suffix in {".gif", ".jfif"}:
@@ -127,7 +154,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="Only UTF-8 text is supported") from exc
         if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
             raise HTTPException(status_code=415, detail="Unsafe text control character")
-        return "text/plain" if suffix == ".txt" else "text/csv"
+        return {".txt": "text/plain", ".csv": "text/csv", ".md": "text/markdown"}[suffix]
 
     if suffix in SIGNATURE_TYPES:
         media_type, signatures = SIGNATURE_TYPES[suffix]

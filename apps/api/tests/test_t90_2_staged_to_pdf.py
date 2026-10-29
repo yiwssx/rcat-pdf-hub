@@ -65,12 +65,12 @@ def test_default_off_routes_and_queue(monkeypatch):
 
 
 @pytest.mark.parametrize("suffix,mime", [
-    (".txt", "text/plain"), (".csv", "text/csv"),
+    (".txt", "text/plain"), (".csv", "text/csv"), (".md", "text/markdown"),
     (".gif", "image/gif"), (".jfif", "image/jpeg"),
 ])
 def test_new_upload_signatures_flagged_and_fail_closed(monkeypatch, tmp_path, suffix, mime):
     path = tmp_path / ("sample" + suffix)
-    if suffix in (".txt", ".csv"):
+    if suffix in (".txt", ".csv", ".md"):
         path.write_text("สวัสดี,RCAT\n", encoding="utf-8")
     elif suffix == ".gif":
         _frames(path, "GIF", 2)
@@ -82,7 +82,7 @@ def test_new_upload_signatures_flagged_and_fail_closed(monkeypatch, tmp_path, su
     assert filetypes.validate_uploaded_file(path, path.name) == mime
     original = path.read_bytes()
     # Arbitrary UTF-8 text is valid TXT; use invalid UTF-8 to test rejection.
-    invalid = b"\xff\xfeinvalid" if suffix in (".txt", ".csv") else b"not a valid " + suffix.encode()
+    invalid = b"\xff\xfeinvalid" if suffix in (".txt", ".csv", ".md") else b"not a valid " + suffix.encode()
     path.write_bytes(invalid)
     with pytest.raises(Exception):
         filetypes.validate_uploaded_file(path, path.name)
@@ -210,6 +210,7 @@ def _session(actor: str, scopes: list[str]) -> str:
 @pytest.mark.parametrize("operation,extension,mime", [
     ("txt-to-pdf", ".txt", "text/plain"),
     ("csv-to-pdf", ".csv", "text/csv"),
+    ("md-to-pdf", ".md", "text/markdown"),
     ("jfif-to-pdf", ".jfif", "image/jpeg"),
     ("gif-to-pdf", ".gif", "image/gif"),
     ("tiff-to-pdf", ".tiff", "image/tiff"),
@@ -248,7 +249,7 @@ def test_flagged_api_requires_owner_scope_mime_then_enqueues(
     endpoint = "/api/v1/pdf/to-pdf/" + operation.removesuffix("-to-pdf")
     client.cookies.set("pdfhub_session", _session(actor, ["jobs:read"]))
     assert client.post(endpoint, json={"file_id": ids[0]}).status_code == 403
-    expected_scope = ("pdf:convert" if operation in {"txt-to-pdf", "csv-to-pdf"}
+    expected_scope = ("pdf:convert" if operation in {"txt-to-pdf", "csv-to-pdf", "md-to-pdf"}
                       else "pdf:image-to-pdf")
     if expected_scope != "pdf:convert":
         client.cookies.set("pdfhub_session", _session(actor, ["pdf:convert"]))

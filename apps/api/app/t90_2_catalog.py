@@ -1,0 +1,65 @@
+"""Authoritative T90-2 40-format engineering inventory.
+
+A staged adapter is NOT evidence of a deployed or visually verified product.
+Explicitly blocked items have no callable endpoint, upload handler or worker.
+"""
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class FormatCapability:
+    item_id: str
+    name: str
+    operations: tuple[str, ...]
+    priority: str
+    risk_or_blocker: str
+
+    @property
+    def engineering_state(self) -> str:
+        return "STAGED" if self.operations else "BLOCKED"
+
+
+FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
+    FormatCapability("T01", "Word (.doc)", ("doc-to-pdf",), "P0", "OLE legacy format validation limited to signature"),
+    FormatCapability("T02", "JPG", ("jpg-to-pdf", "jpeg-to-pdf",), "P0", "raster size and color fidelity"),
+    FormatCapability("T03", "PNG", ("png-to-pdf",), "P0", "transparency and color fidelity"),
+    FormatCapability("T04", "EPUB", (), "P2", "EPUB spine/DRM/archive security and external references"),
+    FormatCapability("T05", "DOCX", ("docx-to-pdf",), "P0", "OOXML fonts, charts and tables"),
+    FormatCapability("T06", "Excel", ("xls-to-pdf", "xlsx-to-pdf", "ods-to-pdf",), "P0", "workbook print areas and formula/cache semantics"),
+    FormatCapability("T07", "PPT", ("ppt-to-pdf",), "P0", "slide aspect, animations lost and embedded fonts"),
+    FormatCapability("T08", "PPTX", ("pptx-to-pdf", "odp-to-pdf",), "P0", "slides and embedded font fidelity"),
+    FormatCapability("T09", "HEIC", (), "P2", "licensed bounded HEIF image codec absent"),
+    FormatCapability("T10", "HTML", ("html-to-pdf",), "P1", "staged sanitized content-only, styling and assets intentionally omitted"),
+    FormatCapability("T11", "DjVu", (), "P3", "untrusted native decoder and compression safety"),
+    FormatCapability("T12", "Pages", (), "P3", "proprietary Apple container and layout converter"),
+    FormatCapability("T13", "TIFF", ("tiff-to-pdf",), "P0", "multi-frame image fidelity"),
+    FormatCapability("T14", "TXT", ("txt-to-pdf",), "P1", "UTF-8 Thai text and page wrapping"),
+    FormatCapability("T15", "ODT", ("odt-to-pdf",), "P0", "OpenDocument fonts and page layout"),
+    FormatCapability("T16", "SVG", (), "P1", "safe vector subset, external fetch, fonts and script blocking"),
+    FormatCapability("T17", "CSV", ("csv-to-pdf",), "P1", "UTF-8 rows, wide tables and print scaling"),
+    FormatCapability("T18", "RTF", ("rtf-to-pdf",), "P0", "legacy RTF parser and font fidelity"),
+    FormatCapability("T19", "MOBI", (), "P3", "licensed native reader and DRM"),
+    FormatCapability("T20", "DWG", (), "P3", "CAD binary licensing, layers and model scale"),
+    FormatCapability("T21", "PUB", (), "P3", "Publisher proprietary parser and layouts"),
+    FormatCapability("T22", "XPS", (), "P2", "ZIP/XML font resource sandbox and converter"),
+    FormatCapability("T23", "XML", ("xml-to-pdf",), "P2", "staged plain source-listing only; no XSLT or document styling"),
+    FormatCapability("T24", "WebP", ("webp-to-pdf",), "P0", "animation and alpha fidelity"),
+    FormatCapability("T25", "HEIF", (), "P2", "licensed bounded HEIF codec absent"),
+    FormatCapability("T26", "JFIF", ("jfif-to-pdf",), "P1", "JPEG/JFIF signature and color accuracy"),
+    FormatCapability("T27", "GIF", ("gif-to-pdf",), "P1", "multi-frame animation page policy"),
+    FormatCapability("T28", "BMP", ("bmp-to-pdf",), "P0", "raster encoding and color"),
+    FormatCapability("T29", "HWP", (), "P3", "Hangul proprietary parser and Korean fonts"),
+    FormatCapability("T30", "CHM", (), "P3", "CHM extraction sandbox and HTML cross-links"),
+    FormatCapability("T31", "FB2", (), "P3", "ebook XML chapters/embedded resources and egress"),
+    FormatCapability("T32", "ZIP", ("zip-to-pdf",), "P2", "staged images-only; other ZIP contents deliberately rejected"),
+    FormatCapability("T33", "URL", (), "P2", "SSRF, DNS rebinding and egress infrastructure unavailable"),
+    FormatCapability("T34", "WPS", (), "P3", "proprietary WPS/Kingsoft parser and licensing"),
+    FormatCapability("T35", "EML", ("eml-to-pdf",), "P2", "staged plain-text email only; rich HTML/attachments excluded"),
+    FormatCapability("T36", "Markdown", ("md-to-pdf",), "P1", "CommonMark safe subset, remote content forbidden"),
+    FormatCapability("T37", "DXF", (), "P3", "CAD parser precision and dangerous external references"),
+    FormatCapability("T38", "CBZ", ("cbz-to-pdf",), "P2", "images-only safe comic archive, page order"),
+    FormatCapability("T39", "AI", (), "P3", "Illustrator AI/PDF dual-mode licensing and embedded resources"),
+    FormatCapability("T40", "CBR", (), "P3", "RAR decoder licensing, archive bombs and extraction isolation"),
+)
+
+FORMAT_BY_ID = {item.item_id: item for item in FORMAT_CAPABILITIES}
