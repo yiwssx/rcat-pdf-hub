@@ -144,5 +144,5 @@ done
 # ephemeral Gotenberg container; no production services or download paths.
 bash "$repo_root/scripts/test-t90-2-publisher-gotenberg.sh" "$port" "$tmp"
 
-# Only ephemeral CI: real upstream libwps and libetonyek test documents.
+# Strict real pinned Pages4/5 and Works negative acceptance.
 bash "$repo_root/scripts/test-t90-2-works-pages-gotenberg.sh" "$port" "$tmp"

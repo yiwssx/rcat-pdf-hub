@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **32 canonical formats STAGED** via **36 guarded format-specific variants** (31 earlier plus Apple Pages 4/5 genuine document ZIP import via existing libetonyek/Gotenberg). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **8 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **33 canonical formats STAGED** via **37 guarded format-specific variants** (31 baseline plus bounded RAR4 stored-image CBR and genuine Apple Pages4/5 document imports). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **7 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -23,7 +23,7 @@
 | T09 | HEIC | P2 | **BLOCKED** | — | licensed bounded HEIF image codec absent |
 | T10 | HTML | P1 | **STAGED (flag OFF)** | `html-to-pdf` | staged sanitized content-only, styling and assets intentionally omitted |
 | T11 | DjVu | P3 | **STAGED (flag OFF)** | `djvu-to-pdf` | 1-page self-contained DJVU IFF (no multipage/INCL) with patched Debian DjVuLibre; native subprocess CPU/AS/FSIZE/no-file limits, 20s timeout; raster-only PDF, not searchable text or full fidelity |
-| T12 | Pages | P3 | **STAGED (flag OFF)** | `pages-to-pdf` | Pages 4 XML package and Pages 5 IWA ZIP full-document importer via LibreOffice/libetonyek; preview-only rejected, modern variants/fidelity unverified |
+| T12 | Pages | P3 | **STAGED (flag OFF)** | `pages-to-pdf` | Pages4 XML and Pages5 IWA ZIP full-document importer via LibreOffice/libetonyek; preview-only rejected, modern variants/fidelity unverified |
 | T13 | TIFF | P0 | **STAGED (flag OFF)** | `tiff-to-pdf` | multi-frame image fidelity |
 | T14 | TXT | P1 | **STAGED (flag OFF)** | `txt-to-pdf` | UTF-8 Thai text and page wrapping |
 | T15 | ODT | P0 | **STAGED (flag OFF)** | `odt-to-pdf` | OpenDocument fonts and page layout |
@@ -51,7 +51,7 @@
 | T37 | DXF | P3 | **STAGED (flag OFF)** | `dxf-to-pdf` | restrictive ASCII ENTITIES LINE/CIRCLE 2D only; no XREF/BLOCK/text/units/color/layer fidelity |
 | T38 | CBZ | P2 | **STAGED (flag OFF)** | `cbz-to-pdf` | images-only safe comic archive, page order |
 | T39 | AI | P3 | **STAGED (flag OFF)** | `ai-to-pdf` | PDF-compatible Illustrator file subset only; strict PDF parse+rewrite, no actions/annotations/encryption; native PostScript/EPS .ai rejected |
-| T40 | CBR | P3 | **BLOCKED** | — | RAR decoder licensing, archive bombs and extraction isolation |
+| T40 | CBR | P3 | **STAGED (flag OFF)** | `cbr-to-pdf` | Only uncompressed RAR4 STORE single-volume image entries, verified CRC & bounds; RAR5, compressed/encrypted/split RAR excluded |
 
 ## Acceptance criteria before individual VERIFIED promotion
 
@@ -157,10 +157,17 @@
 - HEIC/HEIF decoder rollout **deferred**: upstream libheif had successive 2026 security releases including v1.23.7 on 26 Oct 2026, while Debian bookworm `libheif-examples` base is 1.15.1. Installing the old native decoder into current API image without patched/sandboxed isolation would bypass safe signoff. Later implement a separately isolated, patched libheif 1.23.7+ decoder with explicit codec allowlist, true real-image tests, licence review and resource limits.
 - Count after this merge and CI success only: **31 STAGED / 9 BLOCKED / 35 guarded route variants / 0 independently VERIFIED or RELEASED**; remaining blocked HEIC, HEIF, Pages, DWG, HWP, CHM, URL, WPS, CBR. No production deployment or UI release; T90-2 and master issues remain open.
 
+## 2026-10-30 — CBR genuine RAR4 stored image-only subset
+
+- Added `T40 cbr-to-pdf` as **strict RAR4 stored-only** (method `0x30`) document pages encoded as JPEG, PNG, WebP or BMP. The standard-library RAR4 parser validates the actual archive signature `Rar!\\x1a\\x07\\x00`, CRC16 of all block headers, single-volume nonencrypted main header, exact file-header lengths/CRC32, no splitting/compression/unknown flags, file count ≤64, file ≤12MiB, total images ≤24MiB and archive ≤25MiB. RAR5, compressed RAR4 and password-protected archives are **not** supported and must fail closed.
+- Only unique safe ASCII base filenames are allowed, with no path traversal, symlinks or device paths. Image members are copied into a private temporary ZIP and passed to the pre-existing tested CBZ image-to-PDF engine which performs image signature/decompression/pixel/frame and PDF output-page validation. No shell or native/third-party RAR decoder, no archive extraction to user-chosen paths. Synthetic spec-conforming RAR4 archives have also been parsed successfully with an independent `rarfile` implementation (development verification; no runtime reliance).
+- STAGED only with explicit `.cbr` and persisted `application/vnd.comicbook-rar`, authenticated owner scope, upload and worker validation, default OFF. Needs representative real CBR corpus, anti-malware/fuzz, production network isolation/security review and visual/comics golden before independent VERIFIED/RELEASED.
+- Standalone branch evidence target: 32 STAGED / 8 BLOCKED / 36 guarded variants. When merged with simultaneous Pages PR #251, reconcile counts to 33 STAGED / 7 BLOCKED / 37 guarded variants. No release and T90-5 remains pending.
+
 ## 2026-10-30 — real Apple Pages 4/5 and negative Microsoft Works (.wps) libwps corpus
 
 - Authentic pinned LibreOffice upstream `writerperfect/qa/unit/data/writer/libetonyek/pass/Pages_4.pages` (SHA `43c9213922bd26f9242ae93ed6a5aabcc85df11f`, 42,277 B, ZIP `index.xml`) and `Pages_5.pages` (SHA `cd4438a34b451518a8547a8670fc96154255ace8`, 57,362 B, ZIP `Index/Document.iwa`) imported into a real disposable pinned Gotenberg via LibreOffice/libetonyek, produced **nonblank, raster-verified and readable PDF**: Pages 4 = 1 A4 page with expected text 'Document Liberation link', Pages 5 = 2 A5 pages with text 'A5 page'. Both original uploads remain byte-identical and full indexes are present. **An embedded QuickLook preview alone explicitly fails** Pages upload preflight.
 - New static `pages-to-pdf` route and bound input worker checks `.pages` and exact `application/vnd.apple.pages`; uploads revalidated in background workers. ZIP package preflight caps input 16MiB, ZIP members 128, expanded totals 32MiB, main index ≤12MiB, performs bounded CRC decompression for all entries and prevents path traversal and symlinks; only one main `index.xml` or `Index/Document.iwa` permitted; other formats fail closed. No new native library required: pinned Gotenberg already ships libetonyek.
 - **Negative evidence:** real Microsoft Works `Works_3.0.wps`, `Works_4.5.wps`, `Works_5.0.wps`, `Works_6.0.wps` (immutable pinned git blobs) all returned a **blank first PDF page with no extracted text** on the same Gotenberg, despite upstream libwps claiming import; therefore **T34 WPS stays BLOCKED** and *must not* be routed/staged until nonblank real-file conversion is proven and Works vs Kingsoft WPS families disambiguated. Tests faithfully log unsupported versions without mislabeling the job as general WPS success.
 - Staging does NOT mean all versions or complex layout, fonts, table/chart fidelity are verified. Needs real Thai institutional Pages corpus, package malware screening, isolated native LibreOffice converter review, full authorized Compose upload→worker→signed-download and T90-5 approval. Feature flag `PDFHUB_TO_PDF_TOOLS_ENABLED=false` stays OFF, no production deploy.
-- If CI and review pass: **32 STAGED / 8 BLOCKED / 36 guarded variants / 0 independently VERIFIED or RELEASED**. Remaining blockers: HEIC, HEIF, DWG, HWP, CHM, URL, WPS, CBR.
+- If CI and review pass: **33 STAGED / 7 BLOCKED / 37 guarded variants / 0 independently VERIFIED or RELEASED**. Remaining blockers: HEIC, HEIF, DWG, HWP, CHM, URL, WPS, CBR.
