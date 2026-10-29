@@ -6,7 +6,6 @@ isolated Compose golden corpus before any VERIFIED/RELEASED designation).
 from __future__ import annotations
 
 from io import BytesIO
-from pathlib import Path
 import zipfile
 
 import pytest
