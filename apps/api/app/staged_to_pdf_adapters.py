@@ -15,6 +15,11 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "txt-to-pdf": ("text/plain", ".txt"),
     "csv-to-pdf": ("text/csv", ".csv"),
     "md-to-pdf": ("text/markdown", ".md"),
+    "html-to-pdf": ("text/html", ".html"),
+    "xml-to-pdf": ("application/xml", ".xml"),
+    "eml-to-pdf": ("message/rfc822", ".eml"),
+    "zip-to-pdf": ("application/zip", ".zip"),
+    "cbz-to-pdf": ("application/vnd.comicbook+zip", ".cbz"),
     "jfif-to-pdf": ("image/jpeg", ".jfif"),
     "gif-to-pdf": ("image/gif", ".gif"),
     "tiff-to-pdf": ("image/tiff", ".tiff"),
@@ -74,6 +79,16 @@ def execute_staged_to_pdf_operation(
         to_pdf_engine.csv_to_pdf(inputs[0], output)
     elif operation == "md-to-pdf":
         to_pdf_engine.markdown_to_pdf(inputs[0], output)
+    elif operation == "html-to-pdf":
+        to_pdf_engine.html_to_pdf(source=inputs[0], output=output)
+    elif operation == "xml-to-pdf":
+        to_pdf_engine.xml_to_pdf(source=inputs[0], output=output)
+    elif operation == "eml-to-pdf":
+        to_pdf_engine.eml_to_pdf(source=inputs[0], output=output)
+    elif operation in {"zip-to-pdf", "cbz-to-pdf"}:
+        to_pdf_engine.archive_images_to_pdf(
+            inputs[0], output, kind=operation.split("-", 1)[0]
+        )
     elif operation in OFFICE_TO_PDF_OPERATIONS:
         to_pdf_engine.office_document_to_pdf(
             inputs[0], output, original_suffix=Path(original_name).suffix.lower()
