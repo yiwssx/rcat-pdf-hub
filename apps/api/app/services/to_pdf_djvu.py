@@ -63,9 +63,21 @@ def validate_single_page_djvu(source: Path) -> tuple[str, ...]:
         if kind in SUPPORTED_RASTER_CHUNKS:
             image_chunks += 1
         chunks.append(kind.decode("ascii"))
-        offset += 8 + length + (length & 1)
+        end = offset + 8 + length
+        if length & 1 and end < size:
+            # Internal IFF chunks require a zero-byte alignment pad.
+            if data[end] != 0:
+                raise ValueError("DjVu IFF chunk has invalid alignment padding")
+            offset = end + 1
+        else:
+            # A final odd-length chunk is permitted without physical padding,
+            # as some DjVuLibre writers do not append a terminal pad byte.
+            offset = end
     if offset != size or not seen_info or image_chunks == 0:
-        raise ValueError("DjVu missing INFO/raster or malformed IFF chunk alignment")
+        raise ValueError(
+            f"DjVu missing INFO/raster or malformed IFF chunks "
+            f"(chunks={chunks!r}, offset={offset}, size={size})"
+        )
     return tuple(chunks)
 
 
