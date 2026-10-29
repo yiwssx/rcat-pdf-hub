@@ -367,7 +367,7 @@ def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) 
     _distinct(source, output)
     if original_suffix not in {
         ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-        ".odt", ".ods", ".odp", ".rtf", ".pub",
+        ".odt", ".ods", ".odp", ".rtf", ".pub", ".hwp",
     }:
         raise ValueError("Unsupported Office document extension")
     if source.stat().st_size > MAX_IMAGE_BYTES:
