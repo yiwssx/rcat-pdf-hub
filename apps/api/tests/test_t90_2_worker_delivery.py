@@ -108,7 +108,7 @@ def test_t90_2_markdown_worker_owner_and_artifact(monkeypatch, tmp_path):
     _setup(monkeypatch, tmp_path)
     monkeypatch.setattr(get_settings(), "to_pdf_tools_enabled", True)
     source = tmp_path / "originals" / "lesson.md"
-    source.write_text("# การแปลงไฟล์\\n\\n|วิชา|คะแนน|\\n|---|---|\\n|PHP|95|", encoding="utf-8")
+    source.write_text("# การแปลงไฟล์\n\n|วิชา|คะแนน|\n|---|---|\n|PHP|95|", encoding="utf-8")
     original = source.read_bytes()
     rendered = []
 
