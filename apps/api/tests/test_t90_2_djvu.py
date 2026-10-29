@@ -98,8 +98,12 @@ def test_rejects_external_includes_and_oversized_declared_geometry(tmp_path):
 
     blob = bytearray(source.read_bytes())
     extra = b"INCL" + (4).to_bytes(4, "big") + b"evil"
-    struct.pack_into(">I", blob, 8, struct.unpack_from(">I", blob, 8)[0] + len(extra))
-    wrong.write_bytes(blob + extra)
+    # cjb2 may omit physical padding for its terminal odd-length chunk.
+    # Insert a valid IFF pad before appending INCL so the parser reaches and
+    # specifically rejects the external-reference chunk itself.
+    pad = b"\x00" if len(blob) % 2 else b""
+    struct.pack_into(">I", blob, 8, struct.unpack_from(">I", blob, 8)[0] + len(pad) + len(extra))
+    wrong.write_bytes(blob + pad + extra)
     with pytest.raises(ValueError, match="external"):
         validate_single_page_djvu(wrong)
 
