@@ -90,7 +90,9 @@ def odf(path: Path, kind: str, body: str, styles: str, automatic: str) -> None:
 
 FONT_STYLE = ('<style:style style:name="Thai" style:family="paragraph">'
               '<style:text-properties style:font-name="Garuda" '
-              'fo:font-family="Garuda" fo:font-size="14pt"/>'
+              'fo:font-family="Garuda" style:font-name-complex="Garuda" '
+              'style:font-name-asian="Garuda" style:font-size-complex="14pt" '
+              'fo:font-size="14pt"/>'
               '</style:style>')
 
 
@@ -103,7 +105,9 @@ def make_odt(path: Path) -> None:
 def make_ods(path: Path) -> None:
     cell_style = ('<style:style style:name="ThaiCell" style:family="table-cell">'
                   '<style:text-properties style:font-name="Garuda" '
-                  'fo:font-family="Garuda" fo:font-size="13pt"/>'
+                  'fo:font-family="Garuda" style:font-name-complex="Garuda" '
+                  'style:font-name-asian="Garuda" style:font-size-complex="13pt" '
+                  'fo:font-size="13pt"/>'
                   '</style:style>')
     body = (f'<table:table table:name="Thai test" table:style-name="Sheet">'
             '<table:table-column table:style-name="WideColumn"/>'
