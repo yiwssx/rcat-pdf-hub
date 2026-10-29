@@ -38,7 +38,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T16", "SVG", ("svg-to-pdf",), "P1", "restricted geometry/text only; no CSS, remote links, gradients, filters, images or fonts"),
     FormatCapability("T17", "CSV", ("csv-to-pdf",), "P1", "UTF-8 rows, wide tables and print scaling"),
     FormatCapability("T18", "RTF", ("rtf-to-pdf",), "P0", "legacy RTF parser and font fidelity"),
-    FormatCapability("T19", "MOBI", (), "P3", "licensed native reader and DRM"),
+    FormatCapability("T19", "MOBI", ("mobi-to-pdf",), "P3", "restricted DRM-free classic UTF-8 MOBI4-6 text transcript only; no KF8, media, CSS, full typography"),
     FormatCapability("T20", "DWG", (), "P3", "CAD binary licensing, layers and model scale"),
     FormatCapability("T21", "PUB", (), "P3", "Publisher proprietary parser and layouts"),
     FormatCapability("T22", "XPS", ("xps-to-pdf",), "P2", "restricted ZIP FixedDocument/Glyphs Unicode transcript; no vector, image, page-size or original font fidelity"),
