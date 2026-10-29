@@ -21,6 +21,7 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "ai-to-pdf": ("application/vnd.adobe.illustrator", ".ai"),
     "epub-to-pdf": ("application/epub+zip", ".epub"),
     "fb2-to-pdf": ("application/x-fictionbook+xml", ".fb2"),
+    "mobi-to-pdf": ("application/x-mobipocket-ebook", ".mobi"),
     "html-to-pdf": ("text/html", ".html"),
     "xml-to-pdf": ("application/xml", ".xml"),
     "eml-to-pdf": ("message/rfc822", ".eml"),
@@ -100,6 +101,9 @@ def execute_staged_to_pdf_operation(
         to_pdf_engine.epub_to_pdf(inputs[0], output)
     elif operation == "fb2-to-pdf":
         to_pdf_engine.fb2_to_pdf(inputs[0], output)
+    elif operation == "mobi-to-pdf":
+        from app.services.to_pdf_mobi import restricted_mobi_to_pdf
+        restricted_mobi_to_pdf(inputs[0], output)
     elif operation == "html-to-pdf":
         to_pdf_engine.html_to_pdf(source=inputs[0], output=output)
     elif operation == "xml-to-pdf":
