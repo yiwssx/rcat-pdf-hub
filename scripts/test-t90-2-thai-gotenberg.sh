@@ -139,3 +139,7 @@ if not re.search(font_pattern, fonts, re.IGNORECASE):
 print(f"PASS: real Gotenberg LibreOffice {kind}: pages={pages} size={width}x{height} pt, Thai text + embedded approved Thai font")
 PY
 done
+
+# Additional real Microsoft Publisher binary regression against the same
+# ephemeral Gotenberg container; no production services or download paths.
+bash "$repo_root/scripts/test-t90-2-publisher-gotenberg.sh" "$port" "$tmp"

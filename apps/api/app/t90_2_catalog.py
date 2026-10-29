@@ -40,7 +40,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T18", "RTF", ("rtf-to-pdf",), "P0", "legacy RTF parser and font fidelity"),
     FormatCapability("T19", "MOBI", ("mobi-to-pdf",), "P3", "restricted DRM-free classic UTF-8 MOBI4-6 text transcript only; no KF8, media, CSS, full typography"),
     FormatCapability("T20", "DWG", (), "P3", "CAD binary licensing, layers and model scale"),
-    FormatCapability("T21", "PUB", (), "P3", "Publisher proprietary parser and layouts"),
+    FormatCapability("T21", "PUB", ("pub-to-pdf",), "P3", "bounded v3 OLE Publisher subset via pinned LibreOffice/libmspub; proprietary layout/font fidelity unverified"),
     FormatCapability("T22", "XPS", ("xps-to-pdf",), "P2", "restricted ZIP FixedDocument/Glyphs Unicode transcript; no vector, image, page-size or original font fidelity"),
     FormatCapability("T23", "XML", ("xml-to-pdf",), "P2", "staged plain source-listing only; no XSLT or document styling"),
     FormatCapability("T24", "WebP", ("webp-to-pdf",), "P0", "animation and alpha fidelity"),
