@@ -81,7 +81,8 @@ def test_svg_flagged_upload_to_pdf_binary_and_immutable(monkeypatch, tmp_path):
         def __exit__(self, *args):
             return False
 
-        def post(self, url, *, files):
+        def post(self, url, *, files, data):
+            assert data == {"preferCssPageSize": "true"}
             assert url.endswith("/forms/chromium/convert/html")
             assert files["files"][0] == "index.html"
             markup.append(files["files"][1].decode("utf-8"))
