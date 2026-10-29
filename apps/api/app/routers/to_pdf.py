@@ -250,3 +250,20 @@ def cbz_to_pdf(
 ):
     return _submit(req, principal, db, "cbz-to-pdf")
 
+
+@router.post("/epub", response_model=JobOut, status_code=202)
+def epub_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "epub-to-pdf")
+
+
+@router.post("/fb2", response_model=JobOut, status_code=202)
+def fb2_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "fb2-to-pdf")

@@ -109,6 +109,34 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="File extension is PDF but the file signature is not PDF")
         return PDF
 
+    # EPUB and FB2 ebooks are opt-in text-only converters. The worker performs
+    # full bounded ZIP/XML inspection; upload verifies only lightweight type.
+    if suffix in {".epub", ".fb2"}:
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged ebook conversion is disabled")
+        if suffix == ".epub":
+            if path.stat().st_size > 20 * 1024 * 1024 or not head.startswith(b"PK\x03\x04"):
+                raise HTTPException(status_code=415, detail="Invalid EPUB container")
+            try:
+                with zipfile.ZipFile(path) as archive:
+                    entry = archive.getinfo("mimetype")
+                    if entry.file_size > 64 or archive.read(entry) != b"application/epub+zip":
+                        raise ValueError("EPUB MIME mismatch")
+            except (KeyError, ValueError, zipfile.BadZipFile, OSError, RuntimeError, EOFError) as exc:
+                raise HTTPException(status_code=415, detail="Invalid EPUB MIME signature") from exc
+            return "application/epub+zip"
+        if path.stat().st_size > 8 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="FB2 source exceeds 8 MiB")
+        try:
+            text = path.read_bytes().decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=415, detail="FB2 must be UTF-8 XML") from exc
+        if not text.lstrip().startswith(("<FictionBook", "<?xml")):
+            raise HTTPException(status_code=415, detail="Invalid FB2 XML signature")
+        if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
+            raise HTTPException(status_code=415, detail="Invalid FB2 control character")
+        return "application/x-fictionbook+xml"
+
     # T90-2 high-risk archives are never extracted during upload inspection.
     if suffix in {".zip", ".cbz"}:
         if not get_settings().to_pdf_tools_enabled:
