@@ -47,7 +47,8 @@ def test_commonmark_thai_tables_code_and_raw_html_escaped(monkeypatch, tmp_path)
             assert kwargs["timeout"] == 180.0
         def __enter__(self): return self
         def __exit__(self, *args): return False
-        def post(self, url, *, files):
+        def post(self, url, *, files, data):
+            assert data == {"preferCssPageSize": "true"}
             assert url == get_settings().gotenberg_url.rstrip("/") + "/forms/chromium/convert/html"
             html = files["files"][1].decode("utf-8")
             posted.append(html)
