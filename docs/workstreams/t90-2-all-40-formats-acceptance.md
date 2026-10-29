@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **22 canonical formats STAGED** via **26 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **18 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **24 canonical formats STAGED** via **28 real format-specific variants**, including 12 P0 (Office/Images), 6 P1 (safe text/Markdown/GIF/JFIF/HTML/CSV) and 4 P2 constrained subsets. This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **16 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -15,7 +15,7 @@
 | T01 | Word (.doc) | P0 | **STAGED (flag OFF)** | `doc-to-pdf` | OLE legacy format validation limited to signature |
 | T02 | JPG | P0 | **STAGED (flag OFF)** | `jpg-to-pdf`, `jpeg-to-pdf` | raster size and color fidelity |
 | T03 | PNG | P0 | **STAGED (flag OFF)** | `png-to-pdf` | transparency and color fidelity |
-| T04 | EPUB | P2 | **BLOCKED** | — | EPUB spine/DRM/archive security and external references |
+| T04 | EPUB | P2 | **STAGED (flag OFF)** | `epub-to-pdf` | text-only XHTML spine; no images, styles, DRM, or remote resources |
 | T05 | DOCX | P0 | **STAGED (flag OFF)** | `docx-to-pdf` | OOXML fonts, charts and tables |
 | T06 | Excel | P0 | **STAGED (flag OFF)** | `xls-to-pdf`, `xlsx-to-pdf`, `ods-to-pdf` | workbook print areas and formula/cache semantics |
 | T07 | PPT | P0 | **STAGED (flag OFF)** | `ppt-to-pdf` | slide aspect, animations lost and embedded fonts |
@@ -42,7 +42,7 @@
 | T28 | BMP | P0 | **STAGED (flag OFF)** | `bmp-to-pdf` | raster encoding and color |
 | T29 | HWP | P3 | **BLOCKED** | — | Hangul proprietary parser and Korean fonts |
 | T30 | CHM | P3 | **BLOCKED** | — | CHM extraction sandbox and HTML cross-links |
-| T31 | FB2 | P3 | **BLOCKED** | — | ebook XML chapters/embedded resources and egress |
+| T31 | FB2 | P3 | **STAGED (flag OFF)** | `fb2-to-pdf` | text-only FictionBook body; no embedded images or exact typography |
 | T32 | ZIP | P2 | **STAGED (flag OFF)** | `zip-to-pdf` | staged images-only; other ZIP contents deliberately rejected |
 | T33 | URL | P2 | **BLOCKED** | — | SSRF, DNS rebinding and egress infrastructure unavailable |
 | T34 | WPS | P3 | **BLOCKED** | — | proprietary WPS/Kingsoft parser and licensing |
@@ -59,7 +59,7 @@
 
 **Thai + typography**: Sarabun/Noto Sans Thai licensed fonts present inside the actual pinned Gotenberg container, not only on the API host; complex Thai grapheme shaping/combining characters; no missing glyphs, text cut-off or swapped glyphs; DOCX/XLSX/PPTX layout goldens; spreadsheet print areas/page breaks/formula fidelity; markdown table wrapping and plain-text line breaks; comparison against source through actual files, not mocks.
 
-**Dangerous or proprietary formats**: URL tool requires a separate design for pinned resolver, SSRF/DNS rebinding, private-network and metadata-IP blocks, proxy enforcement, redirect refusal, rate limits and egress firewall; ZIP/CBZ strictly images-only with no filesystem extraction and anti-bomb limits; SVG requires vetted vector library with script, remote reference and font isolation; EPUB/XPS/FB2/CHM/DjVu/MOBI/WPS/HWP/DWG/DXF/PUB/AI/CBR/PAGES/HEIF/HEIC require decoder/license and representative binary goldens before enabling. Do not accept blind ZIP extraction/LibreOffice "try everything" as an implementation.
+**Dangerous or proprietary formats**: URL tool requires a separate design for pinned resolver, SSRF/DNS rebinding, private-network and metadata-IP blocks, proxy enforcement, redirect refusal, rate limits and egress firewall; ZIP/CBZ strictly images-only with no filesystem extraction and anti-bomb limits; SVG requires vetted vector library with script, remote reference and font isolation; XPS/CHM/DjVu/MOBI/WPS/HWP/DWG/DXF/PUB/AI/CBR/PAGES/HEIF/HEIC require decoder/license and representative binary goldens before enabling. Do not accept blind ZIP extraction/LibreOffice "try everything" as an implementation.
 
 **Rollout/operations**: production flag `PDFHUB_TO_PDF_TOOLS_ENABLED=false` until signed T90-5 activation; preserve previous routes and Docker networks; no silent DB migration; exact-HEAD CI six Core API jobs, Web CI, CodeQL Python/JS, Dependency Review; Compose integration in an isolated stack; page-by-page manual and automated document-quality acceptance; T90-5 release checklist and rollback test. A merged PR is engineering only.
 
@@ -67,7 +67,7 @@
 
 - Static registry: `apps/api/app/t90_2_catalog.py`, tested against the actual staged dispatch/route map to disallow phantom or unaccounted operations.
 - Typed guarded upload/endpoint/adapter: `apps/api/app/filetypes.py`, `app/routers/to_pdf.py`, `app/staged_to_pdf_adapters.py`.
-- Engines: `app/services/to_pdf_engine.py` (validated Office MIME, original filename preserved into Gotenberg; real raster page count; sanitized HTML; UTF-8 XML source listing; text-only EML; image-only ZIP/CBZ).
+- Engines: `app/services/to_pdf_engine.py` (validated Office MIME, original filename preserved into Gotenberg; real raster page count; sanitized HTML; UTF-8 XML source listing; text-only EML; image-only ZIP/CBZ; bounded text-only EPUB/FB2).
 - Tests: `apps/api/tests/test_t90_2_40_registry.py`, `test_t90_2_multi_format_batch.py`, previous image fidelity, worker owner and Markdown security tests.
 - Meaningful rollback: keep flag OFF (default). Partial batch may be reverted from PR; the 13 legacy core adapters must remain operational.
 
@@ -79,3 +79,10 @@
 - **CBZ** accepts image comic pages and ignores allowed `ComicInfo.xml` metadata; no CBR/RAR fallback.
 
 "STAGED" here is a narrow, accurately labeled backend subset. It does not imply feature parity with every source-format or commercial PDF service.
+
+## 2026-10-29 follow-on: opt-in text-only ebook subset
+
+- T04 EPUB: strict ZIP entries/paths/duplicates/mode/compression/encryption/size ratios; mandatory `mimetype` and `META-INF/container.xml`; rootfile OPF with bounded manifest/spine; exact XHTML chapters parsed with `defusedxml`; chapter order follows OPF spine. Only heading and paragraph text is printed through existing CSP-restricted Gotenberg HTML renderer. No scripts, CSS, images, links, fonts, remote network access, arbitrary ZIP extraction, DRM, or external entities.
+- T31 FB2: bounded `FictionBook` XML with `defusedxml` refusing DTD and entities; book title and section paragraphs are escaped and printed. Embedded images, covers, styling, poetry/footnotes and original layout intentionally omitted.
+- Both use existing `pdf:convert` scope, owner/expiry/MIME checks, worker artefact retention, strict PDF parser, feature flag OFF and immutable input. The new code must pass CI and owner-bound worker tests; these formats remain **STAGED, not VERIFIED or RELEASED** without real Thai font and document-fidelity acceptance.
+- Added `tests/test_t90_2_ebooks.py`, worker integration and input abuse tests. Another 16 formats still need vetted engines.
