@@ -113,7 +113,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
     if suffix in {".zip", ".cbz"}:
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged archive conversion disabled")
-        if not head.startswith(b"PK\\x03\\x04") or path.stat().st_size > 30 * 1024 * 1024:
+        if not head.startswith(b"PK\x03\x04") or path.stat().st_size > 30 * 1024 * 1024:
             raise HTTPException(status_code=415, detail="Invalid or oversized archive signature")
         if not zipfile.is_zipfile(path):
             raise HTTPException(status_code=415, detail="Invalid image ZIP archive")
@@ -128,7 +128,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             text = path.read_bytes().decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise HTTPException(status_code=415, detail="Only UTF-8 documents are supported") from exc
-        if any(ord(char) < 32 and char not in "\\n\\r\\t" for char in text):
+        if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
             raise HTTPException(status_code=415, detail="Unsafe staged document control character")
         if suffix == ".xml" and not text.lstrip().startswith("<"):
             raise HTTPException(status_code=415, detail="XML source does not contain markup")
