@@ -52,6 +52,7 @@ def _png(color: str) -> bytes:
     ("odp-to-pdf", "application/vnd.oasis.opendocument.presentation", ".odp"),
     ("rtf-to-pdf", "application/rtf", ".rtf"),
     ("pub-to-pdf", "application/x-mspublisher", ".pub"),
+    ("pages-to-pdf", "application/vnd.apple.pages", ".pages"),
 ])
 def test_office_static_routers_and_gotenberg_binary_guards(monkeypatch, tmp_path, operation, mime, suffix):
     assert STAGED_TO_PDF_INPUTS[operation] == (mime, suffix)
