@@ -211,6 +211,8 @@ def _session(actor: str, scopes: list[str]) -> str:
     ("txt-to-pdf", ".txt", "text/plain"),
     ("csv-to-pdf", ".csv", "text/csv"),
     ("md-to-pdf", ".md", "text/markdown"),
+    ("epub-to-pdf", ".epub", "application/epub+zip"),
+    ("fb2-to-pdf", ".fb2", "application/x-fictionbook+xml"),
     ("jfif-to-pdf", ".jfif", "image/jpeg"),
     ("gif-to-pdf", ".gif", "image/gif"),
     ("tiff-to-pdf", ".tiff", "image/tiff"),
@@ -249,7 +251,7 @@ def test_flagged_api_requires_owner_scope_mime_then_enqueues(
     endpoint = "/api/v1/pdf/to-pdf/" + operation.removesuffix("-to-pdf")
     client.cookies.set("pdfhub_session", _session(actor, ["jobs:read"]))
     assert client.post(endpoint, json={"file_id": ids[0]}).status_code == 403
-    expected_scope = ("pdf:convert" if operation in {"txt-to-pdf", "csv-to-pdf", "md-to-pdf"}
+    expected_scope = ("pdf:convert" if operation in {"txt-to-pdf", "csv-to-pdf", "md-to-pdf", "epub-to-pdf", "fb2-to-pdf"}
                       else "pdf:image-to-pdf")
     if expected_scope != "pdf:convert":
         client.cookies.set("pdfhub_session", _session(actor, ["pdf:convert"]))
