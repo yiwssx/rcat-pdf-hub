@@ -31,7 +31,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T09", "HEIC", (), "P2", "licensed bounded HEIF image codec absent"),
     FormatCapability("T10", "HTML", ("html-to-pdf",), "P1", "staged sanitized content-only, styling and assets intentionally omitted"),
     FormatCapability("T11", "DjVu", ("djvu-to-pdf",), "P3", "single-page inline DJVU IFF only; bounded patched Debian DjVuLibre subprocess; no multipage, external INCL, exact layout/text fidelity"),
-    FormatCapability("T12", "Pages", (), "P3", "proprietary Apple container and layout converter"),
+    FormatCapability("T12", "Pages", ("pages-to-pdf",), "P3", "Pages 4/5 ZIP full-document index only via libetonyek; other Pages variants and visual/font fidelity unverified"),
     FormatCapability("T13", "TIFF", ("tiff-to-pdf",), "P0", "multi-frame image fidelity"),
     FormatCapability("T14", "TXT", ("txt-to-pdf",), "P1", "UTF-8 Thai text and page wrapping"),
     FormatCapability("T15", "ODT", ("odt-to-pdf",), "P0", "OpenDocument fonts and page layout"),
