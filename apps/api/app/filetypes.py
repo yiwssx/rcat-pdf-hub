@@ -125,7 +125,7 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
     if suffix == ".xps":
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged XPS transcription disabled")
-        if not head.startswith(b"PK\\x03\\x04".replace(b"\\x03", b"\x03").replace(b"\\x04", b"\x04")):
+        if not head.startswith(b"PK\x03\x04"):
             raise HTTPException(status_code=415, detail="Invalid XPS ZIP signature")
         from app.services.to_pdf_special import xps_to_safe_html
         try:
