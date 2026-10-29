@@ -286,6 +286,15 @@ def fb2_to_pdf(
 ):
     return _submit(req, principal, db, "fb2-to-pdf")
 
+@router.post("/djvu", response_model=JobOut, status_code=202)
+def djvu_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "djvu-to-pdf")
+
+
 @router.post("/dxf", response_model=JobOut, status_code=202)
 def dxf_to_pdf(
     req: ConvertRequest,
