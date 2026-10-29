@@ -133,6 +133,209 @@ def markdown_to_pdf(source: Path, output: Path) -> None:
     _html_to_pdf(body, output)
 
 
+def html_to_pdf(source: Path, output: Path) -> None:
+    """HTML content-only subset: never render untrusted tags/attributes/CSS."""
+    from html.parser import HTMLParser
+
+    _distinct(source, output)
+    raw = _read_utf8(source)
+    allowed = frozenset({
+        "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span",
+        "strong", "em", "b", "i", "u", "pre", "code", "blockquote",
+        "ul", "ol", "li", "table", "thead", "tbody", "tr", "th", "td",
+        "br", "hr",
+    })
+    forbidden = frozenset({
+        "script", "style", "iframe", "object", "embed", "svg", "math",
+        "noscript", "template", "head", "canvas", "video", "audio",
+    })
+
+    class SafeTextHtml(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.fragments: list[str] = []
+            self.suppressed = 0
+            self.tags = 0
+
+        def handle_starttag(self, tag, attrs):
+            self.tags += 1
+            if self.tags > 20000:
+                raise ValueError("HTML exceeds tag-count limit")
+            if tag in forbidden:
+                self.suppressed += 1
+            elif not self.suppressed and tag in allowed:
+                self.fragments.append("<" + tag + ">")
+
+        def handle_startendtag(self, tag, attrs):
+            self.handle_starttag(tag, attrs)
+
+        def handle_endtag(self, tag):
+            if tag in forbidden:
+                self.suppressed = max(0, self.suppressed - 1)
+            elif not self.suppressed and tag in allowed and tag not in {"hr", "br"}:
+                self.fragments.append("</" + tag + ">")
+
+        def handle_data(self, data):
+            if not self.suppressed:
+                self.fragments.append(escape(data))
+
+    parser = SafeTextHtml()
+    parser.feed(raw)
+    parser.close()
+    fragment = "".join(parser.fragments)
+    if not fragment.strip():
+        raise ValueError("HTML has no printable text content")
+    _html_to_pdf(fragment, output)
+
+
+def xml_to_pdf(source: Path, output: Path) -> None:
+    """Render a readable XML source listing, never execute XML or fetch entities."""
+    from xml.etree import ElementTree
+
+    _distinct(source, output)
+    text = _read_utf8(source)
+    if any(token in text.upper() for token in ("<!DOCTYPE", "<!ENTITY", "<?XML-STYLESHEET")):
+        raise ValueError("XML entity and stylesheet declarations are not accepted")
+    try:
+        root = ElementTree.fromstring(text)
+    except ElementTree.ParseError as exc:
+        raise ValueError("Invalid XML document") from exc
+    nodes = 0
+    stack = [(root, 1)]
+    while stack:
+        node, depth = stack.pop()
+        nodes += 1
+        if nodes > 10000 or depth > 64 or len(node.attrib) > 50:
+            raise ValueError("XML complexity exceeds staged limits")
+        stack.extend((child, depth + 1) for child in node)
+    _html_to_pdf("<h1>XML document</h1><pre>" + escape(text) + "</pre>", output)
+
+
+def eml_to_pdf(source: Path, output: Path) -> None:
+    """Convert email headers and plain-text body, never MIME attachments/HTML."""
+    from email import policy
+    from email.parser import BytesParser
+
+    _distinct(source, output)
+    if source.stat().st_size > MAX_TEXT_BYTES:
+        raise ValueError("EML exceeds staged 2 MiB limit")
+    raw = source.read_bytes()
+    if b"\x00" in raw:
+        raise ValueError("EML contains unsafe control characters")
+    try:
+        message = BytesParser(policy=policy.default).parsebytes(raw)
+        if message.defects:
+            raise ValueError("Malformed EML")
+        if message.is_multipart():
+            candidates = []
+            for index, part in enumerate(message.walk()):
+                if index > 64:
+                    raise ValueError("Too many EML parts")
+                if (part.get_content_type() == "text/plain"
+                        and part.get_content_disposition() != "attachment"):
+                    candidates.append(part.get_content())
+            body = "\n\n".join(candidates)
+        else:
+            if message.get_content_type() != "text/plain":
+                raise ValueError("Only plain-text EML bodies are supported")
+            body = message.get_content()
+    except (UnicodeError, LookupError, TypeError, ValueError) as exc:
+        raise ValueError("Unsupported EML body or encoding") from exc
+    if not isinstance(body, str) or not body.strip() or len(body) > 200000:
+        raise ValueError("EML plain-text body is empty or too large")
+    headers = "".join(
+        "<p><strong>" + escape(label) + ":</strong> "
+        + escape(str(message.get(label, ""))[:2000]) + "</p>"
+        for label in ("From", "To", "Date", "Subject")
+    )
+    _html_to_pdf("<h1>Email</h1>" + headers + "<pre>" + escape(body) + "</pre>", output)
+
+
+def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
+    """CBZ or images-only ZIP, in memory with bounded metadata and no extraction."""
+    import re
+    import zipfile
+
+    _distinct(source, output)
+    if kind not in {"cbz", "zip"}:
+        raise ValueError("Unknown archive format")
+    if source.stat().st_size > MAX_IMAGE_BYTES:
+        raise ValueError("Archive exceeds staged 30 MiB limit")
+    with TemporaryDirectory(prefix="pdfhub-comic-") as folder:
+        files = []
+        total = 0
+        pixels = 0
+        try:
+            with zipfile.ZipFile(source, "r") as archive:
+                infos = archive.infolist()
+                if not 1 <= len(infos) <= 256:
+                    raise ValueError("Archive entry count exceeds limits")
+                images = []
+                for info in infos:
+                    name = info.filename
+                    parts = name.rstrip("/").split("/")
+                    mode = (info.external_attr >> 16) & 0o170000
+                    if (not name or name.startswith("/") or "\\" in name or ":" in name
+                            or any(part in ("", ".", "..") for part in parts)
+                            or mode not in (0, 0o100000, 0o040000)
+                            or (mode == 0o040000 and not info.is_dir())
+                            or info.flag_bits & 1
+                            or info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)):
+                        raise ValueError("Unsafe archive entry")
+                    if info.is_dir():
+                        continue
+                    if name.casefold().endswith("comicinfo.xml") and info.file_size <= 1024*1024:
+                        continue
+                    if Path(name).suffix.casefold() not in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
+                        raise ValueError("Only image-only ZIP/CBZ archives are supported")
+                    total += info.file_size
+                    if (info.file_size > 12 * 1024 * 1024
+                            or total > 50 * 1024 * 1024
+                            or info.file_size > (info.compress_size + 1024) * 100):
+                        raise ValueError("Archive expansion exceeds limits")
+                    images.append(info)
+                if not 1 <= len(images) <= MAX_FRAMES:
+                    raise ValueError("Image count exceeds staged 64-page limit")
+                # Natural order, not archive metadata order.
+                key = lambda info: [int(v) if v.isdigit() else v.casefold()
+                                    for v in re.split(r"(\d+)", info.filename)]
+                images.sort(key=key)
+                for index, info in enumerate(images):
+                    data = archive.read(info)
+                    if len(data) != info.file_size:
+                        raise ValueError("Archive member length changed")
+                    with Image.open(BytesIO(data)) as image:
+                        if image.format not in {"JPEG", "PNG", "WEBP", "BMP"}:
+                            raise ValueError("Archive image signature mismatch")
+                        width, height = image.size
+                        count = width * height
+                        pixels += count
+                        if count > MAX_FRAME_PIXELS or pixels > MAX_TOTAL_PIXELS:
+                            raise ValueError("Archive image pixels exceed staged limits")
+                        frame = ImageOps.exif_transpose(image.copy())
+                    try:
+                        target = Path(folder) / f"page-{index:04d}.png"
+                        frame.save(target, format="PNG")
+                        files.append(target)
+                    finally:
+                        frame.close()
+        except (zipfile.BadZipFile, OSError, RuntimeError, EOFError, UnidentifiedImageError) as exc:
+            raise ValueError("Invalid image archive") from exc
+        pdf_tools.images_to_pdf(files, output, page_size="a4", fit="contain",
+                                margin=18, dpi=150)
+        pdf = output.read_bytes()
+        if not pdf.startswith(b"%PDF-") or len(pdf) > MAX_PDF_BYTES:
+            output.unlink(missing_ok=True)
+            raise ValueError("Archive PDF output invalid or oversized")
+        try:
+            result = PdfReader(BytesIO(pdf), strict=True)
+            if len(result.pages) != len(files):
+                raise ValueError("Archive conversion page count mismatch")
+        except Exception:
+            output.unlink(missing_ok=True)
+            raise
+
+
 def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) -> None:
     """Forward validated Office bytes with original extension to pinned Gotenberg.
 
