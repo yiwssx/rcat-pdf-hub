@@ -209,3 +209,44 @@ def bmp_to_pdf(
 ):
     return _submit(req, principal, db, "bmp-to-pdf")
 
+
+@router.post("/html", response_model=JobOut, status_code=202)
+def html_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "html-to-pdf")
+
+@router.post("/xml", response_model=JobOut, status_code=202)
+def xml_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "xml-to-pdf")
+
+@router.post("/eml", response_model=JobOut, status_code=202)
+def eml_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "eml-to-pdf")
+
+@router.post("/zip", response_model=JobOut, status_code=202)
+def zip_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "zip-to-pdf")
+
+@router.post("/cbz", response_model=JobOut, status_code=202)
+def cbz_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "cbz-to-pdf")
+
