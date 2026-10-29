@@ -143,3 +143,6 @@ done
 # Additional real Microsoft Publisher binary regression against the same
 # ephemeral Gotenberg container; no production services or download paths.
 bash "$repo_root/scripts/test-t90-2-publisher-gotenberg.sh" "$port" "$tmp"
+
+# T90-2 HWP 97 real import feasibility in disposable converter CI.
+bash "$repo_root/scripts/test-t90-2-hwp97-gotenberg.sh" "$port" "$tmp"
