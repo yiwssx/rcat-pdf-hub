@@ -242,6 +242,15 @@ def zip_to_pdf(
 ):
     return _submit(req, principal, db, "zip-to-pdf")
 
+@router.post("/cbr", response_model=JobOut, status_code=202)
+def restricted_stored_rar4_cbr_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "cbr-to-pdf")
+
+
 @router.post("/cbz", response_model=JobOut, status_code=202)
 def cbz_to_pdf(
     req: ConvertRequest,

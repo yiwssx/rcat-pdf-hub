@@ -4,8 +4,8 @@
 
 ## Current engineering tally
 
-- **31 canonical formats STAGED** via **35 guarded format-specific variants** (30 earlier plus a single-page, self-contained DjVu native decoder under strict controls). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
-- **9 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
+- **32 canonical formats STAGED** via **36 guarded format-specific variants** (31 baseline plus a bounded standard-library RAR4 stored-image-only CBR subset; no native unrar). This means version-controlled backend code is present but default disabled, not that all test/visual/fidelity/production gates have passed.
+- **8 formats BLOCKED** pending vetted decoders, licensing, conversion-scope clarity or safety/egress isolation. Never expose dummy routes or re-label them as implemented.
 - No new Web catalog/UX released; existing 13 operation adapters are unchanged; T90-1 #225 independently pending.
 
 ## Exhaustive canonical format decisions
@@ -51,7 +51,7 @@
 | T37 | DXF | P3 | **STAGED (flag OFF)** | `dxf-to-pdf` | restrictive ASCII ENTITIES LINE/CIRCLE 2D only; no XREF/BLOCK/text/units/color/layer fidelity |
 | T38 | CBZ | P2 | **STAGED (flag OFF)** | `cbz-to-pdf` | images-only safe comic archive, page order |
 | T39 | AI | P3 | **STAGED (flag OFF)** | `ai-to-pdf` | PDF-compatible Illustrator file subset only; strict PDF parse+rewrite, no actions/annotations/encryption; native PostScript/EPS .ai rejected |
-| T40 | CBR | P3 | **BLOCKED** | — | RAR decoder licensing, archive bombs and extraction isolation |
+| T40 | CBR | P3 | **STAGED (flag OFF)** | `cbr-to-pdf` | Only uncompressed RAR4 STORE single-volume image entries, verified CRC & bounds; RAR5, compressed/encrypted/split RAR excluded |
 
 ## Acceptance criteria before individual VERIFIED promotion
 
@@ -156,3 +156,10 @@
 - CI runs genuine `cjb2` → `ddjvu` one-page raster-to-PDF regression with immutable upload source plus invalid header, indirect/DJVM and geometry rejection. This intentionally **does not** assert full multipage support, searchable/OCR text, font fidelity, page-layout goldens or PDF/A.
 - HEIC/HEIF decoder rollout **deferred**: upstream libheif had successive 2026 security releases including v1.23.7 on 26 Oct 2026, while Debian bookworm `libheif-examples` base is 1.15.1. Installing the old native decoder into current API image without patched/sandboxed isolation would bypass safe signoff. Later implement a separately isolated, patched libheif 1.23.7+ decoder with explicit codec allowlist, true real-image tests, licence review and resource limits.
 - Count after this merge and CI success only: **31 STAGED / 9 BLOCKED / 35 guarded route variants / 0 independently VERIFIED or RELEASED**; remaining blocked HEIC, HEIF, Pages, DWG, HWP, CHM, URL, WPS, CBR. No production deployment or UI release; T90-2 and master issues remain open.
+
+## 2026-10-30 — CBR genuine RAR4 stored image-only subset
+
+- Added `T40 cbr-to-pdf` as **strict RAR4 stored-only** (method `0x30`) document pages encoded as JPEG, PNG, WebP or BMP. The standard-library RAR4 parser validates the actual archive signature `Rar!\\x1a\\x07\\x00`, CRC16 of all block headers, single-volume nonencrypted main header, exact file-header lengths/CRC32, no splitting/compression/unknown flags, file count ≤64, file ≤12MiB, total images ≤24MiB and archive ≤25MiB. RAR5, compressed RAR4 and password-protected archives are **not** supported and must fail closed.
+- Only unique safe ASCII base filenames are allowed, with no path traversal, symlinks or device paths. Image members are copied into a private temporary ZIP and passed to the pre-existing tested CBZ image-to-PDF engine which performs image signature/decompression/pixel/frame and PDF output-page validation. No shell or native/third-party RAR decoder, no archive extraction to user-chosen paths. Synthetic spec-conforming RAR4 archives have also been parsed successfully with an independent `rarfile` implementation (development verification; no runtime reliance).
+- STAGED only with explicit `.cbr` and persisted `application/vnd.comicbook-rar`, authenticated owner scope, upload and worker validation, default OFF. Needs representative real CBR corpus, anti-malware/fuzz, production network isolation/security review and visual/comics golden before independent VERIFIED/RELEASED.
+- Standalone branch evidence target: 32 STAGED / 8 BLOCKED / 36 guarded variants. When merged with simultaneous Pages PR #251, reconcile counts to 33 STAGED / 7 BLOCKED / 37 guarded variants. No release and T90-5 remains pending.
