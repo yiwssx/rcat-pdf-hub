@@ -134,6 +134,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="Unsupported or unsafe XPS document") from exc
         return "application/vnd.ms-xpsdocument"
 
+    # Restrict native DjVuLibre decoding to bounded self-contained single-page
+    # DJVU IFF; untrusted data is parsed in a resource-capped worker subprocess.
+    if suffix == ".djvu":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged DjVu conversion disabled")
+        from app.services.to_pdf_djvu import validate_single_page_djvu
+        try:
+            validate_single_page_djvu(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or unsafe DjVu document") from exc
+        return "image/vnd.djvu"
+
     # Only the restricted ASCII ENTITIES / LINE+CIRCLE CAD subset is accepted.
     if suffix == ".dxf":
         if not get_settings().to_pdf_tools_enabled:
