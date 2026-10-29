@@ -40,11 +40,7 @@ def _head(path: Path, size: int = 16) -> bytes:
 
 # Strictly bound the *declared* contents before an Office converter opens the
 # package. This is a metadata preflight, not a decompression or antivirus scan.
-from app.services.zip_preflight import (
-    _checked_office_members,
-    MAX_OFFICE_ZIP_ENTRIES, MAX_OFFICE_ZIP_UNCOMPRESSED,
-    MAX_OFFICE_ZIP_ENTRY_BYTES, MAX_OFFICE_ZIP_EXPANSION,
-)
+from app.services.zip_preflight import _checked_office_members
 
 OOXML_MAIN_PARTS = {
     ".docx": "word/document.xml",
