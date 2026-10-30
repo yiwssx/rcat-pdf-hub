@@ -40,54 +40,13 @@ def _head(path: Path, size: int = 16) -> bytes:
 
 # Strictly bound the *declared* contents before an Office converter opens the
 # package. This is a metadata preflight, not a decompression or antivirus scan.
-MAX_OFFICE_ZIP_ENTRIES = 2048
-MAX_OFFICE_ZIP_UNCOMPRESSED = 256 * 1024 * 1024
-MAX_OFFICE_ZIP_ENTRY_BYTES = 64 * 1024 * 1024
-MAX_OFFICE_ZIP_EXPANSION = 1000
+from app.services.zip_preflight import _checked_office_members
+
 OOXML_MAIN_PARTS = {
     ".docx": "word/document.xml",
     ".xlsx": "xl/workbook.xml",
     ".pptx": "ppt/presentation.xml",
 }
-
-
-def _checked_office_members(archive: zipfile.ZipFile) -> dict[str, zipfile.ZipInfo]:
-    """Reject dangerous or implausible Office ZIP member metadata, without extraction.
-
-    Converter sandboxing, AV and runtime/memory limits remain independent gates.
-    """
-    infos = archive.infolist()
-    if not 1 <= len(infos) <= MAX_OFFICE_ZIP_ENTRIES:
-        raise ValueError("Office archive contains too many entries")
-    seen: dict[str, zipfile.ZipInfo] = {}
-    total = 0
-    for info in infos:
-        name = info.filename
-        # Directories are permitted; traversals, Windows paths, duplicates,
-        # symlinks and encrypted/unusual compression are not.
-        parts = name.rstrip("/").split("/")
-        mode = (info.external_attr >> 16) & 0o170000
-        if (
-            not name or name.startswith("/") or "\\" in name or ":" in name
-            or any(part in ("", ".", "..") for part in parts)
-            or any(ord(char) < 32 or ord(char) == 127 for char in name)
-            or name.casefold() in seen
-            or mode not in (0, 0o100000, 0o040000)
-            or (mode == 0o040000 and not info.is_dir())
-            or info.flag_bits & 1
-            or info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)
-            or info.file_size > MAX_OFFICE_ZIP_ENTRY_BYTES
-            or info.file_size > (info.compress_size + 1024) * MAX_OFFICE_ZIP_EXPANSION
-        ):
-            raise ValueError("Unsafe Office archive entry")
-        total += info.file_size
-        if total > MAX_OFFICE_ZIP_UNCOMPRESSED:
-            raise ValueError("Office archive expands beyond allowed size")
-        # Macro-enabled binaries are not valid content for macro-free OOXML.
-        if name.casefold().endswith("vbaproject.bin") or "/activex/" in ("/" + name.casefold()):
-            raise ValueError("Macro/ActiveX components are not allowed in macro-free Office files")
-        seen[name.casefold()] = info
-    return seen
 
 
 def _valid_zip_member(path: Path, suffix: str) -> bool:
@@ -300,7 +259,18 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail=f"OpenDocument type does not match {suffix}")
         return ODF_TYPES[suffix]
 
-    # Legacy HWP3 only, documented version and password/protection revalidation.
+    # Apple Pages 4/5 ZIP package only. QuickLook preview alone rejected.
+    if suffix == ".pages":
+        if not get_settings().to_pdf_tools_enabled:
+            raise HTTPException(status_code=415, detail="Staged Pages conversion disabled")
+        from app.services.to_pdf_pages import validate_pages_package
+        try:
+            validate_pages_package(path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=415, detail="Unsupported or unsafe Pages package") from exc
+        return "application/vnd.apple.pages"
+
+    # Legacy HWP3 only, strict 30-byte version and password/protection flags.
     if suffix == ".hwp":
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged HWP3 conversion disabled")

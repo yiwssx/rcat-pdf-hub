@@ -44,6 +44,7 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "rtf-to-pdf": ("application/rtf", ".rtf"),
     "pub-to-pdf": ("application/x-mspublisher", ".pub"),
     "hwp-to-pdf": ("application/x-hwp", ".hwp"),
+    "pages-to-pdf": ("application/vnd.apple.pages", ".pages"),
     "jpg-to-pdf": ("image/jpeg", ".jpg"),
     "jpeg-to-pdf": ("image/jpeg", ".jpeg"),
     "png-to-pdf": ("image/png", ".png"),
@@ -54,7 +55,7 @@ STAGED_TO_PDF_OPERATIONS = frozenset(STAGED_TO_PDF_INPUTS)
 OFFICE_TO_PDF_OPERATIONS = frozenset({
     "doc-to-pdf", "docx-to-pdf", "xls-to-pdf", "xlsx-to-pdf",
     "ppt-to-pdf", "pptx-to-pdf", "odt-to-pdf", "ods-to-pdf",
-    "odp-to-pdf", "rtf-to-pdf", "pub-to-pdf", "hwp-to-pdf",
+    "odp-to-pdf", "rtf-to-pdf", "pub-to-pdf", "pages-to-pdf", "hwp-to-pdf",
 })
 
 

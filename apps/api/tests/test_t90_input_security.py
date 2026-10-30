@@ -10,6 +10,7 @@ import pytest
 from fastapi import HTTPException
 
 from app import filetypes
+from app.services import zip_preflight
 from app.filetypes import validate_uploaded_file
 from app.routers.pdf import PDF_INPUT_OPERATIONS, _create_job, _is_pdf
 
@@ -112,7 +113,7 @@ def test_zip_symlink_rejected(tmp_path):
 ])
 def test_office_archive_limits_fail_closed(tmp_path, monkeypatch, limit, value):
     p = package(tmp_path / "large.docx", docx_entries())
-    monkeypatch.setattr(filetypes, limit, value)
+    monkeypatch.setattr(zip_preflight, limit, value)
     with pytest.raises(HTTPException) as exc:
         validate_uploaded_file(p, p.name)
     assert exc.value.status_code == 415
@@ -122,7 +123,7 @@ def test_oversized_declared_expansion_rejected_without_decompression(tmp_path, m
     p = package(tmp_path / "ratio.docx", docx_entries() + [
         ("word/repetitive.xml", b"A" * 50000),
     ])
-    monkeypatch.setattr(filetypes, "MAX_OFFICE_ZIP_EXPANSION", 1)
+    monkeypatch.setattr(zip_preflight, "MAX_OFFICE_ZIP_EXPANSION", 1)
     with pytest.raises(HTTPException) as exc:
         validate_uploaded_file(p, p.name)
     assert exc.value.status_code == 415
