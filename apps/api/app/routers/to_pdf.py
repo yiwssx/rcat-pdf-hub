@@ -269,6 +269,15 @@ def epub_to_pdf(
     return _submit(req, principal, db, "epub-to-pdf")
 
 
+@router.post("/pages", response_model=JobOut, status_code=202)
+def apple_pages_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "pages-to-pdf")
+
+
 @router.post("/pub", response_model=JobOut, status_code=202)
 def publisher_to_pdf(
     req: ConvertRequest,

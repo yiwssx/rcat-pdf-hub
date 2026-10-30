@@ -97,6 +97,7 @@ def inspect_phase_zero() -> list[str]:
     jobs = parse("apps/api/app/routers/jobs.py")
     pdf = parse("apps/api/app/routers/pdf.py")
     types = parse("apps/api/app/filetypes.py")
+    zip_validator = parse("apps/api/app/services/zip_preflight.py")
     worker = parse("apps/api/app/worker_tasks.py")
     config = parse("apps/api/app/config.py")
     schemas = parse("apps/api/app/schemas.py")
@@ -128,7 +129,7 @@ def inspect_phase_zero() -> list[str]:
 
     for cap, value in EXPECTED_OFFICE_ZIP_CAPS.items():
         try:
-            if positive_static_int(assigned(types, cap)) != value:
+            if positive_static_int(assigned(zip_validator, cap)) != value:
                 errors.append(f"Unsafe or changed Office ZIP bound: {cap}")
         except ValueError:
             errors.append(f"Office ZIP bound is not static: {cap}")

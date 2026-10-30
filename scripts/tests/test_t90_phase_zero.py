@@ -20,6 +20,7 @@ SNAPSHOTS = (
     "apps/api/app/routers/jobs.py",
     "apps/api/app/routers/pdf.py",
     "apps/api/app/filetypes.py",
+    "apps/api/app/services/zip_preflight.py",
     "apps/api/app/worker_tasks.py",
     "apps/api/app/config.py",
     "apps/api/app/schemas.py",
@@ -104,7 +105,7 @@ class T90PhaseZeroReadinessTests(unittest.TestCase):
 
     def test_detect_unsafe_office_limit_expansion(self):
         def mutate(root):
-            path = root / "apps/api/app/filetypes.py"
+            path = root / "apps/api/app/services/zip_preflight.py"
             source = path.read_text(encoding="utf-8")
             assert "MAX_OFFICE_ZIP_ENTRIES = 2048" in source
             path.write_text(source.replace("MAX_OFFICE_ZIP_ENTRIES = 2048",
