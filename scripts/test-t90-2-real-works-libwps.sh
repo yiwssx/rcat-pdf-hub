@@ -3,6 +3,9 @@
 set -euo pipefail
 revision="fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4"
 temp="$(mktemp -d)"
+# CI test container runs as uid 10001. mktemp defaults to 0700 root,
+# making the read-only bind-mount inaccessible unless mode is relaxed.
+chmod 0755 "$temp"
 trap 'rm -rf "$temp"' EXIT
 passed=0
 while IFS='|' read -r name blob bytes; do
