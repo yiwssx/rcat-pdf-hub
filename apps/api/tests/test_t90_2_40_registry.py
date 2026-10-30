@@ -48,7 +48,7 @@ def test_public_scope_retains_existing_image_versus_convert_boundary():
         for route in to_pdf.router.routes
         if route.path.startswith("/api/v1/pdf/to-pdf/")
     }
-    assert len(by_path) == 36
+    assert len(by_path) == 37
     for item in FORMAT_CAPABILITIES:
         for operation in item.operations:
             assert operation.removesuffix("-to-pdf") in by_path
