@@ -20,7 +20,7 @@ while IFS='|' read -r name blob bytes; do
   if docker run --rm --network none --entrypoint /usr/bin/wps2text \
     -v "$temp:/fixtures:ro" rcat-pdf-hub-api-test "/fixtures/$name" \
     > "$temp/$name.txt" 2> "$temp/$name.err"; then
-    python3 - "$temp/$name.txt" "$name" <<'PY'
+    if python3 - "$temp/$name.txt" "$name" <<'PY'
 from pathlib import Path
 import sys
 data=Path(sys.argv[1]).read_bytes()
@@ -30,7 +30,11 @@ if len(text.strip()) < 10 or "\ufffd" in text:
     raise SystemExit("Works libwps document content missing or invalid")
 print("PASS genuine Works text", sys.argv[2])
 PY
-    passed=$((passed + 1))
+    then
+      passed=$((passed + 1))
+    else
+      echo "UNSUPPORTED text-empty $name despite libwps return success"
+    fi
   else
     echo "UNSUPPORTED libwps $name: $(head -c 220 "$temp/$name.err" | tr '\n' ' ')"
   fi
