@@ -14,12 +14,14 @@ from app.services import to_pdf_engine
 
 def _document(kind: str) -> bytes:
     buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=(595.28, 841.89))
+    pdf = canvas.Canvas(buffer, pagesize=(15, 15) if kind == "tiny" else (595.28, 841.89))
     if kind == "text":
         pdf.drawString(48, 760, "Actual converted content")
     elif kind == "vector":
         pdf.setFillColorRGB(0.2, 0.3, 0.4)
         pdf.rect(40, 80, 80, 80, fill=1, stroke=0)
+    elif kind == "tiny":
+        pdf.rect(2, 2, 11, 11, fill=1, stroke=0)
     elif kind == "invisible":
         pdf.setFillColorRGB(1, 1, 1)
         pdf.drawString(48, 760, "Invisible white text")
@@ -48,6 +50,7 @@ def test_structurally_valid_but_blank_pdf_must_fail_closed(tmp_path, kind):
 @pytest.mark.parametrize("kind,pages", [
     ("text", 1),
     ("vector", 1),
+    ("tiny", 1),
     ("delayed", 3),
 ])
 def test_real_rendered_content_passes_even_without_extracted_text(tmp_path, kind, pages):
