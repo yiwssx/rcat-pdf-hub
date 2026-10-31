@@ -278,6 +278,15 @@ def apple_pages_to_pdf(
     return _submit(req, principal, db, "pages-to-pdf")
 
 
+@router.post("/hwp", response_model=JobOut, status_code=202)
+def legacy_hwp3_to_pdf(
+    req: ConvertRequest,
+    principal: Principal = Depends(require_scope("pdf:convert")),
+    db: Session = Depends(get_db),
+):
+    return _submit(req, principal, db, "hwp-to-pdf")
+
+
 @router.post("/pub", response_model=JobOut, status_code=202)
 def publisher_to_pdf(
     req: ConvertRequest,

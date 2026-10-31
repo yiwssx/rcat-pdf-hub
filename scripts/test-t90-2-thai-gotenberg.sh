@@ -146,3 +146,6 @@ bash "$repo_root/scripts/test-t90-2-publisher-gotenberg.sh" "$port" "$tmp"
 
 # Strict real pinned Pages4/5 and Works negative acceptance.
 bash "$repo_root/scripts/test-t90-2-works-pages-gotenberg.sh" "$port" "$tmp"
+
+# Real HWP97 Korean text import.
+bash "$repo_root/scripts/test-t90-2-hwp97-gotenberg.sh" "$port" "$tmp"

@@ -48,7 +48,7 @@ FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
     FormatCapability("T26", "JFIF", ("jfif-to-pdf",), "P1", "JPEG/JFIF signature and color accuracy"),
     FormatCapability("T27", "GIF", ("gif-to-pdf",), "P1", "multi-frame animation page policy"),
     FormatCapability("T28", "BMP", ("bmp-to-pdf",), "P0", "raster encoding and color"),
-    FormatCapability("T29", "HWP", (), "P3", "Hangul proprietary parser and Korean fonts"),
+    FormatCapability("T29", "HWP", ("hwp-to-pdf",), "P3", "legacy HWP 3.0/1997 only with exact 30-byte version signature and no password, pinned LibreOffice hwpfilter; HWP5/HWPX excluded"),
     FormatCapability("T30", "CHM", (), "P3", "CHM extraction sandbox and HTML cross-links"),
     FormatCapability("T31", "FB2", ("fb2-to-pdf",), "P3", "text-only FictionBook body; no embedded images or exact typography"),
     FormatCapability("T32", "ZIP", ("zip-to-pdf",), "P2", "staged images-only; other ZIP contents deliberately rejected"),
