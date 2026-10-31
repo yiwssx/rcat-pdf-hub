@@ -63,8 +63,9 @@ def _has_visible_pdf_content(data: bytes) -> bool:
     A PDF parser accepts documents with only blank page objects. Some real
     external Office decoders produce exactly those on unsupported input and
     previously passed as successful output. PDFium is already hash-pinned in
-    the API runtime. Render no more than 32 pages at <=36dpi, without writing
-    any file, and require actual visible ink (text, vector or graphics).
+    the API runtime. Render no more than 32 pages with <=700px longest side (tiny source
+    pages render at higher scale), without writing any file, and require
+    actual visible ink (text, vector or graphics).
     This is a rejection gate, NOT a guarantee of full source-format fidelity.
     """
     import pypdfium2 as pdfium
@@ -76,12 +77,14 @@ def _has_visible_pdf_content(data: bytes) -> bool:
                 page = document[index]
                 try:
                     width, height = page.get_size()
-                    if not (36 <= width <= 14400 and 36 <= height <= 14400):
+                    if not (1 <= width <= 14400 and 1 <= height <= 14400):
                         raise ValueError("Converter PDF has unsupported page dimensions")
-                    bitmap = page.render(
-                        scale=min(0.5, 700.0 / max(width, height)),
-                        grayscale=True,
-                    )
+                    # A tiny DjVu or CAD page can legitimately be 10-20 PDF
+                    # points wide. Upscale such pages to roughly 96 pixels
+                    # while bounding normal/huge pages to <=700 pixels.
+                    longest = max(width, height)
+                    scale = min(700.0 / longest, max(0.5, 96.0 / longest))
+                    bitmap = page.render(scale=scale, grayscale=True)
                     try:
                         histogram = bitmap.to_pil().histogram()
                         # True white and near-white pixels do not count.
