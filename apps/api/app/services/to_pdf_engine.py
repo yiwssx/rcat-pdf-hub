@@ -57,12 +57,60 @@ def _read_utf8(source: Path) -> str:
     return text
 
 
+def _has_visible_pdf_content(data: bytes) -> bool:
+    """Raster-validate converter PDFs, not just their container/page count.
+
+    A PDF parser accepts documents with only blank page objects. Some real
+    external Office decoders produce exactly those on unsupported input and
+    previously passed as successful output. PDFium is already hash-pinned in
+    the API runtime. Render no more than 32 pages with <=700px longest side (tiny source
+    pages render at higher scale), without writing any file, and require
+    actual visible ink (text, vector or graphics).
+    This is a rejection gate, NOT a guarantee of full source-format fidelity.
+    """
+    import pypdfium2 as pdfium
+
+    try:
+        document = pdfium.PdfDocument(data)
+        try:
+            for index in range(min(len(document), 32)):
+                page = document[index]
+                try:
+                    width, height = page.get_size()
+                    if not (1 <= width <= 14400 and 1 <= height <= 14400):
+                        raise ValueError("Converter PDF has unsupported page dimensions")
+                    # A tiny DjVu or CAD page can legitimately be 10-20 PDF
+                    # points wide. Upscale such pages to roughly 96 pixels
+                    # while bounding normal/huge pages to <=700 pixels.
+                    longest = max(width, height)
+                    scale = min(700.0 / longest, max(0.5, 96.0 / longest))
+                    bitmap = page.render(scale=scale, grayscale=True)
+                    try:
+                        histogram = bitmap.to_pil().histogram()
+                        # True white and near-white pixels do not count.
+                        # A handful of antialiased dark pixels does count:
+                        # this keeps sparse signatures and small text valid.
+                        if sum(histogram[:245]) >= 10:
+                            return True
+                    finally:
+                        bitmap.close()
+                finally:
+                    page.close()
+        finally:
+            document.close()
+    except Exception as exc:
+        raise ValueError("Converter PDF could not be visually validated") from exc
+    return False
+
+
 def _checked_pdf(data: bytes, output: Path) -> None:
     if not data.startswith(b"%PDF-") or len(data) > MAX_PDF_BYTES:
         raise ValueError("Converter returned an invalid or oversized PDF")
     reader = PdfReader(BytesIO(data), strict=True)
     if reader.is_encrypted or not 1 <= len(reader.pages) <= 1000:
         raise ValueError("Converter returned an unusable PDF")
+    if not _has_visible_pdf_content(data):
+        raise ValueError("Converter returned blank or invisible PDF pages")
     output.write_bytes(data)
 
 
