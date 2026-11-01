@@ -203,34 +203,53 @@ def html_to_pdf(source: Path, output: Path) -> None:
         def __init__(self):
             super().__init__(convert_charrefs=True)
             self.fragments: list[str] = []
-            self.suppressed = 0
+            # Track the tag identity, not only the nesting depth. A stray
+            # forbidden closing tag must never unlock suppressed script/CSS.
+            self.filtered_tags: list[str] = []
             self.tags = 0
 
-        def handle_starttag(self, tag, attrs):
+        def _count_tag(self):
             self.tags += 1
             if self.tags > 20000:
                 raise ValueError("HTML exceeds tag-count limit")
+
+        def handle_starttag(self, tag, attrs):
+            self._count_tag()
             if tag in forbidden:
-                self.suppressed += 1
-            elif not self.suppressed and tag in allowed:
+                self.filtered_tags.append(tag)
+            elif not self.filtered_tags and tag in allowed:
                 self.fragments.append("<" + tag + ">")
 
         def handle_startendtag(self, tag, attrs):
-            self.handle_starttag(tag, attrs)
+            # A self-closing <style/> or <head/> contains no content to
+            # suppress. Previously this called handle_starttag() without a
+            # matching end tag, silently discarding the rest of the document.
+            self._count_tag()
+            if not self.filtered_tags and tag in allowed:
+                self.fragments.append(
+                    "<" + tag + ">" if tag in {"hr", "br"}
+                    else "<" + tag + "></" + tag + ">"
+                )
 
         def handle_endtag(self, tag):
             if tag in forbidden:
-                self.suppressed = max(0, self.suppressed - 1)
-            elif not self.suppressed and tag in allowed and tag not in {"hr", "br"}:
+                if not self.filtered_tags or self.filtered_tags[-1] != tag:
+                    raise ValueError("HTML has unmatched filtered element")
+                self.filtered_tags.pop()
+            elif not self.filtered_tags and tag in allowed and tag not in {"hr", "br"}:
                 self.fragments.append("</" + tag + ">")
 
         def handle_data(self, data):
-            if not self.suppressed:
+            if not self.filtered_tags:
                 self.fragments.append(escape(data))
 
     parser = SafeTextHtml()
     parser.feed(raw)
     parser.close()
+    if parser.filtered_tags:
+        # A document with an unclosed script/style/head could previously be
+        # rendered as a plausible but incomplete PDF. Never report success.
+        raise ValueError("HTML has unterminated filtered element")
     fragment = "".join(parser.fragments)
     if not fragment.strip():
         raise ValueError("HTML has no printable text content")
