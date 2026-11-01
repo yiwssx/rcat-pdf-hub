@@ -221,10 +221,13 @@ def html_to_pdf(source: Path, output: Path) -> None:
                 self.fragments.append("<" + tag + ">")
 
         def handle_startendtag(self, tag, attrs):
-            # A self-closing <style/> or <head/> contains no content to
-            # suppress. Previously this called handle_starttag() without a
-            # matching end tag, silently discarding the rest of the document.
+            # HTML (unlike XML) does not reliably honor self-closing
+            # script/style/head tags. The old parser treated them as opening
+            # tags and silently truncated subsequent printable content.
+            # Reject the ambiguous input rather than guessing its semantics.
             self._count_tag()
+            if tag in forbidden:
+                raise ValueError("HTML self-closing filtered element unsupported")
             if not self.filtered_tags and tag in allowed:
                 self.fragments.append(
                     "<" + tag + ">" if tag in {"hr", "br"}
