@@ -347,6 +347,7 @@ def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
                 if not 1 <= len(infos) <= 256:
                     raise ValueError("Archive entry count exceeds limits")
                 images = []
+                seen_names: set[str] = set()
                 for info in infos:
                     name = info.filename
                     parts = name.rstrip("/").split("/")
@@ -358,6 +359,13 @@ def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
                             or info.flag_bits & 1
                             or info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)):
                         raise ValueError("Unsafe archive entry")
+                    # ZIP permits duplicate names. The first image could be
+                    # shadowed by a later file, producing the wrong PDF page
+                    # while still passing binary/PDF page-count validation.
+                    folded_name = name.casefold()
+                    if folded_name in seen_names:
+                        raise ValueError("Duplicate archive member name")
+                    seen_names.add(folded_name)
                     if info.is_dir():
                         continue
                     if name.casefold().endswith("comicinfo.xml") and info.file_size <= 1024*1024:
@@ -372,10 +380,18 @@ def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
                     images.append(info)
                 if not 1 <= len(images) <= MAX_FRAMES:
                     raise ValueError("Image count exceeds staged 64-page limit")
-                # Natural order, not archive metadata order.
-                key = lambda info: [int(v) if v.isdigit() else v.casefold()
-                                    for v in re.split(r"(\d+)", info.filename)]
-                images.sort(key=key)
+                # Natural order, not ZIP insertion order. Every sort field
+                # must have a comparable type: an initial "01.png" and
+                # "cover.png" previously compared int vs str and crashed.
+                # Case-folded duplicate names above avoid ambiguous aliases.
+                def natural_key(info):
+                    segments = re.split(r"(\d+)", info.filename.casefold())
+                    return (
+                        tuple((1, int(v)) if v.isdigit() else (0, v)
+                              for v in segments),
+                        info.filename,
+                    )
+                images.sort(key=natural_key)
                 for index, info in enumerate(images):
                     data = archive.read(info)
                     if len(data) != info.file_size:
@@ -383,6 +399,11 @@ def archive_images_to_pdf(source: Path, output: Path, *, kind: str) -> None:
                     with Image.open(BytesIO(data)) as image:
                         if image.format not in {"JPEG", "PNG", "WEBP", "BMP"}:
                             raise ValueError("Archive image signature mismatch")
+                        # A comic page maps to exactly one image. Animated
+                        # WebP can contain many frames; selecting frame zero
+                        # silently loses content even though output is valid.
+                        if getattr(image, "n_frames", 1) != 1:
+                            raise ValueError("Animated archive images require explicit frame conversion")
                         width, height = image.size
                         count = width * height
                         pixels += count
