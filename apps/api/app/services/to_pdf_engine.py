@@ -103,12 +103,17 @@ def _has_visible_pdf_content(data: bytes) -> bool:
     return False
 
 
-def _checked_pdf(data: bytes, output: Path) -> None:
+def _checked_pdf(data: bytes, output: Path, *, expected_pages: int | None = None) -> None:
     if not data.startswith(b"%PDF-") or len(data) > MAX_PDF_BYTES:
         raise ValueError("Converter returned an invalid or oversized PDF")
     reader = PdfReader(BytesIO(data), strict=True)
     if reader.is_encrypted or not 1 <= len(reader.pages) <= 1000:
         raise ValueError("Converter returned an unusable PDF")
+    if expected_pages is not None and len(reader.pages) != expected_pages:
+        raise ValueError(
+            f"Converter lost or added pages: expected {expected_pages}, "
+            f"received {len(reader.pages)}"
+        )
     if not _has_visible_pdf_content(data):
         raise ValueError("Converter returned blank or invisible PDF pages")
     output.write_bytes(data)
@@ -442,6 +447,10 @@ def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) 
         raise ValueError("Unsupported Office document extension")
     if source.stat().st_size > MAX_IMAGE_BYTES:
         raise ValueError("Office input exceeds staged file-size limit")
+    # Slide count is verifiable from the source package. An HTTP 200 PDF with
+    # one surviving slide out of many must never be accepted as successful.
+    from app.services.to_pdf_slide_integrity import expected_slide_pages
+    slide_pages = expected_slide_pages(source, original_suffix=original_suffix)
     with TemporaryDirectory(prefix="pdfhub-office-to-pdf-") as folder:
         copy = Path(folder) / ("document" + original_suffix)
         shutil.copyfile(source, copy)
@@ -452,7 +461,7 @@ def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) 
                     files={"files": (copy.name, fh, "application/octet-stream")},
                 )
         response.raise_for_status()
-        _checked_pdf(response.content, output)
+        _checked_pdf(response.content, output, expected_pages=slide_pages)
 
 
 def image_frames_to_pdf(source: Path, output: Path, *, kind: str) -> None:
