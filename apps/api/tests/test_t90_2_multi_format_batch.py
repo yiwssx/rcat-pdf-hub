@@ -79,6 +79,13 @@ def test_office_static_routers_and_gotenberg_binary_guards(monkeypatch, tmp_path
     source.write_bytes(b"staged bytes")
     original = source.read_bytes()
     out = tmp_path / "output.pdf"
+    # This batch checks transport on intentionally opaque fake Office bytes;
+    # real PPTX/ODP XML and missing-slide behaviour have separate regressions.
+    if suffix in {".pptx", ".odp"}:
+        monkeypatch.setattr(
+            "app.services.to_pdf_slide_integrity.expected_slide_pages",
+            lambda src, *, original_suffix: 1,
+        )
     to_pdf_engine.office_document_to_pdf(source, out, original_suffix=suffix)
     assert len(PdfReader(str(out), strict=True).pages) == 1
     assert calls == [("document" + suffix, original, "application/octet-stream")]
