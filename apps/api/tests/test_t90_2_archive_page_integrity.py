@@ -6,7 +6,6 @@ archive image silently loses animation frames. No Gotenberg or transport mocks.
 from __future__ import annotations
 
 from io import BytesIO
-from pathlib import Path
 from zipfile import ZIP_STORED, ZipFile
 import warnings
 
