@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
-from app.identity import decode_session_token, identity_from_claims, validate_oidc_token
+from app.identity import _require_rcat_identity, decode_session_token, identity_from_claims, validate_oidc_token
 from app.models import ApiKey
 from app.policy import effective_policy, ensure_rate_limit
 
@@ -51,6 +51,11 @@ def new_api_key() -> str:
 
 
 def _service_principal(supplied: str, db: Session) -> Principal:
+    if settings.rcat_institutional_only:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Institutional access requires verified OIDC identity",
+        )
     if hmac.compare_digest(supplied, settings.admin_api_key):
         return Principal(
             name="bootstrap-admin",
@@ -81,6 +86,13 @@ def _service_principal(supplied: str, db: Session) -> Principal:
 
 
 def _identity_principal(identity: dict) -> Principal:
+    try:
+        _require_rcat_identity(identity)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only verified @rcat.ac.th accounts are permitted",
+        ) from exc
     scopes = set(identity.get("scopes") or [])
     name = str(identity["name"])
     ensure_rate_limit(name, settings.default_rate_limit_per_minute)
