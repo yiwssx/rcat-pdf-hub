@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 from functools import lru_cache
@@ -37,7 +38,39 @@ def _claim_list(value) -> list[str]:
     return [str(value)]
 
 
+def _verified_rcat_email(email: object, verified: object) -> str:
+    """Accept only OIDC-provider-attested institutional mail, never a UI field.
+
+    The supplied email must be a conventional single-address ASCII mailbox;
+    subdomains, lookalikes, whitespace, Unicode homographs and unverified
+    email values are rejected rather than silently normalized.
+    """
+    if verified is not True or not isinstance(email, str):
+        raise ValueError("A verified institutional email is required")
+    if (len(email) > 254 or not email.isascii()
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._%+\-]*@rcat\.ac\.th",
+                                email, flags=re.IGNORECASE)):
+        raise ValueError("Only verified @rcat.ac.th identities may sign in")
+    return email.lower()
+
+
+def _require_rcat_identity(identity: dict) -> None:
+    """Re-evaluate the restriction when creating/decoding any session."""
+    if not settings.rcat_institutional_only:
+        return
+    if identity.get("source") not in {"oidc", "oidc-bearer"}:
+        raise ValueError("Institutional access requires trusted OIDC")
+    _verified_rcat_email(identity.get("email"), identity.get("email_verified"))
+
+
 def identity_from_claims(claims: dict, source: str) -> dict:
+    if settings.rcat_institutional_only:
+        if source not in {"oidc", "oidc-bearer"}:
+            raise ValueError("Institutional access requires OIDC")
+        validated_email = _verified_rcat_email(
+            claims.get("email"), claims.get("email_verified"))
+    else:
+        validated_email = str(claims.get("email") or "")[:254]
     subject = str(claims.get("sub") or claims.get("uid") or claims.get("username") or "unknown")
     display = str(
         claims.get("preferred_username")
@@ -53,6 +86,8 @@ def identity_from_claims(claims: dict, source: str) -> dict:
     return {
         "name": f"user:{safe_display}"[:120],
         "subject": subject,
+        "email": validated_email,
+        "email_verified": claims.get("email_verified") is True if source.startswith("oidc") else False,
         "display_name": display,
         "groups": groups,
         "roles": list(roles),
@@ -92,6 +127,7 @@ def create_local_admin_identity(username: str) -> dict:
 
 
 def create_session_token(identity: dict) -> str:
+    _require_rcat_identity(identity)
     now = int(time.time())
     payload = {
         "iss": "pdfhub",
@@ -105,6 +141,8 @@ def create_session_token(identity: dict) -> str:
         "pdfhub_roles": identity.get("roles", []),
         "pdfhub_scopes": identity.get("scopes", []),
         "pdfhub_source": identity.get("source", "session"),
+        "pdfhub_email": identity.get("email", ""),
+        "pdfhub_email_verified": identity.get("email_verified") is True,
         "pdfhub_identity_admin": bool(identity.get("is_identity_admin", False)),
     }
     return jwt.encode(payload, settings.auth_token_secret, algorithm="HS256")
@@ -120,6 +158,14 @@ def decode_session_token(token: str) -> dict:
         options={"require": ["exp", "iat", "sub"]},
     )
     source = str(claims.get("pdfhub_source") or "session")
+    if settings.rcat_institutional_only:
+        if source != "oidc":
+            raise jwt.InvalidTokenError("Institutional access requires OIDC")
+        try:
+            _verified_rcat_email(
+                claims.get("pdfhub_email"), claims.get("pdfhub_email_verified"))
+        except ValueError as exc:
+            raise jwt.InvalidTokenError("Institutional email is not verified") from exc
     if source == "web-console":
         if not settings.web_console_auto_login_enabled:
             raise jwt.InvalidTokenError("Web Console sessions are disabled while institutional authentication is active")
@@ -146,6 +192,8 @@ def decode_session_token(token: str) -> dict:
     return {
         "name": str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120],
         "subject": str(claims["sub"]),
+        "email": str(claims.get("pdfhub_email") or ""),
+        "email_verified": claims.get("pdfhub_email_verified") is True,
         "display_name": str(claims.get("pdfhub_display_name") or claims["sub"]),
         "groups": groups,
         "roles": list(roles),
