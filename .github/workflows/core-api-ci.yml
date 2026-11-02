@@ -89,6 +89,11 @@ jobs:
         run: |
           python3 scripts/validate-t90-phase-zero.py
           python3 -m unittest discover -s scripts/tests -p 'test_t90_phase_zero.py'
+      - name: Audit T90-2 provenance tooling and independent T90-5 ledger
+        run: |
+          python3 scripts/validate-t90-rcat-pilot-acceptance.py
+          python3 -m unittest discover -s scripts/tests -p 'test_t90_rcat_pilot_acceptance.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_t90_2_fixture_audit.py'
       - name: Build API test image
         run: docker build -t rcat-pdf-hub-api-test apps/api
       - name: Validate OpenAPI frontend contract
