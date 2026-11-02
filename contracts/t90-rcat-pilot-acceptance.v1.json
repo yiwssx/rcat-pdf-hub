@@ -33,12 +33,16 @@
     },
     {
       "tool_id": "T21",
-      "state": "IMPLEMENTED",
+      "state": "STAGED",
       "source_commit": "2abd02bbc176c8748f3da11acd911a61e5826c3f",
       "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/249",
-      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40967771160",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41419587183",
       "supported_subset": "Bounded CFB Publisher file imported by pinned LibreOffice/libmspub; one actual pinned fixture yields two nonblank A4 pages.",
-      "acceptance_pending": "Real Publisher font/layout comparisons, Thai print geometry, institutional auth/download and isolation."
+      "acceptance_pending": "Real Publisher font/layout comparisons, Thai print geometry, institutional auth/download and isolation.",
+      "source_sha256": "79f9a8d99ed18faa174fa7200dbe91627015e2b77439a20421119abc128d62f7",
+      "output_sha256": "c9678e279b841c9acd054ee197e029d660b974dbd24d667c6daefcaeae3d94f1",
+      "pages_or_items_checked": true,
+      "fixture_provenance": "LibreOffice core writerperfect/qa/unit/data/draw/libmspub/pass/fdo59355-1.pub at fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4, git blob 607a07ae2d362e4a1f6e779dfff88726fe74f910; size 10752 bytes, first page nonblank, two A4 pages. Observable exact CI log from job 125191649641."
     }
   ]
 }
