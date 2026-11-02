@@ -26,6 +26,8 @@ from app.staged_geometry_adapters import (
 )
 from app.staged_to_pdf_adapters import (
     STAGED_TO_PDF_OPERATIONS, execute_staged_to_pdf_operation,
+    NATIVE_DEV_TO_PDF_OPERATIONS, native_dev_enabled,
+    execute_native_dev_to_pdf_operation,
 )
 from app.services import pdf_tools as _pdf_tools
 
@@ -188,7 +190,28 @@ def process_job(job_id: str) -> str:
             write_journal.fenced_progress(db, job, token, 25)
         else:
             _set_job(db, job, progress=25)
-        if job.operation in STAGED_TO_PDF_OPERATIONS:
+        if job.operation == "url-to-pdf":
+            # URL has NO uploaded FileRecord. Recheck the principal-owned job,
+            # independently gated feature and a single canonical URL param.
+            if (not settings.to_pdf_tools_enabled or not settings.url_to_pdf_dev_enabled
+                    or file_ids or files or set(params) != {"url"}
+                    or not isinstance(params["url"], str)):
+                raise ValueError("URL conversion job is disabled or malformed")
+            from app.services.to_pdf_url import url_to_pdf
+            url_to_pdf(params["url"], output)
+        elif job.operation in NATIVE_DEV_TO_PDF_OPERATIONS:
+            from app.routers.pdf import _is_expired
+            if (not native_dev_enabled(job.operation) or len(files) != 1
+                    or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])):
+                raise ValueError("Native development input is unavailable, disabled or unauthorized")
+            execute_native_dev_to_pdf_operation(
+                job.operation, inputs, output, params,
+                original_name=files[0].original_name,
+                content_type=files[0].content_type,
+            )
+        elif job.operation in STAGED_TO_PDF_OPERATIONS:
             from app.routers.pdf import _is_expired
             if (not settings.to_pdf_tools_enabled or len(files) != 1
                     or files[0] is None

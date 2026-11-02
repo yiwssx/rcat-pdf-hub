@@ -39,6 +39,33 @@ class Settings(BaseSettings):
     from_pdf_tools_enabled: bool = False
     # T90-4 M33: bounded AcroForm text fill, default disabled.
     pdf_filler_tools_enabled: bool = False
+    # Private/internal T90 pilot: exact authenticated principal names only.
+    # Defaults OFF to preserve existing installations. When enabled with no
+    # allowlist, all T90-2 submissions are denied (fail closed).
+    # Do not substitute web-console shared auto-login for per-person identity.
+    t90_private_pilot_enabled: bool = False
+    t90_private_pilot_principals: str = ""
+    # T30 experimental CHM decoder: always OFF unless separately opted in.
+    # Not an approval to publish a route or run without network-denied sandbox.
+    chm_native_dev_enabled: bool = False
+    # T09/T25 experimental HEIC/HEIF runtime is externally pinned and
+    # security-gated; this development flag is OFF by default.
+    heif_native_dev_enabled: bool = False
+    # T33 remote URL import is an independent opt-in development feature.
+    # Must remain OFF until worker egress is denied for private destinations.
+    url_to_pdf_dev_enabled: bool = False
+    # Shared exclusively with the opt-in network-isolated URL fetch sidecar.
+    # Never default to a working credential or expose in API responses/logs.
+    url_fetcher_shared_secret: str = ""
+    # Optional native conversion service in an independent restricted Docker
+    # container. Never configured by default or shared with public API users.
+    native_sidecar_shared_secret: str = ""
+
+    # T34 MS Works .wps import via dedicated native writerperfect; OFF.
+    wps_native_dev_enabled: bool = False
+    # T20 DWG external native CAD reader + restricted 2D DXF bridge; OFF.
+    # Requires compatible licensing and native sandbox certification.
+    dwg_native_dev_enabled: bool = False
     # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
     artifact_write_journal_enabled: bool = False
     # Heartbeats only start when artifact_write_journal_enabled=true.

@@ -1,0 +1,120 @@
+name: T90-2 Docker Native Isolation Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/app/t90_2_catalog.py"
+      - "apps/api/app/native_format_policy.py"
+      - "apps/api/app/staged_to_pdf_adapters.py"
+      - "apps/api/tests/test_t90_2_native_dev_integrations.py"
+      - "apps/api/app/services/native_sandbox.py"
+      - "apps/api/app/services/t90_2_native_docker_selftest.py"
+      - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
+      - "apps/api/app/services/t90_2_external_heic_selftest.py"
+      - "apps/api/app/services/to_pdf_heif_native.py"
+      - "apps/api/Dockerfile"
+      - "compose.native-sidecar.yaml"
+      - ".github/workflows/t90-2-native-sandbox.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bwrap-real-runtime:
+    name: Docker-native unprivileged file + network isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build exact locked API image
+        run: docker build --build-arg PDFHUB_NATIVE_ONLY=1 -t pdfhub-t90-2-native-qa apps/api
+      - name: Probe Docker isolation with no network, no caps and read-only root
+        run: |
+          set -euo pipefail
+          # Deliberately keep Docker's normal seccomp policy and
+          # the API image's nonroot user. NEVER use privileged/unconfined
+          # settings to turn a failing acceptance test green.
+          docker run --rm \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --network none \
+            --read-only \
+            -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
+            pdfhub-t90-2-native-qa \
+            python -m app.services.t90_2_native_docker_selftest
+
+  patched-heif-runtime:
+    name: Build libheif 1.23.7, verify runtime version inside nonroot Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build only the isolated, version-pinned native decoder image
+        run: |
+          docker build \
+            --build-arg PDFHUB_NATIVE_ONLY=1 \
+            --build-arg PDFHUB_HEIF_FROM_SOURCE=1 \
+            -t pdfhub-t90-2-heif-pinned apps/api
+      - name: Verify offline decoder binary and patched libheif version
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --network none \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only \
+            -e LD_LIBRARY_PATH=/opt/pdfhub/heif/lib \
+            pdfhub-t90-2-heif-pinned \
+            /opt/pdfhub/heif/bin/heif-dec --version
+      - name: Execute real HEIF decoder-to-PDF pipeline in offline native container
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --network none \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+            -e HOME=/tmp \
+            -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true \
+            -e PDFHUB_HEIF_NATIVE_DEV_ENABLED=true \
+            -e LD_LIBRARY_PATH=/opt/pdfhub/heif/lib \
+            pdfhub-t90-2-heif-pinned \
+            python -m app.services.t90_2_heif_runtime_selftest
+
+      - name: Prove independent immutable HEVC HEIC sample with no decoder network
+        run: |
+          set -euo pipefail
+          # Fetch ONLY on disposable Actions host. The decoder has NO network;
+          # this is not an arbitrary URL import or public app capability.
+          sample_dir="$(mktemp -d)"
+          trap 'rm -rf "$sample_dir"' EXIT
+          curl --fail --silent --show-error --location --retry 2 \
+            --max-time 45 --proto '=https' --proto-redir '=https' \
+            "https://raw.githubusercontent.com/strukturag/libheif/12a259a5882dd99d45ec5fc77e296a3b620d1e2e/tests/data/rainbow-451x461.heic" \
+            -o "$sample_dir/rainbow-451x461.heic"
+          test "$(wc -c < "$sample_dir/rainbow-451x461.heic")" -eq 7080
+          test "$(git hash-object "$sample_dir/rainbow-451x461.heic")" = \
+            "6691f50f39bd69871a2abe284de2ef9f5243bc66"
+          # mktemp creates 0700 host directories, which the non-root Docker
+          # decoder cannot traverse. Open READ access to this disposable,
+          # checksum-pinned, public upstream fixture only; mount stays RO.
+          chmod 0755 "$sample_dir"
+          chmod 0444 "$sample_dir/rainbow-451x461.heic"
+          docker run --rm \
+            --network none \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only \
+            --mount "type=bind,src=$sample_dir,dst=/fixtures,readonly" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+            -e HOME=/tmp \
+            -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true \
+            -e PDFHUB_HEIF_NATIVE_DEV_ENABLED=true \
+            -e LD_LIBRARY_PATH=/opt/pdfhub/heif/lib \
+            pdfhub-t90-2-heif-pinned \
+            python -m app.services.t90_2_external_heic_selftest

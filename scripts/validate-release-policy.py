@@ -53,8 +53,27 @@ assert workflow_files == [
     ".github/workflows/dependabot-patch-automerge.yml",
     ".github/workflows/dependabot-python-security.yml",
     ".github/workflows/dependency-review.yml",
+    ".github/workflows/t90-2-native-sandbox.yml",
     ".github/workflows/web-ci.yml",
 ], f"Only explicitly reviewed workflows are allowed: {workflow_files}"
+
+native_sandbox_workflow = read(".github/workflows/t90-2-native-sandbox.yml")
+for required in (
+    "pull_request:", "permissions:", "contents: read",
+    "docker build --build-arg PDFHUB_NATIVE_ONLY=1 -t pdfhub-t90-2-native-qa",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges",
+    "--read-only",
+    "python -m app.services.t90_2_native_docker_selftest",
+):
+    assert required in native_sandbox_workflow, (
+        f"T90-2 Native Sandbox workflow missing security requirement: {required}"
+    )
+assert "pull_request_target:" not in native_sandbox_workflow
+assert "--security-opt seccomp=unconfined" not in native_sandbox_workflow
+assert "--security-opt apparmor=unconfined" not in native_sandbox_workflow
+assert "--privileged" not in native_sandbox_workflow
+
 
 codeql_workflow = read(".github/workflows/codeql.yml")
 for required in ("pull_request:", "contents: read", "security-events: write", "github/codeql-action/init@v4", "github/codeql-action/analyze@v4"):

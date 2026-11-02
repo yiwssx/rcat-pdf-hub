@@ -7,7 +7,7 @@ from rq.job import Job as RQJob
 from app.config import get_settings
 from app.staged_document_adapters import STAGED_DOCUMENT_OPERATIONS
 from app.staged_geometry_adapters import STAGED_GEOMETRY_OPERATIONS
-from app.staged_to_pdf_adapters import STAGED_TO_PDF_OPERATIONS
+from app.staged_to_pdf_adapters import NATIVE_DEV_TO_PDF_OPERATIONS, native_dev_enabled, STAGED_TO_PDF_OPERATIONS
 
 
 QueueClass = Literal["interactive", "pdf", "heavy"]
@@ -57,6 +57,13 @@ def queue_class_for_operation(operation: str) -> QueueClass:
     if settings.pdf_filler_tools_enabled and operation == "fill-pdf-form":
         return "pdf"
     if settings.from_pdf_tools_enabled and operation == "pdf-to-tiff":
+        return "heavy"
+    if operation in NATIVE_DEV_TO_PDF_OPERATIONS:
+        if not native_dev_enabled(operation):
+            raise ValueError("Native experimental conversion is not enabled")
+        return "heavy"
+    if (operation == "url-to-pdf" and settings.to_pdf_tools_enabled
+            and settings.url_to_pdf_dev_enabled):
         return "heavy"
     if settings.to_pdf_tools_enabled and operation in STAGED_TO_PDF_OPERATIONS:
         return "heavy"

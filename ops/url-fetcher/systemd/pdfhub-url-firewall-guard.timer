@@ -1,0 +1,13 @@
+[Unit]
+Description=RCAT PDF Hub T90-2 URL fetcher host firewall lease refresh
+Documentation=docs/workstreams/t90-2-url-fetcher-egress.md
+
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=30s
+AccuracySec=2s
+Persistent=false
+Unit=pdfhub-url-firewall-guard.service
+
+[Install]
+WantedBy=timers.target

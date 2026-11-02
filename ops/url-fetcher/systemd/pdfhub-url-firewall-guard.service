@@ -1,0 +1,17 @@
+[Unit]
+Description=RCAT PDF Hub T90-2 URL fetcher host firewall lease verification
+Documentation=docs/workstreams/t90-2-url-fetcher-egress.md
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# Administrator must manually copy the reviewed script to this exact path.
+# The service does not install new rules, does not enable the fetcher and
+# does not auto-repair unknown firewall modifications.
+ExecStart=/usr/bin/bash /usr/local/libexec/pdfhub/verify-host-egress-firewall.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true

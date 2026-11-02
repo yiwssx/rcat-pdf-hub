@@ -15,7 +15,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
       qpdf ghostscript poppler-utils \
       tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng \
       fonts-noto-core \
-      unpaper pngquant jbig2dec djvulibre-bin curl \
+      unpaper pngquant jbig2dec djvulibre-bin libchm1 wps2odt bubblewrap curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -27,6 +27,24 @@ COPY app ./app
 COPY tests ./tests
 
 RUN useradd --create-home --uid 10001 pdfhub && mkdir -p /data && chown -R pdfhub:pdfhub /data /app
+# The codec-only image must not contain even a writable-looking user-data
+# directory. Its source bytes arrive over one authenticated request and exist
+# only on private tmpfs. API/worker builds retain their original /data path.
+ARG PDFHUB_NATIVE_ONLY=0
+# Only the native sidecar may opt into building the patched decoder. The
+# regular API image stays unchanged; this separately sourced runtime is
+# pinned by upstream v1.23.7's exact full commit SHA in the installer.
+ARG PDFHUB_HEIF_FROM_SOURCE=0
+COPY build-pinned-heif.sh /tmp/build-pinned-heif.sh
+RUN if [ "$PDFHUB_NATIVE_ONLY" = "1" ]; then \
+      rmdir /data; \
+      if [ "$PDFHUB_HEIF_FROM_SOURCE" = "1" ]; then \
+        bash /tmp/build-pinned-heif.sh; \
+      fi; \
+    elif [ "$PDFHUB_HEIF_FROM_SOURCE" != "0" ]; then \
+      echo "Only the dedicated native image may build the HEIF runtime" >&2; exit 1; \
+    fi \
+    && rm -f /tmp/build-pinned-heif.sh
 USER pdfhub
 
 EXPOSE 8000
