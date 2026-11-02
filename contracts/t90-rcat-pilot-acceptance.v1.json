@@ -14,6 +14,24 @@
   },
   "tool_evidence": [
     {
+      "tool_id": "F09",
+      "state": "IMPLEMENTED",
+      "source_commit": "ee4a95e2eded5f171d78909920ffdf280280f288",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/269",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41404451388",
+      "supported_subset": "Owner-bound PDF → one multipage TIFF with 72–300 DPI, 40-page and pixel budgets using strict PDF parse, Poppler raster, Pillow TIFF frame and page-count checking; guarded feature OFF.",
+      "acceptance_pending": "RCAT Workspace OIDC real owner upload/download, Thai page images vs source, operator host AV, runtime security and real institutional file goldens are pending."
+    },
+    {
+      "tool_id": "M33",
+      "state": "IMPLEMENTED",
+      "source_commit": "6e067f68656aed38749acca401f697d6ba5e171d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/270",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41406143729",
+      "supported_subset": "Gated PDF AcroForm existing text field fill only, bounded key/value inputs with owner-scope queue and worker source checks; no digital signature, secure redaction or form flattening.",
+      "acceptance_pending": "Real Thai fillable PDFs, appearance regeneration, owner-bound RCAT Workspace OIDC download, malformed source and host/AV/operator review remain pending."
+    },
+    {
       "tool_id": "T09",
       "state": "IMPLEMENTED",
       "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
