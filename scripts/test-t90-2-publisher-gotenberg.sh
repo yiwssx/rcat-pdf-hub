@@ -42,13 +42,14 @@ curl --fail --silent --show-error --max-time 100 \
 test "$(head -c 5 "$work/publisher.pdf")" = "%PDF-"
 pdfinfo "$work/publisher.pdf" > "$work/pub-info.txt"
 pdftotext -enc UTF-8 "$work/publisher.pdf" "$work/pub-text.txt"
-pdftoppm -f 1 -l 1 -scale-to 450 -singlefile -gray \
+pdftoppm -f 1 -l 2 -scale-to 450 -gray \
   "$work/publisher.pdf" "$work/pub-preview"
-python3 - "$work/publisher.pdf" "$work/pub-info.txt" "$work/pub-preview.pgm" <<'PY'
+python3 - "$work/publisher.pdf" "$work/pub-info.txt" \
+  "$work/pub-preview-1.pgm" "$work/pub-preview-2.pgm" <<'PY'
 from pathlib import Path
 import re
 import sys
-pdf, info, pgm = map(Path, sys.argv[1:])
+pdf, info, page1, page2 = map(Path, sys.argv[1:])
 metadata = info.read_text(encoding="utf-8")
 pages = re.search(r"^Pages:\s*(\d+)$", metadata, re.M)
 size = re.search(r"^Page size:\s*([\d.]+) x ([\d.]+) pts", metadata, re.M)
@@ -61,17 +62,35 @@ if (int(pages.group(1)) != 2
     raise SystemExit(f"Publisher: unexpected PDF result: {metadata}")
 # Rendered first page must contain meaningful nonwhite pixels. This detects
 # format misclassification that technically yields a blank/empty PDF.
-data = pgm.read_bytes()
-if not data.startswith(b"P5\n"):
-    raise SystemExit("Publisher: Poppler failed to rasterize imported page")
-header_end = data.find(b"\n255\n")
-if header_end < 0:
-    raise SystemExit("Publisher: invalid raster preview header")
-pixels = data[header_end + 5:]
-if len(pixels) < 3000 or sum(pixel < 240 for pixel in pixels) < 100:
-    raise SystemExit("Publisher: imported PDF rendered as blank page")
-print(f"PASS: pinned real LibreOffice .pub: {pages.group(1)} pages, "
-      f"{width}x{height}pt, {len(pixels)} rendered pixels")
+blank_pages = []
+for page_no, pgm in enumerate((page1, page2), start=1):
+    data = pgm.read_bytes()
+    if not data.startswith(b"P5\n"):
+        raise SystemExit(f"Publisher: Poppler failed to rasterize page {page_no}")
+    header_end = data.find(b"\n255\n")
+    if header_end < 0:
+        raise SystemExit(f"Publisher: page {page_no} has invalid raster preview header")
+    pixels = data[header_end + 5:]
+    if len(pixels) < 3000:
+        raise SystemExit(f"Publisher: page {page_no} rendered incomplete raster")
+    foreground = sum(pixel < 240 for pixel in pixels)
+    if foreground < 100:
+        blank_pages.append(page_no)
+        print(f"T21_PAGE_OBSERVATION page={page_no} visibly_blank=true "
+              f"note=source-layout-comparison-pending")
+    else:
+        print(f"T21_PAGE_OBSERVATION page={page_no} visibly_blank=false "
+              f"dark_pixels={foreground}")
+if 1 in blank_pages:
+    raise SystemExit("Publisher: confirmed first page of source fixture rendered blank")
+# A genuinely blank second source page can be intentional. Without a
+# reference raster of the original Publisher document, FAILing all conversion
+# tests or claiming full fidelity would both be unjustified. Track it honestly.
+print(f"T21_PAGE_INVENTORY rasterized=2 blank_pages="
+      f"{','.join(map(str, blank_pages)) or 'none'} "
+      f"source_visual_reference=pending")
+print(f"PASS: pinned real LibreOffice .pub: 2 A4 PDF pages, "
+      f"first page nonblank, both pages rasterizable, visual fidelity UNVERIFIED")
 PY
 test "$(sha256sum "$fixture" | cut -d' ' -f1)" = "$sha_before"
 
@@ -81,5 +100,5 @@ test "$(sha256sum "$fixture" | cut -d' ' -f1)" = "$sha_before"
 # narrow claim, not full Thai font/layout fidelity or an authenticated job.
 output_sha="$(sha256sum "$work/publisher.pdf" | cut -d' ' -f1)"
 test "${#output_sha}" -eq 64
-printf 'T90_2_T21_REAL_PUBLISHER_EVIDENCE source_sha256=%s output_sha256=%s pages=2 first_page_nonblank=true original_unchanged=true corpus=LibreOffice-writerperfect-fdo59355-1.pub\n' \
+printf 'T90_2_T21_REAL_PUBLISHER_EVIDENCE source_sha256=%s output_sha256=%s pages=2 pages_rasterized=2 first_page_nonblank=true page2_source_visual_reference=pending original_unchanged=true corpus=LibreOffice-writerperfect-fdo59355-1.pub\n' \
   "$sha_before" "$output_sha"
