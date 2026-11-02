@@ -49,3 +49,37 @@ def pdf_to_tiff(
     if not 16 <= source.size <= MAX_SOURCE_BYTES:
         raise HTTPException(status_code=413, detail="PDF exceeds TIFF conversion budget")
     return _create_job(db, principal, "pdf-to-tiff", [req.file_id], {"dpi": req.dpi})
+
+
+class PdfToGifRequest(BaseModel):
+    """F16 animation: every PDF page is one 256-color GIF frame."""
+    model_config = ConfigDict(extra="forbid")
+    file_id: str = Field(min_length=1, max_length=36)
+    dpi: int = Field(default=96, strict=True, ge=72, le=150)
+    frame_ms: int = Field(default=1200, strict=True, ge=300, le=5000)
+
+
+@router.post("/gif", status_code=202, response_model=JobOut)
+def pdf_to_gif(
+    req: PdfToGifRequest,
+    principal: Principal = Depends(require_scope("pdf:pdf-to-image")),
+    db: Session = Depends(get_db),
+):
+    if not settings.from_pdf_tools_enabled:
+        raise HTTPException(status_code=404, detail="T90-3 conversion is disabled")
+    source = db.get(FileRecord, req.file_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    if source.source_system != principal.name:
+        raise HTTPException(status_code=403, detail="File belongs to another account")
+    if _is_expired(source):
+        raise HTTPException(status_code=410, detail="Source PDF has expired")
+    if (source.content_type != "application/pdf"
+            or not source.original_name.lower().endswith(".pdf")):
+        raise HTTPException(status_code=415, detail="A verified PDF source is required")
+    if not 24 <= source.size <= MAX_SOURCE_BYTES:
+        raise HTTPException(status_code=413, detail="Source PDF exceeds GIF conversion budget")
+    return _create_job(
+        db, principal, "pdf-to-gif", [req.file_id],
+        {"dpi": req.dpi, "frame_ms": req.frame_ms},
+    )

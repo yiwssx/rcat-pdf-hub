@@ -77,6 +77,8 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
     if operation == "pdf-to-tiff":
         return ".tiff", "image/tiff"
+    if operation == "pdf-to-gif":
+        return ".gif", "image/gif"
     if operation in STAGED_GEOMETRY_OPERATIONS:
         return geometry_output_spec(operation)
     if operation in STAGED_DOCUMENT_OPERATIONS:
@@ -254,6 +256,30 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F09 PDF signature changed")
             pdf_to_multipage_tiff(inputs[0], output, dpi=params["dpi"])
+        elif job.operation == "pdf-to-gif":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_gif import (
+                MAX_SOURCE_BYTES as GIF_SOURCE_MAX, pdf_to_animated_gif,
+            )
+            if (not settings.from_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= GIF_SOURCE_MAX
+                    or set(params) != {"dpi", "frame_ms"}):
+                raise ValueError("Staged F16 source or parameters are unauthorized")
+            try:
+                verified_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F16 original PDF signature invalid") from exc
+            if verified_type != "application/pdf":
+                raise ValueError("Staged F16 PDF signature changed")
+            pdf_to_animated_gif(
+                inputs[0], output, dpi=params["dpi"], frame_ms=params["frame_ms"],
+            )
         elif job.operation == "fill-pdf-form":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
