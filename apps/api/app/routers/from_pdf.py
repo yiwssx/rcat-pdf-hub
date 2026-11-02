@@ -83,3 +83,33 @@ def pdf_to_gif(
         db, principal, "pdf-to-gif", [req.file_id],
         {"dpi": req.dpi, "frame_ms": req.frame_ms},
     )
+
+
+class PdfToBmpRequest(BaseModel):
+    """F17 multi-output: PDF pages are individual BMPs inside one ZIP."""
+    model_config = ConfigDict(extra="forbid")
+    file_id: str = Field(min_length=1, max_length=36)
+    dpi: int = Field(default=96, strict=True, ge=72, le=150)
+
+
+@router.post("/bmp", status_code=202, response_model=JobOut)
+def pdf_to_bmp(
+    req: PdfToBmpRequest,
+    principal: Principal = Depends(require_scope("pdf:pdf-to-image")),
+    db: Session = Depends(get_db),
+):
+    if not settings.from_pdf_tools_enabled:
+        raise HTTPException(status_code=404, detail="T90-3 conversion is disabled")
+    source = db.get(FileRecord, req.file_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="PDF not found")
+    if source.source_system != principal.name:
+        raise HTTPException(status_code=403, detail="PDF belongs to another owner")
+    if _is_expired(source):
+        raise HTTPException(status_code=410, detail="PDF has expired")
+    if (source.content_type != "application/pdf"
+            or not source.original_name.lower().endswith(".pdf")):
+        raise HTTPException(status_code=415, detail="Verified PDF required")
+    if not 24 <= source.size <= MAX_SOURCE_BYTES:
+        raise HTTPException(status_code=413, detail="Source exceeds BMP raster budget")
+    return _create_job(db, principal, "pdf-to-bmp", [req.file_id], {"dpi": req.dpi})

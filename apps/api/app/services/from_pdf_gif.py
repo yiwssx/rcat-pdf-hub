@@ -84,7 +84,7 @@ def pdf_to_animated_gif(
         for path in root.iterdir():
             if path.is_symlink() or not path.is_file():
                 raise ValueError("GIF rasterizer generated an unsafe artifact")
-            match = re.fullmatch(r"page-([1-9][0-9]*)\.png", path.name)
+            match = re.fullmatch(r"page-(0*[1-9][0-9]*)\.png", path.name)
             if not match:
                 raise ValueError("GIF rasterizer generated unexpected artifacts")
             index = int(match.group(1))

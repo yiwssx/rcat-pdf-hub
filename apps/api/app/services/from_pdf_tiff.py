@@ -75,7 +75,7 @@ def pdf_to_multipage_tiff(source: Path, output: Path, *, dpi: int = 150) -> None
         for path in files:
             if path.is_symlink() or not path.is_file():
                 raise ValueError("TIFF rasterizer produced unsafe page output")
-            match = re.fullmatch(r"page-([1-9][0-9]*)\.png", path.name)
+            match = re.fullmatch(r"page-(0*[1-9][0-9]*)\.png", path.name)
             if not match:
                 raise ValueError("TIFF rasterizer produced unexpected artifact")
             number = int(match.group(1))

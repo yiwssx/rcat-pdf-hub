@@ -56,7 +56,7 @@ heavy_queue = Queue(
 def queue_class_for_operation(operation: str) -> QueueClass:
     if settings.pdf_filler_tools_enabled and operation == "fill-pdf-form":
         return "pdf"
-    if settings.from_pdf_tools_enabled and operation in {"pdf-to-tiff", "pdf-to-gif"}:
+    if settings.from_pdf_tools_enabled and operation in {"pdf-to-tiff", "pdf-to-gif", "pdf-to-bmp"}:
         return "heavy"
     if operation in NATIVE_DEV_TO_PDF_OPERATIONS:
         if not native_dev_enabled(operation):
