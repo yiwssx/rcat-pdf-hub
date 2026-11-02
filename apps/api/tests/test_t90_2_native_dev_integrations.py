@@ -19,7 +19,7 @@ from app.staged_to_pdf_adapters import (
     STAGED_TO_PDF_OPERATIONS, execute_native_dev_to_pdf_operation,
     native_dev_enabled,
 )
-from app.t90_2_catalog import FORMAT_CAPABILITIES
+from app.t90_2_catalog import FORMAT_CAPABILITIES, EXPERIMENTAL_CODE_PATHS
 
 CASES = [
     ("heic-to-pdf", ".heic", "image/heic", "heif_native_dev_enabled"),
@@ -51,6 +51,32 @@ def test_native_experimental_routes_do_not_claim_staged_or_verified():
     assert sum(c.engineering_state == "BLOCKED" for c in FORMAT_CAPABILITIES) == 6
     assert all(c.operations == () for c in FORMAT_CAPABILITIES
                if c.item_id in {"T09", "T20", "T25", "T30", "T34", "T33"})
+
+
+
+def test_all_forty_format_ids_have_an_engineering_code_path_not_a_release():
+    # The user's code-only milestone excludes physical target-host/file tests.
+    # Presence of a gated path must never be treated as VERIFIED or RELEASED.
+    items = {item.item_id: item for item in FORMAT_CAPABILITIES}
+    assert len(items) == len(FORMAT_CAPABILITIES) == 40
+    assert set(items) == {f"T{i:02d}" for i in range(1, 41)}
+    assert all(item.code_prepared for item in items.values())
+    assert sum(item.engineering_state == "STAGED" for item in items.values()) == 34
+    assert sum(item.engineering_state == "BLOCKED" for item in items.values()) == 6
+    assert set(EXPERIMENTAL_CODE_PATHS) == {
+        "T09", "T20", "T25", "T30", "T33", "T34",
+    }
+    assert set().union(*(set(ops) for ops in EXPERIMENTAL_CODE_PATHS.values())) == (
+        set(NATIVE_DEV_TO_PDF_OPERATIONS) | {"url-to-pdf"}
+    )
+    for item in items.values():
+        assert item.development_operations
+        if item.item_id in EXPERIMENTAL_CODE_PATHS:
+            assert item.operations == ()
+            assert item.engineering_state == "BLOCKED"
+        else:
+            assert item.operations
+            assert item.engineering_state == "STAGED"
 
 
 @pytest.mark.parametrize("operation,suffix,mime,flag", CASES)
