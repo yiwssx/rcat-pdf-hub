@@ -6,6 +6,7 @@ import { BrandGlyph } from "./tool-icons";
 
 export function LocalAdminLogin() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [institutionalOnly, setInstitutionalOnly] = useState(false);
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("เข้าสู่ระบบด้วยบัญชีผู้ดูแลภายใน");
@@ -18,6 +19,7 @@ export function LocalAdminLogin() {
         const config = await getAuthConfig();
         if (!live) return;
         setEnabled(config.local_admin.enabled);
+        setInstitutionalOnly(config.institutional?.rcat_only === true);
         try {
           const me = await getMe(SESSION_AUTH);
           if (live && me.is_admin) window.location.replace("/admin");
@@ -70,7 +72,14 @@ export function LocalAdminLogin() {
           <p>บัญชี Local Admin ใช้เฉพาะการดูแลระบบ และสร้าง session แบบ HttpOnly โดยไม่ส่ง Service API Key เข้า browser</p>
         </div>
 
-        {enabled === false ? (
+        {institutionalOnly ? (
+          <div className="v3InfoBox">
+            <p>ระบบนี้สงวนสิทธิ์สำหรับบัญชีสถาบัน <strong>@rcat.ac.th</strong> ที่ยืนยันตัวตนแล้ว</p>
+            <a href="/api/v1/auth/oidc/login?return_to=%2Fadmin">
+              เข้าสู่ระบบด้วยบัญชี RCAT (SSO)
+            </a>
+          </div>
+        ) : enabled === false ? (
           <div className="v3InfoBox">
             Local Admin ยังไม่ได้เปิดใช้ ให้สร้าง password hash ด้วย <code>make local-admin-hash</code> แล้วกำหนด <code>PDFHUB_LOCAL_ADMIN_PASSWORD_HASH</code> ในไฟล์ .env
           </div>

@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import re
 import secrets
 import time
 from functools import lru_cache
@@ -37,7 +38,82 @@ def _claim_list(value) -> list[str]:
     return [str(value)]
 
 
+def _verified_rcat_email(email: object, verified: object) -> str:
+    """Accept only OIDC-provider-attested institutional mail, never a UI field.
+
+    The supplied email must be a conventional single-address ASCII mailbox;
+    subdomains, lookalikes, whitespace, Unicode homographs and unverified
+    email values are rejected rather than silently normalized.
+    """
+    if verified is not True or not isinstance(email, str):
+        raise ValueError("A verified institutional email is required")
+    if (len(email) > 254 or not email.isascii()
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._%+\-]*@rcat\.ac\.th",
+                                email, flags=re.IGNORECASE)):
+        raise ValueError("Only verified @rcat.ac.th identities may sign in")
+    return email.lower()
+
+
+def _require_google_workspace(hosted_domain: object) -> None:
+    """Require signed membership in RCAT Google Workspace, not just mail."""
+    if settings.oidc_issuer.rstrip("/") not in {
+        "https://accounts.google.com", "accounts.google.com"
+    }:
+        return
+    if not isinstance(hosted_domain, str) or hosted_domain.lower() != "rcat.ac.th":
+        raise ValueError("Google Workspace hosted domain must be rcat.ac.th")
+
+
+def _require_rcat_identity(identity: dict) -> None:
+    """Re-evaluate the restriction when creating/decoding any session."""
+    if not settings.rcat_institutional_only:
+        return
+    if identity.get("source") not in {"oidc", "oidc-bearer"}:
+        raise ValueError("Institutional access requires trusted OIDC")
+    _verified_rcat_email(identity.get("email"), identity.get("email_verified"))
+    _require_google_workspace(identity.get("hosted_domain"))
+
+
+def _institutional_role(groups: list[str], verified_email: str) -> str:
+    """Grant all verified school mailboxes basic conversion access.
+
+    Google ID tokens normally omit Workspace groups. Explicit role mappings
+    still narrow a user to viewer or elevate an IdP-asserted admin group;
+    an operator fallback applies only after verified school-email checks.
+    """
+    if verified_email in settings.rcat_admin_email_set:
+        return ROLE_ADMIN
+    try:
+        return role_for_groups(groups, settings.human_role_group_map)
+    except ValueError:
+        return ROLE_OPERATOR
+
+
+def _institutional_owner_name(subject: str) -> str:
+    """Stable issuer-scoped owner; avoids mutable-email reassignment."""
+    if not subject or subject == "unknown":
+        raise ValueError("Institutional OIDC subject is required")
+    material = (settings.oidc_issuer.rstrip("/") + "\x00" + subject).encode("utf-8")
+    return "user:oidc:" + hashlib.sha256(material).hexdigest()
+
+
+def _safe_return_to(value: str) -> str:
+    """Only origin-relative paths; browsers treat backslashes as slashes."""
+    if (not value.startswith("/") or value.startswith("//")
+            or "\\" in value or any(ord(c) < 32 or ord(c) == 127 for c in value)):
+        return "/"
+    return value
+
+
 def identity_from_claims(claims: dict, source: str) -> dict:
+    if settings.rcat_institutional_only:
+        if source not in {"oidc", "oidc-bearer"}:
+            raise ValueError("Institutional access requires OIDC")
+        validated_email = _verified_rcat_email(
+            claims.get("email"), claims.get("email_verified"))
+        _require_google_workspace(claims.get("hd"))
+    else:
+        validated_email = str(claims.get("email") or "")[:254]
     subject = str(claims.get("sub") or claims.get("uid") or claims.get("username") or "unknown")
     display = str(
         claims.get("preferred_username")
@@ -47,12 +123,26 @@ def identity_from_claims(claims: dict, source: str) -> dict:
         or subject
     )
     groups = _claim_list(claims.get(settings.oidc_group_claim) or claims.get("groups"))
-    roles = (role_for_groups(groups, settings.human_role_group_map),)
+    roles = (
+        (_institutional_role(groups, validated_email),)
+        if settings.rcat_institutional_only
+        else (role_for_groups(groups, settings.human_role_group_map),)
+    )
     scopes = scopes_for_roles(roles, settings.human_scope_set)
     safe_display = display[:110]
+    # The signed sub claim is stable when email is renamed or reassigned;
+    # verified email remains a display/authorization attribute, not owner key.
+    owner_name = (
+        _institutional_owner_name(subject)
+        if settings.rcat_institutional_only
+        else f"user:{safe_display}"[:120]
+    )
     return {
-        "name": f"user:{safe_display}"[:120],
+        "name": owner_name,
         "subject": subject,
+        "email": validated_email,
+        "email_verified": claims.get("email_verified") is True if source.startswith("oidc") else False,
+        "hosted_domain": str(claims.get("hd") or ""),
         "display_name": display,
         "groups": groups,
         "roles": list(roles),
@@ -92,6 +182,7 @@ def create_local_admin_identity(username: str) -> dict:
 
 
 def create_session_token(identity: dict) -> str:
+    _require_rcat_identity(identity)
     now = int(time.time())
     payload = {
         "iss": "pdfhub",
@@ -105,6 +196,9 @@ def create_session_token(identity: dict) -> str:
         "pdfhub_roles": identity.get("roles", []),
         "pdfhub_scopes": identity.get("scopes", []),
         "pdfhub_source": identity.get("source", "session"),
+        "pdfhub_email": identity.get("email", ""),
+        "pdfhub_email_verified": identity.get("email_verified") is True,
+        "pdfhub_hosted_domain": identity.get("hosted_domain", ""),
         "pdfhub_identity_admin": bool(identity.get("is_identity_admin", False)),
     }
     return jwt.encode(payload, settings.auth_token_secret, algorithm="HS256")
@@ -120,6 +214,15 @@ def decode_session_token(token: str) -> dict:
         options={"require": ["exp", "iat", "sub"]},
     )
     source = str(claims.get("pdfhub_source") or "session")
+    if settings.rcat_institutional_only:
+        if source != "oidc":
+            raise jwt.InvalidTokenError("Institutional access requires OIDC")
+        try:
+            _verified_rcat_email(
+                claims.get("pdfhub_email"), claims.get("pdfhub_email_verified"))
+            _require_google_workspace(claims.get("pdfhub_hosted_domain"))
+        except ValueError as exc:
+            raise jwt.InvalidTokenError("Institutional email is not verified") from exc
     if source == "web-console":
         if not settings.web_console_auto_login_enabled:
             raise jwt.InvalidTokenError("Web Console sessions are disabled while institutional authentication is active")
@@ -129,7 +232,13 @@ def decode_session_token(token: str) -> dict:
     if source in {"oidc", "ldap"}:
         # Re-evaluate institutional groups on every session decode so a mapping
         # change or group removal cannot leave stale privileges in a cookie.
-        roles = (role_for_groups(groups, settings.human_role_group_map),)
+        roles = (
+            (_institutional_role(groups, _verified_rcat_email(
+                claims.get("pdfhub_email"), claims.get("pdfhub_email_verified")
+            )),)
+            if settings.rcat_institutional_only
+            else (role_for_groups(groups, settings.human_role_group_map),)
+        )
         scopes = scopes_for_roles(roles, settings.human_scope_set)
     elif roles_claim:
         roles = normalize_roles(roles_claim)
@@ -144,8 +253,15 @@ def decode_session_token(token: str) -> dict:
         roles = ()
         scopes = set(_claim_list(claims.get("pdfhub_scopes")))
     return {
-        "name": str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120],
+        "name": (
+            _institutional_owner_name(str(claims["sub"]))
+            if settings.rcat_institutional_only
+            else str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120]
+        ),
         "subject": str(claims["sub"]),
+        "email": str(claims.get("pdfhub_email") or ""),
+        "email_verified": claims.get("pdfhub_email_verified") is True,
+        "hosted_domain": str(claims.get("pdfhub_hosted_domain") or ""),
         "display_name": str(claims.get("pdfhub_display_name") or claims["sub"]),
         "groups": groups,
         "roles": list(roles),
@@ -203,8 +319,7 @@ def validate_oidc_token(token: str, audience: str | None = None) -> dict:
 
 def build_oidc_authorization_url(return_to: str = "/") -> str:
     discovery = oidc_discovery()
-    if not return_to.startswith("/") or return_to.startswith("//"):
-        return_to = "/"
+    return_to = _safe_return_to(return_to)
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(64)
@@ -253,7 +368,7 @@ def complete_oidc_callback(code: str, state: str) -> tuple[dict, str]:
     claims = validate_oidc_token(str(id_token), audience=settings.oidc_client_id)
     if claims.get("nonce") != saved.get("nonce"):
         raise ValueError("OIDC nonce mismatch")
-    return identity_from_claims(claims, "oidc"), str(saved.get("return_to") or "/")
+    return identity_from_claims(claims, "oidc"), _safe_return_to(str(saved.get("return_to") or "/"))
 
 
 def _ldap_server() -> Server:
@@ -348,4 +463,8 @@ def public_auth_config() -> dict:
         "ldap": {"enabled": settings.ldap_enabled},
         "web_console": {"auto_login": settings.web_console_auto_login_enabled},
         "local_admin": {"enabled": settings.local_admin_enabled},
+        "institutional": {
+            "rcat_only": settings.rcat_institutional_only,
+            "email_domain": "rcat.ac.th" if settings.rcat_institutional_only else None,
+        },
     }

@@ -142,6 +142,7 @@ export type AuthConfig = {
   ldap: { enabled: boolean };
   web_console: { auto_login: boolean };
   local_admin: { enabled: boolean };
+  institutional?: { rcat_only: boolean; email_domain: string | null };
 };
 
 export type AuthMe = {

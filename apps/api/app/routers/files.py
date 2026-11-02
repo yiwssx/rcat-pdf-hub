@@ -254,6 +254,11 @@ def create_signed_download(
     principal: Principal = Depends(require_scope("files:read")),
     db: Session = Depends(get_db),
 ):
+    # In institutional-only mode a shareable URL would allow anyone with
+    # the token to download a document without proving @rcat.ac.th access.
+    # Authenticated direct /download remains available to the owner.
+    if settings.rcat_institutional_only:
+        raise HTTPException(status_code=403, detail="Public signed links are disabled for institutional accounts")
     record = _owned_file(db, file_id, principal)
     _active_file_path(record)
     try:
@@ -282,6 +287,9 @@ def signed_download_file(
     token: str = Query(..., min_length=64, max_length=64),
     db: Session = Depends(get_db),
 ):
+    # Also reject links minted BEFORE enabling institutional access.
+    if settings.rcat_institutional_only:
+        raise HTTPException(status_code=403, detail="Public signed links are disabled for institutional accounts")
     record = db.get(FileRecord, file_id)
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
