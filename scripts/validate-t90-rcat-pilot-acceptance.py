@@ -63,6 +63,12 @@ def verify(registry: dict, evidence: dict) -> dict:
                  "Evidence requires exact source commit")
         _require(isinstance(pr, str) and GITHUB.fullmatch(pr),
                  "Evidence requires traceable GitHub PR")
+        if by_id[id_]["category"] == "to_pdf":
+            _require(isinstance(record.get("supported_subset"), str)
+                     and len(record["supported_subset"].strip()) >= 16
+                     and isinstance(record.get("acceptance_pending"), str)
+                     and len(record["acceptance_pending"].strip()) >= 16,
+                     "T90-2 evidence must describe supported subset and unmet acceptance")
         # Green source-level CI alone is never production acceptance. Every
         # higher stage needs explicit positive/negative source-file evidence.
         if state in {"STAGED", "VERIFIED", "RELEASED"}:

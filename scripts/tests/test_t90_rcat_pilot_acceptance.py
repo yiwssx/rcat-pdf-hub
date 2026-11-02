@@ -19,12 +19,20 @@ class PilotAcceptanceTest(unittest.TestCase):
         self.registry = json.loads((ROOT / "contracts/pdf-tools.v1.json").read_text())
         self.evidence = json.loads((ROOT / "contracts/t90-rcat-pilot-acceptance.v1.json").read_text())
 
-    def test_actual_registry_starts_unverified_without_invented_evidence(self):
+    def test_actual_registry_records_only_3_implemented_without_release(self):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 90)
-        self.assertEqual(len(report["uncertified"]), 90)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 3)
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 87)
+        self.assertEqual(len(report["uncertified"]), 87)
+        self.assertEqual(
+            {item["tool_id"] for item in self.evidence["tool_evidence"]},
+            {"T11", "T19", "T21"},
+        )
+        for record in self.evidence["tool_evidence"]:
+            self.assertTrue(record["supported_subset"])
+            self.assertTrue(record["acceptance_pending"])
 
     def test_reject_public_release_scope(self):
         self.evidence["scope"] = "anonymous-public"
@@ -60,6 +68,23 @@ class PilotAcceptanceTest(unittest.TestCase):
         self.assertEqual(report["state_counts"]["IMPLEMENTED"], 1)
         self.assertEqual(report["released"], 0)
         self.assertEqual(report["state_counts"]["UNASSESSED"], 89)
+
+    def test_to_pdf_implementation_requires_scoped_capability_and_pending_checks(self):
+        proof = {
+            "tool_id": "T21", "state": "IMPLEMENTED",
+            "source_commit": "2abd02bbc176c8748f3da11acd911a61e5826c3f",
+            "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/249",
+        }
+        self.evidence["tool_evidence"] = [proof]
+        with self.assertRaisesRegex(ValueError, "supported subset"):
+            module.verify(self.registry, self.evidence)
+        proof["supported_subset"] = "Publisher CFB sample only"
+        with self.assertRaisesRegex(ValueError, "supported subset"):
+            module.verify(self.registry, self.evidence)
+        proof["acceptance_pending"] = "Thai visual tests and independent validation"
+        self.assertEqual(
+            module.verify(self.registry, self.evidence)["state_counts"]["IMPLEMENTED"], 1
+        )
 
     def test_staged_without_real_file_checksums_is_rejected(self):
         self.evidence["tool_evidence"] = [{

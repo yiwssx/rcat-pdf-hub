@@ -12,5 +12,33 @@
     "google_workspace_hd_required_for_google_issuer": true,
     "stable_oidc_subject_owner_required": true
   },
-  "tool_evidence": []
+  "tool_evidence": [
+    {
+      "tool_id": "T11",
+      "state": "IMPLEMENTED",
+      "source_commit": "2b5070dd03c5711695abd869525e602f9d976d13",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/250",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40971078204",
+      "supported_subset": "One-page self-contained DjVuLibre raster file only; indirect and multipage structures fail closed.",
+      "acceptance_pending": "Real institutional raster/glyph goldens, multiformat scope, security sandbox and full owner download."
+    },
+    {
+      "tool_id": "T19",
+      "state": "IMPLEMENTED",
+      "source_commit": "f81b21478f49ff3f102148fa574dd23e258cdd08",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/248",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40907520966",
+      "supported_subset": "DRM-free UTF-8 classic MOBI 4–6 PalmDOC plain text transcription only; no KF8/DRM/rich layout.",
+      "acceptance_pending": "Real DRM-free file corpus, Thai text fidelity and institutional owner end-to-end workflow."
+    },
+    {
+      "tool_id": "T21",
+      "state": "IMPLEMENTED",
+      "source_commit": "2abd02bbc176c8748f3da11acd911a61e5826c3f",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/249",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40967771160",
+      "supported_subset": "Bounded CFB Publisher file imported by pinned LibreOffice/libmspub; one actual pinned fixture yields two nonblank A4 pages.",
+      "acceptance_pending": "Real Publisher font/layout comparisons, Thai print geometry, institutional auth/download and isolation."
+    }
+  ]
 }
