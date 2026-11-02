@@ -23,11 +23,11 @@ class PilotAcceptanceTest(unittest.TestCase):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 8)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 10)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 81)
-        self.assertEqual(len(report["uncertified"]), 81)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 79)
+        self.assertEqual(len(report["uncertified"]), 79)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F09", "M33"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -47,6 +47,18 @@ class PilotAcceptanceTest(unittest.TestCase):
                         item["pr"],
                         "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
                     )
+        for item_id, commit, pr in (
+            ("F09", "ee4a95e2eded5f171d78909920ffdf280280f288", 269),
+            ("M33", "6e067f68656aed38749acca401f697d6ba5e171d", 270),
+        ):
+            item = next(record for record in self.evidence["tool_evidence"]
+                        if record["tool_id"] == item_id)
+            self.assertEqual(item["state"], "IMPLEMENTED")
+            self.assertEqual(item["source_commit"], commit)
+            self.assertEqual(
+                item["pr"],
+                f"https://github.com/yiwssx/rcat-pdf-hub/pull/{pr}",
+            )
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
         self.assertTrue(publisher["pages_or_items_checked"])
