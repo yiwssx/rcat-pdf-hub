@@ -74,3 +74,12 @@ print(f"PASS: pinned real LibreOffice .pub: {pages.group(1)} pages, "
       f"{width}x{height}pt, {len(pixels)} rendered pixels")
 PY
 test "$(sha256sum "$fixture" | cut -d' ' -f1)" = "$sha_before"
+
+# Generate machine-readable, public-fixture-only provenance on stdout; never
+# upload original institutional documents or claim a T90-5 release.
+# Two pages and page-1 raster were checked above. This records precisely that
+# narrow claim, not full Thai font/layout fidelity or an authenticated job.
+output_sha="$(sha256sum "$work/publisher.pdf" | cut -d' ' -f1)"
+test "${#output_sha}" -eq 64
+printf 'T90_2_T21_REAL_PUBLISHER_EVIDENCE source_sha256=%s output_sha256=%s pages=2 first_page_nonblank=true original_unchanged=true corpus=LibreOffice-writerperfect-fdo59355-1.pub\n' \
+  "$sha_before" "$output_sha"
