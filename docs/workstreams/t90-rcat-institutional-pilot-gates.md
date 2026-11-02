@@ -131,3 +131,12 @@ no OIDC issuer/secret was configured and no production flag was enabled.
   including OIDC sessions minted before this policy was enabled.
 - OAuth return paths reject cross-origin URLs, browser backslash normalization,
   and control-character injection before and after authorization.
+
+## Compose configuration delivery
+
+The base `docker-compose.yml` API environment mapping is shared with queue
+workers and schedulers. Both `PDFHUB_RCAT_INSTITUTIONAL_ONLY` and
+`PDFHUB_RCAT_ADMIN_EMAILS` must be interpolated there; declaring them only
+in `.env` is not sufficient for container visibility. Production Compose
+inherits the base environment and adds secure-cookie defaults. The release
+policy validator explicitly checks both mappings.
