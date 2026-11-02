@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "scope": "rcat-institutional-oidc-verified-email",
+  "source_registry": "contracts/pdf-tools.v1.json",
+  "policy": {
+    "institutional_email_domain": "rcat.ac.th",
+    "require_provider_verified_email": true,
+    "no_anonymous_service_release": true,
+    "each_tool_independently_approved": true,
+    "public_production_signoff_not_assumed": true
+  },
+  "tool_evidence": []
+}
