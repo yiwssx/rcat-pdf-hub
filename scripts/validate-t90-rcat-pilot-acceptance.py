@@ -43,8 +43,11 @@ def verify(registry: dict, evidence: dict) -> dict:
     _require(policy.get("institutional_email_domain") == "rcat.ac.th"
              and policy.get("require_provider_verified_email") is True
              and policy.get("no_anonymous_service_release") is True
-             and policy.get("each_tool_independently_approved") is True,
-             "Mandatory verified institutional access policy missing")
+             and policy.get("each_tool_independently_approved") is True
+             and policy.get("oidc_provider_authority_required") is True
+             and policy.get("google_workspace_hd_required_for_google_issuer") is True
+             and policy.get("stable_oidc_subject_owner_required") is True,
+             "Mandatory verified institutional OIDC authority or stable ownership policy missing")
     by_id = {t["id"]: t for t in tools}
     certified: dict[str, dict] = {}
     for record in evidence.get("tool_evidence", []):
@@ -81,6 +84,8 @@ def verify(registry: dict, evidence: dict) -> dict:
                      and bool(record.get("thai_fidelity_report")),
                      "VERIFIED requires real fidelity, security, owner and Thai QA")
         if state == "RELEASED":
+            _require(bool(record.get("institutional_sso_report")),
+                     "RELEASED requires actual school-only SSO verification")
             _require(bool(record.get("approved_by"))
                      and bool(record.get("approved_at"))
                      and bool(record.get("rollback_plan"))
