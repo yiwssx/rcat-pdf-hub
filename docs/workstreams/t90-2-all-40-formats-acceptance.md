@@ -1,6 +1,6 @@
 # T90-2 consolidated 40-format delivery ledger (2026-10-29)
 
-> Governance: **40/40 enumerated and adjudicated** is not **40/40 independently implemented, VERIFIED or RELEASED**. Release count remains **0/90**. Technical gates are enforced in code, and the dangerous formats below have **no upload route, no queue operation, and no engine stub**. T90-2 issue [#237](https://github.com/yiwssx/rcat-pdf-hub/issues/237); parent [#172](https://github.com/yiwssx/rcat-pdf-hub/issues/172).
+> **CURRENT ENGINEERING SNAPSHOT (2026-11-02):** [40-format code-only completion and deferred physical QA](t90-2-code-only-completion-2026-11-02.md) supersedes older dated summary paragraphs below. **40/40 guarded source paths prepared (34 restricted STAGED backends + 6 default-OFF experimental engines), not 40/40 operational approvals.** The six previously missing endpoints exist only behind individual developer flags; they are still **BLOCKED FOR ACCEPTANCE** pending actual RCAT host/licensing/file quality proof. T21 Publisher page 2 was observed visually blank; source-reference fidelity remains unresolved. **0 tools VERIFIED/RELEASED.** Historical sections are preserved for chronology only.\n\n> Governance: **40/40 enumerated and adjudicated** is not **40/40 independently implemented, VERIFIED or RELEASED**. Release count remains **0/90**. Technical gates are enforced in code, and the six dangerous formats have **default-OFF experimental routes/queue/service prototypes** that are **not independently accepted or released**. T90-2 issue [#237](https://github.com/yiwssx/rcat-pdf-hub/issues/237); parent [#172](https://github.com/yiwssx/rcat-pdf-hub/issues/172).
 
 ## Current engineering tally
 
@@ -32,7 +32,7 @@
 | T18 | RTF | P0 | **STAGED (flag OFF)** | `rtf-to-pdf` | legacy RTF parser and font fidelity |
 | T19 | MOBI | P3 | **STAGED (flag OFF)** | `mobi-to-pdf` | restricted DRM-free, classic UTF-8 MOBI4–6 BOOKMOBI, compression 1 or bounded PalmDOC compression 2; *text transcript only*; rejects rich HTML/images/CSS/DRM/KF8/HUFF |
 | T20 | DWG | P3 | **BLOCKED** | — | CAD binary licensing, layers and model scale |
-| T21 | PUB | P3 | **STAGED (flag OFF)** | `pub-to-pdf` | Strict size/CFB v3 FAT-directory preflight; pinned real Gotenberg/libmspub Publisher sample yields 2 nonblank A4 pages; arbitrary Publisher page/font fidelity unverified |
+| T21 | PUB | P3 | **STAGED (flag OFF)** | `pub-to-pdf` | Strict size/CFB v3 FAT-directory preflight; pinned real Gotenberg/libmspub Publisher sample yields 2 A4 pages (page 1 nonblank, page 2 visibly blank; original source page-2 reference pending); arbitrary Publisher page/font fidelity unverified |
 | T22 | XPS | P2 | **STAGED (flag OFF)** | `xps-to-pdf` | Restricted ZIP/XML Glyphs Unicode-only **text transcription** onto A4; rejects images/vectors; original XPS page geometry/fonts not preserved |
 | T23 | XML | P2 | **STAGED (flag OFF)** | `xml-to-pdf` | staged plain source-listing only; no XSLT or document styling |
 | T24 | WebP | P0 | **STAGED (flag OFF)** | `webp-to-pdf` | animation and alpha fidelity |
