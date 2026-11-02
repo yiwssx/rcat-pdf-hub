@@ -31,7 +31,12 @@ goldens, AV/abuse/sandbox tests, and independent operator signoff.
 - [x] Size/signature and upstream Git SHA checked.
 - [x] Native CFB parser + actual pinned LibreOffice converter run.
 - [x] Two A4 PDF pages, visible rasterized page 1, source immutability.
-- [ ] Independently inspect page 2's visual contents against source.
+- [x] Independent CI rasterizes page 2 and explicitly reports its observed blankness; **this is a known evidence gap, not successful visual fidelity**. See PR #276 and the per-page job log.
+- [ ] Determine whether page 2 is intentionally blank in the original Publisher source using a trusted source preview/reference before claiming page-fidelity.
 - [ ] Multiple genuine Publisher generations / fonts / Thai print documents.
 - [ ] Production-equivalent owner-bound API→queue→worker→signed download.
 - [ ] Independent isolation/AV/recovery and RCAT-only OIDC signoff.
+
+## New factual observation from real CI
+
+During PR #276 preliminary [Core API CI](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41424089415), job 125206365292, Poppler rendered page 1 with nonwhite pixels but **page 2 returned a visually blank raster**. The PDF remains two A4 pages. Without a trustworthy visual reference of the source page 2, this observation cannot distinguish intentional blank-page semantics from a LibreOffice import defect. The corrected QA script records each page's visible/blank status instead of falsely labeling both pages as nonblank. T21 remains **STAGED** and this is an unresolved `VERIFIED` gate.
