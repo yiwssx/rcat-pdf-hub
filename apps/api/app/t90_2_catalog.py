@@ -16,7 +16,29 @@ class FormatCapability:
 
     @property
     def engineering_state(self) -> str:
+        # Independent format acceptance gate: a prototype alone is not STAGED.
         return "STAGED" if self.operations else "BLOCKED"
+
+    @property
+    def development_operations(self) -> tuple[str, ...]:
+        return self.operations or EXPERIMENTAL_CODE_PATHS.get(self.item_id, ())
+
+    @property
+    def code_prepared(self) -> bool:
+        # "Prepared" means a guarded source path exists, NOT output fidelity,
+        # target-host runtimes, authorized user access or release acceptance.
+        return bool(self.development_operations)
+
+
+# Six individually gated draft pipelines, never included in STAGED routes.
+EXPERIMENTAL_CODE_PATHS = {
+    "T09": ("heic-to-pdf",),
+    "T20": ("dwg-to-pdf",),
+    "T25": ("heif-to-pdf",),
+    "T30": ("chm-to-pdf",),
+    "T33": ("url-to-pdf",),
+    "T34": ("wps-to-pdf",),
+}
 
 
 FORMAT_CAPABILITIES: tuple[FormatCapability, ...] = (
