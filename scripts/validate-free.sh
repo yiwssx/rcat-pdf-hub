@@ -112,6 +112,10 @@ operations() {
   python3 -m unittest discover -s scripts/tests -p 'test_tool_parameters.py'
   python3 scripts/validate-tool-artifacts.py
   python3 -m unittest discover -s scripts/tests -p 'test_tool_artifacts.py'
+  # T90-5: institutional certification is a separate, evidence-driven ledger.
+  # It must not infer a release from passing the planning/CI registry alone.
+  python3 scripts/validate-t90-rcat-pilot-acceptance.py
+  python3 -m unittest discover -s scripts/tests -p 'test_t90_rcat_pilot_acceptance.py'
   echo 'operations: PASS'
 }
 
