@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     to_pdf_tools_enabled: bool = False
     # T90-3 F09: opt-in only; output is multipage TIFF, not a PDF.
     from_pdf_tools_enabled: bool = False
+    # T90-4 M33: bounded AcroForm text fill, default disabled.
+    pdf_filler_tools_enabled: bool = False
     # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
     artifact_write_journal_enabled: bool = False
     # Heartbeats only start when artifact_write_journal_enabled=true.

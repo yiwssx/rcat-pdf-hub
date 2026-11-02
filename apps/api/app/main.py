@@ -90,6 +90,10 @@ if settings.to_pdf_tools_enabled:
 if settings.from_pdf_tools_enabled:
     from app.routers import from_pdf
     app.include_router(from_pdf.router)
+# M33 staged AcroForm text edits do not appear in default OpenAPI.
+if settings.pdf_filler_tools_enabled:
+    from app.routers import pdf_filler
+    app.include_router(pdf_filler.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
