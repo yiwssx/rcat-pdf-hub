@@ -12,9 +12,10 @@ When `PDFHUB_RCAT_INSTITUTIONAL_ONLY=true`:
 
 1. Human sign-in requires OIDC Authorization Code + PKCE from a preconfigured
    issuer whose signed ID token contains an **email** claim matching exactly
-   `*@rcat.ac.th` and boolean `email_verified=true`. Name, UI email fields,
-   preferred_username, sub and group membership **alone are not evidence**
-   of control of an institutional mailbox.
+   `*@rcat.ac.th` and boolean `email_verified=true`. For Google's issuer,
+   the signed `hd` claim must also equal `rcat.ac.th`, confirming current
+   Google Workspace membership. Email verification alone is insufficient to
+   establish organization membership. The signed `sub` identifies a user.
 2. The API checks the claims when the OIDC callback completes, when converting
    a validated OIDC bearer into a principal, and **every time** it decodes an
    HttpOnly session cookie. Sessions minted before activation without the
@@ -34,8 +35,8 @@ When `PDFHUB_RCAT_INSTITUTIONAL_ONLY=true`:
    administrator privileges require a trusted IdP admin group or an exact
    `PDFHUB_RCAT_ADMIN_EMAILS` allowlist entry. The API re-evaluates
    roles whenever sessions are decoded, so removing an admin email revokes its
-   elevated privileges. Ownership uses the validated email instead of a
-   non-unique display name. Existing job/file isolation, expiration, quotas,
+   elevated privileges. Ownership uses an issuer-scoped digest of the stable
+   OIDC `sub`, not a changeable email or non-unique display name. Existing job/file isolation, expiration, quotas,
    malware scanning and audit remain unchanged.
 6. Authentication is an application access boundary, not a network firewall.
    Browser login pages and operational health endpoints can remain reachable
@@ -45,9 +46,10 @@ When `PDFHUB_RCAT_INSTITUTIONAL_ONLY=true`:
 **Google sign-in:** register an OAuth 2.0 Web application in the Google Cloud
 project approved for the school's use; use issuer `https://accounts.google.com`
 and register exact callback `https://pdf.rcat.ac.th/api/v1/auth/oidc/callback`.
-Google's hosted-domain (`hd`) hint may improve account selection but must NOT
-be treated as authorization; the verified email claim and exact `@rcat.ac.th`
-domain are always checked by the server. Configure an explicit admin email
+A Google OAuth `hd` request parameter is only an account-selection hint;
+**the signed `hd` claim within the validated ID token** must match `rcat.ac.th`
+in addition to a verified matching email. Accounts without Google's Workspace
+`hd` claim are rejected, even if Google previously verified their email. Configure an explicit admin email
 allowlist because ordinary Google ID tokens omit group claims. A free-text
 email field or a hard-coded `@rcat.ac.th` suffix in the UI is NOT authentication.
 
@@ -124,11 +126,11 @@ no OIDC issuer/secret was configured and no production flag was enabled.
 
 ## Follow-up: identity integrity and OAuth redirects
 
-- File/job owner fields are limited to 120 characters. A verified RCAT mailbox
-  is used directly if it fits; an exceptionally long mailbox is represented
-  by its deterministic full SHA-256 digest, not a truncated colliding name.
-- Institutional session decode recomputes the owner from the verified email,
-  including OIDC sessions minted before this policy was enabled.
+- File/job owner fields are limited to 120 characters. The trusted issuer and
+  Google/OIDC `sub` are hashed to a stable `user:oidc:` owner name; emails may
+  change or be reassigned, so they are unsuitable ownership identifiers.
+- Institutional session decode recalculates the owner from signed `sub` and
+  rejects Google sessions missing provider-attested Workspace `hd`.
 - OAuth return paths reject cross-origin URLs, browser backslash normalization,
   and control-character injection before and after authorization.
 
@@ -140,3 +142,16 @@ workers and schedulers. Both `PDFHUB_RCAT_INSTITUTIONAL_ONLY` and
 in `.env` is not sufficient for container visibility. Production Compose
 inherits the base environment and adds secure-cookie defaults. The release
 policy validator explicitly checks both mappings.
+
+## Google provider account-authority guidance
+
+Google's official ID-token verification guidance requires the signed `hd`
+claim when restricting access to a Google Workspace organization. If RCAT
+emails are not provisioned as managed Google Workspace accounts, consumer
+Google IDs cannot be accepted solely on `email_verified`; an authoritative
+institutional OIDC provider or a fresh independent mailbox-verification
+mechanism would be needed.
+
+Official references:
+- https://developers.google.com/identity/gsi/web/guides/verify-google-id-token
+- https://developers.google.com/identity/openid-connect/openid-connect
