@@ -14,6 +14,15 @@
   },
   "tool_evidence": [
     {
+      "tool_id": "T09",
+      "state": "IMPLEMENTED",
+      "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427497363",
+      "supported_subset": "Single HEVC .heic conversion routed through default-disabled, patched libheif >=1.23.7 isolated native sidecar; upstream real HEIC sample gave one visible PDF page.",
+      "acceptance_pending": "Real phone camera HEIC images, multi-frame/orientation/ICC, target-host codec rights and actual RCAT authenticated lifecycle remain deferred."
+    },
+    {
       "tool_id": "T11",
       "state": "IMPLEMENTED",
       "source_commit": "2b5070dd03c5711695abd869525e602f9d976d13",
@@ -32,17 +41,62 @@
       "acceptance_pending": "Real DRM-free file corpus, Thai text fidelity and institutional owner end-to-end workflow."
     },
     {
+      "tool_id": "T20",
+      "state": "IMPLEMENTED",
+      "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427495667",
+      "supported_subset": "Experimental LibreDWG binary-to-restricted DXF 2D LINE/CIRCLE to PDF pathway in no-network native sidecar; unsupported CAD semantics fail closed.",
+      "acceptance_pending": "Genuine licensed DWG/version corpus, 2D geometry/units/layers/fonts/scale visual comparisons, GPLv3 review and target-host isolation remain deferred."
+    },
+    {
       "tool_id": "T21",
       "state": "STAGED",
       "source_commit": "2abd02bbc176c8748f3da11acd911a61e5826c3f",
       "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/249",
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41419587183",
-      "supported_subset": "Bounded CFB Publisher file imported by pinned LibreOffice/libmspub; one actual pinned fixture yields two nonblank A4 pages.",
-      "acceptance_pending": "Real Publisher font/layout comparisons, Thai print geometry, institutional auth/download and isolation.",
+      "supported_subset": "Bounded CFB Publisher import with pinned LibreOffice/libmspub; authentic public QA sample generates 2 A4 PDF pages: page 1 visibly nonblank, page 2 visibly blank (source-page intent unresolved).",
+      "acceptance_pending": "CRITICAL: independently compare blank PDF page 2 to actual Publisher source page 2; Thai font and print layout, broader versions, owner-scope, isolated RCAT OIDC and security acceptance all pending.",
       "source_sha256": "79f9a8d99ed18faa174fa7200dbe91627015e2b77439a20421119abc128d62f7",
       "output_sha256": "c9678e279b841c9acd054ee197e029d660b974dbd24d667c6daefcaeae3d94f1",
       "pages_or_items_checked": true,
       "fixture_provenance": "LibreOffice core writerperfect/qa/unit/data/draw/libmspub/pass/fdo59355-1.pub at fac2bcb8ce6c81bda79b624e000c293fcdf1e7e4, git blob 607a07ae2d362e4a1f6e779dfff88726fe74f910; size 10752 bytes, first page nonblank, two A4 pages. Observable exact CI log from job 125191649641."
+    },
+    {
+      "tool_id": "T25",
+      "state": "IMPLEMENTED",
+      "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427497363",
+      "supported_subset": "Experimental patched native libheif HEIF-to-PDF path with generated uncompressed/lossless single-frame HEIF smoke in no-network Docker.",
+      "acceptance_pending": "Externally authored HEIF/bit-depth/alpha/multi-image corpus, accurate frame/orientation fidelity, rights review and target-host RCAT owner workflow deferred."
+    },
+    {
+      "tool_id": "T30",
+      "state": "IMPLEMENTED",
+      "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427495667",
+      "supported_subset": "Experimental bounded CHM/LZX unpacking-to-sanitized text/HTML-to-PDF inside separate constrained native decoder; no arbitrary web fetch.",
+      "acceptance_pending": "Authentic CHM 3rd-party docs, Thai/legacy charsets, images/TOC and navigation comparison, malformed input/AV and deployed sandbox pending."
+    },
+    {
+      "tool_id": "T33",
+      "state": "IMPLEMENTED",
+      "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427495667",
+      "supported_subset": "Experimental signed dedicated URL-fetcher pipeline: validated public HTTPS only, pinned DNS/TLS, no redirects, script-free bounded text transcript PDF.",
+      "acceptance_pending": "Real RCAT host egress firewall, DNS rebinding/private metadata endpoint denial, HTTPS/network integration, live auth/quotas/owner and quality remain deferred."
+    },
+    {
+      "tool_id": "T34",
+      "state": "IMPLEMENTED",
+      "source_commit": "b1ce2f15c9f4273901b1e3034bd685a99177b85d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/259",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427495667",
+      "supported_subset": "Experimental Microsoft Works .wps reader through isolated writerperfect wps2odt to validated nonblank ODT and bounded PDF output, separately gated.",
+      "acceptance_pending": "Actual rights-cleared Works WPS generations and Thai print goldens, licensing, target-side runtime, owner auth and source/PDF comparison deferred."
     }
   ]
 }
