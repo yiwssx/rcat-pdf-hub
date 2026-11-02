@@ -1,7 +1,6 @@
 """F09 native PDF->TIFF: actual Poppler raster and multipage TIFF evidence."""
 from __future__ import annotations
 
-from io import BytesIO
 from pathlib import Path
 import shutil
 
