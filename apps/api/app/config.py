@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     session_cookie_name: str = "pdfhub_session"
     session_ttl_minutes: int = 480
     session_cookie_secure: bool = False
+    # Institutional pilot: only identities with verified @rcat.ac.th email
+    # supplied by a trusted OIDC identity provider can access the API.
+    # Default OFF to preserve existing deployments until an IdP is configured.
+    rcat_institutional_only: bool = False
     human_scopes: str = DEFAULT_HUMAN_SCOPES
     viewer_groups: str = "pdfhub-viewers"
     operator_groups: str = "pdfhub-users"
@@ -151,6 +155,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_enabled_integrations(self):
+        # Identity restriction is a security boundary, not a UI filter. Do
+        # not allow a password-less workspace or unverifiable LDAP login.
+        if self.rcat_institutional_only:
+            if not self.oidc_enabled or self.ldap_enabled:
+                raise ValueError("RCAT institutional mode requires OIDC and disallows LDAP")
+            if not self.oidc_issuer or not self.oidc_client_id:
+                raise ValueError("RCAT institutional OIDC issuer and client are required")
+            if not self.session_cookie_secure:
+                raise ValueError("RCAT institutional mode requires Secure cookies")
         if self.oidc_enabled:
             missing = [
                 name for name, value in (
@@ -239,11 +252,11 @@ class Settings(BaseSettings):
     def web_console_auto_login_enabled(self) -> bool:
         # Institutional identity always wins: enabling OIDC or LDAP disables the
         # anonymous Web Console bootstrap even if the flag was left on.
-        return self.web_console_auto_login and not self.oidc_enabled and not self.ldap_enabled
+        return not self.rcat_institutional_only and self.web_console_auto_login and not self.oidc_enabled and not self.ldap_enabled
 
     @property
     def local_admin_enabled(self) -> bool:
-        return bool(self.local_admin_username.strip() and self.local_admin_password_hash.strip())
+        return not self.rcat_institutional_only and bool(self.local_admin_username.strip() and self.local_admin_password_hash.strip())
 
     @property
     def oidc_redirect_uri(self) -> str:
