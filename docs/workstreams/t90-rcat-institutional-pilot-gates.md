@@ -121,3 +121,13 @@ verification because malicious document content can still enter the system.
 
 **Rollout state as authored:** source and QA on a dedicated dev branch only;
 no OIDC issuer/secret was configured and no production flag was enabled.
+
+## Follow-up: identity integrity and OAuth redirects
+
+- File/job owner fields are limited to 120 characters. A verified RCAT mailbox
+  is used directly if it fits; an exceptionally long mailbox is represented
+  by its deterministic full SHA-256 digest, not a truncated colliding name.
+- Institutional session decode recomputes the owner from the verified email,
+  including OIDC sessions minted before this policy was enabled.
+- OAuth return paths reject cross-origin URLs, browser backslash normalization,
+  and control-character injection before and after authorization.

@@ -78,6 +78,22 @@ def _institutional_role(groups: list[str], verified_email: str) -> str:
         return ROLE_OPERATOR
 
 
+def _institutional_owner_name(email: str) -> str:
+    """One owner per verified mailbox, within the 120-character DB limit."""
+    value = f"user:{email}"
+    if len(value) <= 120:
+        return value
+    return "user:sha256:" + hashlib.sha256(email.encode("ascii")).hexdigest()
+
+
+def _safe_return_to(value: str) -> str:
+    """Only origin-relative paths; browsers treat backslashes as slashes."""
+    if (not value.startswith("/") or value.startswith("//")
+            or "\\" in value or any(ord(c) < 32 or ord(c) == 127 for c in value)):
+        return "/"
+    return value
+
+
 def identity_from_claims(claims: dict, source: str) -> dict:
     if settings.rcat_institutional_only:
         if source not in {"oidc", "oidc-bearer"}:
@@ -105,7 +121,7 @@ def identity_from_claims(claims: dict, source: str) -> dict:
     # The display name is not an owner identifier: different school users may
     # share the same preferred_username. Use the verified mailbox for ownership.
     owner_name = (
-        f"user:{validated_email}"
+        _institutional_owner_name(validated_email)
         if settings.rcat_institutional_only
         else f"user:{safe_display}"[:120]
     )
@@ -222,7 +238,13 @@ def decode_session_token(token: str) -> dict:
         roles = ()
         scopes = set(_claim_list(claims.get("pdfhub_scopes")))
     return {
-        "name": str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120],
+        "name": (
+            _institutional_owner_name(_verified_rcat_email(
+                claims.get("pdfhub_email"), claims.get("pdfhub_email_verified")
+            ))
+            if settings.rcat_institutional_only
+            else str(claims.get("pdfhub_name") or f"user:{claims['sub']}")[:120]
+        ),
         "subject": str(claims["sub"]),
         "email": str(claims.get("pdfhub_email") or ""),
         "email_verified": claims.get("pdfhub_email_verified") is True,
@@ -283,8 +305,7 @@ def validate_oidc_token(token: str, audience: str | None = None) -> dict:
 
 def build_oidc_authorization_url(return_to: str = "/") -> str:
     discovery = oidc_discovery()
-    if not return_to.startswith("/") or return_to.startswith("//"):
-        return_to = "/"
+    return_to = _safe_return_to(return_to)
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(64)
@@ -333,7 +354,7 @@ def complete_oidc_callback(code: str, state: str) -> tuple[dict, str]:
     claims = validate_oidc_token(str(id_token), audience=settings.oidc_client_id)
     if claims.get("nonce") != saved.get("nonce"):
         raise ValueError("OIDC nonce mismatch")
-    return identity_from_claims(claims, "oidc"), str(saved.get("return_to") or "/")
+    return identity_from_claims(claims, "oidc"), _safe_return_to(str(saved.get("return_to") or "/"))
 
 
 def _ldap_server() -> Server:

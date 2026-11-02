@@ -230,3 +230,39 @@ def test_rcat_admin_email_allowlist_is_exact_and_revocable(monkeypatch):
 def test_invalid_rcat_admin_email_configuration_fails_closed(bad):
     with pytest.raises(ValidationError):
         Settings(rcat_admin_emails=bad)
+
+
+
+def test_long_verified_rcat_email_has_stable_bounded_owner(monkeypatch):
+    _institutional_mode(monkeypatch)
+    email = "a" * 116 + "@rcat.ac.th"
+    identity = identity_from_claims(
+        {**_oidc_claims(email), "groups": []}, "oidc",
+    )
+    assert identity["email"] == email
+    assert identity["name"].startswith("user:sha256:")
+    assert len(identity["name"]) <= 120
+    assert decode_session_token(create_session_token(identity))["name"] == identity["name"]
+
+
+def test_old_oidc_cookie_cannot_retain_display_name_as_owner(monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rcat_institutional_only", False)
+    old = identity_from_claims(_oidc_claims(), "oidc")
+    assert old["name"] == "user:teacher"
+    cookie = create_session_token(old)
+    monkeypatch.setattr(settings, "rcat_institutional_only", True)
+    assert decode_session_token(cookie)["name"] == "user:teacher@rcat.ac.th"
+
+
+@pytest.mark.parametrize("return_to,expected", [
+    ("//evil.invalid/path", "/"),
+    (r"/\evil.invalid/path", "/"),
+    (r"/safe\evil", "/"),
+    ("https://evil.invalid", "/"),
+    ("/safe?next=/documents", "/safe?next=/documents"),
+    ("/safe\r\nLocation: https://evil.invalid", "/"),
+])
+def test_oidc_redirect_rejects_external_browser_backslash_urls(return_to, expected):
+    from app.identity import _safe_return_to
+    assert _safe_return_to(return_to) == expected
