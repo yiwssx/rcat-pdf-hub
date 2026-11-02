@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     geometry_tools_enabled: bool = False
     # T90-2: bounded TXT/CSV/JFIF/GIF/TIFF converters; default OFF.
     to_pdf_tools_enabled: bool = False
+    # T90-3 F09: opt-in only; output is multipage TIFF, not a PDF.
+    from_pdf_tools_enabled: bool = False
     # Experimental crash-safe writes. Off until full multi-worker load/recovery QA.
     artifact_write_journal_enabled: bool = False
     # Heartbeats only start when artifact_write_journal_enabled=true.
