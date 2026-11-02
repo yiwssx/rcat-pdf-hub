@@ -73,6 +73,8 @@ def _output_spec(operation: str) -> tuple[str, str]:
 
 def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
+    if operation == "pdf-to-tiff":
+        return ".tiff", "image/tiff"
     if operation in STAGED_GEOMETRY_OPERATIONS:
         return geometry_output_spec(operation)
     if operation in STAGED_DOCUMENT_OPERATIONS:
@@ -209,6 +211,26 @@ def process_job(job_id: str) -> str:
                     or _is_expired(files[0])):
                 raise ValueError("Staged PDF input is unavailable or unauthorized")
             execute_staged_document_operation(job.operation, inputs, output, params)
+        elif job.operation == "pdf-to-tiff":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_tiff import pdf_to_multipage_tiff
+
+            if (not settings.from_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or set(params) != {"dpi"}):
+                raise ValueError("Staged F09 source or parameters are unauthorized")
+            try:
+                verified_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F09 original PDF signature invalid") from exc
+            if verified_type != "application/pdf":
+                raise ValueError("Staged F09 PDF signature changed")
+            pdf_to_multipage_tiff(inputs[0], output, dpi=params["dpi"])
         elif job.operation in STAGED_GEOMETRY_OPERATIONS:
             from app.routers.pdf import _is_expired
             if (not settings.geometry_tools_enabled

@@ -54,6 +54,8 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.from_pdf_tools_enabled and operation == "pdf-to-tiff":
+        return "heavy"
     if settings.to_pdf_tools_enabled and operation in STAGED_TO_PDF_OPERATIONS:
         return "heavy"
     if settings.document_data_tools_enabled and operation in STAGED_DOCUMENT_OPERATIONS:

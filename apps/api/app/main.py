@@ -86,6 +86,10 @@ if settings.geometry_tools_enabled:
 if settings.to_pdf_tools_enabled:
     from app.routers import to_pdf
     app.include_router(to_pdf.router)
+# F09 staging routes are not visible to existing/default deployments.
+if settings.from_pdf_tools_enabled:
+    from app.routers import from_pdf
+    app.include_router(from_pdf.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
