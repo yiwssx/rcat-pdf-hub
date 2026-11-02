@@ -182,13 +182,14 @@ def test_google_oidc_without_workspace_groups_allows_verified_school_users(monke
         "oidc",
     )
     second = identity_from_claims(
-        {**_oidc_claims("second@rcat.ac.th"), "groups": [], "preferred_username": shared_display},
+        {**_oidc_claims("second@rcat.ac.th"), "sub": "different-user-43", "groups": [], "preferred_username": shared_display},
         "oidc",
     )
     assert first["roles"] == second["roles"] == ["operator"]
     assert "pdf:convert" in first["scopes"]
-    assert first["name"] == "user:first@rcat.ac.th"
-    assert second["name"] == "user:second@rcat.ac.th"
+    assert first["name"].startswith("user:oidc:")
+    assert second["name"].startswith("user:oidc:")
+    assert first["name"] != second["name"]
     assert decode_session_token(create_session_token(first))["roles"] == ["operator"]
 
 
@@ -240,7 +241,7 @@ def test_long_verified_rcat_email_has_stable_bounded_owner(monkeypatch):
         {**_oidc_claims(email), "groups": []}, "oidc",
     )
     assert identity["email"] == email
-    assert identity["name"].startswith("user:sha256:")
+    assert identity["name"].startswith("user:oidc:")
     assert len(identity["name"]) <= 120
     assert decode_session_token(create_session_token(identity))["name"] == identity["name"]
 
@@ -252,7 +253,9 @@ def test_old_oidc_cookie_cannot_retain_display_name_as_owner(monkeypatch):
     assert old["name"] == "user:teacher"
     cookie = create_session_token(old)
     monkeypatch.setattr(settings, "rcat_institutional_only", True)
-    assert decode_session_token(cookie)["name"] == "user:teacher@rcat.ac.th"
+    decoded = decode_session_token(cookie)
+    assert decoded["name"].startswith("user:oidc:")
+    assert decoded["name"] != old["name"]
 
 
 @pytest.mark.parametrize("return_to,expected", [
@@ -266,3 +269,52 @@ def test_old_oidc_cookie_cannot_retain_display_name_as_owner(monkeypatch):
 def test_oidc_redirect_rejects_external_browser_backslash_urls(return_to, expected):
     from app.identity import _safe_return_to
     assert _safe_return_to(return_to) == expected
+
+
+
+@pytest.mark.parametrize("hosted_domain", [None, "", "other.ac.th", "sub.rcat.ac.th", "rcat.ac.th.evil.invalid"])
+def test_google_verified_rcat_email_without_managed_workspace_is_denied(monkeypatch, hosted_domain):
+    settings = _institutional_mode(monkeypatch)
+    monkeypatch.setattr(settings, "oidc_issuer", "https://accounts.google.com")
+    claims = {**_oidc_claims(), "iss": "https://accounts.google.com", "hd": hosted_domain}
+    with pytest.raises(ValueError, match="hosted domain"):
+        identity_from_claims(claims, "oidc")
+
+
+def test_managed_google_workspace_user_is_allowed_without_groups(monkeypatch):
+    settings = _institutional_mode(monkeypatch)
+    monkeypatch.setattr(settings, "oidc_issuer", "https://accounts.google.com")
+    claims = {**_oidc_claims(), "iss": "https://accounts.google.com", "hd": "rcat.ac.th", "groups": []}
+    identity = identity_from_claims(claims, "oidc")
+    assert identity["roles"] == ["operator"]
+    assert identity["hosted_domain"] == "rcat.ac.th"
+    restored = decode_session_token(create_session_token(identity))
+    assert restored["hosted_domain"] == "rcat.ac.th"
+    assert restored["name"] == identity["name"]
+
+
+def test_preexisting_google_cookie_without_hosted_domain_is_rejected(monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rcat_institutional_only", False)
+    monkeypatch.setattr(settings, "oidc_issuer", "https://accounts.google.com")
+    cookie = create_session_token(identity_from_claims(
+        {**_oidc_claims(), "iss": "https://accounts.google.com"}, "oidc"
+    ))
+    monkeypatch.setattr(settings, "rcat_institutional_only", True)
+    with pytest.raises(jwt.InvalidTokenError):
+        decode_session_token(cookie)
+
+
+def test_google_email_reassignment_does_not_reassign_documents(monkeypatch):
+    settings = _institutional_mode(monkeypatch)
+    monkeypatch.setattr(settings, "oidc_issuer", "https://accounts.google.com")
+    base = {**_oidc_claims(), "iss": "https://accounts.google.com",
+            "hd": "rcat.ac.th", "groups": []}
+    old = identity_from_claims({**base, "sub": "original-account"}, "oidc")
+    reassigned = identity_from_claims({**base, "sub": "new-account"}, "oidc")
+    assert old["email"] == reassigned["email"]
+    assert old["name"] != reassigned["name"]
+    changed = identity_from_claims(
+        {**base, "sub": "original-account", "email": "renamed@rcat.ac.th"}, "oidc"
+    )
+    assert changed["name"] == old["name"]
