@@ -33,7 +33,17 @@ _STYLE = """<!doctype html><html lang="th"><head><meta charset="utf-8">
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit}
 table{border-collapse:collapse;width:100%;table-layout:fixed}
 td,th{border:1px solid #999;padding:5px;vertical-align:top;overflow-wrap:anywhere}
-thead{display:table-header-group}tr{break-inside:avoid}</style><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;; connect-src &#39;none&#39;; img-src &#39;none&#39;; font-src &#39;none&#39;; base-uri &#39;none&#39;; form-action &#39;none&#39;"></head><body>"""
+thead{display:table-header-group}tr{break-inside:avoid}
+figure.book-image{margin:12px 0;max-width:100%;break-inside:avoid}
+figure.book-image img{display:block;max-width:100%;max-height:245mm;width:auto;height:auto;object-fit:contain}
+blockquote{margin:12px 0;padding:3px 12px;border-left:3px solid #bbb}
+table caption{font-weight:600;text-align:left;margin-bottom:5px}
+.book-spacer{min-height:8mm}
+h1,h2,h3{break-after:avoid}
+.chm-chapter{break-before:page}.chm-chapter:first-of-type{break-before:auto}
+.chm-chapter img{display:block;max-width:100%;max-height:235mm;object-fit:contain}
+a{color:#235e8b;text-decoration:underline}
+</style><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; style-src &#39;unsafe-inline&#39;; connect-src &#39;none&#39;; img-src data:; font-src &#39;none&#39;; base-uri &#39;none&#39;; form-action &#39;none&#39;"></head><body>"""
 _END = "</body></html>"
 
 
@@ -441,14 +451,14 @@ def svg_to_pdf(source: Path, output: Path) -> None:
 
 
 def epub_to_pdf(source: Path, output: Path) -> None:
-    """Convert bounded EPUB text spine; no remote resources, CSS or DRM."""
+    """Convert bounded EPUB text, local bitmap illustrations and book blocks."""
     from app.services.to_pdf_ebooks import epub_to_safe_html
     _distinct(source, output)
     _html_to_pdf(epub_to_safe_html(source), output)
 
 
 def fb2_to_pdf(source: Path, output: Path) -> None:
-    """Convert bounded FictionBook XML body; images intentionally omitted."""
+    """Convert bounded FictionBook body, cover and inline bitmap illustrations."""
     from app.services.to_pdf_ebooks import fb2_to_safe_html
     _distinct(source, output)
     _html_to_pdf(fb2_to_safe_html(source), output)

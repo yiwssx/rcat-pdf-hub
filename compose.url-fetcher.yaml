@@ -1,0 +1,60 @@
+# T90-2 URL importer opt-in overlay. DO NOT START until host firewall
+# installer has run and network isolation acceptance has been completed.
+# Base docker-compose.yml stays unchanged; feature flags stay OFF by default.
+services:
+  api:
+    environment:
+      PDFHUB_TO_PDF_TOOLS_ENABLED: ${PDFHUB_TO_PDF_TOOLS_ENABLED:-false}
+      PDFHUB_URL_TO_PDF_DEV_ENABLED: ${PDFHUB_URL_TO_PDF_DEV_ENABLED:-false}
+
+  worker-heavy:
+    environment:
+      PDFHUB_TO_PDF_TOOLS_ENABLED: ${PDFHUB_TO_PDF_TOOLS_ENABLED:-false}
+      PDFHUB_URL_TO_PDF_DEV_ENABLED: ${PDFHUB_URL_TO_PDF_DEV_ENABLED:-false}
+      PDFHUB_URL_FETCHER_SHARED_SECRET: ${PDFHUB_URL_FETCHER_SHARED_SECRET:?URL fetcher requires a unique high-entropy shared secret}
+    networks:
+      - default
+      - url_fetch_internal
+
+  url-fetcher:
+    profiles: ["url-import-dev"]
+    build:
+      context: .
+      dockerfile: ops/url-fetcher/Dockerfile
+    environment:
+      PDFHUB_URL_FETCHER_SHARED_SECRET: ${PDFHUB_URL_FETCHER_SHARED_SECRET:?URL fetcher requires a unique high-entropy shared secret}
+    user: "65534:65534"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 128m
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    volumes:
+      # Installed by ops/url-fetcher/install-host-egress-firewall.sh.
+      # Missing/untrusted attestation => sidecar refuses startup.
+      - ${PDFHUB_URL_EGRESS_ATTESTATION_PATH:-/etc/pdfhub/url-egress.attested}:/run/pdfhub/url-egress.attested:ro
+    networks:
+      url_fetch_internal: {}
+      url_fetch_egress:
+        ipv4_address: 172.30.243.2
+        gw_priority: 100
+    expose:
+      - "8099"
+    restart: "no"
+
+networks:
+  url_fetch_internal:
+    internal: true
+    driver: bridge
+  url_fetch_egress:
+    driver: bridge
+    driver_opts:
+      # Stable host interface identity for both FORWARD and INPUT filtering.
+      com.docker.network.bridge.name: br-pdfhub-url
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: 172.30.243.0/28

@@ -9,6 +9,12 @@ from fastapi import HTTPException
 from app.config import get_settings
 from app.filetypes import validate_uploaded_file
 from app.services import to_pdf_engine
+from app.native_format_policy import (
+    NATIVE_DEV_TO_PDF_INPUTS, native_dev_enabled,
+)
+# Backward-compatible static export for queue/worker/tests; authoritative
+# formats and flags reside in app.native_format_policy.
+NATIVE_DEV_TO_PDF_OPERATIONS = frozenset(NATIVE_DEV_TO_PDF_INPUTS)
 
 # Operation -> required persisted MIME and original upload suffix.
 STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
@@ -52,6 +58,35 @@ STAGED_TO_PDF_INPUTS: Mapping[str, tuple[str, str]] = {
     "bmp-to-pdf": ("image/bmp", ".bmp"),
 }
 STAGED_TO_PDF_OPERATIONS = frozenset(STAGED_TO_PDF_INPUTS)
+
+def execute_native_dev_to_pdf_operation(
+    operation: str, inputs: list[Path], output: Path, params: dict,
+    *, original_name: str, content_type: str,
+) -> None:
+    """Strictly isolated, independently gated native DEVELOPMENT dispatch.
+
+    The outer queue and worker must verify file ownership/expiry. This stage
+    additionally revalidates the native input signature before any subprocess.
+    """
+    if (not native_dev_enabled(operation) or len(inputs) != 1 or params
+            or operation not in NATIVE_DEV_TO_PDF_INPUTS):
+        raise ValueError("Native development converter unavailable")
+    mime, suffix, _ = NATIVE_DEV_TO_PDF_INPUTS[operation]
+    if (content_type != mime or Path(original_name).suffix.lower() != suffix):
+        raise ValueError("Native input MIME/extension does not match job")
+    try:
+        actual = validate_uploaded_file(inputs[0], original_name)
+    except HTTPException as exc:
+        raise ValueError("Native file signature no longer validates") from exc
+    if actual != mime:
+        raise ValueError("Native file source signature changed")
+    # SECURITY: never import or execute ctypes/CAD/CHM/Works decoders in
+    # credential-bearing worker. All native execution is inside the optional
+    # network-segregated, non-root Docker sidecar. No unsandboxed fallback.
+    from app.services.native_sidecar_client import convert_native_remotely
+    convert_native_remotely(operation, inputs[0], output)
+
+
 OFFICE_TO_PDF_OPERATIONS = frozenset({
     "doc-to-pdf", "docx-to-pdf", "xls-to-pdf", "xlsx-to-pdf",
     "ppt-to-pdf", "pptx-to-pdf", "odt-to-pdf", "ods-to-pdf",

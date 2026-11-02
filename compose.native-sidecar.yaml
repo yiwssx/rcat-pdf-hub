@@ -1,0 +1,94 @@
+# Optional development-only Docker-native decoder. Unlike nested Bubblewrap,
+# this service obtains isolation from its OWN unprivileged Docker container.
+# The credential-bearing API/RQ worker NEVER loads any native codec.
+#
+# Apply only in a staging clone after all service hardening/QA checks pass.
+# Profiles and ALL original production format flags remain default OFF.
+services:
+  worker-heavy:
+    environment:
+      PDFHUB_NATIVE_SIDECAR_SHARED_SECRET: ${PDFHUB_NATIVE_SIDECAR_SHARED_SECRET:?Set a unique random 40+ character secret}
+      PDFHUB_TO_PDF_TOOLS_ENABLED: ${PDFHUB_TO_PDF_TOOLS_ENABLED:-false}
+      PDFHUB_CHM_NATIVE_DEV_ENABLED: ${PDFHUB_CHM_NATIVE_DEV_ENABLED:-false}
+      PDFHUB_HEIF_NATIVE_DEV_ENABLED: ${PDFHUB_HEIF_NATIVE_DEV_ENABLED:-false}
+      PDFHUB_DWG_NATIVE_DEV_ENABLED: ${PDFHUB_DWG_NATIVE_DEV_ENABLED:-false}
+      PDFHUB_WPS_NATIVE_DEV_ENABLED: ${PDFHUB_WPS_NATIVE_DEV_ENABLED:-false}
+    networks:
+      - default
+      - native_converter_internal
+
+  api:
+    environment:
+      PDFHUB_TO_PDF_TOOLS_ENABLED: ${PDFHUB_TO_PDF_TOOLS_ENABLED:-false}
+      PDFHUB_CHM_NATIVE_DEV_ENABLED: ${PDFHUB_CHM_NATIVE_DEV_ENABLED:-false}
+      PDFHUB_HEIF_NATIVE_DEV_ENABLED: ${PDFHUB_HEIF_NATIVE_DEV_ENABLED:-false}
+      PDFHUB_DWG_NATIVE_DEV_ENABLED: ${PDFHUB_DWG_NATIVE_DEV_ENABLED:-false}
+      PDFHUB_WPS_NATIVE_DEV_ENABLED: ${PDFHUB_WPS_NATIVE_DEV_ENABLED:-false}
+
+  native-gotenberg:
+    profiles: ["native-dev"]
+    build: ./ops/gotenberg
+    image: rcat-pdf-hub/gotenberg:8.34.0-thai1
+    command:
+      - gotenberg
+      - --api-timeout=180s
+      - --libreoffice-restart-after=15
+      - --chromium-restart-after=30
+    # Not reachable from the application/default network and not allowed
+    # to access DB, Redis, NAS or the public Internet.
+    networks:
+      - native_converter_internal
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 1024m
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=512m
+    restart: "no"
+
+  native-decoder:
+    profiles: ["native-dev"]
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      args:
+        PDFHUB_NATIVE_ONLY: "1"
+        # Builds v1.23.7 by immutable upstream Git commit, decoder-only.
+        PDFHUB_HEIF_FROM_SOURCE: "1"
+    command: ["python", "-m", "app.services.native_sidecar_server"]
+    user: "10001:10001"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 96
+    mem_limit: 1024m
+    cpus: 2.0
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=512m,mode=1777
+    environment:
+      HOME: /tmp
+      TMPDIR: /tmp
+      PDFHUB_NATIVE_ISOLATED_CONTAINER: "1"
+      PDFHUB_NATIVE_SIDECAR_SHARED_SECRET: ${PDFHUB_NATIVE_SIDECAR_SHARED_SECRET:?Set a unique random 40+ character secret}
+      PDFHUB_GOTENBERG_URL: http://native-gotenberg:3000
+      PDFHUB_TO_PDF_TOOLS_ENABLED: "true"
+      PDFHUB_CHM_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_HEIF_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_DWG_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_WPS_NATIVE_DEV_ENABLED: "true"
+    depends_on:
+      native-gotenberg:
+        condition: service_started
+    # Single internal-only bridge: no access to PostgreSQL, Valkey, API
+    # listeners, public networks, NAS mounts or the Docker control socket.
+    networks:
+      - native_converter_internal
+    expose: ["8098"]
+    restart: "no"
+
+networks:
+  native_converter_internal:
+    driver: bridge
+    internal: true

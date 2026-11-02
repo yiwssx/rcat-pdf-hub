@@ -11,7 +11,7 @@ from app.models import FileRecord
 from app.routers.pdf import _create_job, _is_expired
 from app.schemas import JobOut
 from app.security import Principal, require_scope
-from app.staged_to_pdf_adapters import STAGED_TO_PDF_INPUTS
+from app.staged_to_pdf_adapters import STAGED_TO_PDF_INPUTS, NATIVE_DEV_TO_PDF_INPUTS, native_dev_enabled
 
 router = APIRouter(prefix="/api/v1/pdf/to-pdf", tags=["T90-2 (staged)"])
 settings = get_settings()
@@ -20,6 +20,12 @@ settings = get_settings()
 class ConvertRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     file_id: str = Field(min_length=1, max_length=36)
+
+
+class URLConvertRequest(BaseModel):
+    """URL-only job, never a fake uploaded .url file."""
+    model_config = ConfigDict(extra="forbid")
+    url: str = Field(min_length=10, max_length=1800)
 
 
 def _submit(req: ConvertRequest, principal: Principal, db: Session, operation: str) -> JobOut:
@@ -356,3 +362,101 @@ def pdf_compatible_ai_to_pdf(
     db: Session = Depends(get_db),
 ):
     return _submit(req, principal, db, "ai-to-pdf")
+
+
+# This route does not exist in the default API or OpenAPI schema. Both
+# development gates must be explicitly enabled at process startup; a future
+# rollout additionally requires an isolated worker network egress policy.
+if settings.to_pdf_tools_enabled and settings.url_to_pdf_dev_enabled:
+    @router.post("/url", response_model=JobOut, status_code=202)
+    def public_https_url_to_pdf(
+        req: URLConvertRequest,
+        principal: Principal = Depends(require_scope("pdf:convert")),
+        db: Session = Depends(get_db),
+    ):
+        from app.services.to_pdf_url import validate_public_https_url
+
+        try:
+            validate_public_https_url(req.url)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # A URL job has zero uploaded files: owner/quotas/queue are enforced
+        # by _create_job, then params + disabled state are revalidated by RQ.
+        return _create_job(
+            db, principal, "url-to-pdf", [],
+            {"url": req.url},
+        )
+
+
+# Native T90-2 development-only routes are NOT advertised unless the global
+# switch and the exact engine switch were deliberately enabled at startup.
+# They are intentionally not part of STAGED_TO_PDF_INPUTS or the 34-format
+# STAGED catalog. Production must not enable them before real-file QA.
+
+def _submit_native(
+    req: ConvertRequest, principal: Principal, db: Session, operation: str,
+) -> JobOut:
+    if not native_dev_enabled(operation):
+        raise HTTPException(status_code=404, detail="Native developer conversion unavailable")
+    record = db.get(FileRecord, req.file_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    if record.source_system != principal.name:
+        raise HTTPException(status_code=403, detail="File belongs to another owner")
+    if _is_expired(record):
+        raise HTTPException(status_code=410, detail="File data has expired")
+    mime, suffix, _flag = NATIVE_DEV_TO_PDF_INPUTS[operation]
+    if (record.content_type != mime
+            or not record.original_name.lower().endswith(suffix)):
+        raise HTTPException(status_code=415, detail="Native conversion format mismatch")
+    return _create_job(db, principal, operation, [req.file_id], {})
+
+
+if native_dev_enabled("heic-to-pdf"):
+    @router.post("/heic", response_model=JobOut, status_code=202)
+    def native_heic_to_pdf(
+        req: ConvertRequest,
+        principal: Principal = Depends(require_scope("pdf:convert")),
+        db: Session = Depends(get_db),
+    ):
+        return _submit_native(req, principal, db, "heic-to-pdf")
+
+
+if native_dev_enabled("heif-to-pdf"):
+    @router.post("/heif", response_model=JobOut, status_code=202)
+    def native_heif_to_pdf(
+        req: ConvertRequest,
+        principal: Principal = Depends(require_scope("pdf:convert")),
+        db: Session = Depends(get_db),
+    ):
+        return _submit_native(req, principal, db, "heif-to-pdf")
+
+
+if native_dev_enabled("dwg-to-pdf"):
+    @router.post("/dwg", response_model=JobOut, status_code=202)
+    def native_dwg_to_pdf(
+        req: ConvertRequest,
+        principal: Principal = Depends(require_scope("pdf:convert")),
+        db: Session = Depends(get_db),
+    ):
+        return _submit_native(req, principal, db, "dwg-to-pdf")
+
+
+if native_dev_enabled("chm-to-pdf"):
+    @router.post("/chm", response_model=JobOut, status_code=202)
+    def native_chm_to_pdf(
+        req: ConvertRequest,
+        principal: Principal = Depends(require_scope("pdf:convert")),
+        db: Session = Depends(get_db),
+    ):
+        return _submit_native(req, principal, db, "chm-to-pdf")
+
+
+if native_dev_enabled("wps-to-pdf"):
+    @router.post("/wps", response_model=JobOut, status_code=202)
+    def native_ms_works_wps_to_pdf(
+        req: ConvertRequest,
+        principal: Principal = Depends(require_scope("pdf:convert")),
+        db: Session = Depends(get_db),
+    ):
+        return _submit_native(req, principal, db, "wps-to-pdf")

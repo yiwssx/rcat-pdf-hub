@@ -155,3 +155,26 @@ def require_scope(scope: str) -> Callable:
         return principal
 
     return dependency
+
+
+def enforce_t90_private_pilot(principal: Principal) -> None:
+    """Additional T90 pilot owner gate, never a replacement for require_scope.
+
+    No wildcard, implicit admin override, substring matching or group
+    inference. Fail closed when enabled without an explicit principal list.
+    The normal conversion feature flags remain independent and default OFF.
+    """
+    from app.config import get_settings
+
+    policy = get_settings()
+    if not policy.t90_private_pilot_enabled:
+        return
+    approved = {
+        item.strip() for item in policy.t90_private_pilot_principals.split(",")
+        if item.strip() and item.strip() != "*"
+    }
+    if not approved or principal.name not in approved:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="T90 private pilot access not granted",
+        )

@@ -68,6 +68,39 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="File extension is PDF but the file signature is not PDF")
         return PDF
 
+    # Experimental native T90-2 formats are uploadable ONLY with BOTH their
+    # dedicated development flag and the global T90-2 gate explicitly enabled.
+    # Header/size checks happen before persistence; the heavy worker repeats
+    # validation inside a dedicated no-network native decoder sandbox.
+    if suffix in {".heic", ".heif", ".dwg", ".chm", ".wps"}:
+        from app.native_format_policy import native_dev_enabled
+        operation = suffix.lstrip(".") + "-to-pdf"
+        if not native_dev_enabled(operation):
+            raise HTTPException(status_code=415, detail="Native format is not enabled for development")
+        size = path.stat().st_size
+        if suffix in {".heic", ".heif"}:
+            from app.services.to_pdf_heif_native import _checked_heif_container
+            try:
+                _checked_heif_container(path, suffix=suffix)
+            except (OSError, ValueError) as exc:
+                raise HTTPException(status_code=415, detail="Invalid HEIC/HEIF container") from exc
+            return "image/heic" if suffix == ".heic" else "image/heif"
+        if suffix == ".dwg":
+            from app.services.to_pdf_dwg_native import DWG_VERSIONS, MAX_SOURCE_BYTES
+            if not 48 <= size <= MAX_SOURCE_BYTES or head[:6] not in DWG_VERSIONS:
+                raise HTTPException(status_code=415, detail="Invalid or unsupported DWG header")
+            return "image/vnd.dwg"
+        if suffix == ".chm":
+            if not 128 <= size <= 20 * 1024 * 1024 or not head.startswith(b"ITSF"):
+                raise HTTPException(status_code=415, detail="Invalid or oversized CHM archive")
+            return "application/vnd.ms-htmlhelp"
+        # Distinguish Microsoft Works from Kingsoft only after invoking the
+        # dedicated writerperfect parser inside the restricted native worker.
+        # An extension or generic OLE header is not sufficient evidence.
+        if not 16 <= size <= 12 * 1024 * 1024:
+            raise HTTPException(status_code=415, detail="Works input size unsupported")
+        return "application/vnd.ms-works"
+
     # AI is accepted ONLY as an inert, strictly parsed PDF-compatible stream.
     # Native Illustrator PostScript/EPS is deliberately unsupported.
     if suffix == ".ai":
@@ -141,8 +174,9 @@ def validate_uploaded_file(path: Path, original_name: str) -> str:
             raise HTTPException(status_code=415, detail="Unsupported or unsafe MOBI document") from exc
         return "application/x-mobipocket-ebook"
 
-    # EPUB and FB2 ebooks are opt-in text-only converters. The worker performs
-    # full bounded ZIP/XML inspection; upload verifies only lightweight type.
+    # EPUB and FB2 ebooks are opt-in, bounded text + local-bitmap converters.
+    # Worker performs full archive/XML/image-resource inspection; this upload
+    # preflight only authenticates lightweight type. Feature remains disabled.
     if suffix in {".epub", ".fb2"}:
         if not get_settings().to_pdf_tools_enabled:
             raise HTTPException(status_code=415, detail="Staged ebook conversion is disabled")
