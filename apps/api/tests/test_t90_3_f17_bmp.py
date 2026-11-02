@@ -98,6 +98,16 @@ def test_reject_encrypted_and_symlinked_pdf(tmp_path):
     assert not (tmp_path / "out.zip").exists()
 
 
+def test_existing_output_cannot_be_clobbered(tmp_path):
+    source = tmp_path / "source.pdf"
+    dest = tmp_path / "already.zip"
+    _pdf(source)
+    dest.write_bytes(b"existing-institutional-file")
+    with pytest.raises(ValueError, match="independent"):
+        pdf_to_bmp_zip(source, dest)
+    assert dest.read_bytes() == b"existing-institutional-file"
+
+
 def _record(*, owner="user:a", mime="application/pdf", name="source.pdf",
             size=1234, expired=False):
     return SimpleNamespace(
