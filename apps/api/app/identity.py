@@ -63,6 +63,21 @@ def _require_rcat_identity(identity: dict) -> None:
     _verified_rcat_email(identity.get("email"), identity.get("email_verified"))
 
 
+def _institutional_role(groups: list[str], verified_email: str) -> str:
+    """Grant all verified school mailboxes basic conversion access.
+
+    Google ID tokens normally omit Workspace groups. Explicit role mappings
+    still narrow a user to viewer or elevate an IdP-asserted admin group;
+    an operator fallback applies only after verified school-email checks.
+    """
+    if verified_email in settings.rcat_admin_email_set:
+        return ROLE_ADMIN
+    try:
+        return role_for_groups(groups, settings.human_role_group_map)
+    except ValueError:
+        return ROLE_OPERATOR
+
+
 def identity_from_claims(claims: dict, source: str) -> dict:
     if settings.rcat_institutional_only:
         if source not in {"oidc", "oidc-bearer"}:
@@ -80,11 +95,22 @@ def identity_from_claims(claims: dict, source: str) -> dict:
         or subject
     )
     groups = _claim_list(claims.get(settings.oidc_group_claim) or claims.get("groups"))
-    roles = (role_for_groups(groups, settings.human_role_group_map),)
+    roles = (
+        (_institutional_role(groups, validated_email),)
+        if settings.rcat_institutional_only
+        else (role_for_groups(groups, settings.human_role_group_map),)
+    )
     scopes = scopes_for_roles(roles, settings.human_scope_set)
     safe_display = display[:110]
+    # The display name is not an owner identifier: different school users may
+    # share the same preferred_username. Use the verified mailbox for ownership.
+    owner_name = (
+        f"user:{validated_email}"
+        if settings.rcat_institutional_only
+        else f"user:{safe_display}"[:120]
+    )
     return {
-        "name": f"user:{safe_display}"[:120],
+        "name": owner_name,
         "subject": subject,
         "email": validated_email,
         "email_verified": claims.get("email_verified") is True if source.startswith("oidc") else False,
@@ -175,7 +201,13 @@ def decode_session_token(token: str) -> dict:
     if source in {"oidc", "ldap"}:
         # Re-evaluate institutional groups on every session decode so a mapping
         # change or group removal cannot leave stale privileges in a cookie.
-        roles = (role_for_groups(groups, settings.human_role_group_map),)
+        roles = (
+            (_institutional_role(groups, _verified_rcat_email(
+                claims.get("pdfhub_email"), claims.get("pdfhub_email_verified")
+            )),)
+            if settings.rcat_institutional_only
+            else (role_for_groups(groups, settings.human_role_group_map),)
+        )
         scopes = scopes_for_roles(roles, settings.human_scope_set)
     elif roles_claim:
         roles = normalize_roles(roles_claim)

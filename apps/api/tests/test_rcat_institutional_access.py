@@ -168,3 +168,65 @@ def test_anonymous_signed_link_minting_and_old_links_are_disabled(monkeypatch):
             token="a" * 64, db=SimpleNamespace(),
         )
     assert used.value.status_code == 403
+
+
+
+def test_google_oidc_without_workspace_groups_allows_verified_school_users(monkeypatch):
+    """Google standard ID tokens have no Workspace group claims."""
+    _institutional_mode(monkeypatch)
+    settings = get_settings()
+    monkeypatch.setattr(settings, "rcat_admin_emails", "")
+    shared_display = "Teacher"
+    first = identity_from_claims(
+        {**_oidc_claims("first@rcat.ac.th"), "groups": [], "preferred_username": shared_display},
+        "oidc",
+    )
+    second = identity_from_claims(
+        {**_oidc_claims("second@rcat.ac.th"), "groups": [], "preferred_username": shared_display},
+        "oidc",
+    )
+    assert first["roles"] == second["roles"] == ["operator"]
+    assert "pdf:convert" in first["scopes"]
+    assert first["name"] == "user:first@rcat.ac.th"
+    assert second["name"] == "user:second@rcat.ac.th"
+    assert decode_session_token(create_session_token(first))["roles"] == ["operator"]
+
+
+def test_oidc_explicit_viewer_group_stays_read_only(monkeypatch):
+    _institutional_mode(monkeypatch)
+    identity = identity_from_claims(
+        {**_oidc_claims(), "groups": ["pdfhub-viewers"]}, "oidc",
+    )
+    assert identity["roles"] == ["viewer"]
+    assert "files:read" in identity["scopes"]
+    assert "pdf:convert" not in identity["scopes"]
+
+
+def test_rcat_admin_email_allowlist_is_exact_and_revocable(monkeypatch):
+    settings = _institutional_mode(monkeypatch)
+    monkeypatch.setattr(settings, "rcat_admin_emails", "admin@rcat.ac.th")
+    admin = identity_from_claims(
+        {**_oidc_claims("ADMIN@RCAT.AC.TH"), "groups": []}, "oidc",
+    )
+    other = identity_from_claims(
+        {**_oidc_claims("admin2@rcat.ac.th"), "groups": []}, "oidc",
+    )
+    assert admin["roles"] == ["admin"]
+    assert admin["scopes"] == ["*"]
+    assert other["roles"] == ["operator"]
+    signed = create_session_token(admin)
+    monkeypatch.setattr(settings, "rcat_admin_emails", "")
+    revoked = decode_session_token(signed)
+    assert revoked["roles"] == ["operator"]
+    assert "*" not in revoked["scopes"]
+
+
+@pytest.mark.parametrize("bad", [
+    "administrator@gmail.com",
+    "admin@sub.rcat.ac.th",
+    "admin@rcat.ac.th.evil.example",
+    "admin@rcat.ac.th,other@gmail.com",
+])
+def test_invalid_rcat_admin_email_configuration_fails_closed(bad):
+    with pytest.raises(ValidationError):
+        Settings(rcat_admin_emails=bad)

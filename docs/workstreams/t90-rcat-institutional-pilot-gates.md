@@ -28,19 +28,28 @@ When `PDFHUB_RCAT_INSTITUTIONAL_ONLY=true`:
    shareable signed download URLs are disabled. Authenticated **owner-scoped**
    download still works. Separate machine integrations will need an explicitly
    designed service-identity policy before being reenabled.
-5. Institutional group-to-role mapping remains in force: `@rcat.ac.th`
-   is **necessary but not sufficient** for files/operator/admin privileges.
-   Only mapped groups receive permitted roles. Existing job/file ownership,
-   expiration, quotas, malware scanning and audit remain unchanged.
+5. A verified `@rcat.ac.th` account receives the **operator** role by default,
+   including conversion/upload, because ordinary Google ID tokens do not contain
+   Workspace group claims. An explicitly mapped viewer group remains read-only;
+   administrator privileges require a trusted IdP admin group or an exact
+   `PDFHUB_RCAT_ADMIN_EMAILS` allowlist entry. The API re-evaluates
+   roles whenever sessions are decoded, so removing an admin email revokes its
+   elevated privileges. Ownership uses the validated email instead of a
+   non-unique display name. Existing job/file isolation, expiration, quotas,
+   malware scanning and audit remain unchanged.
 6. Authentication is an application access boundary, not a network firewall.
    Browser login pages and operational health endpoints can remain reachable
    without exposing user documents. Restrict network ingress independently
    if the deployment must be accessible only on campus or through VPN.
 
-**No assumption that the school already has an OIDC provider:** configure a
-trusted institutional IdP (e.g. Google Workspace / Microsoft Entra / Keycloak
-federated with institutional ownership) with a stable OIDC issuer, client ID,
-redirect URI and roles/group claims. A simple email textbox is NOT acceptable.
+**Google sign-in:** register an OAuth 2.0 Web application in the Google Cloud
+project approved for the school's use; use issuer `https://accounts.google.com`
+and register exact callback `https://pdf.rcat.ac.th/api/v1/auth/oidc/callback`.
+Google's hosted-domain (`hd`) hint may improve account selection but must NOT
+be treated as authorization; the verified email claim and exact `@rcat.ac.th`
+domain are always checked by the server. Configure an explicit admin email
+allowlist because ordinary Google ID tokens omit group claims. A free-text
+email field or a hard-coded `@rcat.ac.th` suffix in the UI is NOT authentication.
 
 ### Required pilot environment (not enabled automatically)
 
@@ -50,9 +59,10 @@ PDFHUB_OIDC_ENABLED=true
 PDFHUB_LDAP_ENABLED=false
 PDFHUB_SESSION_COOKIE_SECURE=true
 PDFHUB_PUBLIC_BASE_URL=https://pdf.rcat.ac.th
-PDFHUB_OIDC_ISSUER=https://<configured-institutional-issuer>
-PDFHUB_OIDC_CLIENT_ID=<registered-OIDC-client>
-PDFHUB_OIDC_CLIENT_SECRET=<from-IdP-if-confidential-client>
+PDFHUB_OIDC_ISSUER=https://accounts.google.com
+PDFHUB_OIDC_CLIENT_ID=<registered-google-oauth-web-client-id>
+PDFHUB_OIDC_CLIENT_SECRET=<registered-google-oauth-client-secret>
+PDFHUB_RCAT_ADMIN_EMAILS=<school-admin@rcat.ac.th>
 PDFHUB_WEB_CONSOLE_AUTO_LOGIN=false
 ```
 
@@ -99,8 +109,10 @@ verification because malicious document content can still enter the system.
 ### Immediate policy tests
 
 - Wrong/missing/unverified mail; lookalike domains; upper-case domains;
-  OIDC roles; invalid/expired sessions; replayed sessions issued before
-  the policy was enabled; local/Web Console/API-key bypass attempts.
+  Google ID tokens with no group claim; shared display names from different
+  mailboxes; viewer vs operator scopes; exact admin-email allowlist and
+  immediate revocation; invalid/expired sessions; replayed sessions issued
+  before the policy was enabled; local/Web Console/API-key bypass attempts.
 - Signed download URLs issued before/after RCAT-only activation must not
   bypass the OIDC account boundary.
 - Per-format safety stays distinct from human identity: restricted Docker

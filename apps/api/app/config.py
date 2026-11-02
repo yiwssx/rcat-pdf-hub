@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -77,6 +78,10 @@ class Settings(BaseSettings):
     # supplied by a trusted OIDC identity provider can access the API.
     # Default OFF to preserve existing deployments until an IdP is configured.
     rcat_institutional_only: bool = False
+    # Google OIDC does not normally provide Workspace group claims. All verified
+    # RCAT users receive the operator role; this explicit allowlist grants
+    # administrator access without enabling local-admin or API-key bypasses.
+    rcat_admin_emails: str = ""
     human_scopes: str = DEFAULT_HUMAN_SCOPES
     viewer_groups: str = "pdfhub-viewers"
     operator_groups: str = "pdfhub-users"
@@ -155,6 +160,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_enabled_integrations(self):
+        # Refuse an accidentally misconfigured administrator allowlist.
+        for email in self.rcat_admin_email_set:
+            if not email.isascii() or not re.fullmatch(
+                r"[a-z0-9][a-z0-9._%+\-]*@rcat\.ac\.th", email
+            ):
+                raise ValueError("RCAT_ADMIN_EMAILS entries must be @rcat.ac.th addresses")
         # Identity restriction is a security boundary, not a UI filter. Do
         # not allow a password-less workspace or unverifiable LDAP login.
         if self.rcat_institutional_only:
@@ -227,6 +238,10 @@ class Settings(BaseSettings):
     @property
     def human_scope_set(self) -> set[str]:
         return {x.strip() for x in self.human_scopes.split(",") if x.strip()}
+
+    @property
+    def rcat_admin_email_set(self) -> set[str]:
+        return {x.strip().lower() for x in self.rcat_admin_emails.split(",") if x.strip()}
 
     @property
     def viewer_group_set(self) -> set[str]:
