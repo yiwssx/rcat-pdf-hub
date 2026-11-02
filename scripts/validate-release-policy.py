@@ -289,6 +289,7 @@ assert 'max-file: "${PDFHUB_LOG_MAX_FILES:-5}"' in prod_compose
 assert "PDFHUB_SESSION_COOKIE_SECURE: ${PDFHUB_SESSION_COOKIE_SECURE:-false}" in compose
 assert "PDFHUB_WEB_CONSOLE_AUTO_LOGIN: ${PDFHUB_WEB_CONSOLE_AUTO_LOGIN:-true}" in compose
 assert "PDFHUB_FROM_PDF_TOOLS_ENABLED: ${PDFHUB_FROM_PDF_TOOLS_ENABLED:-false}" in compose, ("F09 release flag must be explicitly mapped with default OFF")
+assert "PDFHUB_PDF_FILLER_TOOLS_ENABLED: ${PDFHUB_PDF_FILLER_TOOLS_ENABLED:-false}" in compose, ("M33 must be default OFF and visible to all job workers")
 assert "PDFHUB_RCAT_INSTITUTIONAL_ONLY: ${PDFHUB_RCAT_INSTITUTIONAL_ONLY:-false}" in compose, (
     "Institutional-only flag must reach API/worker Compose environment"
 )

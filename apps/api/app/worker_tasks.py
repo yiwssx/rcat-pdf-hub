@@ -231,6 +231,29 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F09 PDF signature changed")
             pdf_to_multipage_tiff(inputs[0], output, dpi=params["dpi"])
+        elif job.operation == "fill-pdf-form":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_acroform_fill import (
+                MAX_SOURCE_BYTES, fill_pdf_text_fields,
+            )
+            if (not settings.pdf_filler_tools_enabled
+                    or len(files) != 1 or files[0] is None
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= MAX_SOURCE_BYTES
+                    or set(params) != {"updates"}
+                    or not isinstance(params["updates"], dict)):
+                raise ValueError("Staged M33 form source or parameters are unauthorized")
+            try:
+                actual_mime = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged M33 original PDF signature invalid") from exc
+            if actual_mime != "application/pdf":
+                raise ValueError("Staged M33 original PDF signature changed")
+            fill_pdf_text_fields(inputs[0], output, params["updates"])
         elif job.operation in STAGED_GEOMETRY_OPERATIONS:
             from app.routers.pdf import _is_expired
             if (not settings.geometry_tools_enabled
