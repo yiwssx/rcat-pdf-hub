@@ -19,11 +19,12 @@ class PilotAcceptanceTest(unittest.TestCase):
         self.registry = json.loads((ROOT / "contracts/pdf-tools.v1.json").read_text())
         self.evidence = json.loads((ROOT / "contracts/t90-rcat-pilot-acceptance.v1.json").read_text())
 
-    def test_actual_registry_records_only_3_implemented_without_release(self):
+    def test_actual_registry_credits_only_authentic_T21_staging_not_release(self):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 3)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 2)
+        self.assertEqual(report["state_counts"]["STAGED"], 1)
         self.assertEqual(report["state_counts"]["UNASSESSED"], 87)
         self.assertEqual(len(report["uncertified"]), 87)
         self.assertEqual(
@@ -33,6 +34,14 @@ class PilotAcceptanceTest(unittest.TestCase):
         for record in self.evidence["tool_evidence"]:
             self.assertTrue(record["supported_subset"])
             self.assertTrue(record["acceptance_pending"])
+        publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
+        self.assertEqual(publisher["state"], "STAGED")
+        self.assertTrue(publisher["pages_or_items_checked"])
+        self.assertEqual(len(publisher["source_sha256"]), 64)
+        self.assertEqual(len(publisher["output_sha256"]), 64)
+        self.assertIn("fdo59355-1.pub", publisher["fixture_provenance"])
+        self.assertEqual(publisher["ci_run"],
+                         "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41419587183")
 
     def test_reject_public_release_scope(self):
         self.evidence["scope"] = "anonymous-public"
