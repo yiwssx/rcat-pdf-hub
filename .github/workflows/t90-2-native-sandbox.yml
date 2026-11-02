@@ -3,6 +3,10 @@ name: T90-2 Docker Native Isolation Acceptance
 on:
   pull_request:
     paths:
+      - "apps/api/app/t90_2_catalog.py"
+      - "apps/api/app/native_format_policy.py"
+      - "apps/api/app/staged_to_pdf_adapters.py"
+      - "apps/api/tests/test_t90_2_native_dev_integrations.py"
       - "apps/api/app/services/native_sandbox.py"
       - "apps/api/app/services/t90_2_native_docker_selftest.py"
       - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
