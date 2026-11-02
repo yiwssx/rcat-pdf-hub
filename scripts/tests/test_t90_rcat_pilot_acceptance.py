@@ -69,6 +69,23 @@ class PilotAcceptanceTest(unittest.TestCase):
         self.assertEqual(report["released"], 0)
         self.assertEqual(report["state_counts"]["UNASSESSED"], 89)
 
+    def test_to_pdf_implementation_requires_scoped_capability_and_pending_checks(self):
+        proof = {
+            "tool_id": "T21", "state": "IMPLEMENTED",
+            "source_commit": "2abd02bbc176c8748f3da11acd911a61e5826c3f",
+            "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/249",
+        }
+        self.evidence["tool_evidence"] = [proof]
+        with self.assertRaisesRegex(ValueError, "supported subset"):
+            module.verify(self.registry, self.evidence)
+        proof["supported_subset"] = "Publisher CFB sample only"
+        with self.assertRaisesRegex(ValueError, "supported subset"):
+            module.verify(self.registry, self.evidence)
+        proof["acceptance_pending"] = "Thai visual tests and independent validation"
+        self.assertEqual(
+            module.verify(self.registry, self.evidence)["state_counts"]["IMPLEMENTED"], 1
+        )
+
     def test_staged_without_real_file_checksums_is_rejected(self):
         self.evidence["tool_evidence"] = [{
             "tool_id": "F09", "state": "STAGED",
