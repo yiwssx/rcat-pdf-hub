@@ -6,6 +6,7 @@ import { BrandGlyph } from "./tool-icons";
 
 export function LocalAdminLogin() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [institutionalOnly, setInstitutionalOnly] = useState(false);
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("เข้าสู่ระบบด้วยบัญชีผู้ดูแลภายใน");
