@@ -64,9 +64,9 @@ if (int(pages.group(1)) != 2
 # format misclassification that technically yields a blank/empty PDF.
 for page_no, pgm in enumerate((page1, page2), start=1):
     data = pgm.read_bytes()
-    if not data.startswith(b"P5\\n"):
+    if not data.startswith(b"P5\n"):
         raise SystemExit(f"Publisher: Poppler failed to rasterize page {page_no}")
-    header_end = data.find(b"\\n255\\n")
+    header_end = data.find(b"\n255\n")
     if header_end < 0:
         raise SystemExit(f"Publisher: page {page_no} has invalid raster preview header")
     pixels = data[header_end + 5:]
