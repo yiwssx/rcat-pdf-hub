@@ -396,4 +396,8 @@ def public_auth_config() -> dict:
         "ldap": {"enabled": settings.ldap_enabled},
         "web_console": {"auto_login": settings.web_console_auto_login_enabled},
         "local_admin": {"enabled": settings.local_admin_enabled},
+        "institutional": {
+            "rcat_only": settings.rcat_institutional_only,
+            "email_domain": "rcat.ac.th" if settings.rcat_institutional_only else None,
+        },
     }
