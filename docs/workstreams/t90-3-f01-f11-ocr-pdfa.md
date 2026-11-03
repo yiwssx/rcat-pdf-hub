@@ -10,7 +10,8 @@ OCRmyPDF/Tesseract engines, not a renamed JPG/PDF or browser placeholder.
   claim that every Thai glyph is recognized perfectly.
 - F11: `POST /api/v1/pdf/from-pdf/pdfa` targets PDF/A-2 through
   `ocrmypdf --force-ocr --output-type pdfa-2` **only for scanned,
-  image-only original PDF pages**. Selectable-text pages are rejected:
+  image-only original PDF pages without annotations, AcroForms, text,
+  or vector-painted marks**. Selectable-text pages are rejected:
   pinned Debian Ghostscript 10.0.0 contains a known `--skip-text` PDF/A
   corruption regression. This source limitation prevents the force mode
   from discarding existing selectable text. The output must retain the
