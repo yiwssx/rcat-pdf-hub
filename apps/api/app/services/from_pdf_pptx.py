@@ -148,8 +148,8 @@ def pdf_to_editable_text_pptx(source: Path, output: Path) -> None:
     total_chars = 0
     for page in pdf.pages:
         width, height = float(page.mediabox.width), float(page.mediabox.height)
-        if (not math.isfinite(width) and math.isfinite(height)
-                and 1 <= width <= 4000 and 1 <= height <= 4000):
+        if (not math.isfinite(width) or not math.isfinite(height)
+                or not 1 <= width <= 4000 or not 1 <= height <= 4000):
             raise ValueError("Invalid PDF page geometry for slides")
         lines = _extract_plain_lines(page, pdf)
         if len(lines) > MAX_LINES_PER_SLIDE:
