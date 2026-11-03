@@ -64,9 +64,23 @@ def convert_accessible_pdf(
         # validation. Independent veraPDF testing is deferred to T90-5.
         if kind == "pdfa-2":
             reader = PdfReader(str(output), strict=True)
-            xmp = reader.xmp_metadata
-            if xmp is None or str(getattr(xmp, "pdfaid_part", "")) != "2":
-                raise ValueError("PDF/A-2 identification metadata missing")
+            from defusedxml import ElementTree
+            root = reader.trailer["/Root"]
+            metadata = root.get("/Metadata")
+            if metadata is None:
+                raise ValueError("PDF/A-2 XMP identification metadata missing")
+            raw_xmp = metadata.get_object().get_data()
+            if not raw_xmp or len(raw_xmp) > 512 * 1024:
+                raise ValueError("PDF/A-2 XMP metadata exceeds safety limits")
+            xmp_xml = ElementTree.fromstring(raw_xmp)
+            pdfa_namespace = "{http://www.aiim.org/pdfa/ns/id/}"
+            parts = [
+                (node.text or "").strip()
+                for node in xmp_xml.iter()
+                if node.tag == pdfa_namespace + "part"
+            ]
+            if parts != ["2"]:
+                raise ValueError("PDF/A-2 XMP identification is absent or ambiguous")
     except Exception:
         if output.exists() and not output.is_symlink():
             output.unlink()
