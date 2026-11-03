@@ -513,6 +513,34 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F08 PDF signature changed")
             pdf_to_editable_text_pptx(inputs[0], output)
+        elif job.operation in {"delete-pdf-pages", "reorder-pdf-pages"}:
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_page_selection import (
+                MAX_SOURCE_BYTES as PAGE_MAX_SOURCE, select_pdf_pages,
+            )
+            if (not settings.manage_page_tools_enabled
+                    or len(files) != 1 or files[0] is None
+                    or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= PAGE_MAX_SOURCE
+                    or not isinstance(params, dict)
+                    or set(params) != {"pages"}):
+                raise ValueError("Staged M14/M15 page source/parameters unauthorized")
+            try:
+                verified = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged M14/M15 PDF signature invalid") from exc
+            if verified != "application/pdf":
+                raise ValueError("Staged M14/M15 PDF source type changed")
+            select_pdf_pages(
+                inputs[0], output,
+                operation=("delete" if job.operation == "delete-pdf-pages" else "reorder"),
+                pages=params["pages"],
+            )
         elif job.operation in {"pdf-to-ocr", "pdf-to-pdfa"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
