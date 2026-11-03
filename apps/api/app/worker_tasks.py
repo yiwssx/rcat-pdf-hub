@@ -87,7 +87,7 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
         return ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     if operation == "pdf-to-excel":
         return ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    if operation in {"pdf-to-bmp", "pdf-to-svg", "pdf-to-csv"}:
+    if operation in {"pdf-to-bmp", "pdf-to-svg", "pdf-to-csv", "pdf-to-jpg", "pdf-to-png"}:
         return ".zip", "application/zip"
     if operation in STAGED_GEOMETRY_OPERATIONS:
         return geometry_output_spec(operation)
