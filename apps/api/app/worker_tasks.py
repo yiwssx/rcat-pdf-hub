@@ -79,7 +79,7 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
         return ".tiff", "image/tiff"
     if operation == "pdf-to-gif":
         return ".gif", "image/gif"
-    if operation == "pdf-to-bmp":
+    if operation in {"pdf-to-bmp", "pdf-to-svg"}:
         return ".zip", "application/zip"
     if operation in STAGED_GEOMETRY_OPERATIONS:
         return geometry_output_spec(operation)
@@ -304,6 +304,28 @@ def process_job(job_id: str) -> str:
             if actual_type != "application/pdf":
                 raise ValueError("Staged F17 PDF signature changed")
             pdf_to_bmp_zip(inputs[0], output, dpi=params["dpi"])
+        elif job.operation == "pdf-to-svg":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_svg import (
+                MAX_SOURCE_BYTES as SVG_MAX_SOURCE, pdf_to_svg_zip,
+            )
+            if (not settings.from_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= SVG_MAX_SOURCE
+                    or params):
+                raise ValueError("Staged F12 source or parameters unauthorized")
+            try:
+                actual_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F12 source PDF signature invalid") from exc
+            if actual_type != "application/pdf":
+                raise ValueError("Staged F12 PDF signature changed")
+            pdf_to_svg_zip(inputs[0], output)
         elif job.operation == "fill-pdf-form":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
