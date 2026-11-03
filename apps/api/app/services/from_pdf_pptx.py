@@ -19,6 +19,7 @@ from app.services.from_pdf_rtf import (
 MIMETYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_LINES_PER_SLIDE = 20
+MAX_LINE_CHARS = 96
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -119,7 +120,8 @@ def _slide(lines: list[str]) -> bytes:
     }), _tag(A, "avLst"))
     ET.SubElement(geometry, _tag(A, "noFill"))
     text_box = ET.SubElement(shape, _tag(P, "txBody"))
-    ET.SubElement(text_box, _tag(A, "bodyPr"), {"wrap": "square"})
+    body_properties = ET.SubElement(text_box, _tag(A, "bodyPr"), {"wrap": "square"})
+    ET.SubElement(body_properties, _tag(A, "normAutofit"))
     ET.SubElement(text_box, _tag(A, "lstStyle"))
     for line in lines:
         paragraph = ET.SubElement(text_box, _tag(A, "p"))
@@ -152,8 +154,9 @@ def pdf_to_editable_text_pptx(source: Path, output: Path) -> None:
                 or not 1 <= width <= 4000 or not 1 <= height <= 4000):
             raise ValueError("Invalid PDF page geometry for slides")
         lines = _extract_plain_lines(page, pdf)
-        if len(lines) > MAX_LINES_PER_SLIDE:
-            raise ValueError("Too much text for faithful editable slide export")
+        if (len(lines) > MAX_LINES_PER_SLIDE
+                or any(len(line) > MAX_LINE_CHARS for line in lines)):
+            raise ValueError("Text would overflow the supported PPTX slide layout")
         total_chars += sum(len(text) for text in lines)
         if total_chars > MAX_CHARS:
             raise ValueError("Source PDF text exceeds PPTX budget")
