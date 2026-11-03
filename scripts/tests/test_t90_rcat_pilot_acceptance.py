@@ -23,11 +23,11 @@ class PilotAcceptanceTest(unittest.TestCase):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 12)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 19)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 77)
-        self.assertEqual(len(report["uncertified"]), 77)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F09", "F16", "F17", "M33"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 70)
+        self.assertEqual(len(report["uncertified"]), 70)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F06", "F07", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -75,6 +75,28 @@ class PilotAcceptanceTest(unittest.TestCase):
                 f"https://github.com/yiwssx/rcat-pdf-hub/actions/runs/{run}",
             )
             self.assertIn("RCAT", item["acceptance_pending"])
+        # Source-level exact-head evidence is never an independent real-host release.
+        for item_id, commit, pr, ci_run in (
+            ("F02", "a05a674ac0b71a707f98e277260f3c7a1ed2a732", 286, 41593120159),
+            ("F06", "a05a674ac0b71a707f98e277260f3c7a1ed2a732", 286, 41593120159),
+            ("F07", "031643c0b9d5f503d6067da8044831eae1cbc65c", 287, 41593763974),
+            ("F10", "e761c92e16efb8f11286efc8844d786297bd3b2d", 285, 41592473851),
+            ("F12", "d2d7009b5768d631f0522847b873ff5dceecec7b", 282, 41589680309),
+            ("F13", "26818d1142c4beb53bc12be37b8755b6a938dd50", 283, 41590380462),
+            ("F14", "e60ae83359ea1d83fc4478d5513914899b956039", 284, 41591622801),
+        ):
+            item = next(record for record in self.evidence["tool_evidence"]
+                        if record["tool_id"] == item_id)
+            self.assertEqual(item["state"], "IMPLEMENTED")
+            self.assertEqual(item["source_commit"], commit)
+            self.assertEqual(item["pr"], f"https://github.com/yiwssx/rcat-pdf-hub/pull/{pr}")
+            self.assertEqual(
+                item["ci_run"],
+                f"https://github.com/yiwssx/rcat-pdf-hub/actions/runs/{ci_run}",
+            )
+            self.assertTrue(item["supported_subset"])
+            self.assertTrue(item["acceptance_pending"])
+
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
         self.assertTrue(publisher["pages_or_items_checked"])
