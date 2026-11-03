@@ -104,6 +104,42 @@
       "acceptance_pending": "Real institutional Thai Unicode/ligatures and RTF rendering, Word/LibreOffice reader proof, actual RCAT OIDC owner upload/download, host AV/isolation/load and operator release signoff remain pending."
     },
     {
+      "tool_id": "F03",
+      "state": "IMPLEMENTED",
+      "source_commit": "118f8c75d4b21f1956c82dc7ec7a65c2b09e5da1",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/291",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41596390837",
+      "supported_subset": "Owner-bound default-OFF PDF to JPG returns exactly one actual Poppler JPEG per source PDF page inside ordered ZIP, max 20 pages/24 MiB source and bounded DPI/pixel/output sizes; real generated 2/10-page page-inventory tests.",
+      "acceptance_pending": "Real RCAT Thai scanned/vector original source versus JPEG pixels and print/DPI fidelity, original host Poppler isolation/AV/load, institutional verified Google Workspace OIDC owner job/download and operator approval pending."
+    },
+    {
+      "tool_id": "F04",
+      "state": "IMPLEMENTED",
+      "source_commit": "118f8c75d4b21f1956c82dc7ec7a65c2b09e5da1",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/291",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41596390837",
+      "supported_subset": "Owner-bound default-OFF PDF to PNG generates one actual lossless PNG raster per source page in complete ordered ZIP, max 20 pages, strict 72–200 DPI/pixel/page/size budgets and real 2/10-page artifact inventory tests.",
+      "acceptance_pending": "Real RCAT Thai glyph/raster source comparison and transparency/ICC needs, verified OIDC owner download, host Poppler sandbox/AV/load and independent operator rollback/activation are pending."
+    },
+    {
+      "tool_id": "F05",
+      "state": "IMPLEMENTED",
+      "source_commit": "d75d367b939fab1c4cc863f2f4184f27526fc470",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/289",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41595483198",
+      "supported_subset": "Bounded selectable single-column PDF text exported as genuine reflowable EPUB3 with OCF mimetype, package manifest/spine, navigation and one editable XHTML chapter per source page; scans/images/multicolumn fail closed, default OFF.",
+      "acceptance_pending": "Real RCAT Thai Unicode and ebook reader fidelity, page/paragraph handling, scans/complex formatting, original Workspace OIDC owner lifecycle and target-host AV/isolation/rollback remain pending."
+    },
+    {
+      "tool_id": "F08",
+      "state": "IMPLEMENTED",
+      "source_commit": "53dae762937fe3571c67bcefed9ce507d3b61781",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/290",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41598057731",
+      "supported_subset": "Real modern editable PPTX slides, one source PDF page to one PowerPoint slide of genuine text-box paragraphs; strict single-column selectable text, max 20 lines and 96 Unicode characters/line, AutoFit and default OFF. No binary PPT or complex layout claim.",
+      "acceptance_pending": "Real RCAT Thai fonts and original visual slide/source comparisons, office reader reopen, target-host isolation/AV/runtime, institutional Google Workspace OIDC job ownership and operator activation remain pending."
+    },
+    {
       "tool_id": "M33",
       "state": "IMPLEMENTED",
       "source_commit": "6e067f68656aed38749acca401f697d6ba5e171d",
