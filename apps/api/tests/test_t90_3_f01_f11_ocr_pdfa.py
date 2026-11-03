@@ -22,7 +22,7 @@ from app.services.from_pdf_ocr_pdfa import convert_accessible_pdf
 from app.worker_tasks import _output_spec_for_job
 
 
-def _source(path: Path, pages: int = 2, *, image_only: bool = False) -> None:
+def _source(path: Path, pages: int = 2, *, image_only: bool = False, vector: bool = False) -> None:
     c = Canvas(str(path), pagesize=(240, 180))
     for n in range(pages):
         if image_only:
@@ -30,6 +30,8 @@ def _source(path: Path, pages: int = 2, *, image_only: bool = False) -> None:
             canvas = ImageDraw.Draw(image)
             canvas.text((50, 80), f"SCAN PAGE {n+1}", fill="black")
             c.drawImage(ImageReader(image), 15, 30, width=210, height=115)
+            if vector:
+                c.rect(8, 8, 30, 15, stroke=1, fill=0)
         else:
             c.drawString(25, 105, f"Original PDF source page {n + 1}")
         c.showPage()
@@ -125,6 +127,14 @@ def test_true_pdfa2_xmp_from_ocrmypdf(tmp_path):
     )
     assert len(PdfReader(str(output), strict=True).pages) == 1
     assert output.stat().st_size > 100
+
+
+def test_f11_refuses_vector_art_mixed_with_page_scans(tmp_path):
+    source, output = tmp_path / "mixed.pdf", tmp_path / "mixed-pdfa.pdf"
+    _source(source, pages=1, image_only=True, vector=True)
+    with pytest.raises(ValueError, match="vector painting"):
+        convert_accessible_pdf(source, output, kind="pdfa-2")
+    assert not output.exists()
 
 
 def test_f11_selectable_original_text_is_not_rasterized(tmp_path):
