@@ -10,7 +10,8 @@ the output is honestly \`.pptx\`, **not** an old binary \`.ppt\` file.
   one unambiguous left-aligned text column. No scanned PDFs, images,
   vector drawings, tables, rotated/transformed text, multiple columns,
   or unsupported geometry.
-- Each page is rebuilt as one editable text box. Maximum 20 lines per slide;
+- Each page is rebuilt as one editable text box with DrawingML AutoFit.
+  Maximum 20 lines and 96 Unicode codepoints per source line per slide;
   exceeding that limit fails rather than silently clipping text.
   Output uses a common 4:3 slide geometry, not the PDF's original page
   size, font metrics or exact layout. **Visual fidelity is not guaranteed.**
