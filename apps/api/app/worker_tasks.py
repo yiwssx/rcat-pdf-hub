@@ -91,7 +91,7 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
         return ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     if operation == "pdf-to-excel":
         return ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    if operation in {"pdf-to-bmp", "pdf-to-svg", "pdf-to-csv"}:
+    if operation in {"pdf-to-bmp", "pdf-to-svg", "pdf-to-csv", "pdf-to-jpg", "pdf-to-png"}:
         return ".zip", "application/zip"
     if operation in STAGED_GEOMETRY_OPERATIONS:
         return geometry_output_spec(operation)
@@ -466,6 +466,32 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F05 PDF signature changed")
             pdf_to_reflowable_epub(inputs[0], output)
+        elif job.operation in {"pdf-to-jpg", "pdf-to-png"}:
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_raster import (
+                MAX_SOURCE_BYTES as RASTER_MAX_SOURCE, pdf_to_raster_page_zip,
+            )
+            if (not settings.from_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= RASTER_MAX_SOURCE
+                    or set(params) != {"dpi"}):
+                raise ValueError("Staged F03/F04 source or parameters unauthorized")
+            try:
+                verified_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F03/F04 PDF signature invalid") from exc
+            if verified_type != "application/pdf":
+                raise ValueError("Staged F03/F04 PDF signature changed")
+            pdf_to_raster_page_zip(
+                inputs[0], output,
+                fmt="jpg" if job.operation == "pdf-to-jpg" else "png",
+                dpi=params["dpi"],
+            )
         elif job.operation == "pdf-to-ppt":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
