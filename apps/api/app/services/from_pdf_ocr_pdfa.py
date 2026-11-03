@@ -93,12 +93,16 @@ def convert_accessible_pdf(
                 raise ValueError("PDF/A-2 XMP metadata exceeds safety limits")
             xmp_xml = ElementTree.fromstring(raw_xmp)
             pdfa_namespace = "{http://www.aiim.org/pdfa/ns/id/}"
-            parts = [
-                (node.text or "").strip()
-                for node in xmp_xml.iter()
-                if node.tag == pdfa_namespace + "part"
-            ]
-            if parts != ["2"]:
+            parts = []
+            for node in xmp_xml.iter():
+                if node.tag == pdfa_namespace + "part":
+                    parts.append((node.text or "").strip())
+                # RDF descriptions commonly encode pdfaid:part="2" as
+                # a namespace-qualified attribute, not a child element.
+                for name, value in node.attrib.items():
+                    if name == pdfa_namespace + "part":
+                        parts.append(value.strip())
+            if not parts or set(parts) != {"2"}:
                 raise ValueError("PDF/A-2 XMP identification is absent or ambiguous")
     except Exception:
         if output.exists() and not output.is_symlink():
