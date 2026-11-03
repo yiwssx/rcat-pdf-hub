@@ -23,6 +23,24 @@
       "acceptance_pending": "RCAT Workspace OIDC real owner upload/download, Thai page images vs source, operator host AV, runtime security and real institutional file goldens are pending."
     },
     {
+      "tool_id": "F16",
+      "state": "IMPLEMENTED",
+      "source_commit": "c9d17d92eee9bdb66d76a12c1e6a0198935f613b",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/278",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41437263796",
+      "supported_subset": "Default-OFF owner-bound PDF to one animated GIF, one frame per page (rejects frame loss), DPI 72–150, frame duration 300–5000 ms, maximum 20 pages and 24 MiB input; generated real Poppler fixture passed Core API CI.",
+      "acceptance_pending": "Genuine RCAT PDF and Thai text/layout frame comparisons, independent security/runtime checks, live institutional Google Workspace OIDC owner-bound queue/download, AV, load and operator signoff are pending."
+    },
+    {
+      "tool_id": "F17",
+      "state": "IMPLEMENTED",
+      "source_commit": "adbcfd2fb92ba3413bdbd10b20c8b91d63ce12d6",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/280",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41438461454",
+      "supported_subset": "Default-OFF owner-bound PDF to a ZIP of one ordered BMP per PDF page, max 20 pages, 24 MiB PDF, 72–150 DPI, 128 MiB ZIP output; real Poppler 2/10-page fixtures and TIFF/GIF padded-page regression passed in Core API CI.",
+      "acceptance_pending": "Original RCAT/Thai PDF source-vs-BMP pixel fidelity, zip download and malware scan in deployed runtime, institutional Google Workspace OIDC ownership, host isolation/AV/load and operator signoff are pending."
+    },
+    {
       "tool_id": "M33",
       "state": "IMPLEMENTED",
       "source_commit": "6e067f68656aed38749acca401f697d6ba5e171d",
