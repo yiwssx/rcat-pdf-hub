@@ -23,11 +23,11 @@ class PilotAcceptanceTest(unittest.TestCase):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 19)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 23)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 70)
-        self.assertEqual(len(report["uncertified"]), 70)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F06", "F07", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 66)
+        self.assertEqual(len(report["uncertified"]), 66)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -96,6 +96,25 @@ class PilotAcceptanceTest(unittest.TestCase):
             )
             self.assertTrue(item["supported_subset"])
             self.assertTrue(item["acceptance_pending"])
+
+        # Independently credited merged tools, never production acceptance.
+        for tool_id, source_sha, pr, run in (
+            ("F03", "118f8c75d4b21f1956c82dc7ec7a65c2b09e5da1", 291, 41596390837),
+            ("F04", "118f8c75d4b21f1956c82dc7ec7a65c2b09e5da1", 291, 41596390837),
+            ("F05", "d75d367b939fab1c4cc863f2f4184f27526fc470", 289, 41595483198),
+            ("F08", "53dae762937fe3571c67bcefed9ce507d3b61781", 290, 41598057731),
+        ):
+            evidence = next(x for x in self.evidence["tool_evidence"]
+                            if x["tool_id"] == tool_id)
+            self.assertEqual(evidence["state"], "IMPLEMENTED")
+            self.assertEqual(evidence["source_commit"], source_sha)
+            self.assertEqual(evidence["pr"], f"https://github.com/yiwssx/rcat-pdf-hub/pull/{pr}")
+            self.assertEqual(
+                evidence["ci_run"],
+                f"https://github.com/yiwssx/rcat-pdf-hub/actions/runs/{run}",
+            )
+            self.assertIn("RCAT", evidence["acceptance_pending"])
+            self.assertTrue(evidence["supported_subset"])
 
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
