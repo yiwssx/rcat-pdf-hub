@@ -55,6 +55,7 @@ def test_real_pdf_to_editable_powerpoint_slides(tmp_path, count):
         for n in range(1, count+1):
             slide = ET.fromstring(archive.read(f"ppt/slides/slide{n}.xml"))
             values = [x.text for x in slide.findall(".//{%s}t" % A)]
+            assert slide.findall(".//{%s}normAutofit" % A)
             assert values == [f"Source page {n}", "Editable slide text"]
 
 
@@ -104,6 +105,17 @@ def test_reject_more_than_twenty_lines_per_slide(tmp_path):
     canvas.showPage()
     canvas.save()
     with pytest.raises(ValueError):
+        pdf_to_editable_text_pptx(source, output)
+    assert not output.exists()
+
+
+def test_reject_overlong_text_that_could_clip_on_slide(tmp_path):
+    source, output = tmp_path / "wide.pdf", tmp_path / "wide.pptx"
+    canvas = Canvas(str(source), pagesize=(400, 300))
+    canvas.drawString(40, 230, "W" * 130)
+    canvas.showPage()
+    canvas.save()
+    with pytest.raises(ValueError, match="overflow"):
         pdf_to_editable_text_pptx(source, output)
     assert not output.exists()
 
