@@ -11,6 +11,8 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.lib.utils import ImageReader
+from PIL import Image, ImageDraw
 
 from app.config import get_settings
 from app.queue import queue_class_for_operation
@@ -20,10 +22,16 @@ from app.services.from_pdf_ocr_pdfa import convert_accessible_pdf
 from app.worker_tasks import _output_spec_for_job
 
 
-def _source(path: Path, pages: int = 2) -> None:
+def _source(path: Path, pages: int = 2, *, image_only: bool = False) -> None:
     c = Canvas(str(path), pagesize=(240, 180))
     for n in range(pages):
-        c.drawString(25, 105, f"Original PDF source page {n + 1}")
+        if image_only:
+            image = Image.new("RGB", (600, 240), "white")
+            canvas = ImageDraw.Draw(image)
+            canvas.text((50, 80), f"SCAN PAGE {n+1}", fill="black")
+            c.drawImage(ImageReader(image), 15, 30, width=210, height=115)
+        else:
+            c.drawString(25, 105, f"Original PDF source page {n + 1}")
         c.showPage()
     c.save()
 
@@ -32,25 +40,31 @@ def test_f01_real_pdf_keeps_page_count(monkeypatch, tmp_path):
     source, output = tmp_path / "source.pdf", tmp_path / "ocr.pdf"
     _source(source, pages=2)
     captured = []
-    def engine(pdf, dest, languages, deskew, rotate_pages):
-        captured.append((languages, deskew, rotate_pages))
-        shutil.copyfile(pdf, dest)
-    monkeypatch.setattr(pdf_tools, "ocr", engine)
+    def engine(args, timeout=1800):
+        captured.append((args, timeout))
+        shutil.copyfile(args[-2], args[-1])
+    monkeypatch.setattr(pdf_tools, "_run", engine)
     before = source.read_bytes()
     convert_accessible_pdf(
         source, output, kind="ocr", languages="tha+eng",
         deskew=True, rotate_pages=False,
     )
-    assert captured == [("tha+eng", True, False)]
+    assert len(captured) == 1
+    assert captured[0][0][:5] == [
+        "ocrmypdf", "--skip-text", "--output-type", "pdf", "--optimize",
+    ]
+    assert "--deskew" in captured[0][0]
+    assert "--rotate-pages" not in captured[0][0]
+    assert captured[0][1] == 600
     assert len(PdfReader(str(output)).pages) == 2
     assert source.read_bytes() == before
 
 
 def test_f11_refuses_pdfa_without_xmp_and_cleans_output(monkeypatch, tmp_path):
     source, output = tmp_path / "source.pdf", tmp_path / "pdfa.pdf"
-    _source(source)
-    monkeypatch.setattr(pdf_tools, "pdfa", lambda pdf, dest, languages:
-                        shutil.copyfile(pdf, dest))
+    _source(source, image_only=True)
+    monkeypatch.setattr(pdf_tools, "_run",
+                        lambda args, timeout: shutil.copyfile(args[-2], args[-1]))
     with pytest.raises(ValueError, match="PDF/A-2"):
         convert_accessible_pdf(source, output, kind="pdfa-2")
     assert not output.exists()
@@ -61,8 +75,8 @@ def test_reject_page_loss_and_never_keep_partial_output(monkeypatch, tmp_path):
     single = tmp_path / "one.pdf"
     _source(source, pages=2)
     _source(single, pages=1)
-    monkeypatch.setattr(pdf_tools, "ocr", lambda pdf, dest, **kwargs:
-                        shutil.copyfile(single, dest))
+    monkeypatch.setattr(pdf_tools, "_run",
+                        lambda args, timeout: shutil.copyfile(single, args[-1]))
     with pytest.raises(ValueError, match="page inventory"):
         convert_accessible_pdf(source, output, kind="ocr")
     assert not output.exists()
@@ -105,12 +119,29 @@ def test_reject_unrecognized_or_unsafe_parameters(tmp_path, kwargs):
                     reason="OCRmyPDF binary unavailable in host environment")
 def test_true_pdfa2_xmp_from_ocrmypdf(tmp_path):
     source, output = tmp_path / "source.pdf", tmp_path / "archival.pdf"
-    _source(source, pages=1)
+    _source(source, pages=1, image_only=True)
     convert_accessible_pdf(
         source, output, kind="pdfa-2", languages="eng",
     )
     assert len(PdfReader(str(output), strict=True).pages) == 1
     assert output.stat().st_size > 100
+
+
+def test_f11_selectable_original_text_is_not_rasterized(tmp_path):
+    source, output = tmp_path / "selectable.pdf", tmp_path / "no-force.pdf"
+    _source(source, pages=1, image_only=False)
+    with pytest.raises(ValueError, match="image-only"):
+        convert_accessible_pdf(source, output, kind="pdfa-2")
+    assert not output.exists()
+
+
+@pytest.mark.skipif(shutil.which("ocrmypdf") is None,
+                    reason="OCRmyPDF runtime unavailable")
+def test_real_f01_ocr_path_avoids_unsafe_pdfa_ghostscript(tmp_path):
+    source, output = tmp_path / "source.pdf", tmp_path / "searchable.pdf"
+    _source(source, pages=1, image_only=True)
+    convert_accessible_pdf(source, output, kind="ocr", languages="eng")
+    assert len(PdfReader(str(output), strict=True).pages) == 1
 
 
 def _record(*, owner="member-a", mime="application/pdf", name="source.pdf",
