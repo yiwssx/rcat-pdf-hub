@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     from_pdf_tools_enabled: bool = False
     # T90-4 M33: bounded AcroForm text fill, default disabled.
     pdf_filler_tools_enabled: bool = False
+    manage_page_tools_enabled: bool = False
     # Private/internal T90 pilot: exact authenticated principal names only.
     # Defaults OFF to preserve existing installations. When enabled with no
     # allowlist, all T90-2 submissions are denied (fail closed).
