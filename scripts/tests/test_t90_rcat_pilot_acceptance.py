@@ -19,15 +19,15 @@ class PilotAcceptanceTest(unittest.TestCase):
         self.registry = json.loads((ROOT / "contracts/pdf-tools.v1.json").read_text())
         self.evidence = json.loads((ROOT / "contracts/t90-rcat-pilot-acceptance.v1.json").read_text())
 
-    def test_actual_registry_credits_six_implemented_deferred_and_T21_staged(self):
+    def test_actual_registry_credits_individual_engines_and_T21_staged(self):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 10)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 12)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 79)
-        self.assertEqual(len(report["uncertified"]), 79)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F09", "M33"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 77)
+        self.assertEqual(len(report["uncertified"]), 77)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F09", "F16", "F17", "M33"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -59,6 +59,22 @@ class PilotAcceptanceTest(unittest.TestCase):
                 item["pr"],
                 f"https://github.com/yiwssx/rcat-pdf-hub/pull/{pr}",
             )
+        for item_id, commit, pr, run in (
+            ("F16", "c9d17d92eee9bdb66d76a12c1e6a0198935f613b", 278, 41437263796),
+            ("F17", "adbcfd2fb92ba3413bdbd10b20c8b91d63ce12d6", 280, 41438461454),
+        ):
+            item = next(record for record in self.evidence["tool_evidence"]
+                        if record["tool_id"] == item_id)
+            self.assertEqual(item["state"], "IMPLEMENTED")
+            self.assertEqual(item["source_commit"], commit)
+            self.assertEqual(
+                item["pr"], f"https://github.com/yiwssx/rcat-pdf-hub/pull/{pr}",
+            )
+            self.assertEqual(
+                item["ci_run"],
+                f"https://github.com/yiwssx/rcat-pdf-hub/actions/runs/{run}",
+            )
+            self.assertIn("RCAT", item["acceptance_pending"])
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
         self.assertTrue(publisher["pages_or_items_checked"])
