@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 
 from pypdf import PdfReader
+from pypdf.generic import ContentStream
 
 from app.services import pdf_tools
 
@@ -35,6 +36,45 @@ def _pages(path: Path, *, max_bytes: int) -> int:
     return len(document.pages)
 
 
+
+
+def _require_scanned_image_only(reader: PdfReader) -> None:
+    """Do not force-rasterize original text, annotations, forms or vector art."""
+    root = reader.trailer["/Root"]
+    if root.get("/AcroForm"):
+        raise ValueError("PDF/A scanned-only mode refuses interactive PDF forms")
+    forbidden_paint = {
+        b"S", b"s", b"f", b"F", b"f*", b"B", b"B*", b"b", b"b*",
+        b"sh", b"BI", b"ID", b"EI",
+    }
+    text_show = {b"Tj", b"TJ", b"'", b'"'}
+    for page in reader.pages:
+        if int(page.get("/Rotate", 0)) % 360 or page.get("/Annots"):
+            raise ValueError("PDF/A scanned-only mode refuses rotation/annotations")
+        if (page.extract_text() or "").strip():
+            raise ValueError("PDF/A scanned-only mode refuses selectable PDF text")
+        resources = page.get("/Resources")
+        objects = resources.get("/XObject") if resources else None
+        if objects is None:
+            raise ValueError("PDF/A requires image-only PDF pages")
+        images = objects.get_object()
+        image_names = {
+            str(name) for name, obj in images.items()
+            if obj.get_object().get("/Subtype") == "/Image"
+        }
+        if not image_names or len(image_names) != len(images):
+            raise ValueError("PDF/A requires image-only PDF XObjects")
+        referenced_images = set()
+        for args, operation in ContentStream(page.get_contents(), reader).operations:
+            if operation in forbidden_paint or operation in text_show:
+                raise ValueError("PDF/A scanned-only mode refuses text/vector painting")
+            if operation == b"Do":
+                if not args or str(args[0]) not in image_names:
+                    raise ValueError("PDF/A scanned-only mode refuses nonimage calls")
+                referenced_images.add(str(args[0]))
+        if not referenced_images:
+            raise ValueError("PDF/A source page must contain a drawn scan image")
+
 def convert_accessible_pdf(
     source: Path, output: Path, *,
     kind: str, languages: str = "tha+eng",
@@ -52,11 +92,7 @@ def convert_accessible_pdf(
         # OCRmyPDF --skip-text PDF/A conversions. Do NOT discard existing
         # selectable text with --force-ocr; accept image-only sources instead.
         reader = PdfReader(str(source), strict=True)
-        if any((page.extract_text() or "").strip() for page in reader.pages):
-            raise ValueError(
-                "PDF/A on this runtime requires image-only PDF pages; "
-                "existing selectable text must be preserved by a newer verified backend"
-            )
+        _require_scanned_image_only(reader)
     try:
         if kind == "ocr":
             # Explicit --output-type pdf bypasses the Ghostscript PDF/A
