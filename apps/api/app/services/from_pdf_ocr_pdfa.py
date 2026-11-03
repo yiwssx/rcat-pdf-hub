@@ -47,16 +47,35 @@ def convert_accessible_pdf(
     if source.resolve() == output.resolve() or output.exists() or output.is_symlink():
         raise ValueError("OCR destination must not replace another file")
     expected_pages = _pages(source, max_bytes=MAX_SOURCE_BYTES)
+    if kind == "pdfa-2":
+        # The pinned Debian Bookworm Ghostscript 10.0.0 corrupts or refuses
+        # OCRmyPDF --skip-text PDF/A conversions. Do NOT discard existing
+        # selectable text with --force-ocr; accept image-only sources instead.
+        reader = PdfReader(str(source), strict=True)
+        if any((page.extract_text() or "").strip() for page in reader.pages):
+            raise ValueError(
+                "PDF/A on this runtime requires image-only PDF pages; "
+                "existing selectable text must be preserved by a newer verified backend"
+            )
     try:
         if kind == "ocr":
-            pdf_tools.ocr(
-                source, output, languages=languages,
-                deskew=deskew, rotate_pages=rotate_pages,
-            )
+            # Explicit --output-type pdf bypasses the Ghostscript PDF/A
+            # regression without changing the legacy /api/v1/pdf/ocr flow.
+            args = ["ocrmypdf", "--skip-text", "--output-type", "pdf",
+                    "--optimize", "1", "-l", languages]
+            if deskew:
+                args.append("--deskew")
+            if rotate_pages:
+                args.append("--rotate-pages")
+            args.extend([str(source), str(output)])
         else:
             if deskew or rotate_pages:
                 raise ValueError("PDF/A accepts only explicit language setting")
-            pdf_tools.pdfa(source, output, languages=languages)
+            # Force mode only for PDFs where we just proved no selectable
+            # text can be destroyed. Produces real PDF/A-2 identified XMP.
+            args = ["ocrmypdf", "--force-ocr", "--output-type", "pdfa-2",
+                    "-l", languages, str(source), str(output)]
+        pdf_tools._run(args, timeout=600)
         actual_pages = _pages(output, max_bytes=MAX_OUTPUT_BYTES)
         if actual_pages != expected_pages:
             raise ValueError("OCR/PDF-A changed source PDF page inventory")
