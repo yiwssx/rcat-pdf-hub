@@ -85,6 +85,8 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
         return ".odt", "application/vnd.oasis.opendocument.text"
     if operation in {"pdf-to-word", "pdf-to-docx"}:
         return ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    if operation == "pdf-to-excel":
+        return ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     if operation in {"pdf-to-bmp", "pdf-to-svg", "pdf-to-csv"}:
         return ".zip", "application/zip"
     if operation in STAGED_GEOMETRY_OPERATIONS:
@@ -418,6 +420,27 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F02/F06 PDF signature changed")
             pdf_to_editable_text_docx(inputs[0], output)
+        elif job.operation == "pdf-to-excel":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_csv import MAX_SOURCE_BYTES as XLSX_MAX_SOURCE
+            from app.services.from_pdf_xlsx import pdf_grid_to_editable_xlsx
+            if (not settings.from_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= XLSX_MAX_SOURCE
+                    or params):
+                raise ValueError("Staged F07 source or parameters unauthorized")
+            try:
+                verified_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F07 PDF signature invalid") from exc
+            if verified_type != "application/pdf":
+                raise ValueError("Staged F07 PDF signature changed")
+            pdf_grid_to_editable_xlsx(inputs[0], output)
         elif job.operation == "fill-pdf-form":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
