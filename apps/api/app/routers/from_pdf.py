@@ -6,6 +6,8 @@ All queue jobs use the existing owner, quota, audit and retention contracts.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -382,3 +384,63 @@ def pdf_to_png(
     db: Session = Depends(get_db),
 ):
     return _submit_pdf_raster(req, principal, db, "pdf-to-png")
+
+
+class PdfOcrRequest(BaseModel):
+    """F01: searchable PDF OCR; original pages retained."""
+    model_config = ConfigDict(extra="forbid")
+    file_id: str = Field(min_length=1, max_length=36)
+    languages: Literal["tha", "eng", "tha+eng", "eng+tha"] = "tha+eng"
+    deskew: bool = False
+    rotate_pages: bool = False
+
+
+class PdfArchiveRequest(BaseModel):
+    """F11: PDF/A-2 archive conversion, independent veraPDF QA pending."""
+    model_config = ConfigDict(extra="forbid")
+    file_id: str = Field(min_length=1, max_length=36)
+    languages: Literal["tha", "eng", "tha+eng", "eng+tha"] = "tha+eng"
+
+
+def _submit_accessible_pdf(file_id: str, principal: Principal,
+                           db: Session, operation: str, params: dict) -> JobOut:
+    from app.services.from_pdf_ocr_pdfa import MAX_SOURCE_BYTES
+    if not settings.from_pdf_tools_enabled:
+        raise HTTPException(status_code=404, detail="T90-3 conversion is disabled")
+    source = db.get(FileRecord, file_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="PDF not found")
+    if source.source_system != principal.name:
+        raise HTTPException(status_code=403, detail="PDF belongs to another owner")
+    if _is_expired(source):
+        raise HTTPException(status_code=410, detail="PDF has expired")
+    if (source.content_type != "application/pdf"
+            or not source.original_name.lower().endswith(".pdf")):
+        raise HTTPException(status_code=415, detail="Verified PDF required")
+    if not 24 <= source.size <= MAX_SOURCE_BYTES:
+        raise HTTPException(status_code=413, detail="PDF exceeds OCR/PDF-A source budget")
+    return _create_job(db, principal, operation, [file_id], params)
+
+
+@router.post("/ocr", status_code=202, response_model=JobOut)
+def pdf_to_ocr(
+    req: PdfOcrRequest,
+    principal: Principal = Depends(require_scope("pdf:ocr")),
+    db: Session = Depends(get_db),
+):
+    return _submit_accessible_pdf(req.file_id, principal, db, "pdf-to-ocr", {
+        "languages": req.languages,
+        "deskew": req.deskew,
+        "rotate_pages": req.rotate_pages,
+    })
+
+
+@router.post("/pdfa", status_code=202, response_model=JobOut)
+def pdf_to_pdfa(
+    req: PdfArchiveRequest,
+    principal: Principal = Depends(require_scope("pdf:pdfa")),
+    db: Session = Depends(get_db),
+):
+    return _submit_accessible_pdf(req.file_id, principal, db, "pdf-to-pdfa", {
+        "languages": req.languages,
+    })
