@@ -94,6 +94,9 @@ if settings.from_pdf_tools_enabled:
 if settings.pdf_filler_tools_enabled:
     from app.routers import pdf_filler
     app.include_router(pdf_filler.router)
+if settings.manage_page_tools_enabled:
+    from app.routers import manage_page_tools
+    app.include_router(manage_page_tools.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
