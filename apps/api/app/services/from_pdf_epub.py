@@ -6,7 +6,7 @@ not screenshot pages. Complex layout, images, scanned pages fail closed.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import hashlib
+from uuid import uuid4
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from xml.etree import ElementTree as ET
@@ -60,7 +60,7 @@ def _navigation(count: int) -> bytes:
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
-def _package(count: int, input_sha: str) -> bytes:
+def _package(count: int) -> bytes:
     root = ET.Element(f"{{{OPF}}}package", {
         "version": "3.0", "unique-identifier": "book-id",
     })
@@ -69,7 +69,7 @@ def _package(count: int, input_sha: str) -> bytes:
     })
     ET.SubElement(metadata, f"{{{DC}}}identifier", {
         "id": "book-id",
-    }).text = f"urn:sha256:{input_sha}"
+    }).text = f"urn:uuid:{uuid4()}"
     ET.SubElement(metadata, f"{{{DC}}}title").text = "Converted PDF text"
     ET.SubElement(metadata, f"{{{DC}}}language").text = "und"
     ET.SubElement(metadata, f"{{{OPF}}}meta", {
@@ -136,7 +136,7 @@ def pdf_to_reflowable_epub(source: Path, output: Path) -> None:
                              compress_type=ZIP_STORED)
             archive.writestr("META-INF/container.xml", _container_xml())
             archive.writestr("EPUB/package.opf",
-                             _package(len(pages), hashlib.sha256(source.read_bytes()).hexdigest()))
+                             _package(len(pages)))
             archive.writestr("EPUB/nav.xhtml", _navigation(len(pages)))
             for i, lines in enumerate(pages, 1):
                 archive.writestr(f"EPUB/page-{i:04d}.xhtml",
