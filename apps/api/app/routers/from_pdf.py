@@ -233,3 +233,47 @@ def pdf_to_odt(
     if not 24 <= source.size <= ODT_MAX_SOURCE:
         raise HTTPException(status_code=413, detail="Source exceeds editable text-only ODT budget")
     return _create_job(db, principal, "pdf-to-odt", [req.file_id], {})
+
+
+class PdfToDocxRequest(BaseModel):
+    """F02/F06: editable Word DOCX, never mislabelled legacy binary DOC."""
+    model_config = ConfigDict(extra="forbid")
+    file_id: str = Field(min_length=1, max_length=36)
+
+
+def _submit_text_docx(req: PdfToDocxRequest, principal: Principal,
+                      db: Session, operation: str) -> JobOut:
+    from app.services.from_pdf_rtf import MAX_SOURCE_BYTES as DOCX_MAX_SOURCE
+    if not settings.from_pdf_tools_enabled:
+        raise HTTPException(status_code=404, detail="T90-3 conversion is disabled")
+    source = db.get(FileRecord, req.file_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="PDF not found")
+    if source.source_system != principal.name:
+        raise HTTPException(status_code=403, detail="PDF belongs to another owner")
+    if _is_expired(source):
+        raise HTTPException(status_code=410, detail="PDF has expired")
+    if (source.content_type != "application/pdf"
+            or not source.original_name.lower().endswith(".pdf")):
+        raise HTTPException(status_code=415, detail="Verified PDF required")
+    if not 24 <= source.size <= DOCX_MAX_SOURCE:
+        raise HTTPException(status_code=413, detail="PDF exceeds text-only DOCX budget")
+    return _create_job(db, principal, operation, [req.file_id], {})
+
+
+@router.post("/docx", status_code=202, response_model=JobOut)
+def pdf_to_docx(
+    req: PdfToDocxRequest,
+    principal: Principal = Depends(require_scope("pdf:pdf-to-image")),
+    db: Session = Depends(get_db),
+):
+    return _submit_text_docx(req, principal, db, "pdf-to-docx")
+
+
+@router.post("/word", status_code=202, response_model=JobOut)
+def pdf_to_word(
+    req: PdfToDocxRequest,
+    principal: Principal = Depends(require_scope("pdf:pdf-to-image")),
+    db: Session = Depends(get_db),
+):
+    return _submit_text_docx(req, principal, db, "pdf-to-word")
