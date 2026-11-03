@@ -41,6 +41,69 @@
       "acceptance_pending": "Original RCAT/Thai PDF source-vs-BMP pixel fidelity, zip download and malware scan in deployed runtime, institutional Google Workspace OIDC ownership, host isolation/AV/load and operator signoff are pending."
     },
     {
+      "tool_id": "F02",
+      "state": "IMPLEMENTED",
+      "source_commit": "a05a674ac0b71a707f98e277260f3c7a1ed2a732",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/286",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41593120159",
+      "supported_subset": "PDF to Word route returns genuine editable modern DOCX (never binary .doc), restricted to selectable single-column text up to 12 pages, 16 MiB PDF and 150k characters; no screenshot documents.",
+      "acceptance_pending": "Actual RCAT-owned Thai typography/layout, nontrivial page structures and target-host DOCX reader fidelity, live Google Workspace OIDC owner upload/download, malware scan, isolation, load and operator review are deferred."
+    },
+    {
+      "tool_id": "F06",
+      "state": "IMPLEMENTED",
+      "source_commit": "a05a674ac0b71a707f98e277260f3c7a1ed2a732",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/286",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41593120159",
+      "supported_subset": "Dedicated PDF-to-DOCX route shares F02 genuine editable WordprocessingML paragraph/page-break converter, rejecting scanned, table, vector/graphic, encrypted and multicolumn PDFs; output .docx.",
+      "acceptance_pending": "Real Thai DOCX glyph/layout/spacing comparison, irregular institutional PDF corpus, target-host Word/LibreOffice preview and owner-scoped RCAT Workspace OIDC/AV/load/rollback acceptance are pending."
+    },
+    {
+      "tool_id": "F07",
+      "state": "IMPLEMENTED",
+      "source_commit": "031643c0b9d5f503d6067da8044831eae1cbc65c",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/287",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41593763974",
+      "supported_subset": "Strict fully ruled rectangular PDF grid tables only, reused F13 parser to produce actual editable XLSX inline-string worksheet per page with stable rows/cells; no inferred columns, numbers or formulas.",
+      "acceptance_pending": "Real RCAT Thai tables and merged-cell/numeric semantics, malformed source on actual runtime, source-vs-output checks and institutional Workspace OIDC user ownership, AV, isolation, load and operator approval pending."
+    },
+    {
+      "tool_id": "F10",
+      "state": "IMPLEMENTED",
+      "source_commit": "e761c92e16efb8f11286efc8844d786297bd3b2d",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/285",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41592473851",
+      "supported_subset": "A true editable OpenDocument Text package with XML paragraphs, ODF MIME/manifest and real page-break style from strictly selectable single-column PDF text; not raster pages or complex layout reconstruction.",
+      "acceptance_pending": "RCAT-authored Thai font/line/page layout comparison, independently reopened ODT on target host, institutionally authorized OIDC file lifecycle, sandbox/AV/load and operator signoff remain deferred."
+    },
+    {
+      "tool_id": "F12",
+      "state": "IMPLEMENTED",
+      "source_commit": "d2d7009b5768d631f0522847b873ff5dceecec7b",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/282",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41589680309",
+      "supported_subset": "Bounded Poppler per-page PDF to actual SVG vector-like XML images in ordered ZIP, max 12 pages and 24 MiB PDF, with defusedxml validation and no external asset loads; not promised editable text.",
+      "acceptance_pending": "Institution-owned Thai font/glyph SVG source comparison, external-asset and malformed-PDF target-host sandbox/AV proof, real OIDC owner-scoped download, performance and operator activation remain pending."
+    },
+    {
+      "tool_id": "F13",
+      "state": "IMPLEMENTED",
+      "source_commit": "26818d1142c4beb53bc12be37b8755b6a938dd50",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/283",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41590380462",
+      "supported_subset": "Explicit full-grid selectable PDF tables only, no guessed whitespace columns, one BOM UTF-8 CSV per source page inside ZIP; rejects formula-like spreadsheet injection, ambiguous fragments and incomplete grids.",
+      "acceptance_pending": "True RCAT Thai/merged/irregular grid table source-output comparisons, institutional Google Workspace OIDC download, target-host validation/security and operator reviewed usability/rollback remain pending."
+    },
+    {
+      "tool_id": "F14",
+      "state": "IMPLEMENTED",
+      "source_commit": "e60ae83359ea1d83fc4478d5513914899b956039",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/284",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41591622801",
+      "supported_subset": "Single-column selectable text-only PDF pages to genuinely editable RTF Unicode paragraphs and page breaks, rejects images, graphics, tables, rotated/multicolumn and encrypted PDFs; no complex fidelity claim.",
+      "acceptance_pending": "Real institutional Thai Unicode/ligatures and RTF rendering, Word/LibreOffice reader proof, actual RCAT OIDC owner upload/download, host AV/isolation/load and operator release signoff remain pending."
+    },
+    {
       "tool_id": "M33",
       "state": "IMPLEMENTED",
       "source_commit": "6e067f68656aed38749acca401f697d6ba5e171d",
