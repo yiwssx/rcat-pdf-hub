@@ -74,6 +74,9 @@ app.include_router(internal.router)
 app.include_router(files.router)
 app.include_router(jobs.router)
 app.include_router(pdf.router)
+if settings.split_zip_tools_enabled and settings.multi_output_artifacts_enabled:
+    from app.routers import pdf_split_zip
+    app.include_router(pdf_split_zip.router)
 # New T90-1.4 routes are absent from OpenAPI and return 404 in default config.
 # Independent staging activation requires explicit operator approval.
 if settings.document_data_tools_enabled:
