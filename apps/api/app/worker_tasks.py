@@ -75,6 +75,8 @@ def _output_spec(operation: str) -> tuple[str, str]:
 
 def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
+    if operation == "split-to-zip":
+        return ".zip", "application/zip"
     if operation == "pdf-to-tiff":
         return ".tiff", "image/tiff"
     if operation == "pdf-to-gif":
@@ -543,6 +545,32 @@ def process_job(job_id: str) -> str:
                 x=params["x"], y=params["y"],
                 font_size=params["font_size"], text=params["text"],
             )
+        elif job.operation == "split-to-zip":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_split_zip import (
+                MAX_SOURCE_BYTES as SPLIT_MAX_SOURCE, make_split_pdf_zip,
+            )
+            if (not settings.split_zip_tools_enabled
+                    or not settings.multi_output_artifacts_enabled
+                    or len(files) != 1 or files[0] is None
+                    or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= SPLIT_MAX_SOURCE
+                    or not isinstance(params, dict)
+                    or set(params) != {"pages"}
+                    or not isinstance(params["pages"], str)):
+                raise ValueError("M07 split ZIP source/parameters unauthorized")
+            try:
+                verified = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("M07 split ZIP source signature invalid") from exc
+            if verified != "application/pdf":
+                raise ValueError("M07 split ZIP PDF signature changed")
+            make_split_pdf_zip(inputs[0], output, pages=params["pages"])
         elif job.operation in {"delete-pdf-pages", "reorder-pdf-pages"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
@@ -648,6 +676,18 @@ def process_job(job_id: str) -> str:
             write_journal.fenced_progress(db, job, token, 80)
         else:
             _set_job(db, job, progress=80)
+        if job.operation == "split-to-zip":
+            from app.services.pdf_split_zip import (
+                MAX_PARTS_BYTES, selected_page_numbers, stage_split_pdf_parts,
+            )
+            from pypdf import PdfReader
+            selection = selected_page_numbers(
+                params["pages"], len(PdfReader(str(inputs[0]), strict=True).pages),
+            )
+            staging = TemporaryDirectory(prefix="pdfhub-m07-parts-", dir=output.parent)
+            staged_pages = stage_split_pdf_parts(
+                output, Path(staging.name), pages=selection, max_bytes=MAX_PARTS_BYTES,
+            )
         if job.operation == "pdf-to-images" and settings.multi_output_artifacts_enabled:
             # Extract only self-generated, verified page images. Keep the
             # original ZIP as the backward-compatible output_file_id.
@@ -717,7 +757,7 @@ def process_job(job_id: str) -> str:
             )
             write_journal.reserve_writes(
                 db, job, token,
-                [(reserved_names[0], "bundle" if job.operation == "pdf-to-images" else "result")]
+                [(reserved_names[0], "bundle" if job.operation in {"pdf-to-images", "split-to-zip"} else "result")]
                 + [(name, "part") for name in reserved_names[1:]],
             )
         primary_name = f"{job.id}-{token}{suffix}" if token else f"{job.id}{suffix}"
@@ -745,7 +785,7 @@ def process_job(job_id: str) -> str:
             journal_files[stored_name] = record.id
         db.add(JobOutputArtifact(
             job_id=job.id, file_id=record.id,
-            role="bundle" if job.operation == "pdf-to-images" else "result",
+            role="bundle" if job.operation in {"pdf-to-images", "split-to-zip"} else "result",
             ordinal=None,
         ))
         for page in staged_pages:
