@@ -31,6 +31,7 @@ type Props = {
   settings: ToolWorkspaceSettings;
   onSettingChange: ToolSettingSetter;
   onRun: (operation: string) => void;
+  onExtract: (pages: string, format: "pdf" | "zip") => void;
   onSignedLink: () => void;
   onCopySignedLink: () => void;
   onArchive: () => void;
@@ -199,10 +200,19 @@ export function ToolPanel(props: Props) {
           <button type="button" className="v3SecondaryAction" onClick={resetPages} disabled={busy || pagesLoading || !totalPages || totalPages > 1000}>คืนค่าหน้าทั้งหมด</button>
           <button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || !!pagesError || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</button>
           <button className="v3SecondaryAction" onClick={() => props.onOrganize(selectedPages)} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1}>สร้าง PDF เฉพาะหน้าที่เลือก {selectedPages.length} หน้า (ไฟล์เดียว)</button>
+          {process.env.NEXT_PUBLIC_PDFHUB_M16_EXTRACT_ENABLED === "true" && <>
+            <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(selectedPages.map((page) => String(page.page)).join(","), "pdf")} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1 || selectedPages.length > 80}>M16 ดึงหน้าที่เลือกเป็น PDF ({selectedPages.length} หน้า)</button>
+            <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(selectedPages.map((page) => String(page.page)).join(","), "zip")} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1 || selectedPages.length > 80}>M16 ดึงหน้าที่เลือกเป็น PDF แยกไฟล์ (.zip)</button>
+          </>}
+
           <details className="v3AdvancedDetails"><summary>เลือกหน้าด้วยช่วงตัวเลข</summary>
             <label className="v3Field">หน้าที่ต้องการ<input value={props.settings.splitPages} onChange={(e) => props.onSettingChange("splitPages", e.target.value)} placeholder="1-3,5 หรือ 1-z"/></label>
             {splitError && <div className="v3FieldNote" role="alert">{splitError}</div>}
             <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf || !!splitError}>สร้าง PDF จากช่วงหน้าที่ระบุ (ไฟล์เดียว)</button>
+            {process.env.NEXT_PUBLIC_PDFHUB_M16_EXTRACT_ENABLED === "true" && <div className="v3FieldRow">
+              <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(props.settings.splitPages, "pdf")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>M16 ดึงช่วงหน้าเป็น PDF</button>
+              <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(props.settings.splitPages, "zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>M16 ดึงช่วงหน้าเป็น ZIP</button>
+            </div>}
             {process.env.NEXT_PUBLIC_PDFHUB_M07_ZIP_ENABLED === "true" && <>
               <p className="v3FieldNote">ทดลองแยกเป็น PDF ทีละหน้า (สูงสุด 80 ไฟล์) และดาวน์โหลด ZIP หรือไฟล์ย่อยผ่านหน้าผลลัพธ์</p>
               <button type="button" className="v3SecondaryAction" onClick={() => props.onRun("split-to-zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>แยกเป็น PDF หลายไฟล์ (.zip)</button>
