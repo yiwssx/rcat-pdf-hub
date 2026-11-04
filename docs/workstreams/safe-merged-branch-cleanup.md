@@ -17,7 +17,7 @@ python3 scripts/prune_merged_branches.py --execute --yes
 python3 scripts/prune_merged_branches.py --execute --yes --min-age-days 7
 ```
 
-The tool rechecks remote SHA, merged PR, and open PRs immediately before each
+The tool rechecks remote SHA, the last immutable reviewed PR commit, merged PR, and open PRs immediately before each
 DELETE. It cannot prove deployment provenance or the absence of references in
 external automation; review its printed list before using --execute. No workflow
 or scheduled job runs this script automatically.
