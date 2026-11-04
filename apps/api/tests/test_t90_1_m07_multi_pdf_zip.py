@@ -140,7 +140,7 @@ def _record(*, owner="school-a", mime="application/pdf", name="input.pdf",
             size=2000, expired=False):
     return SimpleNamespace(
         source_system=owner, content_type=mime, original_name=name, size=size,
-        expires_at=datetime.now(timezone) + timedelta(days=-1 if expired else 1),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=-1 if expired else 1),
     )
 
 
