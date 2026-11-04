@@ -97,6 +97,9 @@ if settings.pdf_filler_tools_enabled:
 if settings.manage_page_tools_enabled:
     from app.routers import manage_page_tools
     app.include_router(manage_page_tools.router)
+if settings.pdf_text_overlay_tools_enabled:
+    from app.routers import pdf_text_overlay
+    app.include_router(pdf_text_overlay.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 

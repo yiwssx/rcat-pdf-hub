@@ -56,6 +56,8 @@ heavy_queue = Queue(
 def queue_class_for_operation(operation: str) -> QueueClass:
     if settings.pdf_filler_tools_enabled and operation == "fill-pdf-form":
         return "pdf"
+    if settings.pdf_text_overlay_tools_enabled and operation == "add-pdf-text":
+        return "pdf"
     if settings.manage_page_tools_enabled and operation in {"delete-pdf-pages", "reorder-pdf-pages"}:
         return "pdf"
     if settings.from_pdf_tools_enabled and operation in {"pdf-to-tiff", "pdf-to-gif", "pdf-to-bmp", "pdf-to-svg", "pdf-to-csv", "pdf-to-rtf", "pdf-to-odt", "pdf-to-word", "pdf-to-docx", "pdf-to-excel", "pdf-to-epub", "pdf-to-jpg", "pdf-to-png", "pdf-to-ppt", "pdf-to-ocr", "pdf-to-pdfa"}:
