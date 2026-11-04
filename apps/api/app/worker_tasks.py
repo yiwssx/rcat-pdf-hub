@@ -541,6 +541,44 @@ def process_job(job_id: str) -> str:
                 operation=("delete" if job.operation == "delete-pdf-pages" else "reorder"),
                 pages=params["pages"],
             )
+        elif job.operation in {"pdf-to-ocr", "pdf-to-pdfa"}:
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_ocr_pdfa import (
+                MAX_SOURCE_BYTES as OCR_MAX_SOURCE, convert_accessible_pdf,
+            )
+            valid = (
+                settings.from_pdf_tools_enabled
+                and len(files) == 1
+                and files[0] is not None
+                and len(inputs) == 1
+                and files[0].source_system == job.requested_by
+                and not _is_expired(files[0])
+                and files[0].content_type == "application/pdf"
+                and files[0].original_name.lower().endswith(".pdf")
+                and 24 <= files[0].size <= OCR_MAX_SOURCE
+                and isinstance(params, dict)
+                and (
+                    set(params) == {"languages", "deskew", "rotate_pages"}
+                    if job.operation == "pdf-to-ocr"
+                    else set(params) == {"languages"}
+                )
+            )
+            if not valid:
+                raise ValueError("Staged F01/F11 source or parameters unauthorized")
+            try:
+                verified_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F01/F11 PDF signature invalid") from exc
+            if verified_type != "application/pdf":
+                raise ValueError("Staged F01/F11 source type changed")
+            convert_accessible_pdf(
+                inputs[0], output,
+                kind="ocr" if job.operation == "pdf-to-ocr" else "pdfa-2",
+                languages=params["languages"],
+                deskew=params.get("deskew", False),
+                rotate_pages=params.get("rotate_pages", False),
+            )
         elif job.operation == "fill-pdf-form":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired

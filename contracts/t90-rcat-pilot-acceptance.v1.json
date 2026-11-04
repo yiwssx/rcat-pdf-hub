@@ -232,6 +232,24 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41427495667",
       "supported_subset": "Experimental Microsoft Works .wps reader through isolated writerperfect wps2odt to validated nonblank ODT and bounded PDF output, separately gated.",
       "acceptance_pending": "Actual rights-cleared Works WPS generations and Thai print goldens, licensing, target-side runtime, owner auth and source/PDF comparison deferred."
+    },
+    {
+      "tool_id": "M14",
+      "state": "IMPLEMENTED",
+      "source_commit": "0c20166056978c0b07a6dc7c9932a81930ed6ee2",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/294",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41599777959",
+      "supported_subset": "Gated owner-scoped authenticated delete-pages PDF API/queue/worker. Strict original-PDF signature, complete bounded page validation, at least one surviving page, per-retained-page content stream parity; engine and tests in merged PR #294.",
+      "acceptance_pending": "Actual RCAT Workspace OIDC owner upload/download, Thai and complex/signed PDFs, page-tree/bookmark preservation assessment, target-host AV/isolation, browser accessibility, performance, independent QA and operator rollout approval. No VERIFIED or RELEASED evidence."
+    },
+    {
+      "tool_id": "M15",
+      "state": "IMPLEMENTED",
+      "source_commit": "0c20166056978c0b07a6dc7c9932a81930ed6ee2",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/294",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41599777959",
+      "supported_subset": "Gated owner-scoped authenticated reorder-pages PDF API/queue/worker. Complete unique permutation required, no silently lost/duplicated page, source-to-output content stream parity and bounded input/output; engine and tests in merged PR #294.",
+      "acceptance_pending": "Actual RCAT Workspace OIDC owner upload/download, Thai and complex/signed PDFs, page-tree/bookmark preservation assessment, target-host AV/isolation, browser accessibility, performance, independent QA and operator rollout approval. No VERIFIED or RELEASED evidence."
     }
   ]
 }
