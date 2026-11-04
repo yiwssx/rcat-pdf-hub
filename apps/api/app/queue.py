@@ -54,6 +54,8 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.split_zip_tools_enabled and settings.multi_output_artifacts_enabled and operation == "split-to-zip":
+        return "pdf"
     if settings.pdf_filler_tools_enabled and operation == "fill-pdf-form":
         return "pdf"
     if settings.pdf_text_overlay_tools_enabled and operation == "add-pdf-text":

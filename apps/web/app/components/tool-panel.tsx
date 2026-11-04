@@ -203,6 +203,11 @@ export function ToolPanel(props: Props) {
             <label className="v3Field">หน้าที่ต้องการ<input value={props.settings.splitPages} onChange={(e) => props.onSettingChange("splitPages", e.target.value)} placeholder="1-3,5 หรือ 1-z"/></label>
             {splitError && <div className="v3FieldNote" role="alert">{splitError}</div>}
             <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf || !!splitError}>สร้าง PDF จากช่วงหน้าที่ระบุ (ไฟล์เดียว)</button>
+            {process.env.NEXT_PUBLIC_PDFHUB_M07_ZIP_ENABLED === "true" && <>
+              <p className="v3FieldNote">ทดลองแยกเป็น PDF ทีละหน้า (สูงสุด 80 ไฟล์) และดาวน์โหลด ZIP หรือไฟล์ย่อยผ่านหน้าผลลัพธ์</p>
+              <button type="button" className="v3SecondaryAction" onClick={() => props.onRun("split-to-zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>แยกเป็น PDF หลายไฟล์ (.zip)</button>
+            </>}
+
           </details>
         </>}
 

@@ -128,6 +128,13 @@ export function ToolWorkspace({
       case "split":
         await onSubmit("split", { file_id: target.id, pages: splitPages });
         return;
+      case "split-to-zip":
+        if (process.env.NEXT_PUBLIC_PDFHUB_M07_ZIP_ENABLED !== "true" || !targetIsPdf) {
+          onMessage("M07 ZIP ยังไม่ได้เปิดใช้งาน");
+          return;
+        }
+        await onSubmit("split-to-zip", { file_id: target.id, pages: splitPages });
+        return;
       case "rotate":
         await onSubmit("rotate", {
           file_id: target.id,
