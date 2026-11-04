@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     pdf_to_image_max_pages: int = Field(default=200, ge=1, le=5000)
     # Opt-in T90 storage expansion: disabled until explicit rollout and load QA.
     multi_output_artifacts_enabled: bool = False
+    # M07 ZIP export also requires multi_output_artifacts_enabled; default OFF.
+    split_zip_tools_enabled: bool = False
     # T90-1.4b staged API/worker; never enabled in production without gated acceptance.
     document_data_tools_enabled: bool = False
     # T90-1.5 M11/M28: opt-in geometry API/worker; default OFF for all deployments.
