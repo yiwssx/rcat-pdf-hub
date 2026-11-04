@@ -54,6 +54,8 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.unlock_pdf_tools_enabled and operation == "unlock-pdf":
+        return "pdf"
     if settings.extract_pages_tools_enabled and (
         operation == "extract-pages-pdf" or (
             operation == "extract-pages-zip" and settings.multi_output_artifacts_enabled

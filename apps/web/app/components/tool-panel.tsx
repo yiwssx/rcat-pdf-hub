@@ -31,6 +31,7 @@ type Props = {
   settings: ToolWorkspaceSettings;
   onSettingChange: ToolSettingSetter;
   onRun: (operation: string) => void;
+  onUnlock: (password: string) => void;
   onExtract: (pages: string, format: "pdf" | "zip") => void;
   onSignedLink: () => void;
   onCopySignedLink: () => void;
@@ -42,6 +43,7 @@ const meta: Record<string, { title: string; subtitle: string; icon: ToolIconName
   ocr: { title: "สแกน / OCR", subtitle: "อ่านข้อความไทย + อังกฤษ", icon: "scan", tone: "rose" },
   "merge-pdf": { title: "รวมไฟล์ PDF", subtitle: "ตรวจรายการก่อนรวมเอกสาร", icon: "merge", tone: "blue" },
   "split-rotate": { title: "จัดหน้า PDF", subtitle: "เลือก แยก และหมุนหน้า", icon: "organize", tone: "violet" },
+  "unlock-pdf": { title: "ปลดล็อก PDF", subtitle: "ใช้รหัสผ่านที่ได้รับอนุญาตเท่านั้น", icon: "unlock", tone: "purple" },
   compress: { title: "ลดขนาด PDF", subtitle: "บีบอัดโดยไม่แก้ไฟล์ต้นฉบับ", icon: "compress", tone: "amber" },
   "pdf-to-images": { title: "PDF → รูปภาพ", subtitle: "ส่งออก PNG หรือ JPEG", icon: "image", tone: "red" },
   "images-to-pdf": { title: "รูปภาพ → PDF", subtitle: "รวมรูปเป็นเอกสาร PDF", icon: "imagePdf", tone: "cyan" },
@@ -59,6 +61,9 @@ function Summary({ target, note }: { target: UploadedFile; note: string }) {
 }
 
 export function ToolPanel(props: Props) {
+  // Keep PDF passwords only in this transient component, never persisted in
+  // ToolWorkspaceSettings, URL, cookies or localStorage.
+  const [unlockPassword, setUnlockPassword] = useState("");
   const [pageItems, setPageItems] = useState<Array<{ page: number; rotation: number }>>([]);
   const [pagesLoading, setPagesLoading] = useState(false);
   const [pagesError, setPagesError] = useState<string | null>(null);
@@ -160,6 +165,23 @@ export function ToolPanel(props: Props) {
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</button>
+        </>}
+
+        {tool === "unlock-pdf" && <>
+          <Summary target={target} note="ต้องมีรหัสผ่านที่ถูกต้องของเอกสาร • ระบบจะสร้างสำเนาที่ไม่เข้ารหัส"/>
+          <div className="v3InfoBox">รหัสผ่านจะถูกส่งผ่านคำขอ HTTPS เท่านั้น และระบบจะไม่บันทึกลงประวัติงาน ไม่รองรับการปลดล็อกโดยไม่มีรหัสผ่าน</div>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            if (busy || !targetIsPdf || !unlockPassword) return;
+            const supplied = unlockPassword;
+            setUnlockPassword("");
+            props.onUnlock(supplied);
+          }}>
+            <label className="v3Field">รหัสผ่านของ PDF
+              <input type="password" value={unlockPassword} autoComplete="off" spellCheck={false} maxLength={256} onChange={(event) => setUnlockPassword(event.target.value)} placeholder="ใส่รหัสผ่านที่ได้รับอนุญาต"/>
+            </label>
+            <button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || unlockPassword.length < 1 || unlockPassword.length > 256}>ปลดล็อก PDF</button>
+          </form>
         </>}
 
         {tool === "merge-pdf" && <>

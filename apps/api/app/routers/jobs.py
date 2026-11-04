@@ -60,6 +60,11 @@ def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
 
 def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
+    if job.operation == "unlock-pdf":
+        from app.config import get_settings
+        if not get_settings().unlock_pdf_tools_enabled:
+            raise HTTPException(status_code=404, detail="M08 unlock disabled")
+        required = "pdf:unlock"
     if job.operation in {"extract-pages-pdf", "extract-pages-zip"}:
         from app.config import get_settings
         flags = get_settings()
@@ -222,6 +227,9 @@ def cancel_job(
             rq_job.cancel()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Unable to cancel queue job") from exc
+    if job.operation == "unlock-pdf":
+        from app.services.pdf_unlock_handoff import erase_password
+        erase_password(job.id)
     job.status = "cancelled"
     job.progress = 100
     job.error = "Cancelled by user"
@@ -239,6 +247,10 @@ def retry_job(
     db: Session = Depends(get_db),
 ):
     source = _owned_job(db, job_id, principal)
+    # An expired/consumed one-time password is never reproducible from a job.
+    # The user must submit a new unlock request and password.
+    if source.operation == "unlock-pdf":
+        raise HTTPException(status_code=409, detail="Resubmit PDF password to unlock again")
     if source.status not in {"failed", "cancelled"}:
         raise HTTPException(status_code=409, detail="Only failed or cancelled jobs can be retried")
     _require_operation_scope(source, principal)

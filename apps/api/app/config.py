@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_HUMAN_SCOPES = (
     "files:read,files:write,jobs:read,jobs:manage,"
-    "pdf:merge,pdf:split,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,"
+    "pdf:merge,pdf:split,pdf:unlock,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,"
     "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,archive:paperless"
 )
 
@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     split_zip_tools_enabled: bool = False
     # M16 selected-page PDF/ZIP: independent approval, default OFF.
     extract_pages_tools_enabled: bool = False
+    # M08: separate, default-disabled owner-bound unlock with one-time encrypted Valkey handoff.
+    unlock_pdf_tools_enabled: bool = False
+    unlock_pdf_handoff_key: str = Field(default="", repr=False)
     # T90-1.4b staged API/worker; never enabled in production without gated acceptance.
     document_data_tools_enabled: bool = False
     # T90-1.5 M11/M28: opt-in geometry API/worker; default OFF for all deployments.
@@ -198,6 +201,16 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_enabled_integrations(self):
+        if self.unlock_pdf_tools_enabled:
+            import base64
+            import binascii
+            try:
+                raw = base64.b64decode(self.unlock_pdf_handoff_key, altchars=b"-_", validate=True)
+                if (len(raw) != 32 or base64.urlsafe_b64encode(raw).decode("ascii")
+                        != self.unlock_pdf_handoff_key):
+                    raise ValueError("M08 handoff key invalid")
+            except (ValueError, binascii.Error):
+                raise ValueError("M08 unlock requires a dedicated 32-byte base64url AEAD handoff key") from None
         # Refuse an accidentally misconfigured administrator allowlist.
         for email in self.rcat_admin_email_set:
             if not email.isascii() or not re.fullmatch(

@@ -545,6 +545,33 @@ def process_job(job_id: str) -> str:
                 x=params["x"], y=params["y"],
                 font_size=params["font_size"], text=params["text"],
             )
+        elif job.operation == "unlock-pdf":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_access_control import unlock_pdf as unlock_engine
+            from app.services.pdf_unlock_handoff import take_password
+            if (not settings.unlock_pdf_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= 16 * 1024 * 1024
+                    or not isinstance(params, dict) or params):
+                raise ValueError("M08 source/parameter authorization rejected")
+            try:
+                verified = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M08 PDF signature invalid") from None
+            if verified != "application/pdf":
+                raise ValueError("M08 source PDF signature changed")
+            # Atomic GETDEL consumes ciphertext once; only password exists in
+            # this worker call's memory, never in DB/RQ, JSON params or logs.
+            password = take_password(job.id, job.requested_by, files[0].id)
+            try:
+                unlock_engine(inputs[0], output, password=password)
+            finally:
+                del password
         elif job.operation in {"extract-pages-pdf", "extract-pages-zip"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
@@ -871,6 +898,10 @@ def process_job(job_id: str) -> str:
             raise RuntimeError("Job was cancelled before output commit")
         db.commit()
     except Exception as exc:
+        # Never surface any M08 engine/crypto/Redis exception through SQL,
+        # error responses, audit, webhook payloads or RQ tracebacks.
+        if job.operation == "unlock-pdf":
+            exc = RuntimeError("M08 unlock failed; resubmit password")
         db.rollback()
         output.unlink(missing_ok=True)
         cleanup_outcomes: dict[str, bool] = {}
@@ -931,6 +962,8 @@ def process_job(job_id: str) -> str:
             {"operation": job.operation, "error": str(exc)[-1000:]},
         )
         _notify_job(db, job)
+        if job.operation == "unlock-pdf":
+            raise RuntimeError("M08 unlock failed; resubmit password") from None
         raise
     else:
         terminal_state = "completed"
@@ -948,7 +981,9 @@ def process_job(job_id: str) -> str:
                 "storage_backend": settings.storage_backend,
             },
         )
-        _auto_archive(db, record, job.requested_by)
+        # Decrypted documents may contain confidential content. Never auto-archive.
+        if job.operation != "unlock-pdf":
+            _auto_archive(db, record, job.requested_by)
         _notify_job(db, job)
         return record.id
     finally:
