@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export type ToolIconName =
   | "scan" | "merge" | "organize" | "split" | "compress" | "image" | "imagePdf"
-  | "watermark" | "numbers" | "archive" | "office" | "stamp" | "link" | "pdfa";
+  | "watermark" | "numbers" | "archive" | "office" | "stamp" | "link" | "pdfa" | "unlock";
 
 export function ToolIcon({ name }: { name: ToolIconName }) {
   const common = {
@@ -24,6 +24,7 @@ export function ToolIcon({ name }: { name: ToolIconName }) {
       {name === "imagePdf" && <><rect {...common} x="3" y="5" width="9" height="12" rx="2"/><path {...common} d="m5 14 2.2-2.5L10 14"/><rect {...common} x="12" y="7" width="9" height="12" rx="2"/><path {...common} d="M14.5 11h4M14.5 14h4M14.5 17h2.5"/></>}
       {name === "watermark" && <path {...common} d="M12 3s5 6.1 5 10a5 5 0 0 1-10 0c0-3.9 5-10 5-10Z"/>}
       {name === "numbers" && <><rect {...common} x="5" y="3" width="14" height="18" rx="2"/><path {...common} d="M8 8h1M8 12h1M8 16h1M12 8h4M12 12h4M12 16h4"/></>}
+      {name === "unlock" && <><rect {...common} x="5" y="10" width="14" height="11" rx="2"/><path {...common} d="M8 10V7a4 4 0 0 1 8 0M12 14v3"/></>}
       {name === "archive" && <><path {...common} d="M4 8h16v12H4zM3 4h18v4H3z"/><path {...common} d="M9 12h6"/></>}
       {name === "office" && <><path {...common} d="M6 3h8l4 4v14H6z"/><path {...common} d="M14 3v5h5M9 13h6M9 16h6"/></>}
       {name === "stamp" && <><path {...common} d="M8 4h8v5c0 2.2 2 3 3 4v3H5v-3c1-1 3-1.8 3-4V4Z"/><path {...common} d="M5 19h14"/></>}
