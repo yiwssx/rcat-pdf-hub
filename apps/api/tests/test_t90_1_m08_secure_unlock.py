@@ -126,6 +126,7 @@ def seed(monkeypatch, tmp_path):
 def _principal(owner="rcat-user-a", scopes=None):
     return SimpleNamespace(
         name=owner, is_bootstrap_admin=False, daily_job_limit=100,
+        auth_source="oidc",
         scopes=set(scopes or {"pdf:unlock", "jobs:manage"}),
     )
 
