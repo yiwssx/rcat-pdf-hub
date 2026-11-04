@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import unittest
+from unittest.mock import patch
 import importlib.util
 from pathlib import Path
 
@@ -28,6 +29,13 @@ def pull(state="closed", merged_at="2026-11-02T00:00:00Z", sha="abc", number=4, 
 class PruneBranchesTests(unittest.TestCase):
     def reason(self, b, ps, **kwargs):
         return classify(b, ps, REPO, "main", now=NOW, **kwargs)[0]
+
+    def test_requires_immutable_last_pr_commit_before_delete(self):
+        with patch.object(module, "all_pages", return_value=[{"sha": "original"}, {"sha": "reviewed"}]):
+            self.assertTrue(module.reviewed_pr_tip_matches(REPO, 44, "reviewed"))
+            self.assertFalse(module.reviewed_pr_tip_matches(REPO, 44, "post-merge"))
+        with patch.object(module, "all_pages", return_value=[]):
+            self.assertFalse(module.reviewed_pr_tip_matches(REPO, 44, "reviewed"))
 
     def test_only_unchanged_merged_branch_eligible(self):
         self.assertEqual(self.reason(branch(), [pull()]), "eligible")
