@@ -92,3 +92,18 @@ def test_rotated_or_encrypted_pdf_and_symlink_refused(tmp_path):
         add_text_to_pdf(source, output, page=1, x=20, y=30,
                         font_size=12, text="hello")
     assert not output.exists()
+
+def test_cropped_page_is_not_treated_as_full_visible_media(tmp_path):
+    source, output = tmp_path / "cropped.pdf", tmp_path / "output.pdf"
+    source_pdf(source)
+    reader = PdfReader(str(source))
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+    writer.pages[0].cropbox.lower_left = (20, 20)
+    with source.open("wb") as stream:
+        writer.write(stream)
+    with pytest.raises(ValueError, match="Cropped"):
+        add_text_to_pdf(source, output, page=1, x=20, y=40,
+                        font_size=12, text="Not visible")
+    assert not output.exists()
