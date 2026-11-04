@@ -54,6 +54,12 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.extract_pages_tools_enabled and (
+        operation == "extract-pages-pdf" or (
+            operation == "extract-pages-zip" and settings.multi_output_artifacts_enabled
+        )
+    ):
+        return "pdf"
     if settings.split_zip_tools_enabled and settings.multi_output_artifacts_enabled and operation == "split-to-zip":
         return "pdf"
     if settings.pdf_filler_tools_enabled and operation == "fill-pdf-form":

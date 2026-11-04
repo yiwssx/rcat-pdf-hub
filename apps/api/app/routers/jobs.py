@@ -60,6 +60,15 @@ def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
 
 def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
+    if job.operation in {"extract-pages-pdf", "extract-pages-zip"}:
+        from app.config import get_settings
+        flags = get_settings()
+        if not flags.extract_pages_tools_enabled or (
+            job.operation == "extract-pages-zip"
+            and not flags.multi_output_artifacts_enabled
+        ):
+            raise HTTPException(status_code=404, detail="M16 extraction is disabled")
+        required = "pdf:split"
     if job.operation == "split-to-zip":
         from app.config import get_settings
         flags = get_settings()
@@ -119,7 +128,7 @@ def get_job_artifacts(
         file = db.get(FileRecord, job.output_file_id)
         if not file or file.source_system != job.requested_by:
             raise HTTPException(status_code=410, detail="Job output is no longer available")
-        items = [(file, "bundle" if job.operation in {"pdf-to-images", "split-to-zip"} else "result", None)]
+        items = [(file, "bundle" if job.operation in {"pdf-to-images", "split-to-zip", "extract-pages-zip"} else "result", None)]
     else:
         items = []
         for link in links:

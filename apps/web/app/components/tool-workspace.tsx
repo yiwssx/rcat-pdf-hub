@@ -234,6 +234,13 @@ export function ToolWorkspace({
       settings={settings}
       onSettingChange={setSetting}
       onRun={(operation) => void run(operation)}
+      onExtract={(pages, format) => {
+        if (process.env.NEXT_PUBLIC_PDFHUB_M16_EXTRACT_ENABLED !== "true" || !targetIsPdf) {
+          onMessage("M16 ยังไม่ได้เปิดใช้งาน");
+          return;
+        }
+        void onSubmit("extract-pages", { file_id: target.id, pages, format });
+      }}
       onSignedLink={() => void createSignedLink()}
       onCopySignedLink={() => void copySignedLink()}
       onArchive={() => void onArchive()}
