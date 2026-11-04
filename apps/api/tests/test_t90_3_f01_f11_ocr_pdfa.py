@@ -140,7 +140,7 @@ def test_f11_refuses_vector_art_mixed_with_page_scans(tmp_path):
 def test_f11_selectable_original_text_is_not_rasterized(tmp_path):
     source, output = tmp_path / "selectable.pdf", tmp_path / "no-force.pdf"
     _source(source, pages=1, image_only=False)
-    with pytest.raises(ValueError, match="image-only"):
+    with pytest.raises(ValueError, match="refuses selectable PDF text"):
         convert_accessible_pdf(source, output, kind="pdfa-2")
     assert not output.exists()
 
