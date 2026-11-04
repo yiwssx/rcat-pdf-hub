@@ -5,6 +5,9 @@ export const PDF_TOOLS: readonly ToolDefinition[] = [
   { id: "ocr", title: "สแกน / OCR", description: "อ่านข้อความไทย + อังกฤษจากเอกสาร", icon: "scan", tone: "rose", badge: "ยอดนิยม" },
   { id: "merge-pdf", title: "รวม PDF", description: "รวมหลายไฟล์เป็นเอกสารเดียว", icon: "merge", tone: "blue" },
   { id: "split-rotate", title: "จัดหน้า PDF", description: "เลือก แยก และหมุนหน้า", icon: "organize", tone: "violet" },
+  ...(process.env.NEXT_PUBLIC_PDFHUB_M08_UNLOCK_ENABLED === "true" ? [
+    { id: "unlock-pdf", title: "ปลดล็อก PDF", description: "ปลดล็อกด้วยรหัสผ่านที่ได้รับอนุญาต ไม่จัดเก็บรหัสผ่าน", icon: "unlock" as const, tone: "purple" as const },
+  ] : []),
   { id: "compress", title: "ลดขนาด PDF", description: "บีบอัดไฟล์สำหรับส่งและจัดเก็บ", icon: "compress", tone: "amber" },
   { id: "pdf-to-images", title: "PDF → รูปภาพ", description: "ส่งออกหน้าเอกสารเป็น PNG/JPEG", icon: "image", tone: "red" },
   { id: "images-to-pdf", title: "รูปภาพ → PDF", description: "รวมรูปภาพหลายไฟล์เป็น PDF", icon: "imagePdf", tone: "cyan" },
