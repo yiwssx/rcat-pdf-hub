@@ -250,6 +250,24 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41599777959",
       "supported_subset": "Gated owner-scoped authenticated reorder-pages PDF API/queue/worker. Complete unique permutation required, no silently lost/duplicated page, source-to-output content stream parity and bounded input/output; engine and tests in merged PR #294.",
       "acceptance_pending": "Actual RCAT Workspace OIDC owner upload/download, Thai and complex/signed PDFs, page-tree/bookmark preservation assessment, target-host AV/isolation, browser accessibility, performance, independent QA and operator rollout approval. No VERIFIED or RELEASED evidence."
+    },
+    {
+      "tool_id": "F01",
+      "state": "IMPLEMENTED",
+      "source_commit": "0b376742ae2cb1dfd9b29b53b20b5b2957c5b075",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/292",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41789621087",
+      "supported_subset": "Default-OFF owner-bound OCRmyPDF/Tesseract searchable PDF operation, restricted English/Thai language settings, page count/integrity budgets, skip-text OCR with output-type pdf to avoid pinned Ghostscript PDF/A regression; merged API, queue and worker.",
+      "acceptance_pending": "Independent real RCAT Thai OCR quality, actual Workspace OIDC owner upload/download, signed/complex source compatibility, host AV/timeout/isolation and operator approval remain DEFERRED. No VERIFIED/RELEASED."
+    },
+    {
+      "tool_id": "F11",
+      "state": "IMPLEMENTED",
+      "source_commit": "0b376742ae2cb1dfd9b29b53b20b5b2957c5b075",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/292",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41789621087",
+      "supported_subset": "Default-OFF owner-bound OCRmyPDF PDF/A-2 export for bounded scanned image-only PDF originals; original selectable text, annotations, vectors and forms rejected before force OCR. PDF/A-2 identification metadata parsed from XMP only; not independently certified ISO/PDF-A conformance.",
+      "acceptance_pending": "Independent veraPDF/ISO PDF-A compliance, real RCAT scan/Thai fidelity, Workspace OIDC owner download, Ghostscript target host verification, sandbox/AV and operator approval remain DEFERRED. No VERIFIED/RELEASED."
     }
   ]
 }
