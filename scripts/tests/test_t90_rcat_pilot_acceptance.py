@@ -23,11 +23,11 @@ class PilotAcceptanceTest(unittest.TestCase):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 25)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 27)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 64)
-        self.assertEqual(len(report["uncertified"]), 64)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33", "M14", "M15"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 62)
+        self.assertEqual(len(report["uncertified"]), 62)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33", "M14", "M15", "F01", "F11"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -129,6 +129,20 @@ class PilotAcceptanceTest(unittest.TestCase):
                              "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41599777959")
             self.assertIn("RCAT", evidence["acceptance_pending"])
             self.assertNotIn(evidence["state"], {"VERIFIED", "RELEASED"})
+        # F01/F11 have reviewed source code, not independently certified PDF/A.
+        for tool_id in ("F01", "F11"):
+            entry = next(x for x in self.evidence["tool_evidence"]
+                         if x["tool_id"] == tool_id)
+            self.assertEqual(entry["state"], "IMPLEMENTED")
+            self.assertEqual(entry["source_commit"],
+                             "0b376742ae2cb1dfd9b29b53b20b5b2957c5b075")
+            self.assertEqual(entry["pr"],
+                             "https://github.com/yiwssx/rcat-pdf-hub/pull/292")
+            self.assertEqual(entry["ci_run"],
+                             "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41789621087")
+            self.assertIn("RCAT", entry["acceptance_pending"])
+            self.assertNotIn(entry["state"], {"VERIFIED", "RELEASED"})
+
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
         self.assertTrue(publisher["pages_or_items_checked"])
