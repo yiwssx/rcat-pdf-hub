@@ -268,6 +268,15 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41789621087",
       "supported_subset": "Default-OFF owner-bound OCRmyPDF PDF/A-2 export for bounded scanned image-only PDF originals; original selectable text, annotations, vectors and forms rejected before force OCR. PDF/A-2 identification metadata parsed from XMP only; not independently certified ISO/PDF-A conformance.",
       "acceptance_pending": "Independent veraPDF/ISO PDF-A compliance, real RCAT scan/Thai fidelity, Workspace OIDC owner download, Ghostscript target host verification, sandbox/AV and operator approval remain DEFERRED. No VERIFIED/RELEASED."
+    },
+    {
+      "tool_id": "M22",
+      "state": "IMPLEMENTED",
+      "source_commit": "2a0600758d6470d6561713fdf28a16c0e518c94f",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/297",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41802848012",
+      "supported_subset": "Default-OFF owner-scoped M22 actual ReportLab/pypdf text overlay into one PDF page, 1–120 printable ASCII chars Helvetica 8–24 pt, exact page/position validation; source, expiry, MIME/signature and job parameter revalidation at API and worker. Binary page-integrity/negative tests merged with PR #297. No Thai/Unicode/complex editor support.",
+      "acceptance_pending": "RCAT Workspace Google OIDC real upload/owner download, Thai Unicode shaping/fonts, genuine signed/complex source test corpus, browser UX/accessibility, AV sandbox isolation, visual output proof, performance/load, independent reviewer and operator signoff DEFERRED. Not VERIFIED or RELEASED."
     }
   ]
 }
