@@ -61,6 +61,13 @@ def classify(branch: dict, pulls: list[dict], repository: str, default: str,
     return "eligible", latest
 
 
+
+def reviewed_pr_tip_matches(repository: str, pr_number: int, sha: str) -> bool:
+    """Require the last immutable PR review commit, not just mutable head.ref."""
+    commits = all_pages(f"repos/{repository}/pulls/{pr_number}/commits?per_page=100")
+    return bool(commits) and commits[-1].get("sha") == sha
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=REPOSITORY)
@@ -104,7 +111,8 @@ def main() -> int:
         if (fresh["object"]["sha"] != sha
                 or latest.get("merged_at") is None
                 or latest["head"]["sha"] != sha
-                or active):
+                or active
+                or not reviewed_pr_tip_matches(args.repo, pr["number"], sha)):
             print(f"SKIP: changed/open since planning: {name}")
             continue
         api(f"repos/{args.repo}/git/refs/heads/{encoded}", method="DELETE")
