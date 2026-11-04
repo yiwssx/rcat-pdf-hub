@@ -9,7 +9,6 @@ import asyncio
 import base64
 import hashlib
 import json
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
