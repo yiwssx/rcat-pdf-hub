@@ -34,8 +34,7 @@ def serialize(job: JobRecord) -> JobOut:
 
 
 OPERATION_SCOPES = {
-    "merge": "pdf:merge", "organize": "pdf:split", "split": "pdf:split",
-    "split-to-zip": "pdf:split", "rotate": "pdf:rotate",
+    "merge": "pdf:merge", "organize": "pdf:split", "split": "pdf:split", "rotate": "pdf:rotate",
     "compress": "pdf:compress", "ocr": "pdf:ocr", "pdfa": "pdf:pdfa", "office-to-pdf": "pdf:convert",
     "watermark": "pdf:watermark", "page-numbers": "pdf:page-number", "stamp": "pdf:stamp",
     "images-to-pdf": "pdf:image-to-pdf", "pdf-to-images": "pdf:pdf-to-image",
@@ -66,6 +65,7 @@ def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
         flags = get_settings()
         if not flags.split_zip_tools_enabled or not flags.multi_output_artifacts_enabled:
             raise HTTPException(status_code=404, detail="M07 split ZIP is disabled")
+        required = "pdf:split"
     if job.operation in {"edit-metadata", "remove-metadata", "extract-text"}:
         from app.config import get_settings
         if not get_settings().document_data_tools_enabled:
