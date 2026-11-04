@@ -133,7 +133,9 @@ def stage_split_pdf_parts(bundle: Path, staging_dir: Path, *,
     if (bundle.is_symlink() or not bundle.is_file()
             or bundle.stat().st_size > MAX_BUNDLE_BYTES):
         raise ValueError("Invalid generated split ZIP")
-    staging_dir.mkdir(parents=True, exist_ok=False)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    if any(staging_dir.iterdir()):
+        raise ValueError("Split staging directory must be empty")
     staged: list[StagedPage] = []
     total = 0
     with ZipFile(bundle) as archive:
