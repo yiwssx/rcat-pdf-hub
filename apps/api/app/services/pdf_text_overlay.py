@@ -55,12 +55,14 @@ def add_text_to_pdf(source: Path, destination: Path, *, page: int,
     # Incremental signatures, form appearances and active annotations may be
     # broken by a page rewrite. Do not pretend we can safely preserve them.
     root = reader.trailer["/Root"]
-    if root.get("/AcroForm"):
+    if root.get("/AcroForm") or root.get("/Perms"):
         raise ValueError("Interactive or signed forms are unsupported")
     for p in reader.pages:
         if int(p.get("/Rotate", 0)) % 360 != 0 or p.get("/Annots"):
             raise ValueError("Rotated or annotated PDFs are unsupported")
     target = reader.pages[page - 1]
+    if list(target.cropbox) != list(target.mediabox):
+        raise ValueError("Cropped PDF pages are unsupported")
     if float(target.mediabox.left) != 0 or float(target.mediabox.bottom) != 0:
         raise ValueError("Non-origin PDF pages are unsupported")
     width, height = float(target.mediabox.width), float(target.mediabox.height)
