@@ -248,6 +248,13 @@ export function ToolWorkspace({
       settings={settings}
       onSettingChange={setSetting}
       onRun={(operation) => void run(operation)}
+      onHeaderFooter={(options) => {
+        if (process.env.NEXT_PUBLIC_PDFHUB_M31_HEADER_FOOTER_ENABLED !== "true" || !targetIsPdf) {
+          onMessage("M31 ส่วนหัว–ท้าย PDF ยังไม่เปิดใช้งาน");
+          return;
+        }
+        void onSubmit("header-and-footer", { file_id: target.id, ...options });
+      }}
       onProtect={(user_password, owner_password) => {
         if (process.env.NEXT_PUBLIC_PDFHUB_M09_PROTECT_ENABLED !== "true" || !targetIsPdf) {
           onMessage("เครื่องมือ M09 ยังไม่เปิดใช้งาน");
