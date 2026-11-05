@@ -37,6 +37,7 @@ def _password(value: str, field: str) -> str:
 
 def _write_atomic(
     writer: PdfWriter, destination: Path, *, expect_encrypted: bool, page_count: int,
+    verify_user_password: str | None = None, verify_owner_password: str | None = None,
 ) -> None:
     temp: str | None = None
     try:
@@ -53,6 +54,15 @@ def _write_atomic(
             encryption = check.trailer["/Encrypt"]
             if int(encryption["/V"]) != 5 or int(encryption["/R"]) != 6:
                 raise ValueError("AES-256 encryption verification failed")
+            # Verify both independently authorized credentials before publish;
+            # do not expose either password in the validation error.
+            if not verify_user_password or not verify_owner_password:
+                raise ValueError("Protected PDF credential verification missing")
+            if not check.decrypt(verify_user_password) or len(check.pages) != page_count:
+                raise ValueError("Protected PDF user credential/page verification failed")
+            owner_check = PdfReader(temp, strict=True)
+            if not owner_check.decrypt(verify_owner_password) or len(owner_check.pages) != page_count:
+                raise ValueError("Protected PDF owner credential/page verification failed")
         elif len(check.pages) != page_count:
             raise ValueError("Decrypted output page count mismatch")
         os.replace(temp, destination)
@@ -76,9 +86,17 @@ def protect_pdf(
         raise ValueError("Input already encrypted; unlock using valid password first")
     if not 1 <= len(reader.pages) <= _MAX_PAGES:
         raise ValueError("PDF page count outside staged bounds")
+    root = reader.trailer["/Root"]
+    if root.get("/Perms") is not None or any(
+        str(field.get("/FT")) == "/Sig" for field in (reader.get_fields() or {}).values()
+    ):
+        raise ValueError("Digitally signed PDFs cannot be protected without invalidating signatures")
     writer = PdfWriter(clone_from=reader)
     writer.encrypt(user_password=user_password, owner_password=owner_password, algorithm="AES-256")
-    _write_atomic(writer, destination, expect_encrypted=True, page_count=len(reader.pages))
+    _write_atomic(
+        writer, destination, expect_encrypted=True, page_count=len(reader.pages),
+        verify_user_password=user_password, verify_owner_password=owner_password,
+    )
 
 
 def unlock_pdf(source: Path, destination: Path, *, password: str) -> None:

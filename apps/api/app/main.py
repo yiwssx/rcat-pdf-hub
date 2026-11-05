@@ -74,6 +74,9 @@ app.include_router(internal.router)
 app.include_router(files.router)
 app.include_router(jobs.router)
 app.include_router(pdf.router)
+if settings.protect_pdf_tools_enabled:
+    from app.routers import pdf_protect
+    app.include_router(pdf_protect.router)
 if settings.unlock_pdf_tools_enabled:
     from app.routers import pdf_unlock
     app.include_router(pdf_unlock.router)

@@ -60,6 +60,11 @@ def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
 
 def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
+    if job.operation == "protect-pdf":
+        from app.config import get_settings
+        if not get_settings().protect_pdf_tools_enabled:
+            raise HTTPException(status_code=404, detail="M09 protection disabled")
+        required = "pdf:protect"
     if job.operation == "unlock-pdf":
         from app.config import get_settings
         if not get_settings().unlock_pdf_tools_enabled:
@@ -230,6 +235,9 @@ def cancel_job(
     if job.operation == "unlock-pdf":
         from app.services.pdf_unlock_handoff import erase_password
         erase_password(job.id)
+    if job.operation == "protect-pdf":
+        from app.services.pdf_protect_handoff import erase_credentials
+        erase_credentials(job.id)
     job.status = "cancelled"
     job.progress = 100
     job.error = "Cancelled by user"
@@ -251,6 +259,8 @@ def retry_job(
     # The user must submit a new unlock request and password.
     if source.operation == "unlock-pdf":
         raise HTTPException(status_code=409, detail="Resubmit PDF password to unlock again")
+    if source.operation == "protect-pdf":
+        raise HTTPException(status_code=409, detail="Resubmit both PDF passwords to protect again")
     if source.status not in {"failed", "cancelled"}:
         raise HTTPException(status_code=409, detail="Only failed or cancelled jobs can be retried")
     _require_operation_scope(source, principal)
