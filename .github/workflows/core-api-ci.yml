@@ -81,6 +81,8 @@ jobs:
         run: make validate-compose
       - name: Validate Prometheus configuration
         run: make validate-observability
+      - name: Validate Release 1 frozen core tool scope (source only)
+        run: make release1-check
       - name: Validate 90-tool output manifest schema and boundary regression
         run: |
           python3 scripts/validate-tool-artifacts.py
