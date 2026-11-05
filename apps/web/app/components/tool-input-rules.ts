@@ -22,6 +22,7 @@ export const TOOL_INPUT_RULES: Readonly<Record<string, ToolInputRule>> = {
   "unlock-pdf": { kind: "pdf", flow: "processing", pdfPreview: false, min: 1, max: 1, accept: PDF },
   "protect-pdf": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
   "extract-images": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
+  "grayscale-pdf": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
   "compress": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
   "pdf-to-images": { kind: "pdf", flow: "processing", pdfPreview: true, min: 1, max: 1, accept: PDF },
   "images-to-pdf": { kind: "image", flow: "processing", pdfPreview: false, min: 1, accept: IMAGE },
