@@ -21,10 +21,10 @@ const scopeOptions = [
   "files:read", "files:write", "jobs:read", "jobs:manage",
   "pdf:merge", "pdf:split", "pdf:unlock", "pdf:protect", "pdf:rotate", "pdf:compress",
   "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
-  "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image", "pdf:extract-images",
+  "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image", "pdf:extract-images", "pdf:grayscale",
 ];
 
-const defaultServiceScopes = scopeOptions.filter((scope) => scope !== "jobs:manage" && scope !== "pdf:unlock" && scope !== "pdf:protect" && scope !== "pdf:extract-images");
+const defaultServiceScopes = scopeOptions.filter((scope) => scope !== "jobs:manage" && scope !== "pdf:unlock" && scope !== "pdf:protect" && scope !== "pdf:extract-images" && scope !== "pdf:grayscale");
 
 export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | "integrations" | "diagnostics" }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
