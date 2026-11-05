@@ -31,6 +31,11 @@ type Props = {
   settings: ToolWorkspaceSettings;
   onSettingChange: ToolSettingSetter;
   onRun: (operation: string) => void;
+  onHeaderFooter: (options: {
+    header: string; footer: string; font_size: number; margin: number;
+    header_align: "left" | "center" | "right";
+    footer_align: "left" | "center" | "right";
+  }) => void;
   onUnlock: (password: string) => void;
   onProtect: (user_password: string, owner_password: string) => void;
   onExtract: (pages: string, format: "pdf" | "zip") => void;
@@ -48,6 +53,7 @@ const meta: Record<string, { title: string; subtitle: string; icon: ToolIconName
   "protect-pdf": { title: "ป้องกัน PDF", subtitle: "เข้ารหัส AES-256 พร้อมรหัสผ่าน 2 ชุด", icon: "unlock", tone: "indigo" },
   "extract-images": { title: "ดึงภาพที่ฝังใน PDF", subtitle: "ส่งออกภาพ PNG/JPEG ต้นทางเป็น ZIP", icon: "image", tone: "cyan" },
   "grayscale-pdf": { title: "แปลง PDF เป็นระดับสีเทา", subtitle: "สร้างสำเนา PDF สีเทาโดยไม่แก้ต้นฉบับ", icon: "pdfa", tone: "indigo" },
+  "header-and-footer": { title: "ส่วนหัวและส่วนท้าย PDF", subtitle: "ข้อความไทยและเลขหน้า ปรับตำแหน่งและขนาดได้", icon: "numbers", tone: "violet" },
   compress: { title: "ลดขนาด PDF", subtitle: "บีบอัดโดยไม่แก้ไฟล์ต้นฉบับ", icon: "compress", tone: "amber" },
   "pdf-to-images": { title: "PDF → รูปภาพ", subtitle: "ส่งออก PNG หรือ JPEG", icon: "image", tone: "red" },
   "images-to-pdf": { title: "รูปภาพ → PDF", subtitle: "รวมรูปเป็นเอกสาร PDF", icon: "imagePdf", tone: "cyan" },
@@ -68,6 +74,12 @@ export function ToolPanel(props: Props) {
   // Keep PDF passwords only in this transient component, never persisted in
   // ToolWorkspaceSettings, URL, cookies or localStorage.
   const [unlockPassword, setUnlockPassword] = useState("");
+  const [headerText, setHeaderText] = useState("");
+  const [footerText, setFooterText] = useState("หน้า {page} / {total}");
+  const [headerAlign, setHeaderAlign] = useState<"left" | "center" | "right">("center");
+  const [footerAlign, setFooterAlign] = useState<"left" | "center" | "right">("center");
+  const [hfFontSize, setHfFontSize] = useState(12);
+  const [hfMargin, setHfMargin] = useState(30);
   const [protectUserPassword, setProtectUserPassword] = useState("");
   const [protectOwnerPassword, setProtectOwnerPassword] = useState("");
   const [protectUserConfirm, setProtectUserConfirm] = useState("");
@@ -173,6 +185,53 @@ export function ToolPanel(props: Props) {
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</button>
+        </>}
+
+        {tool === "header-and-footer" && <>
+          <Summary target={target} note="เพิ่มข้อความส่วนหัวและส่วนท้าย โดยไม่เปลี่ยน PDF ต้นฉบับ"/>
+          <div className="v3InfoBox">ใช้ {'{page}'} แทนเลขหน้าปัจจุบัน และ {'{total}'} แทนจำนวนหน้าทั้งหมด รองรับข้อความภาษาไทยบนระบบที่มีฟอนต์ติดตั้ง โดยไม่รองรับ PDF ที่ลงลายเซ็น มีแบบฟอร์มหรือคำอธิบายประกอบ</div>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            if (busy || !targetIsPdf || (!headerText.trim() && !footerText.trim())) return;
+            props.onHeaderFooter({
+              header: headerText, footer: footerText,
+              font_size: hfFontSize, margin: hfMargin,
+              header_align: headerAlign, footer_align: footerAlign,
+            });
+          }}>
+            <label className="v3Field">ข้อความส่วนหัว (ไม่บังคับ)
+              <input type="text" value={headerText} maxLength={256} placeholder="เช่น วิทยาลัยเกษตรและเทคโนโลยีร้อยเอ็ด" onChange={(event) => setHeaderText(event.target.value)}/>
+            </label>
+            <label className="v3Field">ตำแหน่งส่วนหัว
+              <select value={headerAlign} onChange={(event) => setHeaderAlign(event.target.value as "left" | "center" | "right")}>
+                <option value="left">ชิดซ้าย</option>
+                <option value="center">กึ่งกลาง</option>
+                <option value="right">ชิดขวา</option>
+              </select>
+            </label>
+            <label className="v3Field">ข้อความส่วนท้าย (ไม่บังคับ)
+              <input type="text" value={footerText} maxLength={256} placeholder="เช่น หน้า {page}/{total}" onChange={(event) => setFooterText(event.target.value)}/>
+            </label>
+            <label className="v3Field">ตำแหน่งส่วนท้าย
+              <select value={footerAlign} onChange={(event) => setFooterAlign(event.target.value as "left" | "center" | "right")}>
+                <option value="left">ชิดซ้าย</option>
+                <option value="center">กึ่งกลาง</option>
+                <option value="right">ชิดขวา</option>
+              </select>
+            </label>
+            <label className="v3Field">ขนาดตัวอักษร (pt)
+              <select value={hfFontSize} onChange={(event) => setHfFontSize(Number(event.target.value))}>
+                {[8, 10, 12, 14, 16, 18, 20, 24].map((size) => <option key={size} value={size}>{size} pt</option>)}
+              </select>
+            </label>
+            <label className="v3Field">ระยะขอบ (pt)
+              <select value={hfMargin} onChange={(event) => setHfMargin(Number(event.target.value))}>
+                {[12, 20, 30, 40, 60, 90, 120, 144].map((size) => <option key={size} value={size}>{size} pt</option>)}
+              </select>
+            </label>
+            <button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || (!headerText.trim() && !footerText.trim())}>เพิ่มส่วนหัวและส่วนท้าย PDF</button>
+          </form>
+          <div className="v3FieldNote">ข้อความจะถูกวางทับบนพื้นที่ขอบกระดาษ ไม่เลื่อนเนื้อหาเดิม ควรตรวจเอกสารผลลัพธ์ก่อนใช้งานจริง</div>
         </>}
 
         {tool === "grayscale-pdf" && <>
