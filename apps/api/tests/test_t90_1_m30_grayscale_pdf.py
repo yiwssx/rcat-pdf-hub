@@ -26,7 +26,7 @@ from app.queue import queue_class_for_operation
 from app.routers import pdf_grayscale
 from app.routers.jobs import _require_operation_scope
 from app.services.pdf_grayscale import (
-    MAX_OUTPUT_BYTES, _checked_pdf, grayscale_pdf_bounded,
+    grayscale_pdf_bounded,
 )
 from app.worker_tasks import _output_spec_for_job
 
