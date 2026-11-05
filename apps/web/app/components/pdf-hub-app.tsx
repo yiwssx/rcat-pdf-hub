@@ -41,7 +41,7 @@ import { AdminAreaNav, type AdminArea } from "./admin-area-nav";
 import { AdminOverviewScreen } from "./admin-overview-screen";
 import { AdminJobTriagePanel } from "./admin-job-triage-panel";
 import { AdminStorageHealthPanel } from "./admin-storage-health-panel";
-import { findPdfTool, PDF_TOOLS } from "./tool-catalog";
+import { findPdfTool, institutionalPilotTools, RCAT_RELEASE1_TOOL_IDS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
 import { resolveTaskJourneyStage } from "./task-journey";
@@ -69,8 +69,6 @@ const ToolWorkspace = dynamic(
 );
 
 const imageContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff", "image/bmp"]);
-
-const tools: ToolDefinition[] = [...PDF_TOOLS];
 
 function isPdf(file: UploadedFile | null) {
   return Boolean(file && (file.content_type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf")));
@@ -102,6 +100,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   const [previewPage, setPreviewPage] = useState(1);
   const [toolSettings, setToolSettings] = useState(createToolWorkspaceSettings);
 
+  const institutionalPilot = authConfig?.institutional?.rcat_only === true;
+  const tools = useMemo(() => institutionalPilotTools(institutionalPilot), [institutionalPilot]);
+  const pilotToolUnavailable = institutionalPilot && Boolean(initialTool) && !RCAT_RELEASE1_TOOL_IDS.has(initialTool ?? "");
   const routeTool = initialTool ? findPdfTool(initialTool) : undefined;
   const target = useMemo(() => files.find((file) => file.id === targetId) || null, [files, targetId]);
   const reviewedFiles = selectedInputIds
@@ -376,6 +377,10 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   }
 
   function chooseTool(tool: ToolDefinition) {
+    if (institutionalPilot && !RCAT_RELEASE1_TOOL_IDS.has(tool.id)) {
+      setMessage("เครื่องมือนี้ยังไม่เปิดใน RCAT Release 1");
+      return;
+    }
     if (routeTool?.id === tool.id) {
       setActiveTool(tool.id);
       return;
@@ -654,6 +659,17 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
               <AdminPanel apiKey={auth} area="integrations"/>
             </>}
           </> : <section className="v3AccessDenied"><span>🔐</span><h2>บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล</h2><p>Admin Console จะแสดงเฉพาะ identity ที่ระบบกำหนดเป็นผู้ดูแลเท่านั้น</p><a href="/admin/login">เข้าสู่ระบบผู้ดูแล</a><a href="/">กลับ Workspace</a></section>}
+        </main>
+      ) : pilotToolUnavailable ? (
+        <main className="v3Main" id="workspace">
+          <section className="v3HomeTitle">
+            <div>
+              <span className="v3Kicker">RCAT RELEASE 1</span>
+              <h1>เครื่องมือนี้ยังไม่เปิดให้ใช้งาน</h1>
+              <p>ระยะนำร่องเปิดเฉพาะเครื่องมือ PDF หลักของวิทยาลัย เพื่อให้ตรวจสอบความถูกต้องและความปลอดภัยก่อนขยายบริการ</p>
+            </div>
+            <a className="v3TextLink" href="/">กลับไปเลือกเครื่องมือ</a>
+          </section>
         </main>
       ) : routeTool && (!target || !hasValidRouteInputs) ? (
         <ToolFileIntake
