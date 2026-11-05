@@ -209,3 +209,9 @@ secrets:
 release1-check:
 	python3 scripts/validate-release1.py --mode source
 	python3 -m unittest discover -s scripts/tests -p 'test_release1_gate.py'
+	python3 -m unittest discover -s scripts/tests -p 'test_release1_host_preflight.py'
+
+# Operator-only, read-only: requires staging/production Compose env to be provisioned.
+.PHONY: release1-host-preflight
+release1-host-preflight:
+	@docker compose -f docker-compose.yml -f docker-compose.prod.yml config --format json | python3 scripts/release1-host-preflight.py
