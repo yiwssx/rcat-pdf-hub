@@ -138,6 +138,30 @@ make ps
 make logs
 ```
 
+### One-command Google Workspace setup (RCAT)
+
+On the RCAT Ubuntu host, **after** updating the repository and using its existing
+`.env` (do not recreate it or replace unrelated service credentials):
+
+```bash
+make rcat-workspace-setup
+make rcat-workspace-check
+make release1-host-preflight
+```
+
+The interactive setup reuses an existing valid Google OAuth Client ID and Secret,
+asking only for whichever is missing. It forces RCAT-only OIDC, secure sessions,
+`https://pdf.rcat.ac.th` as the callback base, ClamAV fail-closed, and the R1
+experimental conversion flag off. It preserves DB/API/password secrets and all
+network bind/port settings, backs up `.env` locally with mode `0600`, and never
+prints or uploads OAuth secrets. Re-run it safely; use
+`python3 scripts/setup-rcat-workspace.py --rotate-client` only to replace both
+OAuth credentials. The exact Google OAuth redirect URI must be
+`https://pdf.rcat.ac.th/api/v1/auth/oidc/callback`. This does **not** deploy,
+create Google Cloud credentials, provide HTTPS/DNS, or verify a live Workspace
+login. Start the security-profile ClamAV service on the approved staging host
+before runtime acceptance; do not enable Production without release gates.
+
 ### Production Compose override
 
 Development keeps using `make up` / `make up-nas`. Production uses an explicit override so production-only defaults do not leak into the developer workflow:
