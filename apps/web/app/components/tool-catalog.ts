@@ -36,3 +36,16 @@ export const PDF_TOOLS: readonly ToolDefinition[] = [
 export function findPdfTool(slug: string): ToolDefinition | undefined {
   return PDF_TOOLS.find((tool) => tool.id === slug);
 }
+
+// Release 1 is intentionally narrower than the historical 13-card catalog.
+// This is only presentation gating; the API enforces institutional authorization.
+export const RCAT_RELEASE1_TOOL_IDS: ReadonlySet<string> = new Set([
+  "ocr", "merge-pdf", "split-rotate", "compress", "pdf-to-images",
+  "images-to-pdf", "watermark", "page-numbers", "office-to-pdf",
+]);
+
+export function institutionalPilotTools(rcatOnly: boolean): ToolDefinition[] {
+  return rcatOnly
+    ? PDF_TOOLS.filter((tool) => RCAT_RELEASE1_TOOL_IDS.has(tool.id))
+    : [...PDF_TOOLS];
+}
