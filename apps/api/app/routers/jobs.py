@@ -60,6 +60,11 @@ def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
 
 def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
+    if job.operation == "grayscale-pdf":
+        from app.config import get_settings
+        if not get_settings().grayscale_pdf_tools_enabled:
+            raise HTTPException(status_code=404, detail="M30 grayscale disabled")
+        required = "pdf:grayscale"
     if job.operation == "extract-images":
         from app.config import get_settings
         if not get_settings().extract_embedded_images_tools_enabled:
