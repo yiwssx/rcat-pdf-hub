@@ -234,6 +234,13 @@ export function ToolWorkspace({
       settings={settings}
       onSettingChange={setSetting}
       onRun={(operation) => void run(operation)}
+      onProtect={(user_password, owner_password) => {
+        if (process.env.NEXT_PUBLIC_PDFHUB_M09_PROTECT_ENABLED !== "true" || !targetIsPdf) {
+          onMessage("เครื่องมือ M09 ยังไม่เปิดใช้งาน");
+          return;
+        }
+        void onSubmit("protect-pdf", { file_id: target.id, user_password, owner_password });
+      }}
       onUnlock={(password) => {
         if (process.env.NEXT_PUBLIC_PDFHUB_M08_UNLOCK_ENABLED !== "true" || !targetIsPdf) {
           onMessage("เครื่องมือ M08 ยังไม่เปิดใช้งาน");
