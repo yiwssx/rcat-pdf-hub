@@ -162,7 +162,10 @@ def stage_embedded_image_parts(
                     ordinal=ordinal,
                 ))
     except Exception:
-        for member in staged:
-            member.path.unlink(missing_ok=True)
+        # A rejected member may already have created a partial file before
+        # it was appended to staged. Clean the whole previously empty dir.
+        for member in staging_dir.iterdir():
+            if member.is_file() or member.is_symlink():
+                member.unlink(missing_ok=True)
         raise
     return staged
