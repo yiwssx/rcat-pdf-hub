@@ -152,9 +152,9 @@ export function JobResultScreen({ jobId, auth }: Props) {
             {data.manifest && data.manifest.artifacts.some((part) => part.role === "part") && (
               <section className="v3FollowOn" aria-label="ดาวน์โหลดไฟล์ย่อย">
                 <div className="v3SectionHead">
-                  <div><span className="v3Kicker">INDIVIDUAL FILES</span><h2>{["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF แยกหน้า" : "ดาวน์โหลดภาพทีละหน้า"}</h2></div>
+                  <div><span className="v3Kicker">INDIVIDUAL FILES</span><h2>{["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF แยกหน้า" : data.job.operation === "extract-images" ? "ดาวน์โหลดภาพฝังใน PDF" : "ดาวน์โหลดภาพทีละหน้า"}</h2></div>
                 </div>
-                <p>{["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF แต่ละหน้า หรือเลือกดาวน์โหลดผลลัพธ์เพื่อรับ ZIP ทั้งหมด" : "ดาวน์โหลดภาพเฉพาะหน้าที่ต้องการ หรือใช้ปุ่มดาวน์โหลดผลลัพธ์เพื่อรับ ZIP ทั้งหมด"}</p>
+                <p>{["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF แต่ละหน้า หรือเลือกดาวน์โหลดผลลัพธ์เพื่อรับ ZIP ทั้งหมด" : data.job.operation === "extract-images" ? "ดาวน์โหลดภาพที่ฝังอยู่ใน PDF แยกไฟล์ หรือดาวน์โหลด ZIP ทั้งหมด" : "ดาวน์โหลดภาพเฉพาะหน้าที่ต้องการ หรือใช้ปุ่มดาวน์โหลดผลลัพธ์เพื่อรับ ZIP ทั้งหมด"}</p>
                 {data.manifest.artifacts.filter((part) => part.role === "part").map((part) => {
                   const expiredPart = Boolean(part.expires_at && Date.parse(part.expires_at) <= Date.now());
                   return (
@@ -165,7 +165,7 @@ export function JobResultScreen({ jobId, auth }: Props) {
                         <button type="button" className="v3SecondaryAction"
                           disabled={expiredPart || downloadingPart !== null}
                           onClick={() => void downloadPart(part.file_id, part.file_name)}>
-                          {downloadingPart === part.file_id ? "กำลังดาวน์โหลด…" : `${["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF ส่วนที่" : "ดาวน์โหลดภาพหน้า"} ${part.ordinal}`}
+                          {downloadingPart === part.file_id ? "กำลังดาวน์โหลด…" : `${["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF ส่วนที่" : data.job.operation === "extract-images" ? "ดาวน์โหลดภาพที่" : "ดาวน์โหลดภาพหน้า"} ${part.ordinal}`}
                         </button>
                       </div>
                     </div>
