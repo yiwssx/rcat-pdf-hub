@@ -277,6 +277,69 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41802848012",
       "supported_subset": "Default-OFF owner-scoped M22 actual ReportLab/pypdf text overlay into one PDF page, 1–120 printable ASCII chars Helvetica 8–24 pt, exact page/position validation; source, expiry, MIME/signature and job parameter revalidation at API and worker. Binary page-integrity/negative tests merged with PR #297. No Thai/Unicode/complex editor support.",
       "acceptance_pending": "RCAT Workspace Google OIDC real upload/owner download, Thai Unicode shaping/fonts, genuine signed/complex source test corpus, browser UX/accessibility, AV sandbox isolation, visual output proof, performance/load, independent reviewer and operator signoff DEFERRED. Not VERIFIED or RELEASED."
+    },
+    {
+      "tool_id": "M07",
+      "state": "IMPLEMENTED",
+      "source_commit": "0651613ef199037f15043d0c2b09d3d295ae7222",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/300",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41817899273",
+      "supported_subset": "Default-OFF owner-bound PDF split to genuine ordered one-page PDF documents inside ZIP, with per-page downloadable artifacts only when independently gated multi-output persistence is enabled; legacy single-PDF split remains unchanged.",
+      "acceptance_pending": "RCAT Thai page/document goldens, signed and complex PDF behavior, real Google Workspace OIDC upload/download ownership, target-host AV/isolation/retention and operator rollout approval remain pending."
+    },
+    {
+      "tool_id": "M08",
+      "state": "IMPLEMENTED",
+      "source_commit": "0945eddfde0c07eff80fb13588ef709d5008cca7",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/302",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41826789046",
+      "supported_subset": "Default-OFF legitimate password-authorized PDF unlock with independent owner/RBAC checks and ephemeral AES-256-GCM Valkey one-time password handoff (5-minute TTL); no password in stored jobs or logs, no cracking or bypass.",
+      "acceptance_pending": "RCAT original encrypted Thai PDFs, provisioned host secret and no-leak verification, live institutional Google Workspace OIDC owner workflow, AV/isolation/performance and operator approval remain pending."
+    },
+    {
+      "tool_id": "M09",
+      "state": "IMPLEMENTED",
+      "source_commit": "2e2aaa7946fcb3c5a5e3eca2f5f918693acab01a",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/303",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41957731146",
+      "supported_subset": "Default-OFF owner-bound AES-256 Revision 6 protect-PDF with distinct user/owner passwords, independently verified encrypted output and separate one-time dual-secret AES-GCM handoff; refuses signed/already encrypted input.",
+      "acceptance_pending": "RCAT Thai protected PDF reader interoperability, secure host key provisioning/rotation, institutional Google Workspace OIDC owner jobs, malformed input/isolation/AV/load and operator acceptance remain pending."
+    },
+    {
+      "tool_id": "M16",
+      "state": "IMPLEMENTED",
+      "source_commit": "2a21eba1ce6a51d686fadca5502af0bbb49d0435",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/301",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41819587647",
+      "supported_subset": "Default-OFF authenticated PDF page extraction in exact requested order to one actual PDF or ordered per-page PDF ZIP, bounded to 80 selected parts and separately guarded multi-output artifacts; original remains intact.",
+      "acceptance_pending": "RCAT Thai and complex source PDF page/object/layout comparison, real Google Workspace OIDC owner job and independent downloads, target-host AV/security/rollback and operator signoff remain pending."
+    },
+    {
+      "tool_id": "M18",
+      "state": "IMPLEMENTED",
+      "source_commit": "c74273e241b6bdaae6bcdabd0565b8edb8435f3b",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/304",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41961212961",
+      "supported_subset": "Default-OFF extraction of actual embedded PNG/JPEG PDF image objects into deterministic ZIP, not page screenshots; bounded 200 source pages, 80 images, total size and pixel budgets with guarded owner-scoped independent artifacts.",
+      "acceptance_pending": "RCAT original image color/ICC/format fidelity including unsupported image encodings, real institutional Google Workspace OIDC owner downloads, deployed AV/ZIP isolation/quotas and operator signoff remain pending."
+    },
+    {
+      "tool_id": "M30",
+      "state": "IMPLEMENTED",
+      "source_commit": "72d0a11ac9fee69524396461e6236713c13d2085",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/305",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41963071305",
+      "supported_subset": "Default-OFF owner-bound Ghostscript DeviceGray PDF conversion with real red/green/blue pixel regression, unchanged source, bounded page/geometry/output checks; signed/form/annotated PDFs fail closed.",
+      "acceptance_pending": "RCAT Thai text/vector raster and visual goldens, ICC/transparency compatibility, real institutional Google Workspace OIDC owner workflow, pinned target-host AV/isolation/load and operator approval remain pending."
+    },
+    {
+      "tool_id": "M31",
+      "state": "IMPLEMENTED",
+      "source_commit": "a5983b618a5c356c931d6782a865ed3003758a37",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/306",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41971960969",
+      "supported_subset": "Default-OFF owner-bound true PDF header/footer overlay with independently aligned text and {page}/{total}, 8-24 pt fonts, optional embedded Noto Sans Thai, mixed page sizes and rotated-page handling with strict immutable-source checks.",
+      "acceptance_pending": "RCAT Thai font shaping and printed margin/geometry visual goldens, real Google Workspace OIDC job/download owner checks, target-host font/AV/isolation, document complexity and operator rollout approval remain pending."
     }
   ]
 }
