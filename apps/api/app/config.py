@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_HUMAN_SCOPES = (
     "files:read,files:write,jobs:read,jobs:manage,"
     "pdf:merge,pdf:split,pdf:unlock,pdf:protect,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,"
-    "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,pdf:extract-images,pdf:grayscale,archive:paperless"
+    "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,pdf:extract-images,pdf:grayscale,pdf:header-footer,archive:paperless"
 )
 
 
@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     extract_embedded_images_tools_enabled: bool = False
     # M30 conservative grayscale PDF; off pending independent physical acceptance.
     grayscale_pdf_tools_enabled: bool = False
+    # M31 typed header/footer overlay, strict source acceptance, default OFF.
+    header_footer_tools_enabled: bool = False
     # M08: separate, default-disabled owner-bound unlock with one-time encrypted Valkey handoff.
     unlock_pdf_tools_enabled: bool = False
     unlock_pdf_handoff_key: str = Field(default="", repr=False)
