@@ -36,7 +36,7 @@ settings = get_settings()
 
 ALLOWED_SCOPES = {
     "files:read", "files:write", "jobs:read", "jobs:manage",
-    "pdf:merge", "pdf:split", "pdf:extract-images", "pdf:unlock", "pdf:protect", "pdf:rotate", "pdf:compress",
+    "pdf:merge", "pdf:split", "pdf:extract-images", "pdf:grayscale", "pdf:unlock", "pdf:protect", "pdf:rotate", "pdf:compress",
     "pdf:ocr", "pdf:pdfa", "pdf:convert", "pdf:watermark",
     "pdf:page-number", "pdf:stamp", "pdf:image-to-pdf", "pdf:pdf-to-image",
     "archive:paperless", "admin:keys",
