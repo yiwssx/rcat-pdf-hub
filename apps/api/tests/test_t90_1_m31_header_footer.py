@@ -40,8 +40,9 @@ def source_pdf(path: Path) -> Path:
     # A rotated landscape input must remain legible in the output.
     writer = PdfWriter(clone_from=str(path))
     writer.pages[1].rotate(90)
-    with path.open("wb") as output:
-        writer.write(output)
+    rotated = path.with_name("rotated-source.pdf")
+    writer.write(str(rotated))
+    rotated.replace(path)
     return path
 
 
