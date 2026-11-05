@@ -85,3 +85,23 @@ AV, all three worker configurations consistent with API, and experimental
 conversion backends OFF. Passing only proves the *rendered configuration*
 contract, not a working Google account or AV daemon. Then perform the
 independent pilot checks before requesting any deployment approval.
+
+## One-command RCAT Google Workspace operator setup
+
+After creating the **Web application** OAuth Client in the approved school's
+Google Cloud project, ensure the existing host `.env` is present, and run:
+
+```bash
+make rcat-workspace-setup    # prompts only for missing Google Client ID / Secret
+make rcat-workspace-check    # prints only READY/INCOMPLETE, no credentials
+make release1-host-preflight
+```
+
+Unlike copying a fresh `.env.example`, this setup preserves existing DB/API
+credentials, network bind/ports, comments and unrelated settings. It backs up
+old `.env` values privately and writes atomically at mode `0600`. Re-running
+is safe and avoids duplicate keys; credential replacement is opt-in via
+`python3 scripts/setup-rcat-workspace.py --rotate-client`. It sets the exact
+OAuth callback base to `https://pdf.rcat.ac.th` and explicitly denies
+non-institutional sign-ins. A successful settings check alone does not make
+HTTPS, ClamAV, Google Workspace, or a Production release ready.
