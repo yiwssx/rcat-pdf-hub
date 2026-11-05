@@ -92,7 +92,7 @@ def validate_source(contract: dict, catalog: str, queue: str, config: str) -> No
     start = catalog.find("export const LEGACY_PDF_TOOLS")
     end = catalog.find("export const PDF_TOOLS")
     require(start >= 0 and end > start, "Legacy catalog boundaries not found")
-    legacy = set(re.findall(r'\b id: "([^"]+)"', catalog[start:end]))
+    legacy = set(re.findall(r'\{\s*id:\s*"([^"]+)"', catalog[start:end]))
     require(set(EXPECTED).issubset(legacy), "An essential legacy tool is missing from Web")
     supported = queue_operations(queue)
     require(set().union(*(set(v) for v in EXPECTED.values())) <= supported,
