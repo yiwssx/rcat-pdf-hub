@@ -1,11 +1,19 @@
 import type { ToolDefinition } from "./v3-ui";
 
 // Deliberately separate from the immutable 13-card T90-0 legacy registry.
-// Only the explicit build-time M08 gate exposes this new tool.
+// Each staged tool has its own explicit build-time opt-in gate.
 export const M08_UNLOCK_TOOL: ToolDefinition = {
   id: "unlock-pdf",
   title: "ปลดล็อก PDF",
   description: "ปลดล็อกด้วยรหัสผ่านที่ได้รับอนุญาต ไม่จัดเก็บรหัสผ่าน",
   icon: "unlock",
   tone: "purple",
+};
+
+export const M09_PROTECT_TOOL: ToolDefinition = {
+  id: "protect-pdf",
+  title: "ป้องกัน PDF ด้วยรหัสผ่าน",
+  description: "เข้ารหัส AES-256 โดยตั้งรหัสผ่านสำหรับเปิดและรหัสผ่านเจ้าของเอกสาร",
+  icon: "unlock",
+  tone: "indigo",
 };
