@@ -203,3 +203,9 @@ secrets:
 	@echo "PDFHUB_S3_SECRET_KEY=$$(openssl rand -hex 32)"
 	@echo "PAPERLESS_DB_PASSWORD=$$(openssl rand -hex 24)"
 	@echo "PAPERLESS_SECRET_KEY=$$(openssl rand -hex 48)"
+
+# R1 source-freeze check is deliberately not Production acceptance.
+.PHONY: release1-check
+release1-check:
+	python3 scripts/validate-release1.py --mode source
+	python3 -m unittest discover -s scripts/tests -p 'test_release1_gate.py'
