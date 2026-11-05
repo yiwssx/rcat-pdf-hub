@@ -47,6 +47,7 @@ const meta: Record<string, { title: string; subtitle: string; icon: ToolIconName
   "unlock-pdf": { title: "ปลดล็อก PDF", subtitle: "ใช้รหัสผ่านที่ได้รับอนุญาตเท่านั้น", icon: "unlock", tone: "purple" },
   "protect-pdf": { title: "ป้องกัน PDF", subtitle: "เข้ารหัส AES-256 พร้อมรหัสผ่าน 2 ชุด", icon: "unlock", tone: "indigo" },
   "extract-images": { title: "ดึงภาพที่ฝังใน PDF", subtitle: "ส่งออกภาพ PNG/JPEG ต้นทางเป็น ZIP", icon: "image", tone: "cyan" },
+  "grayscale-pdf": { title: "แปลง PDF เป็นระดับสีเทา", subtitle: "สร้างสำเนา PDF สีเทาโดยไม่แก้ต้นฉบับ", icon: "pdfa", tone: "indigo" },
   compress: { title: "ลดขนาด PDF", subtitle: "บีบอัดโดยไม่แก้ไฟล์ต้นฉบับ", icon: "compress", tone: "amber" },
   "pdf-to-images": { title: "PDF → รูปภาพ", subtitle: "ส่งออก PNG หรือ JPEG", icon: "image", tone: "red" },
   "images-to-pdf": { title: "รูปภาพ → PDF", subtitle: "รวมรูปเป็นเอกสาร PDF", icon: "imagePdf", tone: "cyan" },
@@ -172,6 +173,12 @@ export function ToolPanel(props: Props) {
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</button>
+        </>}
+
+        {tool === "grayscale-pdf" && <>
+          <Summary target={target} note="แปลงเอกสารเป็นระดับสีเทา • ไฟล์ PDF ต้นฉบับยังอยู่"/>
+          <div className="v3InfoBox">ระบบแปลงภาพและสีของเนื้อหาเป็นระดับเทา ไม่ใช่การลดขนาดไฟล์หรือการแปลงเป็นขาวดำสองสี และอาจปรับโครงสร้าง PDF ใหม่ จึงไม่รองรับเอกสารที่ลงลายเซ็นดิจิทัล มีฟอร์ม หรือมีคำอธิบายประกอบ</div>
+          <button type="button" className="v3PrimaryAction" onClick={() => props.onRun("grayscale-pdf")} disabled={busy || !targetIsPdf}>แปลง PDF เป็นระดับสีเทา</button>
         </>}
 
         {tool === "extract-images" && <>

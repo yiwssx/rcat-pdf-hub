@@ -2,6 +2,14 @@ import type { ToolDefinition } from "./v3-ui";
 
 // Deliberately separate from the immutable 13-card T90-0 legacy registry.
 // Each staged tool has its own explicit build-time opt-in gate.
+export const M30_GRAYSCALE_PDF_TOOL: ToolDefinition = {
+  id: "grayscale-pdf",
+  title: "แปลง PDF เป็นระดับสีเทา",
+  description: "แปลงสีในเอกสารเป็นโทนเทาด้วย Ghostscript โดยเก็บไฟล์ต้นฉบับไว้",
+  icon: "pdfa",
+  tone: "indigo",
+};
+
 export const M18_EXTRACT_IMAGES_TOOL: ToolDefinition = {
   id: "extract-images",
   title: "ดึงรูปภาพจาก PDF",

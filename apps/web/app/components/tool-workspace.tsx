@@ -112,6 +112,13 @@ export function ToolWorkspace({
           dpi: imageDpi,
         });
         return;
+      case "grayscale-pdf":
+        if (process.env.NEXT_PUBLIC_PDFHUB_M30_GRAYSCALE_ENABLED !== "true" || !targetIsPdf) {
+          onMessage("M30 แปลง PDF เป็นระดับสีเทายังไม่เปิดใช้งาน");
+          return;
+        }
+        await onSubmit("grayscale-pdf", { file_id: target.id });
+        return;
       case "extract-images":
         if (process.env.NEXT_PUBLIC_PDFHUB_M18_EXTRACT_ENABLED !== "true" || !targetIsPdf) {
           onMessage("M18 ดึงรูปภาพที่ฝังใน PDF ยังไม่เปิดใช้งาน");
