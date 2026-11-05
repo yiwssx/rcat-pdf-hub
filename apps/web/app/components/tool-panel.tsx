@@ -46,6 +46,7 @@ const meta: Record<string, { title: string; subtitle: string; icon: ToolIconName
   "split-rotate": { title: "จัดหน้า PDF", subtitle: "เลือก แยก และหมุนหน้า", icon: "organize", tone: "violet" },
   "unlock-pdf": { title: "ปลดล็อก PDF", subtitle: "ใช้รหัสผ่านที่ได้รับอนุญาตเท่านั้น", icon: "unlock", tone: "purple" },
   "protect-pdf": { title: "ป้องกัน PDF", subtitle: "เข้ารหัส AES-256 พร้อมรหัสผ่าน 2 ชุด", icon: "unlock", tone: "indigo" },
+  "extract-images": { title: "ดึงภาพที่ฝังใน PDF", subtitle: "ส่งออกภาพ PNG/JPEG ต้นทางเป็น ZIP", icon: "image", tone: "cyan" },
   compress: { title: "ลดขนาด PDF", subtitle: "บีบอัดโดยไม่แก้ไฟล์ต้นฉบับ", icon: "compress", tone: "amber" },
   "pdf-to-images": { title: "PDF → รูปภาพ", subtitle: "ส่งออก PNG หรือ JPEG", icon: "image", tone: "red" },
   "images-to-pdf": { title: "รูปภาพ → PDF", subtitle: "รวมรูปเป็นเอกสาร PDF", icon: "imagePdf", tone: "cyan" },
@@ -171,6 +172,12 @@ export function ToolPanel(props: Props) {
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</button>
+        </>}
+
+        {tool === "extract-images" && <>
+          <Summary target={target} note="ดึงภาพที่ฝังอยู่ในเอกสาร ไม่ใช่การแปลงหน้ากระดาษเป็นภาพ"/>
+          <div className="v3InfoBox">รองรับภาพ PNG/JPEG ที่แยกออกจากวัตถุภาพใน PDF โดยตรง ไม่รองรับ PDF ที่เข้ารหัสหรือ PDF ที่ไม่มีภาพฝังอยู่ หากต้องการรูปของทุกหน้า ให้ใช้เครื่องมือ PDF → รูปภาพ</div>
+          <button type="button" className="v3PrimaryAction" onClick={() => props.onRun("extract-images")} disabled={busy || !targetIsPdf}>ดึงภาพฝังใน PDF เป็น ZIP</button>
         </>}
 
         {tool === "protect-pdf" && <>
