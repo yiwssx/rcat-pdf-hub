@@ -60,6 +60,11 @@ def _owned_job(db: Session, job_id: str, principal: Principal) -> JobRecord:
 
 def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
     required = OPERATION_SCOPES.get(job.operation)
+    if job.operation == "header-and-footer":
+        from app.config import get_settings
+        if not get_settings().header_footer_tools_enabled:
+            raise HTTPException(status_code=404, detail="M31 header/footer disabled")
+        required = "pdf:header-footer"
     if job.operation == "grayscale-pdf":
         from app.config import get_settings
         if not get_settings().grayscale_pdf_tools_enabled:
