@@ -576,6 +576,29 @@ def process_job(job_id: str) -> str:
                 )
             finally:
                 del user_password, owner_password
+        elif job.operation == "grayscale-pdf":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_grayscale import (
+                MAX_SOURCE_BYTES as GRAYSCALE_SOURCE_MAX,
+                grayscale_pdf_bounded,
+            )
+            if (not settings.grayscale_pdf_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= GRAYSCALE_SOURCE_MAX
+                    or not isinstance(params, dict) or params):
+                raise ValueError("M30 grayscale source/parameters unauthorized")
+            try:
+                checked_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M30 invalid source PDF signature") from None
+            if checked_type != "application/pdf":
+                raise ValueError("M30 PDF signature changed")
+            grayscale_pdf_bounded(inputs[0], output)
         elif job.operation == "extract-images":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
@@ -966,6 +989,8 @@ def process_job(job_id: str) -> str:
             exc = RuntimeError("M08 unlock failed; resubmit password")
         elif job.operation == "protect-pdf":
             exc = RuntimeError("M09 protection failed; resubmit passwords")
+        elif job.operation == "grayscale-pdf":
+            exc = RuntimeError("M30 grayscale conversion failed; review source limitations")
         db.rollback()
         output.unlink(missing_ok=True)
         cleanup_outcomes: dict[str, bool] = {}
@@ -1030,6 +1055,8 @@ def process_job(job_id: str) -> str:
             raise RuntimeError("M08 unlock failed; resubmit password") from None
         if job.operation == "protect-pdf":
             raise RuntimeError("M09 protection failed; resubmit passwords") from None
+        if job.operation == "grayscale-pdf":
+            raise RuntimeError("M30 grayscale conversion failed; review source limitations") from None
         raise
     else:
         terminal_state = "completed"
@@ -1048,7 +1075,7 @@ def process_job(job_id: str) -> str:
             },
         )
         # Decrypted documents may contain confidential content. Never auto-archive.
-        if job.operation not in {"unlock-pdf", "protect-pdf"}:
+        if job.operation not in {"unlock-pdf", "protect-pdf", "grayscale-pdf"}:
             _auto_archive(db, record, job.requested_by)
         _notify_job(db, job)
         return record.id
