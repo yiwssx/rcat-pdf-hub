@@ -112,6 +112,13 @@ export function ToolWorkspace({
           dpi: imageDpi,
         });
         return;
+      case "extract-images":
+        if (process.env.NEXT_PUBLIC_PDFHUB_M18_EXTRACT_ENABLED !== "true" || !targetIsPdf) {
+          onMessage("M18 ดึงรูปภาพที่ฝังใน PDF ยังไม่เปิดใช้งาน");
+          return;
+        }
+        await onSubmit("extract-images", { file_id: target.id });
+        return;
       case "pdf-to-images":
         if (!targetIsPdf) {
           onMessage("PDF → รูปภาพ ต้องเลือกไฟล์ PDF");

@@ -75,7 +75,7 @@ def _output_spec(operation: str) -> tuple[str, str]:
 
 def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
-    if operation in {"split-to-zip", "extract-pages-zip"}:
+    if operation in {"split-to-zip", "extract-pages-zip", "extract-images"}:
         return ".zip", "application/zip"
     if operation == "pdf-to-tiff":
         return ".tiff", "image/tiff"
@@ -576,6 +576,29 @@ def process_job(job_id: str) -> str:
                 )
             finally:
                 del user_password, owner_password
+        elif job.operation == "extract-images":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_extract_embedded_images import (
+                MAX_SOURCE_BYTES as IMAGE_SOURCE_MAX,
+                extract_embedded_images_zip,
+            )
+            if (not settings.extract_embedded_images_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= IMAGE_SOURCE_MAX
+                    or not isinstance(params, dict) or params):
+                raise ValueError("M18 image extraction source/parameters unauthorized")
+            try:
+                verified = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M18 PDF signature invalid") from None
+            if verified != "application/pdf":
+                raise ValueError("M18 PDF signature changed")
+            extract_embedded_images_zip(inputs[0], output)
         elif job.operation == "unlock-pdf":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
@@ -767,6 +790,14 @@ def process_job(job_id: str) -> str:
             write_journal.fenced_progress(db, job, token, 80)
         else:
             _set_job(db, job, progress=80)
+        if job.operation == "extract-images" and settings.multi_output_artifacts_enabled:
+            from app.services.pdf_extract_embedded_images import (
+                MAX_IMAGE_BYTES, stage_embedded_image_parts,
+            )
+            staging = TemporaryDirectory(prefix="pdfhub-m18-parts-", dir=output.parent)
+            staged_pages = stage_embedded_image_parts(
+                output, Path(staging.name), max_bytes=MAX_IMAGE_BYTES,
+            )
         if job.operation in {"split-to-zip", "extract-pages-zip"}:
             from app.services.pdf_split_zip import (
                 MAX_PARTS_BYTES, selected_page_numbers, stage_split_pdf_parts,
@@ -848,7 +879,7 @@ def process_job(job_id: str) -> str:
             )
             write_journal.reserve_writes(
                 db, job, token,
-                [(reserved_names[0], "bundle" if job.operation in {"pdf-to-images", "split-to-zip", "extract-pages-zip"} else "result")]
+                [(reserved_names[0], "bundle" if job.operation in {"pdf-to-images", "split-to-zip", "extract-pages-zip", "extract-images"} else "result")]
                 + [(name, "part") for name in reserved_names[1:]],
             )
         primary_name = f"{job.id}-{token}{suffix}" if token else f"{job.id}{suffix}"
@@ -876,7 +907,7 @@ def process_job(job_id: str) -> str:
             journal_files[stored_name] = record.id
         db.add(JobOutputArtifact(
             job_id=job.id, file_id=record.id,
-            role="bundle" if job.operation in {"pdf-to-images", "split-to-zip", "extract-pages-zip"} else "result",
+            role="bundle" if job.operation in {"pdf-to-images", "split-to-zip", "extract-pages-zip", "extract-images"} else "result",
             ordinal=None,
         ))
         for page in staged_pages:
