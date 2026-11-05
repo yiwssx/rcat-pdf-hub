@@ -32,6 +32,7 @@ type Props = {
   onSettingChange: ToolSettingSetter;
   onRun: (operation: string) => void;
   onUnlock: (password: string) => void;
+  onProtect: (user_password: string, owner_password: string) => void;
   onExtract: (pages: string, format: "pdf" | "zip") => void;
   onSignedLink: () => void;
   onCopySignedLink: () => void;
@@ -44,6 +45,7 @@ const meta: Record<string, { title: string; subtitle: string; icon: ToolIconName
   "merge-pdf": { title: "รวมไฟล์ PDF", subtitle: "ตรวจรายการก่อนรวมเอกสาร", icon: "merge", tone: "blue" },
   "split-rotate": { title: "จัดหน้า PDF", subtitle: "เลือก แยก และหมุนหน้า", icon: "organize", tone: "violet" },
   "unlock-pdf": { title: "ปลดล็อก PDF", subtitle: "ใช้รหัสผ่านที่ได้รับอนุญาตเท่านั้น", icon: "unlock", tone: "purple" },
+  "protect-pdf": { title: "ป้องกัน PDF", subtitle: "เข้ารหัส AES-256 พร้อมรหัสผ่าน 2 ชุด", icon: "unlock", tone: "indigo" },
   compress: { title: "ลดขนาด PDF", subtitle: "บีบอัดโดยไม่แก้ไฟล์ต้นฉบับ", icon: "compress", tone: "amber" },
   "pdf-to-images": { title: "PDF → รูปภาพ", subtitle: "ส่งออก PNG หรือ JPEG", icon: "image", tone: "red" },
   "images-to-pdf": { title: "รูปภาพ → PDF", subtitle: "รวมรูปเป็นเอกสาร PDF", icon: "imagePdf", tone: "cyan" },
@@ -64,6 +66,10 @@ export function ToolPanel(props: Props) {
   // Keep PDF passwords only in this transient component, never persisted in
   // ToolWorkspaceSettings, URL, cookies or localStorage.
   const [unlockPassword, setUnlockPassword] = useState("");
+  const [protectUserPassword, setProtectUserPassword] = useState("");
+  const [protectOwnerPassword, setProtectOwnerPassword] = useState("");
+  const [protectUserConfirm, setProtectUserConfirm] = useState("");
+  const [protectOwnerConfirm, setProtectOwnerConfirm] = useState("");
   const [pageItems, setPageItems] = useState<Array<{ page: number; rotation: number }>>([]);
   const [pagesLoading, setPagesLoading] = useState(false);
   const [pagesError, setPagesError] = useState<string | null>(null);
@@ -165,6 +171,43 @@ export function ToolPanel(props: Props) {
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>
           <button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</button>
+        </>}
+
+        {tool === "protect-pdf" && <>
+          <Summary target={target} note="สร้างสำเนา PDF แบบ AES-256 (Revision 6) • ไฟล์ต้นฉบับไม่เปลี่ยน"/>
+          <div className="v3InfoBox">รหัสผ่านเปิดเอกสาร (User Password) ใช้สำหรับอ่าน PDF ส่วนรหัสผ่านเจ้าของเอกสาร (Owner Password) ใช้สำหรับจัดการสิทธิ์ ทั้งสองต้องต่างกัน และไม่ถือเป็นระบบ DRM</div>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            if (busy || !targetIsPdf
+                || !protectUserPassword || !protectOwnerPassword
+                || protectUserPassword === protectOwnerPassword
+                || protectUserPassword !== protectUserConfirm
+                || protectOwnerPassword !== protectOwnerConfirm) return;
+            const user = protectUserPassword;
+            const owner = protectOwnerPassword;
+            setProtectUserPassword("");
+            setProtectOwnerPassword("");
+            setProtectUserConfirm("");
+            setProtectOwnerConfirm("");
+            props.onProtect(user, owner);
+          }}>
+            <label className="v3Field">รหัสผ่านสำหรับเปิด PDF
+              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectUserPassword} onChange={(event) => setProtectUserPassword(event.target.value)}/>
+            </label>
+            <label className="v3Field">ยืนยันรหัสผ่านสำหรับเปิด PDF
+              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectUserConfirm} onChange={(event) => setProtectUserConfirm(event.target.value)}/>
+            </label>
+            <label className="v3Field">รหัสผ่านเจ้าของ PDF (ต้องต่างจากรหัสผ่านเปิด)
+              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectOwnerPassword} onChange={(event) => setProtectOwnerPassword(event.target.value)}/>
+            </label>
+            <label className="v3Field">ยืนยันรหัสผ่านเจ้าของ PDF
+              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectOwnerConfirm} onChange={(event) => setProtectOwnerConfirm(event.target.value)}/>
+            </label>
+            {protectUserPassword && protectOwnerPassword && protectUserPassword === protectOwnerPassword && <p role="alert" className="v3FieldNote">รหัสผ่านสำหรับเปิดและเจ้าของเอกสารต้องไม่ซ้ำกัน</p>}
+            {(protectUserConfirm && protectUserPassword !== protectUserConfirm || protectOwnerConfirm && protectOwnerPassword !== protectOwnerConfirm) && <p role="alert" className="v3FieldNote">กรุณายืนยันรหัสผ่านทั้งสองให้ตรงกัน</p>}
+            <button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || !protectUserPassword || !protectOwnerPassword || protectUserPassword === protectOwnerPassword || protectUserPassword !== protectUserConfirm || protectOwnerPassword !== protectOwnerConfirm}>เข้ารหัส PDF ด้วย AES-256</button>
+          </form>
+          <div className="v3FieldNote">ไม่สามารถกู้รหัสผ่านจากระบบได้ หากลืมรหัสผ่านต้องใช้ไฟล์ต้นฉบับเพื่อสร้างใหม่</div>
         </>}
 
         {tool === "unlock-pdf" && <>
