@@ -60,7 +60,8 @@ class WorkspaceSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".env"
             path.write_text(SOURCE, encoding="utf-8")
-            os.chmod(path, 0o644)
+            # Never create a world-readable credential fixture, even temporarily.
+            os.chmod(path, 0o600)
             new_text = module.merge_settings(SOURCE, module.POLICY)
             self.assertTrue(module.write_secure(path, SOURCE, new_text))
             self.assertEqual(path.read_text(), new_text)
