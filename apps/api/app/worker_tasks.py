@@ -576,6 +576,30 @@ def process_job(job_id: str) -> str:
                 )
             finally:
                 del user_password, owner_password
+        elif job.operation == "header-and-footer":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_header_footer_bounded import (
+                MAX_SOURCE_BYTES as HEADER_FOOTER_SOURCE_MAX,
+                header_footer_pdf_bounded,
+                validate_header_footer_params,
+            )
+            if (not settings.header_footer_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= HEADER_FOOTER_SOURCE_MAX):
+                raise ValueError("M31 source ownership/type/size denied")
+            try:
+                checked_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M31 source PDF signature invalid") from None
+            if checked_type != "application/pdf":
+                raise ValueError("M31 PDF signature mismatch")
+            checked_params = validate_header_footer_params(params)
+            header_footer_pdf_bounded(inputs[0], output, params=checked_params)
         elif job.operation == "grayscale-pdf":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
@@ -991,6 +1015,8 @@ def process_job(job_id: str) -> str:
             exc = RuntimeError("M09 protection failed; resubmit passwords")
         elif job.operation == "grayscale-pdf":
             exc = RuntimeError("M30 grayscale conversion failed; review source limitations")
+        elif job.operation == "header-and-footer":
+            exc = RuntimeError("M31 header/footer conversion failed; review source limitations")
         db.rollback()
         output.unlink(missing_ok=True)
         cleanup_outcomes: dict[str, bool] = {}
@@ -1057,6 +1083,8 @@ def process_job(job_id: str) -> str:
             raise RuntimeError("M09 protection failed; resubmit passwords") from None
         if job.operation == "grayscale-pdf":
             raise RuntimeError("M30 grayscale conversion failed; review source limitations") from None
+        if job.operation == "header-and-footer":
+            raise RuntimeError("M31 header/footer conversion failed; review source limitations") from None
         raise
     else:
         terminal_state = "completed"
@@ -1075,7 +1103,7 @@ def process_job(job_id: str) -> str:
             },
         )
         # Decrypted documents may contain confidential content. Never auto-archive.
-        if job.operation not in {"unlock-pdf", "protect-pdf", "grayscale-pdf"}:
+        if job.operation not in {"unlock-pdf", "protect-pdf", "grayscale-pdf", "header-and-footer"}:
             _auto_archive(db, record, job.requested_by)
         _notify_job(db, job)
         return record.id

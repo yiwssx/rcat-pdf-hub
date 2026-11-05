@@ -2,6 +2,14 @@ import type { ToolDefinition } from "./v3-ui";
 
 // Deliberately separate from the immutable 13-card T90-0 legacy registry.
 // Each staged tool has its own explicit build-time opt-in gate.
+export const M31_HEADER_FOOTER_TOOL: ToolDefinition = {
+  id: "header-and-footer",
+  title: "ส่วนหัวและส่วนท้าย PDF",
+  description: "เพิ่มข้อความส่วนหัวและท้าย พร้อมเลขหน้า ตำแหน่งและระยะขอบ",
+  icon: "numbers",
+  tone: "violet",
+};
+
 export const M30_GRAYSCALE_PDF_TOOL: ToolDefinition = {
   id: "grayscale-pdf",
   title: "แปลง PDF เป็นระดับสีเทา",

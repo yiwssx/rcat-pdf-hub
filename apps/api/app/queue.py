@@ -54,6 +54,8 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.header_footer_tools_enabled and operation == "header-and-footer":
+        return "pdf"
     if settings.grayscale_pdf_tools_enabled and operation == "grayscale-pdf":
         return "pdf"
     if settings.extract_embedded_images_tools_enabled and operation == "extract-images":

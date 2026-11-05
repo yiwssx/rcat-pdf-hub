@@ -74,6 +74,9 @@ app.include_router(internal.router)
 app.include_router(files.router)
 app.include_router(jobs.router)
 app.include_router(pdf.router)
+if settings.header_footer_tools_enabled:
+    from app.routers import pdf_header_footer
+    app.include_router(pdf_header_footer.router)
 if settings.grayscale_pdf_tools_enabled:
     from app.routers import pdf_grayscale
     app.include_router(pdf_grayscale.router)

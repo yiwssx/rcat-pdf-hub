@@ -1,5 +1,5 @@
 import type { ToolDefinition } from "./v3-ui";
-import { M08_UNLOCK_TOOL, M09_PROTECT_TOOL, M18_EXTRACT_IMAGES_TOOL, M30_GRAYSCALE_PDF_TOOL } from "./tool-staged-catalog";
+import { M08_UNLOCK_TOOL, M09_PROTECT_TOOL, M18_EXTRACT_IMAGES_TOOL, M30_GRAYSCALE_PDF_TOOL, M31_HEADER_FOOTER_TOOL } from "./tool-staged-catalog";
 
 // Stable public slugs. Keep this catalog independent of auth and upload state.
 export const LEGACY_PDF_TOOLS: readonly ToolDefinition[] = [
@@ -29,6 +29,8 @@ export const PDF_TOOLS: readonly ToolDefinition[] = [
     ? [M18_EXTRACT_IMAGES_TOOL] : []),
   ...(process.env.NEXT_PUBLIC_PDFHUB_M30_GRAYSCALE_ENABLED === "true"
     ? [M30_GRAYSCALE_PDF_TOOL] : []),
+  ...(process.env.NEXT_PUBLIC_PDFHUB_M31_HEADER_FOOTER_ENABLED === "true"
+    ? [M31_HEADER_FOOTER_TOOL] : []),
 ];
 
 export function findPdfTool(slug: string): ToolDefinition | undefined {
