@@ -24,7 +24,7 @@ from app.queue import queue_class_for_operation
 from app.routers import pdf_extract_images
 from app.routers.jobs import _require_operation_scope
 from app.services.pdf_extract_embedded_images import (
-    MAX_IMAGE_BYTES, _validate_image, extract_embedded_images_zip,
+    _validate_image, extract_embedded_images_zip,
     stage_embedded_image_parts,
 )
 from app.worker_tasks import _output_spec_for_job
