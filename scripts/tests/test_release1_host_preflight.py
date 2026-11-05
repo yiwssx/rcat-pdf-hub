@@ -49,6 +49,27 @@ class HostPreflightTests(unittest.TestCase):
         del self.config["services"]["worker-heavy"]
         self.assertIn("missing_service:worker-heavy", mod.inspect_compose(self.config))
 
+    def test_unforwarded_optional_flags_use_api_default_off(self):
+        for name in mod.SERVICES:
+            env = self.config["services"][name]["environment"]
+            for key in mod.OPTIONAL_OFF:
+                self.assertNotIn(key, env)
+        self.assertEqual(mod.inspect_compose(self.config), [])
+
+    def test_newly_forwarded_experimental_flag_blocks_pilot(self):
+        self.config["services"]["api"]["environment"]["PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED"] = "true"
+        self.assertIn(
+            "insecure_setting:PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED",
+            mod.inspect_compose(self.config),
+        )
+
+    def test_worker_experimental_flag_cannot_diverge(self):
+        self.config["services"]["worker"]["environment"]["PDFHUB_TO_PDF_TOOLS_ENABLED"] = "true"
+        self.assertIn(
+            "service_environment_mismatch:worker:PDFHUB_TO_PDF_TOOLS_ENABLED",
+            mod.inspect_compose(self.config),
+        )
+
     def test_experimental_converter_flag_blocks_pilot(self):
         self.config["services"]["api"]["environment"]["PDFHUB_FROM_PDF_TOOLS_ENABLED"] = "true"
         self.assertIn("insecure_setting:PDFHUB_FROM_PDF_TOOLS_ENABLED",
