@@ -68,3 +68,20 @@ Do not infer RELEASED from \`make release1-check\`, green GitHub CI, or this fil
 
 90-tool tracker #172 and separate approval gates #262/#267 remain open for the
 later expansion. No automatic T90 state promotions or feature flag changes.
+
+## Non-mutating host configuration preflight
+
+On a test/target host with actual operator-owned environment values present:
+
+```bash
+make release1-host-preflight
+```
+
+This runs `docker compose ... config --format json` through a read-only checker.
+It never displays the source configuration or credentials; only failing setting
+names are printed. Required: verified RCAT-only OIDC/HTTPS session policy,
+nonempty Google client credentials, `PDFHUB_CLAMAV_ENABLED=true` and fail-closed
+AV, all three worker configurations consistent with API, and experimental
+conversion backends OFF. Passing only proves the *rendered configuration*
+contract, not a working Google account or AV daemon. Then perform the
+independent pilot checks before requesting any deployment approval.
