@@ -1697,3 +1697,32 @@ test("T90-1 PDF tool preflight rejects renamed non-PDF MIME", () => {
   expect(validateToolInputs("compress", [renamedImage])).toContain("ไม่รองรับ");
   expect(validateToolInputs("compress", [pdfWithUnusualName])).toBeNull();
 });
+
+
+test("R1 institutional pilot shows only nine approved tools and blocks excluded deep links", async ({ page }) => {
+  // Mock only the user-facing authorization status; this is not an OIDC security test.
+  await page.route("**/api/v1/auth/config", (route) => route.fulfill({
+    json: { ...authConfigFixture, institutional: { rcat_only: true, email_domain: "rcat.ac.th" } },
+  }));
+  await page.goto("/");
+  await expect(page.locator(".v3ToolGrid .v3ToolCard")).toHaveCount(9);
+  await expect(page.getByRole("button", { name: /Office → PDF/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /ลิงก์ดาวน์โหลด/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /คลังเอกสาร/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /PDF\/A-2/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /ประทับ PDF/ })).toHaveCount(0);
+
+  await page.goto("/tools/signed-link?file=file-pdf-1");
+  await expect(page.getByRole("heading", { name: "เครื่องมือนี้ยังไม่เปิดให้ใช้งาน" })).toBeVisible();
+  await expect(page.locator(".v3ToolPanel")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /สร้างลิงก์/ })).toHaveCount(0);
+
+  await page.goto("/tools/compress");
+  await expect(page.getByRole("heading", { name: "ลดขนาด PDF" })).toBeVisible();
+});
+
+test("noninstitutional legacy catalog remains unchanged", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".v3ToolGrid .v3ToolCard")).toHaveCount(13);
+  await expect(page.getByRole("button", { name: /ลิงก์ดาวน์โหลด/ })).toBeVisible();
+});
