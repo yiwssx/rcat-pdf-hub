@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_HUMAN_SCOPES = (
     "files:read,files:write,jobs:read,jobs:manage,"
     "pdf:merge,pdf:split,pdf:unlock,pdf:protect,pdf:rotate,pdf:compress,pdf:ocr,pdf:pdfa,pdf:convert,"
-    "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,pdf:extract-images,archive:paperless"
+    "pdf:watermark,pdf:page-number,pdf:stamp,pdf:image-to-pdf,pdf:pdf-to-image,pdf:extract-images,pdf:grayscale,archive:paperless"
 )
 
 
@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     extract_pages_tools_enabled: bool = False
     # M18 original embedded XObject extraction; off pending host/Thai acceptance.
     extract_embedded_images_tools_enabled: bool = False
+    # M30 conservative grayscale PDF; off pending independent physical acceptance.
+    grayscale_pdf_tools_enabled: bool = False
     # M08: separate, default-disabled owner-bound unlock with one-time encrypted Valkey handoff.
     unlock_pdf_tools_enabled: bool = False
     unlock_pdf_handoff_key: str = Field(default="", repr=False)
