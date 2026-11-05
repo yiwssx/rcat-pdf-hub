@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "release": "RCAT-PDF-HUB-R1",
+  "lifecycle": "CODE_FREEZE_CANDIDATE_NOT_DEPLOYED",
+  "scope": "9 essential existing processing tools only; other legacy cards remain unchanged but are not R1 acceptance claims",
+  "target": "verified RCAT Google Workspace users only",
+  "tools": [
+    {
+      "slug": "ocr",
+      "operations": [
+        "ocr"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "merge-pdf",
+      "operations": [
+        "merge"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "split-rotate",
+      "operations": [
+        "organize",
+        "split",
+        "rotate"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "compress",
+      "operations": [
+        "compress"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "pdf-to-images",
+      "operations": [
+        "pdf-to-images"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "images-to-pdf",
+      "operations": [
+        "images-to-pdf"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "watermark",
+      "operations": [
+        "watermark"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "page-numbers",
+      "operations": [
+        "page-numbers"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    },
+    {
+      "slug": "office-to-pdf",
+      "operations": [
+        "office-to-pdf"
+      ],
+      "acceptance": [
+        "authenticated_upload",
+        "queued_worker_conversion",
+        "real_output_binary",
+        "authenticated_download",
+        "owner_isolation",
+        "thai_fidelity",
+        "failure_recovery"
+      ]
+    }
+  ],
+  "release_gates": [
+    "google_workspace_authority",
+    "non_rcat_denial",
+    "provider_verified_email",
+    "stable_oidc_owner",
+    "secure_cookie",
+    "service_key_and_share_bypass_denial",
+    "browser_e2e",
+    "av_and_parser_isolation",
+    "quotas_retention_audit",
+    "verified_backup",
+    "rollback_rehearsal",
+    "operator_approval"
+  ],
+  "exclusions": [
+    "T90 experimental converters",
+    "AI tools",
+    "signed-link",
+    "archive",
+    "native sidecars",
+    "automatic production deployment"
+  ],
+  "policy": {
+    "feature_expansion_frozen": true,
+    "production_rollout_requires_explicit_approval": true,
+    "independent_live_evidence_required": true
+  }
+}
