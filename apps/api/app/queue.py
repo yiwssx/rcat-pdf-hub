@@ -54,6 +54,8 @@ heavy_queue = Queue(
 
 
 def queue_class_for_operation(operation: str) -> QueueClass:
+    if settings.extract_embedded_images_tools_enabled and operation == "extract-images":
+        return "pdf"
     if settings.protect_pdf_tools_enabled and operation == "protect-pdf":
         return "pdf"
     if settings.unlock_pdf_tools_enabled and operation == "unlock-pdf":
