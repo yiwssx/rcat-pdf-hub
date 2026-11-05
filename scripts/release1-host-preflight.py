@@ -20,10 +20,12 @@ REQUIRED = {
     "PDFHUB_WEB_CONSOLE_AUTO_LOGIN": "false",
     "PDFHUB_CLAMAV_ENABLED": "true",
     "PDFHUB_CLAMAV_FAIL_CLOSED": "true",
-    "PDFHUB_TO_PDF_TOOLS_ENABLED": "false",
     "PDFHUB_FROM_PDF_TOOLS_ENABLED": "false",
-    "PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED": "false",
 }
+# These settings are intentionally not forwarded by the current Compose file.
+# In the API they default to False; a missing Compose key therefore means OFF.
+# If a future Compose file forwards a key, an explicit 'true' must fail closed.
+OPTIONAL_OFF = ("PDFHUB_TO_PDF_TOOLS_ENABLED", "PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED")
 CREDENTIALS = ("PDFHUB_OIDC_CLIENT_ID", "PDFHUB_OIDC_CLIENT_SECRET")
 
 
@@ -64,6 +66,9 @@ def inspect_compose(data: object) -> list[str]:
         value = api.get(key, "")
         if value.lower() != expected.lower():
             failures.append("insecure_setting:" + key)
+    for key in OPTIONAL_OFF:
+        if api.get(key, "false").lower() != "false":
+            failures.append("insecure_setting:" + key)
     for name in CREDENTIALS:
         value = api.get(name, "").strip()
         if not value or value.startswith("replace-"):
@@ -78,7 +83,7 @@ def inspect_compose(data: object) -> list[str]:
         if name not in envs or name == "api":
             continue
         env = envs[name]
-        for key in (*REQUIRED, *CREDENTIALS, "PDFHUB_PUBLIC_BASE_URL"):
+        for key in (*REQUIRED, *OPTIONAL_OFF, *CREDENTIALS, "PDFHUB_PUBLIC_BASE_URL"):
             if env.get(key, "") != api.get(key, ""):
                 failures.append("service_environment_mismatch:" + name + ":" + key)
     return failures
