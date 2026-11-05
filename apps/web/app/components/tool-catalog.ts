@@ -1,5 +1,5 @@
 import type { ToolDefinition } from "./v3-ui";
-import { M08_UNLOCK_TOOL } from "./tool-staged-catalog";
+import { M08_UNLOCK_TOOL, M09_PROTECT_TOOL } from "./tool-staged-catalog";
 
 // Stable public slugs. Keep this catalog independent of auth and upload state.
 export const LEGACY_PDF_TOOLS: readonly ToolDefinition[] = [
@@ -23,6 +23,8 @@ export const PDF_TOOLS: readonly ToolDefinition[] = [
   ...LEGACY_PDF_TOOLS,
   ...(process.env.NEXT_PUBLIC_PDFHUB_M08_UNLOCK_ENABLED === "true"
     ? [M08_UNLOCK_TOOL] : []),
+  ...(process.env.NEXT_PUBLIC_PDFHUB_M09_PROTECT_ENABLED === "true"
+    ? [M09_PROTECT_TOOL] : []),
 ];
 
 export function findPdfTool(slug: string): ToolDefinition | undefined {
