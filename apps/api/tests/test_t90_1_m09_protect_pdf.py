@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
-import io
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
