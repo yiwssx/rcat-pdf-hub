@@ -23,11 +23,11 @@ class PilotAcceptanceTest(unittest.TestCase):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 28)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 35)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 61)
-        self.assertEqual(len(report["uncertified"]), 61)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33", "M14", "M15", "F01", "F11", "M22"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 54)
+        self.assertEqual(len(report["uncertified"]), 54)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33", "M14", "M15", "F01", "F11", "M22", "M07", "M08", "M09", "M16", "M18", "M30", "M31"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -157,6 +157,33 @@ class PilotAcceptanceTest(unittest.TestCase):
         self.assertIn("ASCII", m22["supported_subset"])
         self.assertIn("RCAT", m22["acceptance_pending"])
         self.assertNotIn(m22["state"], {"VERIFIED", "RELEASED"})
+
+
+        # Exact reviewed source-head CI proves code integration only; not
+        # institutional runtime/Thai fidelity or activation evidence.
+        for tool_id, source_sha, pr, ci_run in (
+            ("M07", "0651613ef199037f15043d0c2b09d3d295ae7222", 300, 41817899273),
+            ("M08", "0945eddfde0c07eff80fb13588ef709d5008cca7", 302, 41826789046),
+            ("M09", "2e2aaa7946fcb3c5a5e3eca2f5f918693acab01a", 303, 41957731146),
+            ("M16", "2a21eba1ce6a51d686fadca5502af0bbb49d0435", 301, 41819587647),
+            ("M18", "c74273e241b6bdaae6bcdabd0565b8edb8435f3b", 304, 41961212961),
+            ("M30", "72d0a11ac9fee69524396461e6236713c13d2085", 305, 41963071305),
+            ("M31", "a5983b618a5c356c931d6782a865ed3003758a37", 306, 41971960969),
+        ):
+            entry = next(item for item in self.evidence["tool_evidence"]
+                         if item["tool_id"] == tool_id)
+            self.assertEqual(entry["state"], "IMPLEMENTED")
+            self.assertEqual(entry["source_commit"], source_sha)
+            self.assertEqual(entry["pr"],
+                             f"https://github.com/yiwssx/rcat-pdf-hub/pull/{pr}")
+            self.assertEqual(entry["ci_run"],
+                             f"https://github.com/yiwssx/rcat-pdf-hub/actions/runs/{ci_run}")
+            self.assertIn("default-off", entry["supported_subset"].lower())
+            self.assertIn("RCAT", entry["acceptance_pending"])
+            self.assertIn("Google Workspace OIDC", entry["acceptance_pending"])
+            for prohibited in ("approved_by", "approved_at", "cohort",
+                               "institutional_sso_report", "thai_fidelity_report"):
+                self.assertNotIn(prohibited, entry)
 
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
