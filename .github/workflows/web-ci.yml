@@ -8,6 +8,25 @@ permissions:
   contents: read
 
 jobs:
+  # Build the same multi-stage image used on the Ubuntu RCAT host, not just
+  # the Next.js build in a clean CI checkout.
+  web-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Poison host-only Next dependencies and cache (Docker must ignore them)
+        run: |
+          mkdir -p apps/web/node_modules/next apps/web/node_modules/@next/swc-linux-x64-musl apps/web/.next/cache
+          printf '{"version":"0.0.0-host"}\n' > apps/web/node_modules/next/package.json
+          printf '{"version":"0.0.0-host"}\n' > apps/web/node_modules/@next/swc-linux-x64-musl/package.json
+          printf 'obsolete host build cache\n' > apps/web/.next/cache/host-cache-marker
+          test -f apps/web/.dockerignore
+          grep -Fx 'node_modules' apps/web/.dockerignore
+          grep -Fx '.next' apps/web/.dockerignore
+      - name: Build exact production web container from pinned lockfile
+        run: docker build --file apps/web/Dockerfile --tag rcat-pdf-hub-web:ci apps/web
+
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 15
