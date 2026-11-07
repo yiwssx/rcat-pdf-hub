@@ -1,0 +1,25 @@
+# Build exclusively from the pinned package-lock dependency graph.
+# Never COPY host dependencies or Next/Turbopack artifacts into the image.
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+.cache
+**/.cache
+test-results
+playwright-report
+coverage
+*.tsbuildinfo
+
+# Local credentials, IDE state and system artifacts.
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.DS_Store
+.vscode
+.idea
+*.log
+npm-debug.log*
