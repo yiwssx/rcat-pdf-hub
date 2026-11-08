@@ -12,13 +12,16 @@ fi
 bash scripts/verify-backup.sh "${BACKUP_DIR}"
 
 storage_backend="$(sed -n 's/^PDFHUB_STORAGE_BACKEND=//p' "${BACKUP_DIR}/manifest.env")"
-project="pdfhub-drill-$(date -u +%Y%m%d%H%M%S)-$$"
-port="${PDFHUB_DRILL_HTTP_PORT:-18081}"
+project="pdfhub-drill-$(date -u +%Y%m%d%H%M%S)-$"
+# Pick an unused local port, or validate the operator's explicit choice.
+# The drill-specific Compose overlay below binds Caddy on loopback only.
+port="$(python3 scripts/select-drill-port.py)"
 
 # A DR drill deliberately restores into isolated named volumes, regardless of whether
 # the production backup came from default-volume or NAS compose mode.
 export PDFHUB_COMPOSE_PROJECT="${project}"
 export PDFHUB_COMPOSE_MODE=default
+export COMPOSE_FILE="${ROOT}/docker-compose.yml:${ROOT}/docker-compose.drill.yml"
 export PDFHUB_RESTORE_ALLOW_COMPOSE_MODE_CHANGE=true
 export PDFHUB_HTTP_PORT="${port}"
 export PDFHUB_ALLOWED_ORIGINS="http://localhost:${port}"
