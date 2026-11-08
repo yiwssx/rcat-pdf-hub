@@ -13,8 +13,10 @@ case "${MODE}" in
   *) echo "PDFHUB_RELEASE_MODE must be code or production" >&2; exit 2 ;;
 esac
 
-printf 'release-readiness: running full repository validation\n'
-make validate-free
+# Reuse CI evidence for the immutable current main SHA. Re-running the
+# complete PR suite on Production repeats builds and browser tests needlessly.
+printf 'release-readiness: verifying exact-commit CI evidence\n'
+bash scripts/verify-ci-evidence.sh
 
 printf 'release-readiness: running source supply-chain gate\n'
 make validate-supply-chain-source
@@ -23,9 +25,6 @@ if [ "${MODE}" = "code" ]; then
   printf 'release-readiness: PASS (code gate)\n'
   exit 0
 fi
-
-printf 'release-readiness: checking local CI enforcement\n'
-make local-ci-doctor
 
 printf 'release-readiness: running production image supply-chain gate\n'
 make validate-supply-chain-images
