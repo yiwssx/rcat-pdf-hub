@@ -64,6 +64,13 @@ def classify(paths: list[str], *, force_all: bool = False) -> dict[str, bool]:
         elif path.startswith("ops/gotenberg/"):
             selected["ops"] = True
             selected["gotenberg"] = True
+        elif path == "scripts/ci-risk-integration.sh":
+            # A change to the integration harness itself must exercise both
+            # real-service tracks before being trusted as a required gate.
+            selected["ops"] = True
+            selected["backend"] = True
+            selected["database"] = True
+            selected["t90_stack"] = True
         elif (
             path.startswith(("scripts/", "ops/", ".github/"))
             or path.startswith(("docker-compose", "compose."))
