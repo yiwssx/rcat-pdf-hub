@@ -72,6 +72,14 @@ class ScopeTests(unittest.TestCase):
                 self.assertTrue(r["t90_stack"])
                 self.assertFalse(r["frontend"])
 
+    def test_integration_harness_change_exercises_real_services(self):
+        r = mod.classify(["scripts/ci-risk-integration.sh"])
+        self.assertTrue(r["ops"])
+        self.assertTrue(r["backend"])
+        self.assertTrue(r["database"])
+        self.assertTrue(r["t90_stack"])
+        self.assertFalse(r["frontend"])
+
     def test_web_auth_and_components_trigger_regression(self):
         for file in ("apps/web/app/web-auth/session/route.ts", "apps/web/components/Toolbar.tsx"):
             with self.subTest(path=file):
