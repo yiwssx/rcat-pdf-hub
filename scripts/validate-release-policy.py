@@ -158,7 +158,11 @@ for required in (
     "bash scripts/compile-python-lock.sh",
 ):
     assert required in python_security_workflow, f"Dependabot Python security workflow missing guard: {required}"
-assert "make validate-free" not in python_security_workflow, "Python security workflow must reuse Lean CI instead of full repeat"
+assert not any(
+    "make validate-free" in line
+    for line in python_security_workflow.splitlines()
+    if not line.lstrip().startswith("#")
+), "Python security workflow must reuse Lean CI instead of full repeat"
 assert "  validate:" not in python_security_workflow, "Deprecated Dependabot full validation job must not return"
 assert "pull_request_target:" not in python_security_workflow, "Python security workflow must not use pull_request_target"
 assert "contents: write" not in python_security_workflow, "Python security workflow must stay read-only"
