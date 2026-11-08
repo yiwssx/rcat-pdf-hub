@@ -114,8 +114,8 @@ for _ in range(120):
     try:
         with socket.create_connection(("clamav", 3310), timeout=3) as conn:
             conn.settimeout(3)
-            conn.sendall(b"zPING\\0")
-            response = conn.recv(64).rstrip(b"\\0\\r\\n")
+            conn.sendall(b"zPING\0")
+            response = conn.recv(64).rstrip(b"\0\r\n")
         if response.upper() == b"PONG":
             print("dr-drill: isolated ClamAV PONG")
             break
