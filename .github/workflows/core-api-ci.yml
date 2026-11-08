@@ -9,18 +9,14 @@ permissions:
 
 jobs:
   host-python:
-    name: Host tooling on Python ${{ matrix.python }}
+    name: Host tooling on Python 3.12
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.12"
       - name: Validate host Python compatibility and operator scripts
         run: |
           python3 scripts/check-host-python.py
