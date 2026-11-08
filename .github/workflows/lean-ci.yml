@@ -79,6 +79,16 @@ jobs:
             python scripts/backend-coverage.py
           docker run --rm -e PDFHUB_CONTRACT_ARTIFACT=/tmp/openapi.json -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci python scripts/validate-api-contract.py
 
+      # Reuse the already-built Python 3.12 image. Real disposable services
+      # only run for migrations, worker queues, storage or dependency changes.
+      - name: Verify risk-scoped PostgreSQL and RQ/S3 integrations
+        if: steps.scope.outputs.database == 'true' || steps.scope.outputs.t90_stack == 'true'
+        timeout-minutes: 18
+        env:
+          CI_INTEGRATION_DATABASE: ${{ steps.scope.outputs.database }}
+          CI_INTEGRATION_T90_STACK: ${{ steps.scope.outputs.t90_stack }}
+        run: bash scripts/ci-risk-integration.sh
+
       - uses: actions/setup-node@v5
         if: steps.scope.outputs.frontend == 'true'
         with:
@@ -92,13 +102,18 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           PDFHUB_E2E_SERVER_MODE: production
+          PDFHUB_CI_UI_REGRESSION: ${{ steps.scope.outputs.web_regression }}
         run: |
           set -euo pipefail
           npm ci --no-audit --no-fund
           npm run typecheck
           npm run build
           npx playwright install --with-deps chromium
-          npx playwright test tests/e2e/pdf-hub.smoke.spec.ts
+          if [[ "${PDFHUB_CI_UI_REGRESSION}" == "true" ]]; then
+            npx playwright test tests/e2e/pdf-hub.smoke.spec.ts tests/e2e/pdf-hub.ui-regression.spec.ts
+          else
+            npx playwright test tests/e2e/pdf-hub.smoke.spec.ts
+          fi
 
       - name: Validate Thai Gotenberg image only if its source changes
         if: steps.scope.outputs.gotenberg == 'true'
