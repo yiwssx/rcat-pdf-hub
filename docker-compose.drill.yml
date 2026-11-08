@@ -1,0 +1,6 @@
+# Used only by scripts/dr-drill.sh through COMPOSE_FILE.
+# Never publish restored school data or drill credentials to the LAN.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:${PDFHUB_HTTP_PORT:?set PDFHUB_HTTP_PORT for DR drill}:80"

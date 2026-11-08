@@ -99,11 +99,14 @@ operations() {
     scripts/tests/test_tool_parameters.py \
     scripts/validate-tool-artifacts.py \
     scripts/tests/test_tool_artifacts.py \
-    scripts/backend-coverage.py
+    scripts/backend-coverage.py \
+    scripts/select-drill-port.py \
+    scripts/tests/test_dr_drill_port.py
   bash scripts/test-ci-resource-cleanup.sh
   bash scripts/test-local-ci-result-cache.sh
   bash scripts/test-ci-nas-dir.sh
   bash scripts/test-runtime-exit-cleanup.sh
+  python3 -m unittest discover -s scripts/tests -p 'test_dr_drill_port.py'
   python3 -m unittest discover -s scripts/tests -p 'test_dependabot_required_checks.py'
   python3 -m unittest discover -s scripts/tests -p 'test_dependabot_python_lock_artifact.py'
   python3 scripts/validate-tool-registry.py
@@ -249,6 +252,19 @@ compose_config() {
   : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-prod-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
+  # DR restores actual backup data: the test gateway must bind to localhost only.
+  PDFHUB_HTTP_PORT=18082 docker compose -p "${project}" \
+    -f docker-compose.yml -f docker-compose.drill.yml \
+    config --format json | python3 -c '
+import json, sys
+config = json.load(sys.stdin)
+ports = config["services"]["caddy"]["ports"]
+assert len(ports) == 1, ports
+port = ports[0]
+assert port.get("host_ip") == "127.0.0.1", ports
+assert str(port.get("published")) == "18082", ports
+assert int(port.get("target")) == 80, ports
+'
   echo 'compose: PASS'
 }
 
