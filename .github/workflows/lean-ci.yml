@@ -5,6 +5,7 @@ name: Lean CI
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -76,7 +77,7 @@ jobs:
           docker run --rm -e PDFHUB_COVERAGE_ARTIFACT=/tmp/backend-coverage.json \
             -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci \
             python scripts/backend-coverage.py
-          docker run --rm -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci python scripts/validate-api-contract.py
+          docker run --rm -e PDFHUB_CONTRACT_ARTIFACT=/tmp/openapi.json -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci python scripts/validate-api-contract.py
 
       - uses: actions/setup-node@v5
         if: steps.scope.outputs.frontend == 'true'
@@ -102,5 +103,10 @@ jobs:
       - name: Validate Thai Gotenberg image only if its source changes
         if: steps.scope.outputs.gotenberg == 'true'
         run: |
+          set -euo pipefail
+          if ! command -v pdfinfo >/dev/null || ! command -v pdftotext >/dev/null || ! command -v pdffonts >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends poppler-utils
+          fi
           docker build -t rcat-pdf-hub-gotenberg-ci ops/gotenberg
           bash scripts/test-t90-2-thai-gotenberg.sh

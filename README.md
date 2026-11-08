@@ -431,7 +431,7 @@ remain for maintainers/incident diagnosis; do not install or restart polling
 Local CI as part of the new workflow. Full Production release controls remain
 separate and no deployment occurs merely because CI passes.
 
-Development host baseline: Python **>=3.11,<4** for stdlib-only administration, Node **24** and Docker/Compose where needed; the application has **one canonical Python 3.12 runtime in Docker**. The legacy four-version host CI matrix remains temporarily only because the current GitHub Ruleset requires all four job names. The host Python is used for standard-library-only orchestration; production API dependencies, import checks, API contract, migrations, and coverage run inside the **pinned Python 3.12 API image** with SHA-256-locked requirements. Keep the production image pinned for repeatable releases; do not downgrade or replace Ubuntu's system Python to run this project. Python 3.10 is end-of-life and unsupported by the OCRmyPDF 17.x runtime.
+Development host baseline: Python **>=3.11,<4** for stdlib-only administration, Node **24** and Docker/Compose where needed; the application has **one canonical Python 3.12 runtime in Docker**. The previous multi-version CI matrix was retired after the GitHub Ruleset switched to `ci/required`. The host Python is used for standard-library-only orchestration; production API dependencies, import checks, API contract, migrations, and coverage run inside the **pinned Python 3.12 API image** with SHA-256-locked requirements. Keep the production image pinned for repeatable releases; do not downgrade or replace Ubuntu's system Python to run this project. Python 3.10 is end-of-life and unsupported by the OCRmyPDF 17.x runtime.
 
 ```bash
 make validate-policy
