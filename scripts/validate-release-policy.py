@@ -105,7 +105,8 @@ for required in (
     assert required in lean_ci_workflow, f"Lean CI missing required guard: {required}"
 for forbidden in ("pull_request_target:", "contents: write", "pull-requests: write"):
     assert forbidden not in lean_ci_workflow, f"Lean CI must remain read-only: {forbidden}"
-assert '["3.11", "3.12", "3.13", "3.14"]' not in read(".github/workflows/core-api-ci.yml"), "Legacy host Python matrix must not return"
+# The legacy four-version host matrix remains until main's required-status
+# ruleset stops requiring all four job names. Retiring it sooner blocks merges.
 
 core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
 for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "make validate-compose", "docker build -t rcat-pdf-hub-api-test apps/api", "scripts/backend-coverage.py"):
