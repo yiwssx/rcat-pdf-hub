@@ -7,9 +7,8 @@ RCAT PDF Hub validation must remain **100% free of paid CI/CD, paid runners, pai
 See [CI-LEAN-00](docs/workstreams/ci-lean-migration.md). The new GitHub-hosted
 `ci/required` check routes PRs by changed paths, and the production release
 gate reuses the successful exact-commit result instead of repeating the full
-suite. The old host Python matrix and Legacy Local CI are **transitional**:
-Ruleset ID 25837608 still requires the old job names. Do not remove those
-names or disable the old timer until the required-check migration is complete.
+suite. Legacy Local CI remains pending host retirement; the four-version Python matrix has been removed after the Ruleset migration:
+Ruleset ID 25837608 should now require `ci/required`, CodeQL (both languages) and Dependency Review. Do not disable the old timer until host retirement is authorized.
 Ubuntu's system Python is not the API runtime; the canonical API image is 3.12.
 
 ## Policy
