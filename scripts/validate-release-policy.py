@@ -98,7 +98,7 @@ lean_ci_workflow = read(".github/workflows/lean-ci.yml")
 for required in (
     "pull_request:", "push:", "name: ci/required",
     'python-version: "3.12"', "scripts/ci-scope.py",
-    "scripts/check-python-lock.py", "python -m pytest",
+    "scripts/check-python-lock.py", "scripts/backend-coverage.py",
     "npm run typecheck", "npm run build", "pdf-hub.smoke.spec.ts",
     "make validate-compose",
 ):
