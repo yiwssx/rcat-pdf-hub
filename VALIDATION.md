@@ -2,10 +2,20 @@
 
 RCAT PDF Hub validation must remain **100% free of paid CI/CD, paid runners, paid hosted build minutes and paid cloud-service requirements**.
 
+## CI migration (2026-11-08)
+
+See [CI-LEAN-00](docs/workstreams/ci-lean-migration.md). The new GitHub-hosted
+`ci/required` check routes PRs by changed paths, and the production release
+gate reuses the successful exact-commit result instead of repeating the full
+suite. The old host Python matrix and Legacy Local CI are **transitional**:
+Ruleset ID 25837608 still requires the old job names. Do not remove those
+names or disable the old timer until the required-check migration is complete.
+Ubuntu's system Python is not the API runtime; the canonical API image is 3.12.
+
 ## Policy
 
-- Standard application PRs use full `make validate-free` on institution-owned/local Linux hardware.
-- GitHub-hosted Actions are limited to two guarded Dependabot workflows in this public repository: one npm patch lane and one Python security-validation lane.
+- Lean CI checks relevant PR changes via GitHub-hosted Standard Runners. Full local validation remains a legacy transition path and must not be repeated by operators.
+- GitHub-hosted Actions already provide Core API, Web, CodeQL, Dependency Review and the new Lean CI; Dependabot lanes remain separately guarded.
 - The narrow Dependabot npm auto-merge lane requires `apps/web/package.json` and `apps/web/package-lock.json` to move together for a bot-only direct forward patch update, then revalidates the exact base/head before squash merge.
 - A Dependabot Python security PR may advance exactly one existing direct pin in `apps/api/requirements.txt`. The matching `apps/api/requirements.lock` must be regenerated and synchronized before the full zero-cost gate can pass; the hosted lane remains read-only and never auto-merges.
 - Any other nonstandard/security dependency PR remains owned by the local full-validation lane and is never auto-merged.
@@ -21,7 +31,7 @@ RCAT PDF Hub validation must remain **100% free of paid CI/CD, paid runners, pai
 ## Required local host
 
 - Linux
-- Host Python **>=3.11,<4** (3.11, 3.12, 3.13, 3.14 covered by GitHub CI; Python 3.10 has reached end-of-life)
+- Host Python **>=3.11,<4** for stdlib-only operator scripts; no multi-version host installation is required. The application runtime is pinned Python 3.12 in Docker. The four GitHub host jobs are legacy checks pending Ruleset cutover.
 - Node **24** + npm/npx
 - Docker Engine + Docker Compose plugin
 - Playwright-compatible Chromium runtime libraries

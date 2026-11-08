@@ -1,0 +1,106 @@
+name: Lean CI
+
+# One stable check for all PRs, including docs-only changes. Never skip the
+# workflow via paths filters: that would leave a required check pending.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lean-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  required:
+    name: ci/required
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # The application uses exactly one locked Python 3.12 image. The host
+      # Python matrix is not a representation of Production compatibility.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Route changed paths to relevant checks
+        id: scope
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" == "workflow_dispatch" || "$BASE_SHA" =~ ^0+$ ]]; then
+            python3 scripts/ci-scope.py --all --github-output "$GITHUB_OUTPUT"
+          else
+            python3 scripts/ci-scope.py --base "$BASE_SHA" --head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify CI routing and repository security policy
+        run: |
+          python3 scripts/check-host-python.py
+          python3 -m unittest discover -s scripts/tests -p 'test_ci_scope.py'
+          python3 scripts/validate-release-policy.py
+
+      - name: Validate changed operator scripts and Compose rules
+        if: steps.scope.outputs.ops == 'true'
+        run: |
+          set -euo pipefail
+          bash -n scripts/*.sh
+          python3 -m unittest discover -s scripts/tests -p 'test_dr_drill_port.py'
+          make validate-compose
+
+      - name: Build canonical Python 3.12 backend image
+        if: steps.scope.outputs.backend == 'true'
+        run: |
+          python3 scripts/check-python-lock.py
+          docker build -t rcat-pdf-hub-api-lean:ci apps/api
+
+      - name: Run backend regression and contract checks once
+        if: steps.scope.outputs.backend == 'true'
+        run: |
+          set -euo pipefail
+          # The coverage wrapper runs pytest exactly once against the pinned
+          # API image, rather than rerunning pytest and coverage separately.
+          docker run --rm -e PDFHUB_COVERAGE_ARTIFACT=/tmp/backend-coverage.json \
+            -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci \
+            python scripts/backend-coverage.py
+          docker run --rm -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci python scripts/validate-api-contract.py
+
+      - uses: actions/setup-node@v5
+        if: steps.scope.outputs.frontend == 'true'
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build and smoke-test changed frontend once
+        if: steps.scope.outputs.frontend == 'true'
+        working-directory: apps/web
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          PDFHUB_E2E_SERVER_MODE: production
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npx playwright install --with-deps chromium
+          npx playwright test tests/e2e/pdf-hub.smoke.spec.ts
+
+      - name: Validate Thai Gotenberg image only if its source changes
+        if: steps.scope.outputs.gotenberg == 'true'
+        run: |
+          docker build -t rcat-pdf-hub-gotenberg-ci ops/gotenberg
+          bash scripts/test-t90-2-thai-gotenberg.sh

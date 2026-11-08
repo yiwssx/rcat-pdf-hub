@@ -53,6 +53,7 @@ assert workflow_files == [
     ".github/workflows/dependabot-patch-automerge.yml",
     ".github/workflows/dependabot-python-security.yml",
     ".github/workflows/dependency-review.yml",
+    ".github/workflows/lean-ci.yml",
     ".github/workflows/t90-2-native-sandbox.yml",
     ".github/workflows/web-ci.yml",
 ], f"Only explicitly reviewed workflows are allowed: {workflow_files}"
@@ -92,6 +93,20 @@ for required in ("pull_request:", "contents: read", "cache-dependency-path: apps
 assert "contents: write" not in web_ci_workflow
 assert "pull-requests: write" not in web_ci_workflow
 assert "pull_request_target:" not in web_ci_workflow
+
+lean_ci_workflow = read(".github/workflows/lean-ci.yml")
+for required in (
+    "pull_request:", "push:", "name: ci/required",
+    'python-version: "3.12"', "scripts/ci-scope.py",
+    "scripts/check-python-lock.py", "scripts/backend-coverage.py",
+    "npm run typecheck", "npm run build", "pdf-hub.smoke.spec.ts",
+    "make validate-compose",
+):
+    assert required in lean_ci_workflow, f"Lean CI missing required guard: {required}"
+for forbidden in ("pull_request_target:", "contents: write", "pull-requests: write"):
+    assert forbidden not in lean_ci_workflow, f"Lean CI must remain read-only: {forbidden}"
+# The legacy four-version host matrix remains until main's required-status
+# ruleset stops requiring all four job names. Retiring it sooner blocks merges.
 
 core_api_ci_workflow = read(".github/workflows/core-api-ci.yml")
 for required in ("pull_request:", "contents: read", "python3 scripts/check-python-lock.py", "make validate-compose", "docker build -t rcat-pdf-hub-api-test apps/api", "scripts/backend-coverage.py"):
