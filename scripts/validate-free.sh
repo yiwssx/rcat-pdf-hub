@@ -252,9 +252,11 @@ compose_config() {
   : >"${err}"
   docker compose -p "${project}" -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml config >/tmp/pdfhub-compose-prod-nas.out 2>"${err}"
   test ! -s "${err}" || { cat "${err}" >&2; exit 1; }
-  # DR restores actual backup data: the test gateway must bind to localhost only.
-  PDFHUB_HTTP_PORT=18082 docker compose -p "${project}" \
-    -f docker-compose.yml -f docker-compose.drill.yml \
+  # DR restores actual backup data: verify localhost-only Caddy routing
+  # from the committed drill fixture, not an operator-modified Production file.
+  PDFHUB_HTTP_PORT=18082 PDFHUB_CLAMAV_ENABLED=true \
+    docker compose -p "${project}" \
+    -f docker-compose.yml -f docker-compose.drill.yml --profile security \
     config --format json | python3 -c '
 import json, sys
 config = json.load(sys.stdin)
@@ -264,6 +266,13 @@ port = ports[0]
 assert port.get("host_ip") == "127.0.0.1", ports
 assert str(port.get("published")) == "18082", ports
 assert int(port.get("target")) == 80, ports
+mounts = config["services"]["caddy"]["volumes"]
+assert len(mounts) == 1, mounts
+assert mounts[0]["source"].endswith("/ops/caddy/Caddyfile.drill"), mounts
+assert mounts[0]["target"] == "/etc/caddy/Caddyfile", mounts
+assert mounts[0]["read_only"] is True, mounts
+assert config["services"]["api"]["environment"]["PDFHUB_CLAMAV_ENABLED"] == "true"
+assert "clamav" in config["services"], config["services"].keys()
 '
   echo 'compose: PASS'
 }
