@@ -59,6 +59,12 @@ else
   dc up -d --wait --wait-timeout 120 postgres valkey gotenberg >/dev/null
 fi
 
+# restore.sh intentionally uses --no-build when starting recovered services.
+# A fresh isolated Compose project has no worker/web images yet, so prepare them
+# here without changing restore.sh behavior or any Production containers.
+printf 'dr-drill: building isolated application images\n'
+dc build api worker-interactive worker worker-heavy cleanup webhook web
+
 PDFHUB_RESTORE_CONFIRM=YES bash scripts/restore.sh "${BACKUP_DIR}"
 
 curl -fsS "http://127.0.0.1:${port}/healthz" >/dev/null
