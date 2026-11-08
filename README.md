@@ -424,7 +424,14 @@ Grafana is provisioned automatically with Prometheus and Tempo data sources plus
 
 ## Validation / local CI
 
-Development host baseline: Python **>=3.11,<4** (3.11–3.14 checked in CI), Node **24**, Docker Engine + Compose plugin, and Playwright-compatible Chromium libraries. The host Python is used for standard-library-only orchestration; production API dependencies, import checks, API contract, migrations, and coverage run inside the **pinned Python 3.12 API image** with SHA-256-locked requirements. Keep the production image pinned for repeatable releases; do not downgrade or replace Ubuntu's system Python to run this project. Python 3.10 is end-of-life and unsupported by the OCRmyPDF 17.x runtime.
+**Migration in progress:** [Lean CI policy and Ruleset cutover](docs/workstreams/ci-lean-migration.md).
+GitHub Actions now provides the `ci/required` path-scoped check. Operators do not
+need to run validation or DR drills to merge PRs. Historical commands below
+remain for maintainers/incident diagnosis; do not install or restart polling
+Local CI as part of the new workflow. Full Production release controls remain
+separate and no deployment occurs merely because CI passes.
+
+Development host baseline: Python **>=3.11,<4** for stdlib-only administration, Node **24** and Docker/Compose where needed; the application has **one canonical Python 3.12 runtime in Docker**. The legacy four-version host CI matrix remains temporarily only because the current GitHub Ruleset requires all four job names. The host Python is used for standard-library-only orchestration; production API dependencies, import checks, API contract, migrations, and coverage run inside the **pinned Python 3.12 API image** with SHA-256-locked requirements. Keep the production image pinned for repeatable releases; do not downgrade or replace Ubuntu's system Python to run this project. Python 3.10 is end-of-life and unsupported by the OCRmyPDF 17.x runtime.
 
 ```bash
 make validate-policy
@@ -442,7 +449,7 @@ make validate-free
 
 Warnings and deprecations are treated as failures.
 
-Install the local polling executor on institution-owned Linux hardware:
+Legacy Local CI installation (retire after protected branch Ruleset cutover; **not required for new setup**):
 
 ```bash
 make install-local-ci
@@ -450,7 +457,7 @@ make local-ci-status
 make local-ci-doctor
 ```
 
-Local CI requires the `gh` CLI to be authenticated and authorized for the repository so it can publish `local-ci/validate-free` and `local-ci/dependency` commit statuses. If authentication is unavailable, the executor fails visibly instead of silently skipping PR validation.
+Existing Local CI requires authenticated `gh` for legacy status reporting. The current Ruleset does not require `local-ci/validate-free`. Do not disable its timer until the cutover steps are confirmed; the backup timer is unrelated and must stay enabled.
 
 The direct Dependabot npm forward-patch lane is restricted to bot-only PRs that advance exactly one direct dependency while updating both `apps/web/package.json` and `apps/web/package-lock.json`, and must pass `npm ci`, typecheck, production build, and browser smoke before squash merge. All other PRs use full `make validate-free` validation and are not auto-merged.
 
