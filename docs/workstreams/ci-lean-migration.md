@@ -10,18 +10,41 @@ Owner decision: approved 2026-11-08. Tracker: #318.
 - Ubuntu's system Python is **not** an application runtime and must not be downgraded or duplicated.
 - Release/DR procedures are **not** claims of successful recovery until actual isolated evidence exists.
 
-## New check
-`.github/workflows/lean-ci.yml` runs `ci/required` on every PR and main push:
-- Documentation only: policy plus path-routing regressions (no Docker).
-- Operator/Compose/DR tooling: shell syntax, DR port regression and Compose render check.
-- API/locks: one canonical Python 3.12 image, backend pytest and OpenAPI contract.
-- Web: Node 24 lockfile install, TypeScript, production build, one focused browser smoke suite.
-- Gotenberg image: build and Thai converter acceptance only when its image sources change.
-- Unknown paths: conservative all-lane execution instead of silent skip.
+## Lean CI (current)
+`.github/workflows/lean-ci.yml` always reports `ci/required` on PRs and
+`main` pushes. It uses a pinned Python 3.12 application image and routes by
+actual changed paths:
+- Docs only: policy and scope self-tests. No Docker.
+- Operator/Compose/DR: syntax, Compose render and DR port assertions.
+- Backend: build the canonical Docker image, run the backend coverage suite
+  **once** plus OpenAPI contract validation.
+- Database schema/model/migration changes: additionally run real PostgreSQL 18
+  upgrade/rollback in **disposable GitHub-hosted** containers.
+- Worker queue, storage and T90 crash-safety changes: additionally run the
+  existing real Valkey/RQ + SeaweedFS fault-injection probe on disposable
+  PostgreSQL, Valkey and S3 containers. Python dependency/image changes run
+  both integration tracks.
+- Web: Node 24 typecheck, build, browser smoke **once**; app/components/auth
+  changes also select the UI/accessibility regression suite in the **same**
+  Playwright invocation.
+- Thai Gotenberg: build/test only for converter image changes.
+- Unknown files: conservative routing to all relevant lanes.
 
-A `workflow_dispatch` invocation intentionally selects all lanes for exceptional investigation. Normal PRs must not use it to repeat previously successful jobs.
+The risk service script explicitly refuses non-GitHub-hosted runners and
+exposes service ports on 127.0.0.1 only. It never handles Production backups,
+Production secrets or a production Compose project.
 
-## Verified pre-migration GitHub Ruleset — do NOT remove old checks yet
+The separate Dependabot Python security Workflow is read-only and **does
+not** run `make validate-free`. Its dedicated job checks eligibility of the
+bot-only one-pin change and generates the full hash-locked dependencies for
+review. The ordinary required Lean CI owns build, coverage, migrations and
+queue/storage regressions for changed Python dependencies. No auto-merge
+permission is added.
+
+A `workflow_dispatch` invocation intentionally selects all lanes for
+exceptional investigation; routine PRs must not repeat completed suites.
+
+## Historical required checks (already migrated)
 Repository Ruleset: `main-required-review-and-security-checks`, ID `25837608`.
 It requires:
 1. CodeQL (python)
@@ -36,10 +59,11 @@ It requires:
 10. Build and check Thai Office converter image
 
 `local-ci/validate-free` is **NOT** a required branch check in this Ruleset.
-Therefore the old four-version matrix cannot be removed before the Ruleset cutover;
-otherwise GitHub would block every merge waiting for nonexistent check names.
+The old four-version matrix and duplicate hosted workflows have now been removed
+in merged PR #320, after the Ruleset was migrated to `ci/required` plus
+CodeQL (both languages) and Dependency Review.
 
-## Cutover order (mandatory, fail closed)
+## Completed cutover procedure (historical record)
 1. Merge the bootstrap PR **only after** the new `ci/required` check and all still-required legacy checks succeed. Do not update the Ruleset while the new check is failing.
 2. Confirm `ci/required` also runs on the exact merged `main` SHA.
 3. Update only GitHub Ruleset ID `25837608`: retain CodeQL (both languages) and Review dependency changes, add `ci/required` (GitHub Actions), and only then remove `api`, `web`, the four Python host job names and Gotenberg legacy job. Keep PR review, non-fast-forward and deletion protections intact. Without a Ruleset administration action, this is explicitly BLOCKED; do not pretend it is automated.
@@ -58,7 +82,7 @@ These should be executed by a purpose-built isolated runner connected through
 an approved private control path; no Production SSH credentials or backup data
 may be put into GitHub-hosted PR jobs.
 
-Until a suitable private runner exists, release/DR evidence is still pending:
+A private release/DR runner has not yet been confirmed; release/DR evidence is still pending:
 do not lower any safety gate or declare a release accepted merely because the
 user no longer wants to perform manual tests.
 
