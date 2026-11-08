@@ -4,3 +4,5 @@ services:
   caddy:
     ports: !override
       - "127.0.0.1:${PDFHUB_HTTP_PORT:?set PDFHUB_HTTP_PORT for DR drill}:80"
+    volumes: !override
+      - ./ops/caddy/Caddyfile.drill:/etc/caddy/Caddyfile:ro

@@ -1,0 +1,21 @@
+{
+	auto_https off
+	servers :80 {
+		protocols h1
+	}
+}
+
+# DR uses only loopback-published HTTP. Do not reference Production hostnames,
+# certificates, upstreams, local operator Caddy overrides, or external services.
+:80 {
+	encode zstd gzip
+
+	@api path /api/* /healthz /readyz /docs* /openapi.json
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -45,28 +45,87 @@ if [ "${storage_backend}" = "s3" ]; then
   export PDFHUB_S3_ACCESS_KEY=pdfhub-drill
   export PDFHUB_S3_SECRET_KEY=pdfhub-drill-secret
   export PDFHUB_S3_AUTO_CREATE_BUCKET=true
-  profiles=(--profile s3)
+  profiles+=(--profile s3)
 fi
 
 dc() { docker compose -p "${project}" "${profiles[@]}" "$@"; }
+
+# Compose loads the operator's .env itself. Check the *rendered* API policy,
+# rather than sourcing .env or guessing from the shell environment.
+clamav_enabled="$(dc config --format json | python3 -c 'import json,sys; env=json.load(sys.stdin)["services"]["api"]["environment"]; print(str(env.get("PDFHUB_CLAMAV_ENABLED", "false")).lower())')"
+case "${clamav_enabled}" in
+  true)
+    # A restored data set must not talk to a Production antivirus endpoint.
+    export PDFHUB_CLAMAV_HOST=clamav
+    export PDFHUB_CLAMAV_PORT=3310
+    profiles+=(--profile security)
+    ;;
+  false) ;;
+  *) echo "dr-drill: invalid PDFHUB_CLAMAV_ENABLED=${clamav_enabled}" >&2; exit 2 ;;
+esac
+
 cleanup() {
   dc down -v --remove-orphans >/dev/null 2>&1 || true
   rm -rf "${PDFHUB_NAS_PATH}" >/dev/null 2>&1 || true
 }
+report_failure() {
+  local code="$?"
+  trap - ERR
+  printf 'dr-drill: FAIL (exit %s); isolated service diagnostics follow\n' "${code}" >&2
+  dc ps --all >&2 || true
+  local endpoint body status
+  for endpoint in healthz readyz; do
+    body="$(mktemp)"
+    status="$(curl -sS --max-time 5 -o "${body}" -w '%{http_code}' "http://127.0.0.1:${port}/${endpoint}" 2>/dev/null || true)"
+    printf 'dr-drill: %s HTTP %s\n' "${endpoint}" "${status:-unavailable}" >&2
+    if [ "${endpoint}" = readyz ] && [ "${status}" = 503 ]; then
+      head -c 1200 "${body}" >&2 || true
+      printf '\n' >&2
+    fi
+    rm -f "${body}"
+  done
+  dc logs --tail 25 --no-color api caddy clamav >&2 || true
+}
+trap report_failure ERR
 trap cleanup EXIT
 
 printf 'dr-drill: starting isolated dependencies %s\n' "${project}"
-if [ "${storage_backend}" = "s3" ]; then
-  dc up -d --wait --wait-timeout 120 seaweedfs postgres valkey gotenberg >/dev/null
-else
-  dc up -d --wait --wait-timeout 120 postgres valkey gotenberg >/dev/null
-fi
+dependencies=(postgres valkey gotenberg)
+if [ "${storage_backend}" = "s3" ]; then dependencies+=(seaweedfs); fi
+if [ "${clamav_enabled}" = true ]; then dependencies+=(clamav); fi
+dc up -d --wait --wait-timeout 120 "${dependencies[@]}" >/dev/null
 
 # restore.sh intentionally uses --no-build when starting recovered services.
 # A fresh isolated Compose project has no worker/web images yet, so prepare them
 # here without changing restore.sh behavior or any Production containers.
 printf 'dr-drill: building isolated application images\n'
 dc build api worker-interactive worker worker-heavy cleanup webhook web
+
+if [ "${clamav_enabled}" = true ]; then
+  printf 'dr-drill: waiting for isolated ClamAV readiness\n'
+  # Fresh ClamAV signature downloads can take longer than the restore health
+  # window. Wait for a real clamd PONG before restoring, without bypassing AV.
+  dc run --rm --no-deps -T api python - <<'PY'
+import socket
+import sys
+import time
+
+for _ in range(120):
+    try:
+        with socket.create_connection(("clamav", 3310), timeout=3) as conn:
+            conn.settimeout(3)
+            conn.sendall(b"zPING\0")
+            response = conn.recv(64).rstrip(b"\0\r\n")
+        if response.upper() == b"PONG":
+            print("dr-drill: isolated ClamAV PONG")
+            break
+    except (OSError, TimeoutError):
+        pass
+    time.sleep(3)
+else:
+    sys.exit("dr-drill: isolated ClamAV did not become ready")
+PY
+fi
 
 PDFHUB_RESTORE_CONFIRM=YES bash scripts/restore.sh "${BACKUP_DIR}"
 
