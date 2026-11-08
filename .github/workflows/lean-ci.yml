@@ -71,7 +71,11 @@ jobs:
         if: steps.scope.outputs.backend == 'true'
         run: |
           set -euo pipefail
-          docker run --rm rcat-pdf-hub-api-lean:ci python -m pytest -q -p no:cacheprovider
+          # The coverage wrapper runs pytest exactly once against the pinned
+          # API image, rather than rerunning pytest and coverage separately.
+          docker run --rm -e PDFHUB_COVERAGE_ARTIFACT=/tmp/backend-coverage.json \
+            -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci \
+            python scripts/backend-coverage.py
           docker run --rm -v "$PWD:/repo:ro" -w /repo rcat-pdf-hub-api-lean:ci python scripts/validate-api-contract.py
 
       - uses: actions/setup-node@v5
