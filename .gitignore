@@ -16,3 +16,6 @@ artifacts/
 # Site-installed Office fonts: do not commit font binaries to Git.
 /ops/gotenberg/fonts/*
 !/ops/gotenberg/fonts/.gitkeep
+
+# Host-specific Caddy config and guarded release migration state (never commit).
+/.local-config/

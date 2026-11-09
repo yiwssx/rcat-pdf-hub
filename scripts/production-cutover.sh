@@ -32,9 +32,12 @@ for cmd in docker gh git python3 curl; do
 done
 docker compose version >/dev/null
 test -f .env || { echo 'cutover: existing .env required (never printed or modified)' >&2; exit 1; }
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-  echo 'cutover: tracked local edits detected; refusing release' >&2; exit 1
-fi
+# One explicitly audited host Caddyfile exception is allowed only if the
+# local file and .env override match a separately preserved site copy. Other
+# tracked edits remain forbidden. Check mode never writes files.
+python3 scripts/migrate-site-caddy.py --check || {
+  echo 'cutover: unverified tracked modifications detected; refusing release' >&2; exit 1
+}
 sha="$(git rev-parse HEAD)"
 if [[ "${RCAT_DEPLOY_SHA:-${sha}}" != "${sha}" ]]; then
   echo 'cutover: requested release SHA does not match checked-out commit' >&2; exit 1

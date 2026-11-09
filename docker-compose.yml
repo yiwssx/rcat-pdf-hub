@@ -248,7 +248,7 @@ services:
     ports:
       - "${PDFHUB_HTTP_PORT:-8080}:80"
     volumes:
-      - ./ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${PDFHUB_CADDYFILE_PATH:-./ops/caddy/Caddyfile}:/etc/caddy/Caddyfile:ro
     depends_on:
       - web
       - api
