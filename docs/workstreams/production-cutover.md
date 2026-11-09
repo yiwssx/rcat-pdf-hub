@@ -32,7 +32,9 @@ existing authorized `rcat_iot_admin` account, not `sudo` by default.
    regular GitHub dependency/security checks have already passed.
 6. Prebuild reviewed application images; explicitly start ONLY the
    profile-guarded `clamav` service required by the RCAT Production
-   fail-closed antivirus policy, and wait for the API's real ClamAV PING to
+   fail-closed antivirus policy. Keep ClamAV on the isolated `data` network
+   for the API and `egress` for FreshClam signature downloads. Wait for the
+   API's real ClamAV PING to
    respond before planned application downtime. If scanner startup fails,
    abort without stopping existing writers. Then stop application writers,
    apply migration, replace app/worker/web/Caddy containers without removing
@@ -44,6 +46,7 @@ again or blindly restore the migrated database**. Start only the missing
 profile service with:
 ```bash
 cd /opt/rcat-pdf-hub
+git pull --ff-only origin main
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile security up -d --no-deps clamav
 ```
 Then query the existing API `/readyz` until scanner definitions are ready.
