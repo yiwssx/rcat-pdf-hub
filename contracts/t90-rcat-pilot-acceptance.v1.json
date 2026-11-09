@@ -367,6 +367,24 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40710634967",
       "supported_subset": "Default-OFF staged M27 owner-scoped API/worker clears supported PDF Document Info plus root/page XMP metadata, validates no sentinel remains in generated PDF binary while preserving original; tests merged via PR #235. This is not irreversible content redaction or a guarantee that every hidden identifier is removed.",
       "acceptance_pending": "RCAT real PDF corpus incl Thai and signed/complex embedded objects, full privacy/forensic metadata residual checks, actual Google Workspace OIDC ownership/download, protected host AV/isolation, accessibility and operator acceptance remain pending; not VERIFIED or RELEASED."
+    },
+    {
+      "tool_id": "M11",
+      "state": "IMPLEMENTED",
+      "source_commit": "7b3d0497ed5c1b1bd32ea7e758f0b229b85daa61",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/236",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40718249607",
+      "supported_subset": "Default-OFF owner-scoped M11 crop-pdf API/queue/worker with static allowlist; exact PDF-point rectangle and selected 1-based pages change CropBox without destroying hidden content; signed/corrupt source rejection, immutable original, persisted real PDF output and negative scope tests delivered in merged PR #236. NOT redaction.",
+      "acceptance_pending": "RCAT real Google Workspace OIDC upload/download, Thai and mixed-rotation page geometry goldens, signed/complex source fidelity, CropBox hidden-content disclosure UX, mobile/browser preview, AV and target-host isolation, operator approval and independently hashed evidence all pending. No VERIFIED/RELEASED."
+    },
+    {
+      "tool_id": "M28",
+      "state": "IMPLEMENTED",
+      "source_commit": "7b3d0497ed5c1b1bd32ea7e758f0b229b85daa61",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/236",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40718249607",
+      "supported_subset": "Default-OFF owner-scoped M28 resize-pdf static API/queue/worker; exact target page width/height in PDF points, independent X/Y scaling (NOT aspect-ratio preserving), source immutability, binary page-size/output and negative scope tests delivered in merged PR #236.",
+      "acceptance_pending": "RCAT real Google Workspace OIDC owner download, Thai document/layout and vector/image scaling goldens, multi-size/rotated/signed PDF comparison, print-geometry inspection, actual target-host AV/load/isolation, browser/mobile accessibility and operator approval pending. No VERIFIED/RELEASED."
     }
   ]
 }

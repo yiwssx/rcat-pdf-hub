@@ -4,7 +4,18 @@
 
 ## Current evidence boundary
 
-The canonical ledger currently has 38 `IMPLEMENTED`, 1 `STAGED` (T21 Publisher), 51 `UNASSESSED`, **0 `VERIFIED` and 0 `RELEASED`**. These are 90 independent engineering/acceptance entries, separate from the nine operational R1 tools. Never equate a green PR or a working Google Login with institutional acceptance.
+The canonical ledger currently has 40 `IMPLEMENTED`, 1 `STAGED` (T21 Publisher), 49 `UNASSESSED`, **0 `VERIFIED` and 0 `RELEASED`**. These are 90 independent engineering/acceptance entries, separate from the nine operational R1 tools. Never equate a green PR or a working Google Login with institutional acceptance.
+
+## Engineering ledger provenance correction
+
+M11 Crop and M28 Resize were independently credited as `IMPLEMENTED`
+using merged [PR #236](https://github.com/yiwssx/rcat-pdf-hub/pull/236),
+source commit `7b3d0497ed5c1b1bd32ea7e758f0b229b85daa61`,
+and Core API CI [run 40718249607](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40718249607).
+Their scoped binary engines are **default-OFF**. M11 changes CropBox but
+does not securely remove hidden document content; M28 independently scales X/Y
+and can distort aspect ratio. These limited implementations do **not** prove
+RCAT Thai/Google Workspace acceptance or a production release.
 
 ## Schema for independently reviewed reports
 
