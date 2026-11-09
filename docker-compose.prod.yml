@@ -131,7 +131,10 @@ services:
     cpus: ${PDFHUB_SEAWEEDFS_CPUS:-2.0}
 
   clamav:
-    networks: [data]
+    # API uses the isolated data network for TCP 3310; freshclam needs
+    # outbound access to obtain signature definitions on an empty DB volume.
+    # The egress network has no published host port for clamd.
+    networks: [data, egress]
     logging: *production-logging
     security_opt:
       - no-new-privileges:true
