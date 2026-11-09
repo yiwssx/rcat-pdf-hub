@@ -6,12 +6,11 @@ import {
   type AuthMe, type Job, type UploadedFile,
 } from "../../../lib/api";
 
-export type ManageId = "M07" | "M14" | "M15" | "M16" | "M18" | "M22" | "M30" | "M31" | "M33";
+export type ManageId = "M14" | "M15" | "M16" | "M18" | "M22" | "M30" | "M31" | "M33";
 type ToolInfo = {
   id: ManageId; title: string; scope: string; path: string; description: string;
 };
 const TOOLS: readonly ToolInfo[] = [
-  { id:"M07", title:"แยกหน้า PDF เป็น ZIP", scope:"pdf:split", path:"split-to-zip", description:"สร้างไฟล์ PDF หน้าละหนึ่งไฟล์ พร้อม ZIP และ Manifest ที่ผูกกับเจ้าของ" },
   { id:"M14", title:"ลบหน้า PDF", scope:"pdf:split", path:"manage-pages/delete", description:"ลบหน้าที่เลือก โดยยังเหลือหน้าอื่นใน PDF" },
   { id:"M15", title:"จัดเรียงหน้า PDF", scope:"pdf:split", path:"manage-pages/reorder", description:"ระบุลำดับหน้าใหม่แบบครบทุกหน้า ไม่ทำซ้ำและไม่ข้าม" },
   { id:"M16", title:"ดึงหน้าจาก PDF", scope:"pdf:split", path:"extract-pages", description:"ส่งออกเฉพาะหน้าที่เลือก เป็น PDF เดียวหรือ ZIP เฉพาะเมื่อ Backend อนุญาต" },
@@ -83,7 +82,7 @@ export function StagedManageClient({
     [enabledToolIds],
   );
   const [toolId, setToolId] = useState<ManageId>(
-    available.find((item) => item.id === requestedToolId)?.id ?? available[0]?.id ?? "M07",
+    available.find((item) => item.id === requestedToolId)?.id ?? available[0]?.id ?? "M14",
   );
   const [identity, setIdentity] = useState<AuthMe | null>(null);
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -162,7 +161,6 @@ export function StagedManageClient({
     let payload: Record<string, unknown> = { file_id: chosen.id };
     try {
       switch (tool.id) {
-        case "M07":
         case "M16":
           if (!validRange(pages)) throw new Error("รูปแบบช่วงหน้าไม่ถูกต้อง เช่น 1,3-5 หรือ 1-z");
           if (total > 200) throw new Error("เครื่องมือชุดนี้รองรับ PDF ไม่เกิน 200 หน้า");
@@ -272,7 +270,7 @@ export function StagedManageClient({
               </label>
             </div>
             {tool && <p className="t90ManageHints">{tool.description}</p>}
-            {tool && (tool.id === "M07" || tool.id === "M16") && (
+            {tool && (tool.id === "M16") && (
               <div className="t90ManageFields">
                 <label className="wide">ช่วงหน้าที่ต้องการ เช่น 1,3-5 หรือ 1-z
                   <input aria-label="ช่วงหน้า PDF" value={pages} maxLength={256}
