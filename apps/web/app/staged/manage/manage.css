@@ -1,0 +1,10 @@
+.t90Manage{max-width:1040px}
+.t90ManageOptions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0 20px}
+.t90ManageOptions label,.t90ManageFields label{display:grid;gap:7px;font-weight:700}
+.t90ManageFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.t90ManageFields input,.t90ManageFields textarea,.t90ManageFields select,.t90ManageOptions select{width:100%;border:1px solid #c9cfe1;border-radius:10px;padding:10px 12px;font:inherit;background:white;color:var(--v3-ink)}
+.t90ManageFields textarea{min-height:86px;resize:vertical}
+.t90ManageFields label.wide{grid-column:1/-1}
+.t90ManageHints{color:var(--v3-muted);font-size:13px;line-height:1.6}
+.t90ManageOptionNote{border-inline-start:3px solid #c8984e;background:#fffaf0;padding:10px 14px;border-radius:8px}
+@media(max-width:700px){.t90ManageOptions,.t90ManageFields{grid-template-columns:1fr}}
