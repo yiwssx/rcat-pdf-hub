@@ -76,3 +76,15 @@ def test_m03_m06_reject_encrypted_pdf(tmp_path):
         writer.write(handle)
     with pytest.raises(ValueError, match="Encrypted"):
         analyze_pdf(encrypted, tmp_path / "blocked.txt", mode="summary")
+
+
+def test_m03_m06_reject_oversized_source_before_hashing(tmp_path):
+    from app.services.pdf_extractive_assist import MAX_SOURCE_BYTES
+    src = tmp_path / "oversize.pdf"
+    with src.open("wb") as stream:
+        stream.write(b"%PDF-")
+        stream.seek(MAX_SOURCE_BYTES)
+        stream.write(b"X")
+    with pytest.raises(ValueError, match="size cap"):
+        analyze_pdf(src, tmp_path / "no-output.txt", mode="summary")
+    assert not (tmp_path / "no-output.txt").exists()
