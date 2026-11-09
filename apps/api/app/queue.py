@@ -90,6 +90,8 @@ def queue_class_for_operation(operation: str) -> QueueClass:
     if settings.pdf_repair_structure_tools_enabled and operation == "repair-pdf-structure":
         return "pdf"
     if settings.pdf_extractive_assist_tools_enabled and operation in {
+    if settings.pdf_edit_text_tools_enabled and operation == "edit-existing-pdf-text":
+        return "pdf"
         "pdf-extractive-summary", "pdf-extractive-evidence",
     }:
         return "heavy"
