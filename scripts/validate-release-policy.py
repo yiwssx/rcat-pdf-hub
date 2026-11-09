@@ -110,6 +110,8 @@ assert "test_verify_release_dr_evidence.py" in read(".github/workflows/lean-ci.y
 # Standard production deploy must have verified CI, live backup, RCAT
 # security settings, exact-SHA authorization and readiness. Automated DR is
 # optional and must retain its full proof path when explicitly requested.
+# ClamAV must have definition-update egress and data network API access.
+assert "networks: [data, egress]" in read("docker-compose.prod.yml")
 assert "PDFHUB_RELEASE_REQUIRE_DR" in cutover
 assert "standard mode" in cutover
 assert "strict mode" in cutover
