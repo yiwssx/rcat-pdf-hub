@@ -7,6 +7,7 @@ proof is "UNASSESSED" and never inherited from untested feature code or CI.
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime
 import json
 from pathlib import Path
 import re
@@ -24,6 +25,40 @@ GITHUB = re.compile(r"https://github\.com/[^\s/]+/[^\s/]+/(?:pull|actions/runs)/
 def _require(condition: bool, message: str) -> None:
     if not condition:
         raise ValueError(message)
+
+
+REPORTS_FOR_VERIFICATION = (
+    "source_vs_output_report",
+    "security_isolation_report",
+    "owner_scope_test_report",
+    "thai_fidelity_report",
+)
+# Never store source documents, student data or bearer secrets in a ledger.
+# The report is retained in an approved private RCAT evidence store; its
+# opaque reference and digest are safe for the version-controlled ledger.
+REPORT_REF = re.compile(r"rcat-evidence:[A-Za-z0-9][A-Za-z0-9._:/-]{7,127}\Z")
+UTC_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
+
+
+def _require_hashed_pass_report(record: dict, name: str) -> None:
+    """Require a machine-readable PASS attestation, not arbitrary prose."""
+    report = record.get(name)
+    _require(isinstance(report, dict), f"{name} requires structured evidence")
+    _require(report.get("result") == "PASS",
+             f"{name} requires an explicit PASS result")
+    digest = report.get("artifact_sha256")
+    _require(isinstance(digest, str) and HASH.fullmatch(digest) is not None,
+             f"{name} requires evidence artifact SHA-256")
+    ref = report.get("evidence_ref")
+    _require(isinstance(ref, str) and REPORT_REF.fullmatch(ref) is not None,
+             f"{name} requires opaque RCAT evidence reference")
+    stamp = report.get("checked_at")
+    _require(isinstance(stamp, str) and UTC_STAMP.fullmatch(stamp) is not None,
+             f"{name} requires an ISO UTC timestamp")
+    try:
+        datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise ValueError(f"{name} has invalid UTC date") from exc
 
 
 def verify(registry: dict, evidence: dict) -> dict:
@@ -84,14 +119,10 @@ def verify(registry: dict, evidence: dict) -> dict:
             _require(record.get("pages_or_items_checked") is True,
                      "STAGED requires real output inventory")
         if state in {"VERIFIED", "RELEASED"}:
-            _require(bool(record.get("source_vs_output_report"))
-                     and bool(record.get("security_isolation_report"))
-                     and bool(record.get("owner_scope_test_report"))
-                     and bool(record.get("thai_fidelity_report")),
-                     "VERIFIED requires real fidelity, security, owner and Thai QA")
+            for report_name in REPORTS_FOR_VERIFICATION:
+                _require_hashed_pass_report(record, report_name)
         if state == "RELEASED":
-            _require(bool(record.get("institutional_sso_report")),
-                     "RELEASED requires actual school-only SSO verification")
+            _require_hashed_pass_report(record, "institutional_sso_report")
             _require(bool(record.get("approved_by"))
                      and bool(record.get("approved_at"))
                      and bool(record.get("rollback_plan"))
