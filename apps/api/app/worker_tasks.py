@@ -562,6 +562,28 @@ def process_job(job_id: str) -> str:
                 raise ValueError("PDF markup input no longer matches PDF signature")
             validate_markup(**params)
             markup_pdf(inputs[0], output, **params)
+        elif job.operation == "repair-pdf-structure":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_repair_structure import (
+                MAX_SOURCE_BYTES as REPAIR_MAX_SOURCE, repair_pdf_structure,
+            )
+            if (not settings.pdf_repair_structure_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= REPAIR_MAX_SOURCE
+                    or not isinstance(params, dict) or params):
+                raise ValueError("M32 PDF owner/source/params unauthorized")
+            try:
+                checked = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M32 original PDF signature invalid") from None
+            if checked != "application/pdf":
+                raise ValueError("M32 PDF signature mismatch")
+            repair_pdf_structure(inputs[0], output)
         elif job.operation == "add-pdf-text":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired

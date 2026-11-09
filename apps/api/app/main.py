@@ -130,6 +130,9 @@ if settings.pdf_flatten_visual_tools_enabled:
 if settings.pdf_markup_tools_enabled:
     from app.routers import pdf_markup
     app.include_router(pdf_markup.router)
+if settings.pdf_repair_structure_tools_enabled:
+    from app.routers import pdf_repair_structure
+    app.include_router(pdf_repair_structure.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
