@@ -111,6 +111,9 @@ def analyze_pdf(source: Path, destination: Path, *,
         raise ValueError("Unexpected question for extractive summary")
     if source.resolve() == destination.resolve() or destination.exists() or destination.is_symlink():
         raise ValueError("Source and output must be separate new files")
+    # Enforce source budget BEFORE hashing (do not read oversized uploads into memory).
+    if source.is_symlink() or not source.is_file() or not 24 <= source.stat().st_size <= MAX_SOURCE_BYTES:
+        raise ValueError("PDF exceeds extractive assistant source size cap")
     before = sha256(source.read_bytes()).digest()
     rows = _load(source)
     found = _summary(rows) if mode == "summary" else _evidence(rows, question)
