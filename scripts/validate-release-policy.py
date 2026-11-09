@@ -104,14 +104,17 @@ for expected in (
 for forbidden in ("docker compose down", "docker volume rm", "PDFHUB_RELEASE_SKIP_DR=true"):
     assert forbidden not in cutover, f"Unsafe production cutover bypass: {forbidden}"
 assert "test_verify_release_dr_evidence.py" in read(".github/workflows/lean-ci.yml")
-# The one-command entrypoint is only a value-discovery/orchestration layer;
-# it must reuse, never weaken, the existing production cutover gates.
+# Standard production deploy must have verified CI, live backup, RCAT
+# security settings, exact-SHA authorization and readiness. Automated DR is
+# optional and must retain its full proof path when explicitly requested.
+assert "PDFHUB_RELEASE_REQUIRE_DR" in cutover
+assert "standard mode" in cutover
+assert "strict mode" in cutover
 one_command_release = read("scripts/one-command-release.py")
 for expected in (
     "scripts/verify-ci-evidence.sh", "scripts/release1-host-preflight.py",
-    "RCAT_DR_RUNNER_READY", "rcat-dr-isolated",
     "scripts/backup.sh", "scripts/verify-backup.sh",
-    "actions/workflows/", "gh", "scripts/production-cutover.sh",
+    "gh", "scripts/production-cutover.sh",
     "RCAT_DEPLOY_CONFIRM", "RCAT_DEPLOY_SHA",
 ):
     assert expected in one_command_release, f"One-command release missing gate: {expected}"
