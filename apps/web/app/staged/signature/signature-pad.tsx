@@ -7,6 +7,7 @@ export function SignaturePad({
 }: { onImage: (blob: Blob | null) => void; disabled: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const active = useRef<number | null>(null);
+  const revision = useRef(0);
 
   function point(event: SignaturePointerEvent<HTMLCanvasElement>) {
     const target = canvas.current!;
@@ -23,6 +24,7 @@ export function SignaturePad({
     if (!surface || !pen) return;
     const startAt = point(event);
     active.current = event.pointerId;
+    revision.current += 1;
     surface.setPointerCapture(event.pointerId);
     pen.strokeStyle = "#223044";
     pen.lineWidth = 3.4;
@@ -49,14 +51,18 @@ export function SignaturePad({
     if (surface?.hasPointerCapture(event.pointerId)) {
       surface.releasePointerCapture(event.pointerId);
     }
+    const expectedRevision = revision.current;
     surface?.toBlob((blob) => {
-      onImage(blob && blob.type === "image/png" ? blob : null);
+      if (expectedRevision === revision.current) {
+        onImage(blob && blob.type === "image/png" ? blob : null);
+      }
     }, "image/png");
   }
   function reset() {
     const surface = canvas.current;
     surface?.getContext("2d")?.clearRect(0, 0, surface.width, surface.height);
     active.current = null;
+    revision.current += 1;
     onImage(null);
   }
   return (
