@@ -95,6 +95,10 @@ def main() -> None:
             blocked("missing required Ubuntu command: " + cmd)
     call("docker", "compose", "version")
     call("gh", "auth", "status")
+    # Host-specific Caddyfile is migrated to ignored site config without
+    # changing the currently mounted configuration of a running container.
+    # Other source edits still fail closed.
+    call("python3", "scripts/migrate-site-caddy.py", timeout=60)
     if call("git", "status", "--porcelain", "--untracked-files=no"):
         blocked("tracked local modifications detected; no deployment attempted")
     if call("gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner") != REPO:
