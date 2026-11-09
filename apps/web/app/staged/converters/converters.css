@@ -1,0 +1,7 @@
+.t90ConverterStage{max-width:900px}
+.t90ConverterStage input[type="file"]{width:100%;border:1px solid #c9cfe1;background:#fff;border-radius:10px;padding:11px;font:inherit}
+.t90ConverterStage .t90DocumentStageField>button{justify-self:start;margin-top:3px}
+.t90ConverterNote{padding:10px 12px;border:1px solid #d6d8ed;border-radius:10px;background:#f8f9ff}
+.t90ConverterMeta{font-weight:600;color:#454c75;font-size:13px;overflow-wrap:anywhere}
+.t90ConverterFooter{margin-top:26px;font-size:12px;color:#5d6179}
+@media(max-width:650px){.t90ConverterStage .t90DocumentStageField>button{width:100%}}
