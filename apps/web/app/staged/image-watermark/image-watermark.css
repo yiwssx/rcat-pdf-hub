@@ -1,0 +1,5 @@
+.m21ImageWatermark{max-width:900px}
+.m21ImageWatermarkFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0}
+.m21ImageWatermarkFields label{display:grid;gap:8px;font-weight:700}
+.m21ImageWatermarkFields input,.m21ImageWatermarkFields select{width:100%;border:1px solid #c9cfe1;background:white;padding:10px;border-radius:10px;font:inherit;color:var(--v3-ink)}
+@media(max-width:650px){.m21ImageWatermarkFields{grid-template-columns:1fr}}
