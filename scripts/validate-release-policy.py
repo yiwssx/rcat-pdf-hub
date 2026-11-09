@@ -96,6 +96,25 @@ for required in (
     assert required in lean_ci_workflow, f"Lean CI missing required guard: {required}"
 for forbidden in ("pull_request_target:", "contents: write", "pull-requests: write"):
     assert forbidden not in lean_ci_workflow, f"Lean CI must remain read-only: {forbidden}"
+for required in (
+    "ci-risk-integration.sh", "CI_INTEGRATION_DATABASE",
+    "CI_INTEGRATION_T90_STACK", "web_regression",
+    "pdf-hub.ui-regression.spec.ts",
+):
+    assert required in lean_ci_workflow, f"Lean CI missing risk-based gate: {required}"
+risk_scope = read("scripts/ci-scope.py")
+for required in ("DATABASE_PATHS", "T90_STACK_PATHS", "WEB_REGRESSION_PATHS", "t90_stack"):
+    assert required in risk_scope, f"CI routing missing risk guard: {required}"
+risk_script = read("scripts/ci-risk-integration.sh")
+for required in (
+    'GITHUB_ACTIONS:-', 'RUNNER_ENVIRONMENT:-', 'github-hosted',
+    'postgres:18.6-bookworm', 'valkey/valkey:8.1.9-alpine3.24',
+    'chrislusf/seaweedfs:4.44', '--network host',
+    'tests/test_t90_postgres_migration_ci.py', 'tests/t90_stack_probe.py',
+    'trap cleanup EXIT',
+):
+    assert required in risk_script, f"Isolated integration gate missing safety guard: {required}"
+
 assert not (ROOT / ".github/workflows/core-api-ci.yml").exists()
 assert not (ROOT / ".github/workflows/web-ci.yml").exists()
 
@@ -135,9 +154,16 @@ for required in (
     "contents: read",
     "check-python-security-dependency.py",
     "apps/api/requirements.lock",
-    "make validate-free",
+    "lock-artifact:",
+    "bash scripts/compile-python-lock.sh",
 ):
     assert required in python_security_workflow, f"Dependabot Python security workflow missing guard: {required}"
+assert not any(
+    "make validate-free" in line
+    for line in python_security_workflow.splitlines()
+    if not line.lstrip().startswith("#")
+), "Python security workflow must reuse Lean CI instead of full repeat"
+assert "  validate:" not in python_security_workflow, "Deprecated Dependabot full validation job must not return"
 assert "pull_request_target:" not in python_security_workflow, "Python security workflow must not use pull_request_target"
 assert "contents: write" not in python_security_workflow, "Python security workflow must stay read-only"
 assert "pull-requests: write" not in python_security_workflow, "Python security workflow must not gain PR write permission"
@@ -155,7 +181,7 @@ for required in ("lock-artifact:", "Check out exact trusted main base",
 assert python_security_workflow.index("Validate immutable Dependabot head") < python_security_workflow.index("Resolve and hash-lock only verified requirements"), "Untrusted dependency state must be validated before lock compilation"
 assert python_security_workflow.index("Resolve and hash-lock only verified requirements") < python_security_workflow.index("Upload review-only full hashed Python lockfile"), "Lock artifact must be resolved before upload"
 
-# Version-update automation remains direct npm patch-only. Security/nonstandard PRs use full validation.
+# Version-update automation remains direct npm patch-only. Nonstandard/security PRs use canonical Lean CI plus targeted review.
 dependabot = read(".github/dependabot.yml")
 assert len(re.findall(r"^\s*-\s+package-ecosystem:", dependabot, flags=re.M)) == 1
 assert re.search(r"^\s*-\s+package-ecosystem:\s*npm\s*$", dependabot, flags=re.M)

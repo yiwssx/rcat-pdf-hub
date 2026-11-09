@@ -12,7 +12,30 @@ from pathlib import Path
 import subprocess
 
 
-LANES = ("backend", "frontend", "ops", "gotenberg")
+LANES = ("backend", "frontend", "ops", "gotenberg", "database", "t90_stack", "web_regression")
+
+# Extra, real-service integration is routed only when its contracts change.
+# Core unit/contract/coverage runs in the ordinary backend lane already.
+DATABASE_PATHS = (
+    "apps/api/alembic/",
+    "apps/api/app/db.py",
+    "apps/api/app/models.py",
+    "apps/api/app/migrate.py",
+    "apps/api/tests/test_t90_postgres_migration_ci.py",
+)
+T90_STACK_PATHS = (
+    "apps/api/app/queue.py",
+    "apps/api/app/worker.py",
+    "apps/api/app/worker_tasks.py",
+    "apps/api/app/lease_recovery.py",
+    "apps/api/app/storage.py",
+    "apps/api/tests/t90_stack_probe.py",
+)
+WEB_REGRESSION_PATHS = (
+    "apps/web/app/",
+    "apps/web/components/",
+    "apps/web/tests/e2e/pdf-hub.ui-regression.spec.ts",
+)
 
 
 def classify(paths: list[str], *, force_all: bool = False) -> dict[str, bool]:
@@ -25,11 +48,29 @@ def classify(paths: list[str], *, force_all: bool = False) -> dict[str, bool]:
             continue
         if path.startswith("apps/api/"):
             selected["backend"] = True
+            if path.startswith(DATABASE_PATHS):
+                selected["database"] = True
+            if path.startswith(T90_STACK_PATHS):
+                selected["t90_stack"] = True
+            # A Python dependency update can change database and RQ/S3
+            # behavior. Exercise real disposable services only for this case.
+            if path in {"apps/api/requirements.txt", "apps/api/requirements.lock", "apps/api/Dockerfile"}:
+                selected["database"] = True
+                selected["t90_stack"] = True
         elif path.startswith("apps/web/"):
             selected["frontend"] = True
+            if path.startswith(WEB_REGRESSION_PATHS):
+                selected["web_regression"] = True
         elif path.startswith("ops/gotenberg/"):
             selected["ops"] = True
             selected["gotenberg"] = True
+        elif path == "scripts/ci-risk-integration.sh":
+            # A change to the integration harness itself must exercise both
+            # real-service tracks before being trusted as a required gate.
+            selected["ops"] = True
+            selected["backend"] = True
+            selected["database"] = True
+            selected["t90_stack"] = True
         elif (
             path.startswith(("scripts/", "ops/", ".github/"))
             or path.startswith(("docker-compose", "compose."))
@@ -45,6 +86,9 @@ def classify(paths: list[str], *, force_all: bool = False) -> dict[str, bool]:
             selected["backend"] = True
             selected["frontend"] = True
             selected["ops"] = True
+            selected["database"] = True
+            selected["t90_stack"] = True
+            selected["web_regression"] = True
     return selected
 
 

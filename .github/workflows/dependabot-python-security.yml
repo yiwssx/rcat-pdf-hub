@@ -11,68 +11,15 @@ concurrency:
   group: dependabot-python-security-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+# The required Lean CI already builds the exact locked Python 3.12 image,
+# checks coverage/contract and selects real PostgreSQL/RQ/S3 integrations
+# whenever Python requirements change. Repeating make validate-free here
+# would rebuild API, Web and the entire Docker Compose stack unnecessarily.
+#
+# This separate read-only security lane only verifies the bot's one-pin
+# change and produces the reviewable hashed lock. It is never an auto-merge
+# authorization and never executes arbitrary PR checkout scripts.
 jobs:
-  validate:
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      BASE_SHA: ${{ github.event.pull_request.base.sha }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-    steps:
-      - name: Check out trusted base
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ env.BASE_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Fetch Dependabot head without executing it
-        run: |
-          git fetch --no-tags origin "pull/${PR_NUMBER}/head:refs/remotes/origin/dependabot-security-pr"
-          test "$(git rev-parse refs/remotes/origin/dependabot-security-pr)" = "${HEAD_SHA}"
-
-      - name: Verify Python security dependency policy
-        run: python3 scripts/check-python-security-dependency.py "${BASE_SHA}" "${HEAD_SHA}"
-
-      - name: Materialize only the verified requirements state
-        run: |
-          git show "${HEAD_SHA}:apps/api/requirements.txt" > apps/api/requirements.txt
-          if git cat-file -e "${HEAD_SHA}:apps/api/requirements.lock" 2>/dev/null; then
-            git show "${HEAD_SHA}:apps/api/requirements.lock" > apps/api/requirements.lock
-          fi
-          git config user.name "dependabot-security-validation"
-          git config user.email "dependabot-security-validation@users.noreply.github.com"
-          git add apps/api/requirements.txt apps/api/requirements.lock
-          git commit -m "test: materialize verified Python security update"
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-
-      - name: Prepare Valkey kernel precondition
-        run: |
-          sudo sysctl -w vm.overcommit_memory=1
-          test "$(sysctl -n vm.overcommit_memory)" = "1"
-
-      - name: Run full zero-cost validation
-        run: |
-          validation_log="$(mktemp)"
-          if ! make validate-free >"${validation_log}" 2>&1; then
-            echo "Full zero-cost validation failed; final output follows:" >&2
-            tail -n 160 "${validation_log}" >&2
-            exit 1
-          fi
-          echo "Full zero-cost validation: PASS"
-
   lock-artifact:
     name: Generate read-only Python dependency lock review artifact
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
