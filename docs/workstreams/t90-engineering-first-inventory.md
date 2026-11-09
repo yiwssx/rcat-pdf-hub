@@ -1,6 +1,6 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-09 after protected PRs [#339](https://github.com/yiwssx/rcat-pdf-hub/pull/339), [#340](https://github.com/yiwssx/rcat-pdf-hub/pull/340), and [#341](https://github.com/yiwssx/rcat-pdf-hub/pull/341) merged; current Engineering First source/workflow readiness. Canonical 90 IDs: [PDF tool registry](../../contracts/pdf-tools.v1.json). Independent code evidence: [T90 ledger](../../contracts/t90-rcat-pilot-acceptance.v1.json). Convert-to-PDF prepared format map: [T90-2 catalog](../../apps/api/app/t90_2_catalog.py). **This is NOT production certification.**
+**Snapshot:** 2026-11-09 after protected PRs [#339](https://github.com/yiwssx/rcat-pdf-hub/pull/339), [#340](https://github.com/yiwssx/rcat-pdf-hub/pull/340), [#341](https://github.com/yiwssx/rcat-pdf-hub/pull/341), [#343](https://github.com/yiwssx/rcat-pdf-hub/pull/343) and [#344](https://github.com/yiwssx/rcat-pdf-hub/pull/344) merged; current Engineering First source/workflow readiness. Canonical 90 IDs: [PDF tool registry](../../contracts/pdf-tools.v1.json). Independent code evidence: [T90 ledger](../../contracts/t90-rcat-pilot-acceptance.v1.json). Convert-to-PDF prepared format map: [T90-2 catalog](../../apps/api/app/t90_2_catalog.py). **This is NOT production certification.**
 
 ## Scope and definitions
 
@@ -11,20 +11,20 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
 - **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 has no accepted MOBI output engine. Blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup:** CODE COMPLETE **59**, PARTIAL **14**, MISSING **10**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED**. Source evidence counts and tool usability may change independently.
+**Dev-only rollup:** CODE COMPLETE **61**, PARTIAL **12**, MISSING **10**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Manage PDF | 10 | 13 | 10 | 0 | 33 |
+| Manage PDF | 12 | 11 | 10 | 0 | 33 |
 | Convert to PDF | 33 | 1 | 0 | 6 | 40 |
 | Convert from PDF | 16 | 0 | 0 | 1 | 17 |
-| **Total** | **59** | **14** | **10** | **7** | **90** |
+| **Total** | **61** | **12** | **10** | **7** | **90** |
 
 ## Prioritized engineering leverage
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage next:** M23 now DONE behind a default-OFF gate via PR #341 (true JPEG/PNG image-on-PDF), leaving ten MISSING Manage tools. Address M20 viewer, M21 image-watermark and incomplete legacy UI in bounded batches; no new infrastructure.
+3. **Manage progress:** M23 done in #341, read-only M20 authenticated viewer done in #343, M07 authentic per-page PDF ZIP workspace done in #344. Next focus M21 image watermark, remaining Manage flows and bounded genuinely missing engines. No new infrastructure.
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -38,7 +38,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | M04 | Merge PDF | **CODE COMPLETE** | Legacy `merge` | Defer independent QA; preserve code/CI |
 | M05 | PDF Translator | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
 | M06 | Chat with PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
-| M07 | Split PDF | **PARTIAL** | PR [#300](https://github.com/yiwssx/rcat-pdf-hub/pull/300) · bounded engine | Finish split / multi-output UI and ZIP delivery |
+| M07 | Split PDF | **CODE COMPLETE** | PR [#300](https://github.com/yiwssx/rcat-pdf-hub/pull/300) bounded ZIP engine + [#344](https://github.com/yiwssx/rcat-pdf-hub/pull/344) guarded owner-scoped Web input/submit/results | Supports non-encrypted, unsigned, non-form, non-annotated PDF ≤16 MiB/200 pages; up to 80 unique pages; all gates OFF; QA deferred |
 | M08 | Unlock PDF | **PARTIAL** | PR [#302](https://github.com/yiwssx/rcat-pdf-hub/pull/302) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
 | M09 | Protect PDF | **PARTIAL** | PR [#303](https://github.com/yiwssx/rcat-pdf-hub/pull/303) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
 | M10 | Rotate PDF | **CODE COMPLETE** | Legacy `rotate` | Defer independent QA; preserve code/CI |
@@ -51,7 +51,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | M17 | Extract text | **CODE COMPLETE** | PR [#235](https://github.com/yiwssx/rcat-pdf-hub/pull/235) · bounded engine | Defer independent QA; preserve code/CI |
 | M18 | Extract images | **PARTIAL** | PR [#304](https://github.com/yiwssx/rcat-pdf-hub/pull/304) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
 | M19 | Add page numbers | **CODE COMPLETE** | Legacy `page-numbers` | Defer independent QA; preserve code/CI |
-| M20 | PDF Viewer | **PARTIAL** | PDF preview primitives | Complete viewer UI controls and page/navigation |
+| M20 | PDF Viewer | **CODE COMPLETE** | Existing authenticated page-count/PNG preview/download APIs + [#343](https://github.com/yiwssx/rcat-pdf-hub/pull/343) Web route | Owner-scoped active PDF selector, page navigation, bounded page index/preview resolution and original download; default-OFF stage UI; no PDF edit; QA deferred |
 | M21 | Add watermark | **PARTIAL** | Legacy `watermark` | Add image-watermark capability; existing text mode is not full coverage |
 | M22 | Add text | **PARTIAL** | PR [#297](https://github.com/yiwssx/rcat-pdf-hub/pull/297) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
 | M23 | Add image to PDF | **CODE COMPLETE** | Genuine JPEG/PNG image overlay + guarded Web [PR #341](https://github.com/yiwssx/rcat-pdf-hub/pull/341) | Defer real-host QA; keep stage flags OFF |
