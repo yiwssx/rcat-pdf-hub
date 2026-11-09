@@ -1,5 +1,8 @@
 # T90 Institutional RCAT Pilot — Scoped acceptance gates
 
+> **Live-status correction — 2026-11-09:** the nine-tool R1 application is deployed and RCAT Google Login was operator-confirmed working; this supersedes historical statements below that no initial OAuth/Production deployment had occurred. Independent R1 negative security and Thai QA remain pending in [#308](https://github.com/yiwssx/rcat-pdf-hub/issues/308). **All 90-tool T90 capabilities are still subject to separate per-tool certification in [#262](https://github.com/yiwssx/rcat-pdf-hub/issues/262).** See [hashed report schema](t90-qa-hashed-report-contract.md): a truthy text claim is no longer sufficient for VERIFIED/RELEASED.
+
+
 **Decision date:** 2026-11-02. **Scope:** only staff/students with a *verified*
 `@rcat.ac.th` identity. An institutional deployment is not a public anonymous
 PDF conversion service, but it still processes untrusted files and potentially

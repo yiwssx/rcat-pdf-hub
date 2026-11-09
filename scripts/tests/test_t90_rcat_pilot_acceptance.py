@@ -284,6 +284,51 @@ class PilotAcceptanceTest(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 module.verify(self.registry, candidate)
 
+    @staticmethod
+    def _synthetic_pass_report():
+        # Schema fixture only; NOT a claim that physical RCAT QA took place.
+        return {
+            "result": "PASS",
+            "artifact_sha256": "a" * 64,
+            "evidence_ref": "rcat-evidence:unit-test-shape-only",
+            "checked_at": "2026-11-09T00:00:00Z",
+        }
+
+    def test_reject_legacy_truthy_strings_for_verified_reports(self):
+        proof = next(x for x in self.evidence["tool_evidence"]
+                     if x["tool_id"] == "T21").copy()
+        proof["state"] = "VERIFIED"
+        for name in module.REPORTS_FOR_VERIFICATION:
+            proof[name] = "verified"
+        self.evidence["tool_evidence"] = [proof]
+        with self.assertRaisesRegex(ValueError, "structured evidence"):
+            module.verify(self.registry, self.evidence)
+
+    def test_verified_requires_explicit_pass_digest_reference_and_date(self):
+        original = next(x for x in self.evidence["tool_evidence"]
+                        if x["tool_id"] == "T21").copy()
+        original["state"] = "VERIFIED"
+        for name in module.REPORTS_FOR_VERIFICATION:
+            original[name] = self._synthetic_pass_report()
+        self.evidence["tool_evidence"] = [original]
+        # This only validates the format of a synthetic test fixture, not
+        # whether a real institution-side report exists in the private store.
+        self.assertEqual(
+            module.verify(self.registry, self.evidence)["released"], 0
+        )
+        for key, bad_value in (
+            ("result", "PENDING"),
+            ("artifact_sha256", "not-an-actual-sha256"),
+            ("evidence_ref", "https://example.com/arbitrary-string"),
+            ("checked_at", "2026-02-31T00:00:00Z"),
+        ):
+            with self.subTest(key=key):
+                report = original["thai_fidelity_report"].copy()
+                original["thai_fidelity_report"] = {**report, key: bad_value}
+                with self.assertRaises(ValueError):
+                    module.verify(self.registry, self.evidence)
+                original["thai_fidelity_report"] = report
+
     def test_release_requires_real_institutional_sso_evidence(self):
         proof = {
             "tool_id": "F09", "state": "RELEASED",
@@ -292,10 +337,10 @@ class PilotAcceptanceTest(unittest.TestCase):
             "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/1",
             "source_sha256": "a" * 64, "output_sha256": "b" * 64,
             "pages_or_items_checked": True,
-            "source_vs_output_report": "verified source vs output",
-            "security_isolation_report": "offline renderer proof",
-            "owner_scope_test_report": "user isolation proof",
-            "thai_fidelity_report": "Thai quality proof",
+            "source_vs_output_report": self._synthetic_pass_report(),
+            "security_isolation_report": self._synthetic_pass_report(),
+            "owner_scope_test_report": self._synthetic_pass_report(),
+            "thai_fidelity_report": self._synthetic_pass_report(),
             "approved_by": "institution reviewer",
             "approved_at": "2026-11-02",
             "rollback_plan": "rollback staging and flags",
