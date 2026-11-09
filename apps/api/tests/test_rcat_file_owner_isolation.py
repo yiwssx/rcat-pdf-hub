@@ -86,7 +86,7 @@ def test_rcat_admin_file_library_metadata_download_and_delete_are_owner_scoped(m
         f"/api/v1/files/{foreign_id}/preview",
     ):
         response = client.get(url)
-        assert response.status_code == 403, (url, response.text)
+        assert response.status_code == 403
     denied_delete = client.delete(f"/api/v1/files/{foreign_id}")
     assert denied_delete.status_code == 403
     denied_bulk = client.post(
