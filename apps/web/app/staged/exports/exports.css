@@ -1,0 +1,6 @@
+.t90ExportStage{max-width:900px}
+.t90ExportStage input[type="file"]{width:100%;border:1px solid #c9cfe1;background:#fff;border-radius:10px;padding:11px;font:inherit}
+.t90ExportStage .t90DocumentStageField>button{justify-self:start}
+.t90ExportLimit{padding:12px;border:1px solid #d6d8ed;border-radius:10px;background:#f8f9ff;overflow-wrap:anywhere}
+.t90ExportFooter{margin-top:26px;font-size:12px;color:#5d6179}
+@media(max-width:650px){.t90ExportStage .t90DocumentStageField>button{width:100%}}
