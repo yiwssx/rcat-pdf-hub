@@ -25,7 +25,32 @@ REQUIRED = {
 # These settings are intentionally not forwarded by the current Compose file.
 # In the API they default to False; a missing Compose key therefore means OFF.
 # If a future Compose file forwards a key, an explicit 'true' must fail closed.
-OPTIONAL_OFF = ("PDFHUB_TO_PDF_TOOLS_ENABLED", "PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED")
+# All T90 experimental capabilities remain disabled in the nine-tool R1.
+# A newly forwarded Compose flag must not silently open an uncertified route.
+# Missing keys are OFF because Settings defaults are False; explicit TRUE
+# in API or any worker is rejected (and consistency is checked below).
+OPTIONAL_OFF = (
+    "PDFHUB_TO_PDF_TOOLS_ENABLED",
+    "PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED",
+    "PDFHUB_SPLIT_ZIP_TOOLS_ENABLED",
+    "PDFHUB_EXTRACT_PAGES_TOOLS_ENABLED",
+    "PDFHUB_EXTRACT_EMBEDDED_IMAGES_TOOLS_ENABLED",
+    "PDFHUB_GRAYSCALE_PDF_TOOLS_ENABLED",
+    "PDFHUB_HEADER_FOOTER_TOOLS_ENABLED",
+    "PDFHUB_UNLOCK_PDF_TOOLS_ENABLED",
+    "PDFHUB_PROTECT_PDF_TOOLS_ENABLED",
+    "PDFHUB_DOCUMENT_DATA_TOOLS_ENABLED",
+    "PDFHUB_GEOMETRY_TOOLS_ENABLED",
+    "PDFHUB_PDF_FILLER_TOOLS_ENABLED",
+    "PDFHUB_MANAGE_PAGE_TOOLS_ENABLED",
+    "PDFHUB_PDF_TEXT_OVERLAY_TOOLS_ENABLED",
+    "PDFHUB_T90_PRIVATE_PILOT_ENABLED",
+    "PDFHUB_CHM_NATIVE_DEV_ENABLED",
+    "PDFHUB_HEIF_NATIVE_DEV_ENABLED",
+    "PDFHUB_URL_TO_PDF_DEV_ENABLED",
+    "PDFHUB_WPS_NATIVE_DEV_ENABLED",
+    "PDFHUB_DWG_NATIVE_DEV_ENABLED",
+)
 CREDENTIALS = ("PDFHUB_OIDC_CLIENT_ID", "PDFHUB_OIDC_CLIENT_SECRET")
 
 
