@@ -4,7 +4,11 @@
 
 ## Current evidence boundary
 
-The canonical ledger currently has 38 `IMPLEMENTED`, 1 `STAGED` (T21 Publisher), 51 `UNASSESSED`, **0 `VERIFIED` and 0 `RELEASED`**. These are 90 independent engineering/acceptance entries, separate from the nine operational R1 tools. Never equate a green PR or a working Google Login with institutional acceptance.
+The canonical ledger currently has 40 `IMPLEMENTED`, 1 `STAGED` (T21 Publisher), 49 `UNASSESSED`, **0 `VERIFIED` and 0 `RELEASED`**. These are 90 independent engineering/acceptance entries, separate from the nine operational R1 tools. Never equate a green PR or a working Google Login with institutional acceptance.
+
+## Geometry source-credit scope
+
+M11 Crop PDF and M28 Resize PDF have independently recorded **IMPLEMENTED** source provenance from merged PR #236, including the isolated Core API CI run 40718249607. M11 changes CropBox only and **does not redact** hidden content; M28 resizes X and Y axes independently, so visual fidelity must be checked with real Thai PDFs. Both routes remain default-OFF and require `pdf:crop` or `pdf:resize` scopes not automatically assigned to RCAT users. These two source credits are not permissions to activate either feature or advance either tool to VERIFIED/RELEASED.
 
 ## Schema for independently reviewed reports
 
