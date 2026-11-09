@@ -40,13 +40,16 @@ def verify(run: dict, evidence: dict, backup: Path, sha: str, now: datetime | No
     stamp = backup.name
     if not STAMP.fullmatch(stamp) or evidence.get("backup_stamp") != stamp:
         raise ValueError("DR snapshot does not match the approved backup")
+    current = now or datetime.now(timezone.utc)
+    created = datetime.strptime(stamp, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    if created > current + timedelta(minutes=5) or current - created > timedelta(hours=72):
+        raise ValueError("release backup is not recent enough")
     checksum = backup / "SHA256SUMS"
     if checksum.is_symlink() or not checksum.is_file():
         raise ValueError("backup checksum manifest is missing/unsafe")
     expected_digest = hashlib.sha256(checksum.read_bytes()).hexdigest()
     if evidence.get("backup_checksums_sha256") != expected_digest:
         raise ValueError("DR-tested backup checksum does not match the release backup")
-    current = now or datetime.now(timezone.utc)
     try:
         start = datetime.fromisoformat(evidence["started_utc"].replace("Z", "+00:00"))
         end = datetime.fromisoformat(evidence["finished_utc"].replace("Z", "+00:00"))
