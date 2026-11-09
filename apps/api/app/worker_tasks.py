@@ -515,6 +515,53 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F08 PDF signature changed")
             pdf_to_editable_text_pptx(inputs[0], output)
+        elif job.operation == "flatten-pdf-visual":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_flatten_visual import (
+                MAX_SOURCE_BYTES as FLATTEN_MAX_SOURCE, visual_flatten_pdf,
+            )
+            if (not settings.pdf_flatten_visual_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= FLATTEN_MAX_SOURCE
+                    or not isinstance(params, dict) or params):
+                raise ValueError("Staged M24 source, owner or parameters unauthorized")
+            try:
+                checked = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("Staged M24 source PDF signature invalid") from None
+            if checked != "application/pdf":
+                raise ValueError("Staged M24 PDF signature mismatched")
+            visual_flatten_pdf(inputs[0], output)
+        elif job.operation == "pdf-markup":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_markup import (
+                MAX_SOURCE_BYTES as MARKUP_MAX_SOURCE,
+                markup_pdf, validate_markup,
+            )
+            if (not settings.pdf_markup_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= MARKUP_MAX_SOURCE
+                    or not isinstance(params, dict)
+                    or set(params) != {"mode", "page", "x", "y", "width", "height", "text"}):
+                raise ValueError("M25/M26/M29 owner/source/parameters unauthorized")
+            try:
+                checked = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("PDF markup source signature invalid") from None
+            if checked != "application/pdf":
+                raise ValueError("PDF markup input no longer matches PDF signature")
+            validate_markup(**params)
+            markup_pdf(inputs[0], output, **params)
         elif job.operation == "repair-pdf-structure":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
