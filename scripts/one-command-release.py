@@ -34,10 +34,6 @@ def call(*argv: str, env: dict[str, str] | None = None,
     return (result.stdout or "").strip()
 
 
-def gh_json(endpoint: str) -> dict:
-    return json.loads(call("gh", "api", endpoint, timeout=30))
-
-
 def live_compose_mode() -> str:
     ids = call(
         "docker", "ps", "-q",
