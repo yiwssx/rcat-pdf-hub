@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Migrate only a modified host Caddyfile to a private, ignored config path.
+"""Preserve modified host Caddy config without changing its active bind mount.
 
-Preserves the exact site bytes; atomically replaces the repository-tracked
-path with a NEW inode so an existing Docker single-file bind mount keeps its
-original content until an approved cutover. No Docker or Caddy restarts.
+Keep the existing tracked file bytes intact (and require an audited one-file
+exception) because replacing that path could change an existing container on
+restarts before a real, separately authorized deployment.
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def check_dir(path: Path) -> None:
     path.chmod(0o700)
 
 
-def migrate() -> str:
+def migrate(*, check_only: bool = False) -> str:
     status = git("status", "--porcelain", "--untracked-files=no").decode("utf-8")
     if not status.strip():
         return "site-caddy: clean; no migration needed"
@@ -72,6 +72,13 @@ def migrate() -> str:
         fail("existing PDFHUB_CADDYFILE_PATH is different; refusing rewrite")
 
     local_root = ROOT / ".local-config"
+    site = local_root / "caddy" / "Caddyfile"
+    if check_only:
+        if (len(existing) != 1 or existing[0] != LOCAL_REL
+                or site.is_symlink() or not site.is_file()
+                or site.read_bytes() != original):
+            fail("modified host Caddyfile is not covered by the verified site override")
+        return "site-caddy: PASS — the sole modified tracked file matches the reviewed site config"
     check_dir(local_root)
     site_dir = local_root / "caddy"
     check_dir(site_dir)
@@ -107,32 +114,21 @@ def migrate() -> str:
             output.flush()
             os.fsync(output.fileno())
 
-    # Preserve current mounted old inode. git restore may truncate that same
-    # inode and thereby change a live container's configuration unexpectedly.
-    if caddy.read_bytes() != original:
-        fail("original Caddyfile changed during preservation; aborting")
-    fd, temp_name = tempfile.mkstemp(dir=caddy.parent, prefix=".caddy-git-")
-    try:
-        with os.fdopen(fd, "wb") as output:
-            output.write(canonical)
-            output.flush()
-            os.fsync(output.fileno())
-        os.chmod(temp_name, 0o644)
-        os.replace(temp_name, caddy)
-    finally:
-        if os.path.exists(temp_name):
-            os.unlink(temp_name)
-
-    if caddy.read_bytes() != canonical or site.read_bytes() != original:
-        fail("post-migration verification failed")
-    git("update-index", "--refresh", "--", TRACKED.as_posix())
-    if git("status", "--porcelain", "--untracked-files=no").strip():
-        fail("tracked files still modified after migrating site Caddyfile")
-    return "site-caddy: PASS — live config preserved in ignored site file; Git clean; no containers restarted"
-
+    # Never replace the tracked path. It is the current live Docker bind mount
+    # source, and rewriting it could unexpectedly affect a restarted container.
+    if caddy.read_bytes() != original or site.read_bytes() != original:
+        fail("site Caddyfile changed during preservation")
+    if git("status", "--porcelain", "--untracked-files=no").decode().splitlines() != [
+        " M ops/caddy/Caddyfile"
+    ]:
+        fail("unexpected additional tracked changes after preserving site Caddyfile")
+    return "site-caddy: PASS — original proxy file unchanged and site copy saved; no containers restarted"
 
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] not in ([], ["--check"]):
+        raise SystemExit("usage: migrate-site-caddy.py [--check]")
     try:
-        print(migrate())
+        print(migrate(check_only=sys.argv[1:] == ["--check"]))
     except (OSError, ValueError, UnicodeError, subprocess.CalledProcessError) as exc:
         raise SystemExit(f"site-caddy: fail-closed migration: {type(exc).__name__}: {exc}") from None
