@@ -104,6 +104,24 @@ for expected in (
 for forbidden in ("docker compose down", "docker volume rm", "PDFHUB_RELEASE_SKIP_DR=true"):
     assert forbidden not in cutover, f"Unsafe production cutover bypass: {forbidden}"
 assert "test_verify_release_dr_evidence.py" in read(".github/workflows/lean-ci.yml")
+# The one-command entrypoint is only a value-discovery/orchestration layer;
+# it must reuse, never weaken, the existing production cutover gates.
+one_command_release = read("scripts/one-command-release.py")
+for expected in (
+    "scripts/verify-ci-evidence.sh", "scripts/release1-host-preflight.py",
+    "RCAT_DR_RUNNER_READY", "rcat-dr-isolated",
+    "scripts/backup.sh", "scripts/verify-backup.sh",
+    "actions/workflows/", "gh", "scripts/production-cutover.sh",
+    "RCAT_DEPLOY_CONFIRM", "RCAT_DEPLOY_SHA",
+):
+    assert expected in one_command_release, f"One-command release missing gate: {expected}"
+for forbidden in ("shell=True", "make validate-free", "PDFHUB_RELEASE_SKIP_DR",
+                  "docker compose down", "docker volume rm"):
+    assert forbidden not in one_command_release, (
+        f"One-command release contains prohibited release shortcut: {forbidden}"
+    )
+assert "test_one_command_release.py" in read(".github/workflows/lean-ci.yml")
+
 
 
 native_sandbox_workflow = read(".github/workflows/t90-2-native-sandbox.yml")
