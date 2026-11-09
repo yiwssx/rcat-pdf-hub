@@ -15,8 +15,6 @@ export default async function StagedManagePage({
   if (process.env.PDFHUB_STAGED_MANAGE_WEB_ENABLED !== "true") notFound();
   const { file, tool } = await searchParams;
   const backendFlags: Record<ManageId, boolean> = {
-    M07: process.env.PDFHUB_SPLIT_ZIP_TOOLS_ENABLED === "true"
-      && process.env.PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED === "true",
     M14: process.env.PDFHUB_MANAGE_PAGE_TOOLS_ENABLED === "true",
     M15: process.env.PDFHUB_MANAGE_PAGE_TOOLS_ENABLED === "true",
     M16: process.env.PDFHUB_EXTRACT_PAGES_TOOLS_ENABLED === "true",
