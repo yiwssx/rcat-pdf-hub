@@ -74,9 +74,9 @@ function parseFields(raw: string): Record<string, string> {
 }
 
 export function StagedManageClient({
-  requestedFileId, requestedToolId, enabledToolIds,
+  requestedFileId, requestedToolId, enabledToolIds, allowMultiOutput,
 }: {
-  requestedFileId?: string; requestedToolId?: string; enabledToolIds: readonly ManageId[];
+  requestedFileId?: string; requestedToolId?: string; enabledToolIds: readonly ManageId[]; allowMultiOutput: boolean;
 }) {
   const available = useMemo(
     () => TOOLS.filter((item) => enabledToolIds.includes(item.id)),
@@ -167,7 +167,10 @@ export function StagedManageClient({
           if (!validRange(pages)) throw new Error("รูปแบบช่วงหน้าไม่ถูกต้อง เช่น 1,3-5 หรือ 1-z");
           if (total > 200) throw new Error("เครื่องมือชุดนี้รองรับ PDF ไม่เกิน 200 หน้า");
           payload = { ...payload, pages };
-          if (tool.id === "M16") payload.format = format;
+          if (tool.id === "M16") {
+            if (format === "zip" && !allowMultiOutput) throw new Error("ยังไม่ได้เปิด Multi-output สำหรับ ZIP");
+            payload.format = format;
+          }
           break;
         case "M14":
         case "M15": {
@@ -183,7 +186,7 @@ export function StagedManageClient({
           break;
         }
         case "M22":
-          if (!overlayText.trim() || overlayText.length > 256
+          if (!overlayText.trim() || overlayText.length > 120
             || !/^[\x20-\x7e]+$/.test(overlayText)) {
             throw new Error("M22 รองรับข้อความ ASCII ที่พิมพ์ได้เท่านั้น ไม่รองรับภาษาไทย");
           }
@@ -280,7 +283,7 @@ export function StagedManageClient({
                   <select aria-label="ชนิดผลลัพธ์" value={format}
                     onChange={(event) => setFormat(event.target.value as "pdf" | "zip")}>
                     <option value="pdf">PDF เดียว</option>
-                    <option value="zip">PDF แยกหน้าใน ZIP (ต้องเปิด Multi-output)</option>
+                    <option value="zip" disabled={!allowMultiOutput}>PDF แยกหน้าใน ZIP (ต้องเปิด Multi-output)</option>
                   </select>
                 </label>}
               </div>
@@ -298,7 +301,7 @@ export function StagedManageClient({
             {tool?.id === "M22" && (
               <div className="t90ManageFields">
                 <label className="wide">ข้อความ ASCII เท่านั้น
-                  <input aria-label="ข้อความที่จะเพิ่ม" maxLength={256} value={overlayText}
+                  <input aria-label="ข้อความที่จะเพิ่ม" maxLength={120} value={overlayText}
                     onChange={(event) => setOverlayText(event.target.value)} disabled={busy} required />
                 </label>
                 <label>หน้าที่จะเพิ่มข้อความ
