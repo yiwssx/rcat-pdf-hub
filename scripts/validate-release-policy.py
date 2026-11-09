@@ -99,6 +99,9 @@ for expected in (
     "scripts/verify-backup.sh", "scripts/verify-ci-evidence.sh",
     "make validate-supply-chain-source", "make validate-supply-chain-images",
     "curl -fsS",
+    'dc --profile security up -d --no-deps clamav',
+    'from app.malware import ping_clamav',
+    'CLAMAV NOT READY',
 ):
     assert expected in cutover, f"Guarded production cutover missing required gate: {expected}"
 for forbidden in ("docker compose down", "docker volume rm", "PDFHUB_RELEASE_SKIP_DR=true"):
