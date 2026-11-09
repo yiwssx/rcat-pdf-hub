@@ -11,20 +11,20 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
 - **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 has no accepted MOBI output engine. Blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup:** CODE COMPLETE **78**, PARTIAL **2**, MISSING **3**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
+**Dev-only rollup:** CODE COMPLETE **78**, PARTIAL **3**, MISSING **2**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Manage PDF | 29 | 1 | 3 | 0 | 33 |
+| Manage PDF | 29 | 2 | 2 | 0 | 33 |
 | Convert to PDF | 33 | 1 | 0 | 6 | 40 |
 | Convert from PDF | 16 | 0 | 0 | 1 | 17 |
-| **Total** | **78** | **2** | **3** | **7** | **90** |
+| **Total** | **78** | **3** | **2** | **7** | **90** |
 
 ## Prioritized engineering leverage
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. Pending M01 true editable content, M05 translation engine, M12 cryptographic signing.
+3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports a strictly bounded exact Courier text-object edit (still PARTIAL); M05 general translation and M12 cryptographic signing remain MISSING.
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -32,7 +32,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 
 | ID | Tool | Dev status | Engine/source evidence | Next engineering work |
 | --- | --- | --- | --- | --- |
-| M01 | Edit PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
+| M01 | Edit PDF | **PARTIAL** | Real, bounded same-length Courier text-object replacement in [M01 source workflow](t90-m01-text-editor-engineering-first.md) | Existing Tj text edited, but not a general PDF/Thai/layout editor; no Production activation |
 | M02 | Compress PDF | **CODE COMPLETE** | Legacy `compress` | Defer independent QA; preserve code/CI |
 | M03 | PDF Summarizer | **CODE COMPLETE** | Genuine bounded extractive PDF summary, quoted page-cited TXT [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353) | No abstraction, OCR or generative inference; QA deferred, flags OFF |
 | M04 | Merge PDF | **CODE COMPLETE** | Legacy `merge` | Defer independent QA; preserve code/CI |
