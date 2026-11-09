@@ -76,6 +76,9 @@ fi
 # gloss over a failing release gate. Keep database and volumes intact.
 dc() { docker compose "${compose[@]}" "$@"; }
 services=(api worker-interactive worker worker-heavy cleanup webhook web)
+echo 'cutover: enforcing release-only source and production image vulnerability gates'
+make validate-supply-chain-source
+make validate-supply-chain-images
 echo 'cutover: building reviewed application images (existing containers remain running)'
 dc build gotenberg "${services[@]}"
 echo 'cutover: stopping writers before the schema migration'
@@ -97,7 +100,7 @@ http=next(p for p in ports if int(p.get("target",0))==80)
 host= http.get("host_ip") or "127.0.0.1"
 if host in ("0.0.0.0","::"): host="127.0.0.1"
 if ":" in host: host="[" + host + "]"
-print(f"{host}:{http["published"]}")
+print(str(host) + ":" + str(http["published"]))
 ')"
 ready=false
 for _ in $(seq 1 60); do
