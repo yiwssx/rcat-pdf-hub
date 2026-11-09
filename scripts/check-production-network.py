@@ -43,7 +43,9 @@ expected_membership = {
     "web": {"app"},
     "caddy": {"edge", "app"},
     "seaweedfs": {"data"},
-    "clamav": {"data"},
+    # clamd is only reachable on the internal data network; freshclam
+    # requires outbound access to fetch signatures on first use and update.
+    "clamav": {"data", "egress"},
     "prometheus": {"management"},
     "alertmanager": {"management"},
     "tempo": {"management"},
