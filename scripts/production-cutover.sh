@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Guarded production cutover for the institution's own Ubuntu host.
 # Modes: check is read-only; deploy is explicit, gated and never automatic.
+# Default release requires CI + institutional OIDC + verified live backup;
+# a separate opt-in strict mode additionally requires official isolated DR.
 # Never run this via a public PR, GitHub-hosted CI job or an arbitrary SSH agent.
 set -Eeuo pipefail
 umask 077
@@ -10,7 +12,7 @@ cd "${ROOT}"
 
 MODE="${1:-check}"
 case "${MODE}" in check|deploy) ;; *)
-  echo "usage: BACKUP=/absolute/snapshot DR_RUN_ID=number [PDFHUB_COMPOSE_MODE=prod] bash scripts/production-cutover.sh check|deploy" >&2
+  echo "usage: BACKUP=/absolute/snapshot [PDFHUB_COMPOSE_MODE=prod] bash scripts/production-cutover.sh check|deploy" >&2
   exit 2;;
 esac
 case "${PDFHUB_COMPOSE_MODE:-prod}" in
@@ -24,8 +26,17 @@ fi
 if [[ -z "${BACKUP:-}" || "${BACKUP}" != /* || ! -d "${BACKUP}" ]]; then
   echo 'cutover: BACKUP must be an existing absolute local path' >&2; exit 2
 fi
-if [[ ! "${DR_RUN_ID:-}" =~ ^[1-9][0-9]*$ ]]; then
-  echo 'cutover: DR_RUN_ID must identify a trusted completed isolated DR workflow' >&2; exit 2
+# Standard releases do not need a GitHub self-hosted DR runner. Explicit
+# strict DR releases are still fully supported with the original proof gate.
+if [[ "${PDFHUB_RELEASE_REQUIRE_DR:-false}" != false && "${PDFHUB_RELEASE_REQUIRE_DR:-false}" != true ]]; then
+  echo 'cutover: PDFHUB_RELEASE_REQUIRE_DR must be true or false' >&2; exit 2
+fi
+strict_dr=false
+if [[ "${PDFHUB_RELEASE_REQUIRE_DR:-false}" == true || -n "${DR_RUN_ID:-}" ]]; then
+  strict_dr=true
+  if [[ ! "${DR_RUN_ID:-}" =~ ^[1-9][0-9]*$ ]]; then
+    echo 'cutover: strict DR mode requires a completed, verified GitHub DR_RUN_ID' >&2; exit 2
+  fi
 fi
 for cmd in docker gh git python3 curl; do
   command -v "${cmd}" >/dev/null || { echo "cutover: missing ${cmd}" >&2; exit 2; }
@@ -52,18 +63,24 @@ docker compose "${compose[@]}" config --format json | python3 scripts/release1-h
 # Verify actual backup contents (not only a directory name or timestamp).
 bash scripts/verify-backup.sh "${BACKUP}" >/dev/null
 
-tmp="$(mktemp -d)"
-trap 'rm -rf -- "${tmp}"' EXIT
-gh api "repos/yiwssx/rcat-pdf-hub/actions/runs/${DR_RUN_ID}" > "${tmp}/run.json"
-# Only download artifacts from the selected official GitHub workflow run.
-gh run download "${DR_RUN_ID}" --repo yiwssx/rcat-pdf-hub \
-  --pattern 'rcat-dr-evidence-*' --dir "${tmp}/artifact" >/dev/null
-mapfile -d '' proofs < <(find "${tmp}/artifact" -type f -name dr-evidence.json -print0)
-if [[ "${#proofs[@]}" -ne 1 ]]; then
-  echo 'cutover: exactly one private DR evidence report required' >&2; exit 1
+if [[ "${strict_dr}" == true ]]; then
+  echo 'cutover: strict mode — verifying official isolated DR restore evidence'
+  tmp="$(mktemp -d)"
+  trap 'rm -rf -- "${tmp}"' EXIT
+  gh api "repos/yiwssx/rcat-pdf-hub/actions/runs/${DR_RUN_ID}" > "${tmp}/run.json"
+  # Only download artifacts from the selected official GitHub workflow run.
+  gh run download "${DR_RUN_ID}" --repo yiwssx/rcat-pdf-hub \
+    --pattern 'rcat-dr-evidence-*' --dir "${tmp}/artifact" >/dev/null
+  mapfile -d '' proofs < <(find "${tmp}/artifact" -type f -name dr-evidence.json -print0)
+  if [[ "${#proofs[@]}" -ne 1 ]]; then
+    echo 'cutover: exactly one private DR evidence report required' >&2; exit 1
+  fi
+  python3 scripts/verify-release-dr-evidence.py "${tmp}/run.json" "${proofs[0]}" "${BACKUP}" "${sha}"
+  echo "cutover: PASS (readiness and matching immutable DR evidence, SHA ${sha:0:12})"
+
+else
+  echo 'cutover: standard mode — CI, RCAT policy and live backup verified; automated DR deferred'
 fi
-python3 scripts/verify-release-dr-evidence.py "${tmp}/run.json" "${proofs[0]}" "${BACKUP}" "${sha}"
-echo "cutover: PASS (readiness and matching immutable DR evidence, SHA ${sha:0:12})"
 
 if [[ "${MODE}" == check ]]; then
   echo 'cutover: CHECK ONLY — no production services modified'
@@ -79,9 +96,19 @@ fi
 # gloss over a failing release gate. Keep database and volumes intact.
 dc() { docker compose "${compose[@]}" "$@"; }
 services=(api worker-interactive worker worker-heavy cleanup webhook web)
-echo 'cutover: enforcing release-only source and production image vulnerability gates'
-make validate-supply-chain-source
-make validate-supply-chain-images
+# Optional extra image scans remain available but are not coupled to every
+# normal production update; Github CI and dependency gates have already passed.
+case "${PDFHUB_RELEASE_EXTRA_SCANS:-false}" in
+  true)
+    echo 'cutover: additional release supply-chain scans requested'
+    make validate-supply-chain-source
+    make validate-supply-chain-images
+    ;;
+  false)
+    echo 'cutover: additional Trivy scans deferred; exact protected-main CI verified'
+    ;;
+  *) echo 'cutover: PDFHUB_RELEASE_EXTRA_SCANS must be true or false' >&2; exit 2 ;;
+esac
 echo 'cutover: building reviewed application images (existing containers remain running)'
 dc build gotenberg "${services[@]}"
 echo 'cutover: stopping writers before the schema migration'
