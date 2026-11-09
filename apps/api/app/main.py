@@ -127,6 +127,9 @@ if settings.pdf_image_overlay_tools_enabled:
 if settings.pdf_flatten_visual_tools_enabled:
     from app.routers import pdf_flatten_visual
     app.include_router(pdf_flatten_visual.router)
+if settings.pdf_markup_tools_enabled:
+    from app.routers import pdf_markup
+    app.include_router(pdf_markup.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 

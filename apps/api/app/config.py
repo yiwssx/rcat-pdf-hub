@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     pdf_text_overlay_tools_enabled: bool = False
     # M23 bounded JPEG/PNG image-on-PDF stage, never enabled without review.
     pdf_image_overlay_tools_enabled: bool = False
+    # M25/M26 actual annotations, M29 visible-only whiteout. All default OFF.
+    pdf_markup_tools_enabled: bool = False
     # M24 visual-only raster flatten; destroys editable/searchable layers, default OFF.
     pdf_flatten_visual_tools_enabled: bool = False
     # Private/internal T90 pilot: exact authenticated principal names only.
