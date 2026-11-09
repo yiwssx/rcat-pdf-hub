@@ -4,7 +4,7 @@
 
 ## Current evidence boundary
 
-The canonical ledger currently has 38 `IMPLEMENTED`, 1 `STAGED` (T21 Publisher), 51 `UNASSESSED`, **0 `VERIFIED` and 0 `RELEASED`**. These are 90 independent engineering/acceptance entries, separate from the nine operational R1 tools. Never equate a green PR or a working Google Login with institutional acceptance.
+The canonical ledger currently has 40 `IMPLEMENTED`, 1 `STAGED` (T21 Publisher), 49 `UNASSESSED`, **0 `VERIFIED` and 0 `RELEASED`**. These are 90 independent engineering/acceptance entries, separate from the nine operational R1 tools. Never equate a green PR or a working Google Login with institutional acceptance.
 
 ## Schema for independently reviewed reports
 
