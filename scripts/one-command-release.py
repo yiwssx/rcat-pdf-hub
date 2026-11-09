@@ -95,12 +95,11 @@ def main() -> None:
             blocked("missing required Ubuntu command: " + cmd)
     call("docker", "compose", "version")
     call("gh", "auth", "status")
-    # Host-specific Caddyfile is migrated to ignored site config without
-    # changing the currently mounted configuration of a running container.
-    # Other source edits still fail closed.
+    # Preserve only the audited live Caddyfile customization, without
+    # changing its current Docker bind-mount source or running containers.
+    # Every other tracked edit is rejected by the strict one-file verifier.
     call("python3", "scripts/migrate-site-caddy.py", timeout=60)
-    if call("git", "status", "--porcelain", "--untracked-files=no"):
-        blocked("tracked local modifications detected; no deployment attempted")
+    call("python3", "scripts/migrate-site-caddy.py", "--check", timeout=60)
     if call("gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner") != REPO:
         blocked("GitHub repository identity does not match")
     sha = call("git", "rev-parse", "HEAD")
