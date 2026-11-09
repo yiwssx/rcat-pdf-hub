@@ -3,6 +3,41 @@
 Owner decision: no operator-run test suites, no unsafe automatic production
 writes, keep Google OIDC institutional access, backups, and DR mandatory.
 
+## Single command for the authorized Ubuntu deployment account
+
+The normal deployment entrypoint has **no manually supplied environment
+variables, SHA, backup path, DR run ID or separate operator-run test suite**:
+
+```bash
+cd /opt/rcat-pdf-hub && git pull --ff-only origin main && python3 scripts/one-command-release.py
+```
+
+Run as the existing account that owns the repository and Docker access,
+**not** with blind `sudo`. The code update by `git pull --ff-only` does not
+restart services.
+
+The orchestrator discovers the **actually running** production Compose mode
+from Docker API container labels, verifies protected main SHA, read-only
+institutional OIDC/HTTPS/ClamAV settings, and successful GitHub CI.
+It then requires repository variable `RCAT_DR_RUNNER_READY=true` and an
+online approved `rcat-dr-isolated` runner.
+
+Only after these conditions does it create and verify a fresh live backup
+(no automated pruning), dispatch the official isolated DR workflow, find
+the run ID on GitHub and require a real restore PASS. The existing guarded
+`production-cutover.sh` independently checks the exact SHA, official DR
+run, and the **same backup's SHA256SUMS** before release scans, migrations,
+application update, and health/readiness checks.
+
+**If the runner is missing, cannot access the read-only snapshot, or any
+gate fails, the command stops; it never invents evidence or deploys by
+bypassing a failed test.** This command cannot provision the DR runner or
+Google Workspace credentials just by being run on the Production host.
+
+On a migration/readiness failure, the retained pre-release snapshot is
+available for incident-controlled recovery with the previous app release;
+do not blindly roll back application binaries after database migrations.
+
 ## What this replaces
 
 A release must **not** redo `make validate-free` on the Ubuntu host. GitHub
@@ -40,7 +75,7 @@ The repository already contains:
 5. Provide `BACKUP=/absolute/path/to/that-snapshot` and `DR_RUN_ID` equal
    to the **successful GitHub Actions run ID**, not an arbitrary local report.
 
-## Unattended release agent sequence (no user-run test suite)
+## Advanced manual release-agent sequence (normally unnecessary)
 
 On the authorized *production* deployment host, after preparing the above:
 
@@ -52,7 +87,10 @@ export PDFHUB_COMPOSE_MODE=prod  # or prod-nas to match the live installation
 export BACKUP=/absolute/path/to/verified-backup
 export DR_RUN_ID=<approved-GitHub-isolated-DR-run-number>
 
-# Optional diagnostic only; deploy runs every gate itself, so omit this\n# to avoid repeated backup checksums and CI attestation work:\n# bash scripts/production-cutover.sh check\n\nexport RCAT_DEPLOY_SHA="$(git rev-parse HEAD)"
+# Optional diagnostic only; deploy runs every gate itself:
+# bash scripts/production-cutover.sh check
+
+export RCAT_DEPLOY_SHA="$(git rev-parse HEAD)"
 RCAT_DEPLOY_CONFIRM=YES bash scripts/production-cutover.sh deploy
 ```
 
