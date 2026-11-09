@@ -12,6 +12,17 @@ variables, SHA, backup path, DR run ID or separate operator-run test suite**:
 cd /opt/rcat-pdf-hub && git pull --ff-only origin main && python3 scripts/one-command-release.py
 ```
 
+**Host Caddy customization:** On the first run, if the only tracked local
+edit is `ops/caddy/Caddyfile`, the entrypoint preserves its exact bytes at
+`.local-config/caddy/Caddyfile` (ignored by Git), appends only
+`PDFHUB_CADDYFILE_PATH=./.local-config/caddy/Caddyfile` to the existing
+`.env`, and atomically swaps the tracked file back to Git's version using a
+new inode. The existing Caddy container's single-file bind mount retains
+the original inode, so the active proxy configuration is not replaced
+during this migration. The next approved Compose cutover uses the saved
+site file. Any other tracked edit, staged Caddy change, conflicting site
+file or conflicting environment setting fails closed. Never use
+`git reset --hard` to discard the institution's Caddy configuration.
 Run as the existing account that owns the repository and Docker access,
 **not** with blind `sudo`. The code update by `git pull --ff-only` does not
 restart services.
