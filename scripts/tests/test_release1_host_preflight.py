@@ -70,6 +70,30 @@ class HostPreflightTests(unittest.TestCase):
             mod.inspect_compose(self.config),
         )
 
+    def test_all_uncertified_r1_experimental_flags_fail_closed(self):
+        # Regression: an R1 preflight must never pass merely because a newly
+        # forwarded T90 flag is omitted from its denylist.
+        for key in mod.OPTIONAL_OFF:
+            with self.subTest(key=key):
+                env = self.config["services"]["api"]["environment"]
+                env[key] = "true"
+                self.assertIn(
+                    "insecure_setting:" + key,
+                    mod.inspect_compose(self.config),
+                )
+                del env[key]
+
+    def test_all_uncertified_worker_flags_must_match_api(self):
+        for key in mod.OPTIONAL_OFF:
+            with self.subTest(key=key):
+                env = self.config["services"]["worker-heavy"]["environment"]
+                env[key] = "true"
+                self.assertIn(
+                    "service_environment_mismatch:worker-heavy:" + key,
+                    mod.inspect_compose(self.config),
+                )
+                del env[key]
+
     def test_experimental_converter_flag_blocks_pilot(self):
         self.config["services"]["api"]["environment"]["PDFHUB_FROM_PDF_TOOLS_ENABLED"] = "true"
         self.assertIn("insecure_setting:PDFHUB_FROM_PDF_TOOLS_ENABLED",
