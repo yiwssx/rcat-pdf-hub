@@ -30,5 +30,6 @@ export default async function StagedManagePage({
     requestedFileId={typeof file === "string" ? file : undefined}
     requestedToolId={typeof tool === "string" ? tool : undefined}
     enabledToolIds={(Object.keys(backendFlags) as ManageId[]).filter((id) => backendFlags[id])}
+    allowMultiOutput={process.env.PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED === "true"}
   />;
 }
