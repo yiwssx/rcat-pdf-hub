@@ -1,0 +1,74 @@
+name: Isolated DR evidence
+
+# Never triggered from pull_request, pull_request_target, merge queue or push.
+# This workflow is inert until an approved, dedicated rootless runner exists.
+on:
+  schedule:
+    # 03:30 Monday Asia/Bangkok, after the institution's daily backup window.
+    - cron: "30 20 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: rcat-private-dr
+  cancel-in-progress: false
+
+jobs:
+  restore-evidence:
+    name: dr/isolated-restore
+    # A repository variable gates queueing. Without the approved runner, this
+    # job is SKIPPED, never "PASS" and never a release gate.
+    if: >-
+      github.repository == 'yiwssx/rcat-pdf-hub' &&
+      github.ref == 'refs/heads/main' &&
+      vars.RCAT_DR_RUNNER_READY == 'true'
+    runs-on: [self-hosted, linux, x64, rcat-dr-isolated]
+    timeout-minutes: 90
+    steps:
+      - name: Check out immutable protected main
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          clean: true
+
+      - name: Restore verified backup in isolated rootless Docker
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash scripts/ci-dr-runner.sh
+
+      - name: Publish sanitized DR evidence only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rcat-dr-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dr-evidence.json
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Summarize status without exposing restored data
+        if: always()
+        shell: bash
+        run: |
+          if test -f dr-evidence.json; then
+            python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          report=json.loads(Path("dr-evidence.json").read_text())
+          summary=(
+              "### RCAT PDF HUB isolated DR\n"
+              f"- Result: **{report['result']}**\n"
+              f"- Commit: `{report['commit_sha']}`\n"
+              f"- Backup stamp: `{report['backup_stamp'] or 'unavailable'}`\n"
+              "- Raw backup data and service logs: **not uploaded**\n"
+          )
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+              f.write(summary)
+          PY
+          else
+            printf '%s\n' '### RCAT PDF HUB isolated DR' '- Result: **BLOCKED / NO EVIDENCE**' >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -52,9 +52,44 @@ assert workflow_files == [
     ".github/workflows/dependabot-patch-automerge.yml",
     ".github/workflows/dependabot-python-security.yml",
     ".github/workflows/dependency-review.yml",
+    ".github/workflows/isolated-dr.yml",
     ".github/workflows/lean-ci.yml",
     ".github/workflows/t90-2-native-sandbox.yml",
 ], f"Only explicitly reviewed workflows are allowed: {workflow_files}"
+
+# Deliberate opt-in: isolated DR is never an ordinary PR, push, release
+# bypass or publicly hosted job. It may not run before a private rootless
+# runner has been provisioned, and must not publish raw backup/log data.
+dr_workflow = read(".github/workflows/isolated-dr.yml")
+for required in (
+    "schedule:", "workflow_dispatch:", "vars.RCAT_DR_RUNNER_READY",
+    "github.ref == 'refs/heads/main'",
+    "runs-on: [self-hosted, linux, x64, rcat-dr-isolated]",
+    "contents: read", "checks: read", "persist-credentials: false",
+    "scripts/ci-dr-runner.sh", "actions/upload-artifact@v6",
+    "if-no-files-found: warn",
+):
+    assert required in dr_workflow, f"DR runner workflow missing isolation guard: {required}"
+assert not re.search(r"(?m)^  (?:pull_request|pull_request_target|push):", dr_workflow), (
+    "Private DR must never run on public PRs or pushes"
+)
+for forbidden in ("contents: write", "issues: write", "deployments: write"):
+    assert forbidden not in dr_workflow, f"DR runner cannot use {forbidden}"
+dr_policy = read("scripts/dr-runner-policy.py")
+for required in (
+    "/mnt/rcat-dr-backups", "/etc/rcat-pdf-hub/dr-isolated-runner.enabled",
+    "os.ST_RDONLY", "RUNNER_ENVIRONMENT", "self-hosted", "rootless",
+    "sha256", "private_logs_uploaded", "restored_production",
+):
+    assert required in dr_policy, f"Private DR policy missing {required}"
+dr_gate = read("scripts/ci-dr-runner.sh")
+for required in (
+    "scripts/dr-runner-policy.py select", "scripts/dr-drill.sh",
+    "scripts/dr-runner-policy.py report", "DOCKER_HOST",
+    "env -i", "timeout 75m", "GITHUB_TOKEN",
+):
+    assert required in dr_gate, f"Private DR execution missing {required}"
+assert "test_dr_runner_policy.py" in read(".github/workflows/lean-ci.yml")
 
 native_sandbox_workflow = read(".github/workflows/t90-2-native-sandbox.yml")
 for required in (
