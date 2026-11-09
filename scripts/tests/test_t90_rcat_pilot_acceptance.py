@@ -23,11 +23,11 @@ class PilotAcceptanceTest(unittest.TestCase):
         report = module.verify(self.registry, self.evidence)
         self.assertEqual(report["total"], 90)
         self.assertEqual(report["released"], 0)
-        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 38)
+        self.assertEqual(report["state_counts"]["IMPLEMENTED"], 40)
         self.assertEqual(report["state_counts"]["STAGED"], 1)
-        self.assertEqual(report["state_counts"]["UNASSESSED"], 51)
-        self.assertEqual(len(report["uncertified"]), 51)
-        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33", "M14", "M15", "F01", "F11", "M22", "M07", "M08", "M09", "M16", "M18", "M30", "M31", "M13", "M17", "M27"}
+        self.assertEqual(report["state_counts"]["UNASSESSED"], 49)
+        self.assertEqual(len(report["uncertified"]), 49)
+        implemented = {"T09", "T11", "T19", "T20", "T25", "T30", "T33", "T34", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F12", "F13", "F14", "F16", "F17", "M33", "M14", "M15", "F01", "F11", "M22", "M07", "M08", "M09", "M16", "M18", "M30", "M31", "M13", "M17", "M27", "M11", "M28"}
         self.assertEqual(
             {item["tool_id"] for item in self.evidence["tool_evidence"]},
             implemented | {"T21"},
@@ -208,6 +208,32 @@ class PilotAcceptanceTest(unittest.TestCase):
             for field in ("thai_fidelity_report", "institutional_sso_report",
                           "approved_by", "approved_at", "cohort"):
                 self.assertNotIn(field, item)
+
+        # M11/M28 actual CropBox / resized-page engines shipped in reviewed
+        # guarded PR #236, but remained uncredited in independent T90 ledger.
+        for tool_id in ("M11", "M28"):
+            item = next(x for x in self.evidence["tool_evidence"]
+                        if x["tool_id"] == tool_id)
+            self.assertEqual(item["state"], "IMPLEMENTED")
+            self.assertEqual(
+                item["source_commit"],
+                "7b3d0497ed5c1b1bd32ea7e758f0b229b85daa61",
+            )
+            self.assertEqual(
+                item["pr"], "https://github.com/yiwssx/rcat-pdf-hub/pull/236"
+            )
+            self.assertEqual(
+                item["ci_run"],
+                "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40718249607",
+            )
+            self.assertIn("Default-OFF", item["supported_subset"])
+            self.assertIn("RCAT", item["acceptance_pending"])
+            for restricted in (
+                "approved_by", "approved_at", "cohort",
+                "source_vs_output_report", "institutional_sso_report",
+                "thai_fidelity_report",
+            ):
+                self.assertNotIn(restricted, item)
 
         publisher = next(x for x in self.evidence["tool_evidence"] if x["tool_id"] == "T21")
         self.assertEqual(publisher["state"], "STAGED")
