@@ -106,6 +106,11 @@ def _require_operation_scope(job: JobRecord, principal: Principal) -> None:
             raise HTTPException(status_code=404, detail="Staged operation is disabled")
         required = ("pdf:extract-text" if job.operation == "extract-text"
                     else "pdf:metadata")
+    if job.operation == "add-pdf-image":
+        from app.config import get_settings
+        if not get_settings().pdf_image_overlay_tools_enabled:
+            raise HTTPException(status_code=404, detail="Staged M23 image overlay disabled")
+        required = "pdf:stamp"
     if job.operation in {"crop-pdf", "resize-pdf"}:
         from app.config import get_settings
         if not get_settings().geometry_tools_enabled:

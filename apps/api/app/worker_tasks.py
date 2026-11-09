@@ -545,6 +545,41 @@ def process_job(job_id: str) -> str:
                 x=params["x"], y=params["y"],
                 font_size=params["font_size"], text=params["text"],
             )
+        elif job.operation == "add-pdf-image":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_image_overlay import (
+                MAX_IMAGE_BYTES, MAX_PDF_BYTES,
+                add_image_to_pdf, validate_image_overlay,
+            )
+            supported = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+            image_suffix = (
+                "." + files[1].original_name.rsplit(".", 1)[-1].lower()
+                if len(files) == 2 and files[1] is not None else ""
+            )
+            if (not settings.pdf_image_overlay_tools_enabled
+                    or len(files) != 2 or len(inputs) != 2
+                    or any(item is None for item in files)
+                    or files[0].id == files[1].id
+                    or any(item.source_system != job.requested_by
+                           or _is_expired(item) for item in files)
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= MAX_PDF_BYTES
+                    or supported.get(image_suffix) != files[1].content_type
+                    or not 16 <= files[1].size <= MAX_IMAGE_BYTES
+                    or not isinstance(params, dict)
+                    or set(params) != {"page", "x", "y", "width", "height"}):
+                raise ValueError("Staged M23 inputs, owner or parameters unauthorized")
+            try:
+                pdf_type = validate_uploaded_file(inputs[0], files[0].original_name)
+                image_type = validate_uploaded_file(inputs[1], files[1].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged M23 source signature invalid") from exc
+            if pdf_type != "application/pdf" or image_type != files[1].content_type:
+                raise ValueError("Staged M23 stored source signature changed")
+            validate_image_overlay(**params)
+            add_image_to_pdf(inputs[0], inputs[1], output, **params)
         elif job.operation == "protect-pdf":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired

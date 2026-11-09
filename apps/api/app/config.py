@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     manage_page_tools_enabled: bool = False
     # M22: printable ASCII overlay only; no signed, rotated or Thai layout claims.
     pdf_text_overlay_tools_enabled: bool = False
+    # M23 bounded JPEG/PNG image-on-PDF stage, never enabled without review.
+    pdf_image_overlay_tools_enabled: bool = False
     # Private/internal T90 pilot: exact authenticated principal names only.
     # Defaults OFF to preserve existing installations. When enabled with no
     # allowlist, all T90-2 submissions are denied (fail closed).

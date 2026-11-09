@@ -121,6 +121,9 @@ if settings.manage_page_tools_enabled:
 if settings.pdf_text_overlay_tools_enabled:
     from app.routers import pdf_text_overlay
     app.include_router(pdf_text_overlay.router)
+if settings.pdf_image_overlay_tools_enabled:
+    from app.routers import pdf_image_overlay
+    app.include_router(pdf_image_overlay.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
