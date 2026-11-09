@@ -48,7 +48,7 @@ def add_image_to_pdf(pdf_path: Path, image_path: Path, destination: Path, *,
         raise ValueError("M23 output must not exist")
     if not 24 <= pdf_path.stat().st_size <= MAX_PDF_BYTES:
         raise ValueError("M23 PDF exceeds source budget")
-    if not 100 <= image_path.stat().st_size <= MAX_IMAGE_BYTES:
+    if not 16 <= image_path.stat().st_size <= MAX_IMAGE_BYTES:
         raise ValueError("M23 image exceeds source budget")
 
     reader = PdfReader(str(pdf_path), strict=True)
