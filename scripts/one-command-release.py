@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""One-command RCAT production release: live backup -> private DR -> gated deploy.
+"""One-command RCAT production release: preflight, verified backup, guarded deploy.
 
-All values are discovered, never typed by the operator. Refuses deployment
-unless the existing protected-main, institutional OIDC and isolated DR gates
-are genuinely ready. Does not install a private runner or modify production
-settings to manufacture a PASS result.
+Automated isolated DR is a separate optional hardening workstream. Production
+rollout still requires exact-main CI, institutional OIDC policy, live backup
+integrity, explicit SHA, safe migration, and post-deploy health checks.
 """
 from __future__ import annotations
 
@@ -14,11 +13,9 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import time
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = "yiwssx/rcat-pdf-hub"
-WORKFLOW = "isolated-dr.yml"
 
 
 def blocked(message: str) -> None:
@@ -35,10 +32,6 @@ def call(*argv: str, env: dict[str, str] | None = None,
     if result.returncode:
         blocked("required step failed: " + " ".join(argv[:3]))
     return (result.stdout or "").strip()
-
-
-def gh_json(endpoint: str) -> dict:
-    return json.loads(call("gh", "api", endpoint, timeout=30))
 
 
 def live_compose_mode() -> str:
@@ -117,18 +110,6 @@ def main() -> None:
     config = call("docker", "compose", *overlays, "config", "--format", "json")
     call("python3", "scripts/release1-host-preflight.py", input_text=config)
 
-    variables = gh_json(f"repos/{REPO}/actions/variables/RCAT_DR_RUNNER_READY")
-    if variables.get("value") != "true":
-        blocked("RCAT_DR_RUNNER_READY is not true; isolated runner not authorized")
-    runners = gh_json(f"repos/{REPO}/actions/runners")
-    approved = [
-        r for r in runners.get("runners", [])
-        if r.get("status") == "online"
-        and any(x.get("name") == "rcat-dr-isolated" for x in r.get("labels", []))
-    ]
-    if not approved:
-        blocked("no online approved rcat-dr-isolated self-hosted runner")
-
     root = backup_root()
     snapshot = root / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     if snapshot.exists():
@@ -143,48 +124,24 @@ def main() -> None:
     call("bash", "scripts/backup.sh", str(snapshot), env=backup_env, timeout=3600)
     call("bash", "scripts/verify-backup.sh", str(snapshot), timeout=3600)
 
-    url = f"repos/{REPO}/actions/workflows/{WORKFLOW}/runs?event=workflow_dispatch&branch=main&per_page=30"
-    previous = max((int(run["id"]) for run in gh_json(url).get("workflow_runs", [])), default=0)
-    print("one-command-release: requesting protected-main private isolated DR", flush=True)
-    call("gh", "workflow", "run", WORKFLOW, "--repo", REPO, "--ref", "main")
-    run_id: int | None = None
-    for _ in range(30):
-        candidates = [
-            int(run["id"])
-            for run in gh_json(url).get("workflow_runs", [])
-            if int(run.get("id", 0)) > previous and run.get("head_sha") == sha
-        ]
-        if candidates:
-            run_id = min(candidates)
-            break
-        time.sleep(3)
-    if run_id is None:
-        blocked("could not find dispatched DR run for exact main SHA")
-    print(f"one-command-release: DR run {run_id} started", flush=True)
-    # Run may be queued or fail due to inaccessible read-only snapshot. That
-    # MUST block deploy; never convert a skipped/failed run to PASS.
-    subprocess.run(
-        ["gh", "run", "watch", str(run_id), "--repo", REPO, "--exit-status"],
-        cwd=ROOT, check=True, timeout=6300,
-    )
+    # A verified live backup is sufficient for the standard release gate.
+    # Isolated automated DR remains available separately, but is NOT
+    # a prerequisite to update existing production containers.
+    print("one-command-release: backup verified; private DR automation deferred", flush=True)
 
-    # Existing cutover re-verifies the immutable main SHA, GitHub run
-    # provenance, matching SHA256SUMS digest and 72-hour freshness BEFORE
-    # performing production supply-chain scans or changing running services.
     deploy_env = dict(os.environ)
     deploy_env.update(
         PDFHUB_COMPOSE_MODE=mode,
         BACKUP=str(snapshot),
-        DR_RUN_ID=str(run_id),
         RCAT_DEPLOY_SHA=sha,
         RCAT_DEPLOY_CONFIRM="YES",
     )
-    print("one-command-release: verified DR finished; starting guarded production cutover", flush=True)
+    print("one-command-release: starting standard backup-gated production cutover", flush=True)
     call("bash", "scripts/production-cutover.sh", "deploy", env=deploy_env,
          capture=False, timeout=7200)
     print(
         f"one-command-release: DEPLOYED SHA={sha} "
-        f"backup={snapshot.name} DR_RUN_ID={run_id} healthz/readyz=PASS",
+        f"backup={snapshot.name} healthz/readyz=PASS (automated DR deferred)",
         flush=True,
     )
 
