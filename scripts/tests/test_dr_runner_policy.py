@@ -80,21 +80,27 @@ class DRRunnerPolicyTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "read-only"):
                     policy.choose_snapshot(root)
 
-    def test_requires_rootless_docker_and_no_running_containers(self):
+    def test_requires_rootless_docker_and_empty_daemon(self):
         good_info = types.SimpleNamespace(stdout='["name=seccomp","name=rootless"]', returncode=0)
         empty = types.SimpleNamespace(stdout="", returncode=0)
         with patch.object(policy.os, "getuid", return_value=1001), patch.dict(
             policy.os.environ, {"DOCKER_HOST": "unix:///run/user/1001/docker.sock"}
         ):
-            with patch.object(policy.subprocess, "run", side_effect=[good_info, empty]):
+            with patch.object(policy.subprocess, "run", side_effect=[good_info, empty, empty]) as run:
                 policy.require_rootless_empty_docker()
+                self.assertEqual(run.call_args_list[1].args[0], ["docker", "ps", "-aq"])
+                self.assertEqual(run.call_args_list[2].args[0], ["docker", "volume", "ls", "-q"])
             rootful = types.SimpleNamespace(stdout='["name=seccomp"]', returncode=0)
             with patch.object(policy.subprocess, "run", return_value=rootful):
                 with self.assertRaisesRegex(ValueError, "rootless"):
                     policy.require_rootless_empty_docker()
-            busy = types.SimpleNamespace(stdout="somecontainer\n", returncode=0)
-            with patch.object(policy.subprocess, "run", side_effect=[good_info, busy]):
-                with self.assertRaisesRegex(ValueError, "running containers"):
+            stopped = types.SimpleNamespace(stdout="stopped-container-id\\n", returncode=0)
+            with patch.object(policy.subprocess, "run", side_effect=[good_info, stopped]):
+                with self.assertRaisesRegex(ValueError, "containers"):
+                    policy.require_rootless_empty_docker()
+            volumes = types.SimpleNamespace(stdout="other-workload-data\\n", returncode=0)
+            with patch.object(policy.subprocess, "run", side_effect=[good_info, empty, volumes]):
+                with self.assertRaisesRegex(ValueError, "named volumes"):
                     policy.require_rootless_empty_docker()
             with patch.dict(policy.os.environ, {"DOCKER_HOST": "unix:///var/run/docker.sock"}):
                 with self.assertRaisesRegex(ValueError, "rootless Docker socket"):
