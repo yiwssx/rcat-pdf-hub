@@ -5,6 +5,8 @@ contact Google, process actual RCAT documents, or modify Production.
 """
 from __future__ import annotations
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app import security
@@ -115,13 +117,17 @@ def test_rcat_admin_cannot_list_or_archive_other_users_paperless(monkeypatch):
 
 
 def test_legacy_wildcard_service_access_retained_outside_rcat_mode(monkeypatch):
-    client, owner = _admin_client(monkeypatch)
-    own_id, foreign_id = _seed_two_files(owner)
+    _, owner = _admin_client(monkeypatch)
+    _, foreign_id = _seed_two_files(owner)
     settings = get_settings()
     principal = Principal(name="legacy-bootstrap", scopes={"*"}, auth_source="bootstrap")
     assert not may_bypass_file_ownership(principal)  # RCAT mode
     with SessionLocal() as db:
-        # A legacy bootstrap principal is not allowed in RCAT mode.
+        for access in (files._owned_file, integrations._owned_file):
+            with pytest.raises(HTTPException) as denied:
+                access(db, foreign_id, principal)
+            assert denied.value.status_code == 403
+
         monkeypatch.setattr(settings, "rcat_institutional_only", False)
         assert may_bypass_file_ownership(principal)
         assert files._owned_file(db, foreign_id, principal).id == foreign_id
