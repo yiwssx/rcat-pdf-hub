@@ -78,6 +78,21 @@ def queue_class_for_operation(operation: str) -> QueueClass:
         return "pdf"
     if settings.pdf_image_overlay_tools_enabled and operation == "add-pdf-image":
         return "pdf"
+    # Source-integrated T90 Manage engines need explicit, independently gated
+    # RQ routing. A real engine/HTTP route is unusable if job submission rejects
+    # the operation; keep all gates OFF in the nine-tool R1 by default.
+    if settings.pdf_image_watermark_tools_enabled and operation == "watermark-pdf-image":
+        return "pdf"
+    if settings.pdf_flatten_visual_tools_enabled and operation == "flatten-pdf-visual":
+        return "heavy"
+    if settings.pdf_markup_tools_enabled and operation == "pdf-markup":
+        return "pdf"
+    if settings.pdf_repair_structure_tools_enabled and operation == "repair-pdf-structure":
+        return "pdf"
+    if settings.pdf_extractive_assist_tools_enabled and operation in {
+        "pdf-extractive-summary", "pdf-extractive-evidence",
+    }:
+        return "heavy"
     if settings.manage_page_tools_enabled and operation in {"delete-pdf-pages", "reorder-pdf-pages"}:
         return "pdf"
     if settings.from_pdf_tools_enabled and operation in {"pdf-to-tiff", "pdf-to-gif", "pdf-to-bmp", "pdf-to-svg", "pdf-to-csv", "pdf-to-rtf", "pdf-to-odt", "pdf-to-word", "pdf-to-docx", "pdf-to-excel", "pdf-to-epub", "pdf-to-jpg", "pdf-to-png", "pdf-to-ppt", "pdf-to-ocr", "pdf-to-pdfa"}:

@@ -75,6 +75,8 @@ def _output_spec(operation: str) -> tuple[str, str]:
 
 def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
+    if operation in {"pdf-extractive-summary", "pdf-extractive-evidence"}:
+        return ".txt", "text/plain; charset=utf-8"
     if operation in {"split-to-zip", "extract-pages-zip", "extract-images"}:
         return ".zip", "application/zip"
     if operation == "pdf-to-tiff":
@@ -515,6 +517,33 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F08 PDF signature changed")
             pdf_to_editable_text_pptx(inputs[0], output)
+        elif job.operation in {"pdf-extractive-summary", "pdf-extractive-evidence"}:
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_extractive_assist import (
+                MAX_SOURCE_BYTES as ASSIST_MAX_BYTES, analyze_pdf,
+            )
+            mode = ("summary" if job.operation == "pdf-extractive-summary"
+                    else "evidence")
+            if (not settings.pdf_extractive_assist_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= ASSIST_MAX_BYTES
+                    or not isinstance(params, dict)
+                    or (set(params) != (set() if mode == "summary" else {"question"}))):
+                raise ValueError("M03/M06 owner, source, flag or parameters unauthorized")
+            try:
+                checked = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M03/M06 source signature invalid") from None
+            if checked != "application/pdf":
+                raise ValueError("M03/M06 source PDF MIME mismatch")
+            analyze_pdf(inputs[0], output, mode=mode,
+                        question=params.get("question", ""))
+
         elif job.operation == "flatten-pdf-visual":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
