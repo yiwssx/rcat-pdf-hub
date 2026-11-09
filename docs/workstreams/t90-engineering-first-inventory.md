@@ -1,6 +1,6 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-09 after protected PRs [#339](https://github.com/yiwssx/rcat-pdf-hub/pull/339), [#340](https://github.com/yiwssx/rcat-pdf-hub/pull/340), [#341](https://github.com/yiwssx/rcat-pdf-hub/pull/341), [#343](https://github.com/yiwssx/rcat-pdf-hub/pull/343) and [#344](https://github.com/yiwssx/rcat-pdf-hub/pull/344) merged; current Engineering First source/workflow readiness. Canonical 90 IDs: [PDF tool registry](../../contracts/pdf-tools.v1.json). Independent code evidence: [T90 ledger](../../contracts/t90-rcat-pilot-acceptance.v1.json). Convert-to-PDF prepared format map: [T90-2 catalog](../../apps/api/app/t90_2_catalog.py). **This is NOT production certification.**
+**Snapshot:** 2026-11-10 after PRs #343–#349 and #351–#353 (including #353 after protected CI merge). This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
 
 ## Scope and definitions
 
@@ -11,20 +11,20 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
 - **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 has no accepted MOBI output engine. Blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup:** CODE COMPLETE **61**, PARTIAL **12**, MISSING **10**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
+**Dev-only rollup:** CODE COMPLETE **78**, PARTIAL **2**, MISSING **3**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Manage PDF | 12 | 11 | 10 | 0 | 33 |
+| Manage PDF | 29 | 1 | 3 | 0 | 33 |
 | Convert to PDF | 33 | 1 | 0 | 6 | 40 |
 | Convert from PDF | 16 | 0 | 0 | 1 | 17 |
-| **Total** | **61** | **12** | **10** | **7** | **90** |
+| **Total** | **78** | **2** | **3** | **7** | **90** |
 
 ## Prioritized engineering leverage
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage progress:** M23 done in #341, read-only M20 authenticated viewer done in #343, M07 authentic per-page PDF ZIP workspace done in #344. Next focus M21 image watermark, remaining Manage flows and bounded genuinely missing engines. No new infrastructure.
+3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. Pending M01 true editable content, M05 translation engine, M12 cryptographic signing.
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -34,37 +34,37 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | --- | --- | --- | --- | --- |
 | M01 | Edit PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
 | M02 | Compress PDF | **CODE COMPLETE** | Legacy `compress` | Defer independent QA; preserve code/CI |
-| M03 | PDF Summarizer | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
+| M03 | PDF Summarizer | **CODE COMPLETE** | Genuine bounded extractive PDF summary, quoted page-cited TXT [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353) | No abstraction, OCR or generative inference; QA deferred, flags OFF |
 | M04 | Merge PDF | **CODE COMPLETE** | Legacy `merge` | Defer independent QA; preserve code/CI |
 | M05 | PDF Translator | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
-| M06 | Chat with PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
+| M06 | Chat with PDF | **PARTIAL** | Actual quoted PDF evidence search [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353) | Question-to-excerpt with page numbers; generative conversational chat still unavailable |
 | M07 | Split PDF | **CODE COMPLETE** | PR [#300](https://github.com/yiwssx/rcat-pdf-hub/pull/300) bounded ZIP engine + [#344](https://github.com/yiwssx/rcat-pdf-hub/pull/344) guarded owner-scoped Web input/submit/results | Supports non-encrypted, unsigned, non-form, non-annotated PDF ≤16 MiB/200 pages; up to 80 unique pages; all gates OFF; QA deferred |
-| M08 | Unlock PDF | **PARTIAL** | PR [#302](https://github.com/yiwssx/rcat-pdf-hub/pull/302) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
-| M09 | Protect PDF | **PARTIAL** | PR [#303](https://github.com/yiwssx/rcat-pdf-hub/pull/303) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
+| M08 | Unlock PDF | **CODE COMPLETE** | Pre-existing AES-GCM one-use password handoff, typed owner API/worker + separate institutional Web [PR #352](https://github.com/yiwssx/rcat-pdf-hub/pull/352) | No persistent passwords, external activation/QA deferred |
+| M09 | Protect PDF | **CODE COMPLETE** | Pre-existing AES-256 protected PDF engine, distinct AEAD handoff + scoped institutional Web [PR #352](https://github.com/yiwssx/rcat-pdf-hub/pull/352) | No credential logging/storage in jobs; activation/QA deferred |
 | M10 | Rotate PDF | **CODE COMPLETE** | Legacy `rotate` | Defer independent QA; preserve code/CI |
 | M11 | Crop PDF | **CODE COMPLETE** | PR [#236](https://github.com/yiwssx/rcat-pdf-hub/pull/236) · bounded engine | Defer independent QA; preserve code/CI |
 | M12 | Sign PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
 | M13 | Edit metadata | **CODE COMPLETE** | PR [#235](https://github.com/yiwssx/rcat-pdf-hub/pull/235) · bounded engine | Defer independent QA; preserve code/CI |
-| M14 | Delete pages | **PARTIAL** | PR [#294](https://github.com/yiwssx/rcat-pdf-hub/pull/294) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
-| M15 | Rearrange pages | **PARTIAL** | PR [#294](https://github.com/yiwssx/rcat-pdf-hub/pull/294) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
-| M16 | Extract pages | **PARTIAL** | PR [#301](https://github.com/yiwssx/rcat-pdf-hub/pull/301) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
+| M14 | Delete pages | **CODE COMPLETE** | Guarded owner-bound delete-pages backend + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
+| M15 | Rearrange pages | **CODE COMPLETE** | Guarded reorder-pages backend + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
+| M16 | Extract pages | **CODE COMPLETE** | PDF page extraction backed by genuine PDF/ZIP engines and shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
 | M17 | Extract text | **CODE COMPLETE** | PR [#235](https://github.com/yiwssx/rcat-pdf-hub/pull/235) · bounded engine | Defer independent QA; preserve code/CI |
-| M18 | Extract images | **PARTIAL** | PR [#304](https://github.com/yiwssx/rcat-pdf-hub/pull/304) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
+| M18 | Extract images | **CODE COMPLETE** | Genuine embedded-image extractor and shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Extracts embedded images, not visual snapshots; QA deferred |
 | M19 | Add page numbers | **CODE COMPLETE** | Legacy `page-numbers` | Defer independent QA; preserve code/CI |
 | M20 | PDF Viewer | **CODE COMPLETE** | Existing authenticated page-count/PNG preview/download APIs + [#343](https://github.com/yiwssx/rcat-pdf-hub/pull/343) Web route | Owner-scoped active PDF selector, page navigation, bounded page index/preview resolution and original download; default-OFF stage UI; no PDF edit; QA deferred |
-| M21 | Add watermark | **PARTIAL** | Legacy `watermark` | Add image-watermark capability; existing text mode is not full coverage |
-| M22 | Add text | **PARTIAL** | PR [#297](https://github.com/yiwssx/rcat-pdf-hub/pull/297) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
+| M21 | Add watermark | **CODE COMPLETE** | Legacy text watermark plus genuine opacity-controlled image watermark [PR #351](https://github.com/yiwssx/rcat-pdf-hub/pull/351) | No cryptographic signing; backend/Web default OFF |
+| M22 | Add text | **CODE COMPLETE** | Actual one-page text overlay engine plus shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Adds overlay only; does not replace embedded PDF text |
 | M23 | Add image to PDF | **CODE COMPLETE** | Genuine JPEG/PNG image overlay + guarded Web [PR #341](https://github.com/yiwssx/rcat-pdf-hub/pull/341) | Defer real-host QA; keep stage flags OFF |
-| M24 | Flatten PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
-| M25 | Annotate PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
-| M26 | Highlight PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
+| M24 | Flatten PDF | **CODE COMPLETE** | Genuine bounded raster visual flatten engine + owner Web [PR #347](https://github.com/yiwssx/rcat-pdf-hub/pull/347) | Visual image-only output; original text layer not preserved |
+| M25 | Annotate PDF | **CODE COMPLETE** | Real PDF FreeText annotations, restricted to ASCII + Web [PR #348](https://github.com/yiwssx/rcat-pdf-hub/pull/348) | Not arbitrary existing text editing; QA deferred |
+| M26 | Highlight PDF | **CODE COMPLETE** | Real PDF Highlight annotation + Web [PR #348](https://github.com/yiwssx/rcat-pdf-hub/pull/348) | Visual rectangle annotation; QA deferred |
 | M27 | Remove metadata | **CODE COMPLETE** | PR [#235](https://github.com/yiwssx/rcat-pdf-hub/pull/235) · bounded engine | Defer independent QA; preserve code/CI |
 | M28 | Resize pages | **CODE COMPLETE** | PR [#236](https://github.com/yiwssx/rcat-pdf-hub/pull/236) · bounded engine | Defer independent QA; preserve code/CI |
-| M29 | Whiteout PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
-| M30 | Grayscale PDF | **PARTIAL** | PR [#305](https://github.com/yiwssx/rcat-pdf-hub/pull/305) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
-| M31 | Header and footer | **PARTIAL** | PR [#306](https://github.com/yiwssx/rcat-pdf-hub/pull/306) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
-| M32 | Repair PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
-| M33 | PDF Filler | **PARTIAL** | PR [#270](https://github.com/yiwssx/rcat-pdf-hub/pull/270) · bounded engine | Finish missing subset / usable Web UI; no full-host QA |
+| M29 | Whiteout PDF | **CODE COMPLETE** | Real visible white overlay + Web [PR #348](https://github.com/yiwssx/rcat-pdf-hub/pull/348) | NOT secure redaction: original content remains recoverable |
+| M30 | Grayscale PDF | **CODE COMPLETE** | Existing genuine grayscale engine + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | QA deferred, flags OFF |
+| M31 | Header and footer | **CODE COMPLETE** | Existing genuine header/footer engine + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | QA deferred, flags OFF |
+| M32 | Repair PDF | **CODE COMPLETE** | Genuine qpdf bounded structural repair engine + owner Web [PR #349](https://github.com/yiwssx/rcat-pdf-hub/pull/349) | Cannot recover irretrievably lost pages; QA deferred |
+| M33 | PDF Filler | **CODE COMPLETE** | Existing AcroForm text filler + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Text fields only, not signature; QA deferred |
 | T01 | Word to PDF | **CODE COMPLETE** | `doc-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T02 | JPG to PDF | **CODE COMPLETE** | `jpg-to-pdf, jpeg-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T03 | PNG to PDF | **CODE COMPLETE** | `png-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
