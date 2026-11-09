@@ -111,6 +111,27 @@ case "${PDFHUB_RELEASE_EXTRA_SCANS:-false}" in
 esac
 echo 'cutover: building reviewed application images (existing containers remain running)'
 dc build gotenberg "${services[@]}"
+
+# The Production OIDC/AV policy requires ClamAV fail-closed, but the Compose
+# service is intentionally hidden behind the optional "security" profile.
+# Bring up ONLY the scanner, without starting unrelated profile services or
+# stopping existing application writers. Abort before planned downtime if the
+# scanner cannot actually respond to a PING through the API data network.
+echo 'cutover: ensuring the required ClamAV service is running'
+dc --profile security up -d --no-deps clamav >/dev/null
+scanner_ready=false
+for _ in $(seq 1 90); do
+  if dc exec -T api python -c 'from app.malware import ping_clamav; import sys; sys.exit(0 if ping_clamav() else 1)' >/dev/null 2>&1; then
+    scanner_ready=true
+    break
+  fi
+  sleep 5
+done
+if [[ "${scanner_ready}" != true ]]; then
+  echo 'cutover: CLAMAV NOT READY — aborting before stopping application writers; inspect clamav logs and memory capacity.' >&2
+  exit 1
+fi
+echo 'cutover: ClamAV PING PASS, safe to proceed with schema migration'
 echo 'cutover: stopping writers before the schema migration'
 dc stop "${services[@]}" >/dev/null
 # One migration under the new image, while old workers cannot write.

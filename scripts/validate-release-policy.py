@@ -99,6 +99,9 @@ for expected in (
     "scripts/verify-backup.sh", "scripts/verify-ci-evidence.sh",
     "make validate-supply-chain-source", "make validate-supply-chain-images",
     "curl -fsS",
+    'dc --profile security up -d --no-deps clamav',
+    'from app.malware import ping_clamav',
+    'CLAMAV NOT READY',
 ):
     assert expected in cutover, f"Guarded production cutover missing required gate: {expected}"
 for forbidden in ("docker compose down", "docker volume rm", "PDFHUB_RELEASE_SKIP_DR=true"):
@@ -107,6 +110,8 @@ assert "test_verify_release_dr_evidence.py" in read(".github/workflows/lean-ci.y
 # Standard production deploy must have verified CI, live backup, RCAT
 # security settings, exact-SHA authorization and readiness. Automated DR is
 # optional and must retain its full proof path when explicitly requested.
+# ClamAV must have definition-update egress and data network API access.
+assert "networks: [data, egress]" in read("docker-compose.prod.yml")
 assert "PDFHUB_RELEASE_REQUIRE_DR" in cutover
 assert "standard mode" in cutover
 assert "strict mode" in cutover

@@ -30,10 +30,29 @@ existing authorized `rcat_iot_admin` account, not `sudo` by default.
    independently repeats CI, RCAT policy and backup verification. Optional
    vulnerability scans can be enabled with `PDFHUB_RELEASE_EXTRA_SCANS=true`;
    regular GitHub dependency/security checks have already passed.
-6. Prebuild reviewed application images, stop application writers for database
-   migration, apply migration, replace app/worker/web/Caddy containers without
-   removing PostgreSQL/Valkey data or volumes, and require /healthz +
-   /readyz success.
+6. Prebuild reviewed application images; explicitly start ONLY the
+   profile-guarded `clamav` service required by the RCAT Production
+   fail-closed antivirus policy. Keep ClamAV on the isolated `data` network
+   for the API and `egress` for FreshClam signature downloads. Wait for the
+   API's real ClamAV PING to
+   respond before planned application downtime. If scanner startup fails,
+   abort without stopping existing writers. Then stop application writers,
+   apply migration, replace app/worker/web/Caddy containers without removing
+   PostgreSQL/Valkey data or volumes, and require /healthz + /readyz success.
+
+If a prior partial release already migrated and started new app containers
+but `/readyz` reports only `clamav: false`, **do not run the whole release
+again or blindly restore the migrated database**. Start only the missing
+profile service with:
+```bash
+cd /opt/rcat-pdf-hub
+git pull --ff-only origin main
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile security up -d --no-deps clamav
+```
+Then query the existing API `/readyz` until scanner definitions are ready.
+For historical partial runs, actual Caddy-published `/readyz` must be HTTP
+200 before acceptance. Starting the scanner is not itself a successful
+readiness check.
 
 Failures before the cutover leave the current services intact. Failures during
 migration or readiness require **incident-controlled recovery** from the
