@@ -1,132 +1,67 @@
-# RCAT PDF HUB — guarded production cutover (code ready, host not yet verified)
+# RCAT PDF HUB — standard production deployment
 
-Owner decision: no operator-run test suites, no unsafe automatic production
-writes, keep Google OIDC institutional access, backups, and DR mandatory.
-
-## Single command for the authorized Ubuntu deployment account
-
-The normal deployment entrypoint has **no manually supplied environment
-variables, SHA, backup path, DR run ID or separate operator-run test suite**:
+## One command — authorized Ubuntu host only
 
 ```bash
 cd /opt/rcat-pdf-hub && git pull --ff-only origin main && python3 scripts/one-command-release.py
 ```
 
-**Host Caddy customization:** On the first run, if the only tracked local
-edit is `ops/caddy/Caddyfile`, the entrypoint preserves its exact bytes at
-`.local-config/caddy/Caddyfile` (ignored by Git), appends only
-`PDFHUB_CADDYFILE_PATH=./.local-config/caddy/Caddyfile` to the existing
-`.env` without rewriting other settings. It **leaves the original tracked
-Caddyfile untouched**, including its current Docker bind mount; an explicit,
-read-only gate permits only this single audited local configuration difference
-when both copies match byte-for-byte. The next approved Compose cutover mounts
-the saved site file. Any other tracked edit, staged Caddy change, conflicting
-site file or conflicting environment setting fails closed. Never use
-`git reset --hard` to discard the institution's Caddy configuration.
-Run as the existing account that owns the repository and Docker access,
-**not** with blind `sudo`. The code update by `git pull --ff-only` does not
-restart services.
+The operator supplies **no SHA, backup path, DR run ID, repository variable, or
+extra passwords**. This is a live Production change (not a dry run); use the
+existing authorized `rcat_iot_admin` account, not `sudo` by default.
 
-The orchestrator discovers the **actually running** production Compose mode
-from Docker API container labels, verifies protected main SHA, read-only
-institutional OIDC/HTTPS/ClamAV settings, and successful GitHub CI.
-It then requires repository variable `RCAT_DR_RUNNER_READY=true` and an
-online approved `rcat-dr-isolated` runner.
+## The required deployment path
 
-Only after these conditions does it create and verify a fresh live backup
-(no automated pruning), dispatch the official isolated DR workflow, find
-the run ID on GitHub and require a real restore PASS. The existing guarded
-`production-cutover.sh` independently checks the exact SHA, official DR
-run, and the **same backup's SHA256SUMS** before release scans, migrations,
-application update, and health/readiness checks.
+1. Preserve the RCAT host-customized `ops/caddy/Caddyfile` bytes in
+   `.local-config/caddy/Caddyfile` with a single `.env` path override. The
+   *currently mounted* original Caddyfile remains untouched. Any unexpected
+   tracked source change fails closed.
+2. Confirm checked-out commit equals protected `origin/main`, an authenticated
+   GitHub CLI, and `ci/required` SUCCESS on that **exact** commit.
+3. Detect the actually running Compose project/mode from API container labels
+   (prod vs prod-nas); validate production Compose and institutional-only
+   Google OIDC, HTTPS cookies, restricted origins/roles and ClamAV policy.
+   No secrets are printed or replaced.
+4. Back up PostgreSQL and existing files from the **running older containers**
+   to a new UTC-stamped directory. Avoid pruning earlier backups. Verify SHA256
+   manifest, PostgreSQL dump header and storage archive integrity.
+5. Invoke `production-cutover.sh deploy` with internally detected commit SHA,
+   verified backup directory and explicit `RCAT_DEPLOY_CONFIRM=YES`. It
+   independently repeats CI, RCAT policy and backup verification. Optional
+   vulnerability scans can be enabled with `PDFHUB_RELEASE_EXTRA_SCANS=true`;
+   regular GitHub dependency/security checks have already passed.
+6. Prebuild reviewed application images, stop application writers for database
+   migration, apply migration, replace app/worker/web/Caddy containers without
+   removing PostgreSQL/Valkey data or volumes, and require /healthz +
+   /readyz success.
 
-**If the runner is missing, cannot access the read-only snapshot, or any
-gate fails, the command stops; it never invents evidence or deploys by
-bypassing a failed test.** This command cannot provision the DR runner or
-Google Workspace credentials just by being run on the Production host.
+Failures before the cutover leave the current services intact. Failures during
+migration or readiness require **incident-controlled recovery** from the
+retained pre-update backup and the compatible prior application version.
+A verified backup is **not** a successful restore rehearsal; do not advertise
+an untested RPO/RTO or automatic rollback. Preserve previous image references
+and logs until acceptance.
 
-On a migration/readiness failure, the retained pre-release snapshot is
-available for incident-controlled recovery with the previous app release;
-do not blindly roll back application binaries after database migrations.
+## Separate workstream: automated isolated DR
 
-## What this replaces
+Automated private DR is **not** a prerequisite for a normal Production update.
+The existing `.github/workflows/isolated-dr.yml` remains **disabled** until
+an approved dedicated runner, rootless Docker and read-only backup mount exist.
+Do not change GitHub repository visibility just to run this workflow.
+Do not set `RCAT_DR_RUNNER_READY=true` without a real secure runner.
 
-A release must **not** redo `make validate-free` on the Ubuntu host. GitHub
-`ci/required` checks the exact protected main SHA. Only release-specific
-source/image supply-chain scanning, a verified backup and **one real, separate
-rootless DR restore** are additional acceptance evidence.
+An operator who expressly requests **strict isolated DR evidence** for a
+future release can still use the existing `production-cutover.sh` with
+`PDFHUB_RELEASE_REQUIRE_DR=true` plus a verified official `DR_RUN_ID`.
+That mode must validate the restored snapshot digest, exact protected main
+commit, and evidence freshness as before. The standard one-command runner
+does **not** set either option.
 
-The repository already contains:
-- `scripts/release1-host-preflight.py`: read-only Compose JSON policy gate;
-  requires RCAT-only Google OIDC, HTTPS, secure cookies, disabled auto-login,
-  locked-down workers, and ClamAV fail-closed. It prints only field names, not
-  secret values.
-- `scripts/verify-backup.sh`: verifies the real PostgreSQL dump, storage
-  archive and checksums.
-- `.github/workflows/isolated-dr.yml`: **inert** until the dedicated runner
-  and repository variable `RCAT_DR_RUNNER_READY=true` exist.
-- `scripts/production-cutover.sh`: read-only `check` and explicit `deploy`.
+## Guardrails
 
-## Prerequisites — required before production modification
-
-1. Authorized Ubuntu host deployment account; existing production `.env`;
-   dedicated rootless DR runner on another isolated daemon. Never run the
-   release script through a public PR job, on untrusted code or with a production
-   Docker socket exposed to GitHub-hosted workers.
-2. Create a **fresh coherent backup from the still-running old deployment**
-   using its original Compose mode. This must happen **before** updating host
-   source and before any migration. Verify it with the existing backup tool.
-3. Make that exact snapshot available to the private DR runner as a read-only
-   mount. Run the protected `isolated-dr.yml` workflow manually. It must
-   finish `success` and upload its sanitized `dr-evidence.json` artifact
-   proving a restore with a matching SHA256SUMS digest.
-4. Fetch the reviewed GitHub main commit onto the release host via normal
-   fast-forward. Confirm no tracked local source modifications and keep the
-   original backup untouched. Never overwrite `.env` or public DNS.
-5. Provide `BACKUP=/absolute/path/to/that-snapshot` and `DR_RUN_ID` equal
-   to the **successful GitHub Actions run ID**, not an arbitrary local report.
-
-## Advanced manual release-agent sequence (normally unnecessary)
-
-On the authorized *production* deployment host, after preparing the above:
-
-```bash
-cd /opt/rcat-pdf-hub
-# Only after creating and snapshotting the current live backup:
-git pull --ff-only origin main
-export PDFHUB_COMPOSE_MODE=prod  # or prod-nas to match the live installation
-export BACKUP=/absolute/path/to/verified-backup
-export DR_RUN_ID=<approved-GitHub-isolated-DR-run-number>
-
-# Optional diagnostic only; deploy runs every gate itself:
-# bash scripts/production-cutover.sh check
-
-export RCAT_DEPLOY_SHA="$(git rev-parse HEAD)"
-RCAT_DEPLOY_CONFIRM=YES bash scripts/production-cutover.sh deploy
-```
-
-The check mode does **not** change Production. It checks same-SHA GitHub CI,
-read-only Compose policy, backup integrity, and genuine GitHub run provenance,
-same SHA, same snapshot checksum digest, and a DR PASS within 72 hours.
-Any mismatch is a hard block. It never prints `.env` or raw backup contents.
-
-The deploy mode needs an explicit exact SHA approval. It performs mandatory
-release-only vulnerability scans, builds images *while old containers run*,
-stops writer surfaces before running Alembic migrations, reconciles only the
-app/worker/converter/Caddy surfaces without stopping PostgreSQL/Valkey or deleting
-volumes, then requires actual /healthz + /readyz success. It does **not**
-invoke `docker compose down -v`, reset DNS, alter backup timers, or rerun
-`make validate-free`.
-
-## Recovery and rollback boundary
-
-Source/binary rollback alone is **not** safe if a schema migration was
-applied. On failure, preserve the untouched pre-release snapshot, original
-git revision and logs. A recovery operator must restore the snapshot using
-the *matching prior release source* and `scripts/restore.sh` in an
-incident-controlled window. Do not attempt an unverified automatic
-PostgreSQL downgrade, force-push or blind `docker volume rm`.
-
-**No deployment or DR PASS is claimed until the Ubuntu host and the separate
-private runner provide direct evidence.** This repository-only handoff is
-not a substitute for host access or Production authorization.
+- Never use `git reset --hard` or `git clean -fd` to resolve local Caddy config.
+- Never reset PostgreSQL volumes or use `docker compose down -v`.
+- No automated production shutdown/rollback on failed migration; the verified
+  backup and pre-deployment images are retained for controlled recovery.
+- A successful GitHub Merge does **not** prove the Ubuntu host was deployed.
+  The actual operator terminal must show `DEPLOYED` and readiness PASS.
