@@ -37,6 +37,16 @@ class Principal:
     auth_source: str = "api_key"
 
 
+def may_bypass_file_ownership(principal: Principal) -> bool:
+    """Legacy wildcard service visibility; never cross-user in RCAT mode.
+
+    A human Workspace administrator may manage accounts and operational
+    settings without implicitly acquiring another person's documents.
+    Explicit, audited support access must use a separate scoped workflow.
+    """
+    return "*" in principal.scopes and not settings.rcat_institutional_only
+
+
 def hash_api_key(value: str) -> str:
     """Return a deterministic keyed digest suitable for indexed API-key lookup."""
     return hmac.new(
