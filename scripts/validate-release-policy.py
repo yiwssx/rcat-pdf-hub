@@ -121,6 +121,19 @@ for forbidden in ("shell=True", "make validate-free", "PDFHUB_RELEASE_SKIP_DR",
         f"One-command release contains prohibited release shortcut: {forbidden}"
     )
 assert "test_one_command_release.py" in read(".github/workflows/lean-ci.yml")
+# RCAT's host-customized reverse proxy must not force unsafe Git resets or
+# bypass tracked-file integrity. Preserve site bytes outside tracked sources.
+site_migrator = read("scripts/migrate-site-caddy.py")
+for gate in (
+    "git", "index", "canonical", "os.replace", "PDFHUB_CADDYFILE_PATH",
+    ".local-config", "only one unstaged", "site.read_bytes() != original",
+):
+    assert gate in site_migrator, f"Host-specific Caddy preservation gate missing: {gate}"
+assert 'scripts/migrate-site-caddy.py' in one_command_release
+assert "test_migrate_site_caddy.py" in read(".github/workflows/lean-ci.yml")
+assert "${PDFHUB_CADDYFILE_PATH:-./ops/caddy/Caddyfile}" in read("docker-compose.yml")
+assert "/.local-config/" in read(".gitignore")
+
 
 
 
