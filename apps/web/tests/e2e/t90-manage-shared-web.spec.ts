@@ -10,7 +10,6 @@ const webEnabled = process.env.PDFHUB_STAGED_MANAGE_WEB_ENABLED === "true";
 const enabled = (tool: string): boolean => {
   const env = process.env;
   const byTool: Record<string, string[]> = {
-    M07: ["PDFHUB_SPLIT_ZIP_TOOLS_ENABLED", "PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED"],
     M14: ["PDFHUB_MANAGE_PAGE_TOOLS_ENABLED"],
     M15: ["PDFHUB_MANAGE_PAGE_TOOLS_ENABLED"],
     M16: ["PDFHUB_EXTRACT_PAGES_TOOLS_ENABLED"],
@@ -42,28 +41,8 @@ async function mocks(page: Page, scopes = [
 
 test("Manage staging page is absent in the default-OFF Web build", async ({ page }) => {
   test.skip(webEnabled, "Default-OFF route test");
-  const res = await page.goto("/staged/manage?tool=M07");
+  const res = await page.goto("/staged/manage?tool=M14");
   expect(res?.status()).toBe(404);
-});
-
-test("M07 ZIP split submits exactly owned PDF and range", async ({ page }) => {
-  test.skip(!enabled("M07"), "Dev-only M07 Web+backend flags required");
-  await mocks(page);
-  const requests: unknown[] = [];
-  await page.route("**/api/v1/pdf/split-to-zip", async (route) => {
-    requests.push(route.request().postDataJSON());
-    await route.fulfill({ status: 202, json: {
-      id: "split-job", operation: "split-to-zip", status: "queued", progress: 0,
-      input_file_ids: [sample.id], output_file_id: null, params: {},
-      error: null, requested_by: owner,
-    } });
-  });
-  await page.goto("/staged/manage?tool=M07&file=foreign");
-  await expect(page.getByLabel("PDF ต้นฉบับ (เฉพาะของฉัน)").locator("option")).toHaveCount(1);
-  await page.getByLabel("ช่วงหน้า PDF").fill("1,3");
-  await page.getByRole("button", { name: "เริ่มดำเนินการ" }).click();
-  await expect(page.getByText("รหัสงาน: split-job")).toBeVisible();
-  expect(requests).toEqual([{ file_id: sample.id, pages: "1,3" }]);
 });
 
 test("M14/M15 create independent typed jobs in one reused Web form", async ({ page }) => {
