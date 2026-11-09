@@ -367,6 +367,24 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40710634967",
       "supported_subset": "Default-OFF staged M27 owner-scoped API/worker clears supported PDF Document Info plus root/page XMP metadata, validates no sentinel remains in generated PDF binary while preserving original; tests merged via PR #235. This is not irreversible content redaction or a guarantee that every hidden identifier is removed.",
       "acceptance_pending": "RCAT real PDF corpus incl Thai and signed/complex embedded objects, full privacy/forensic metadata residual checks, actual Google Workspace OIDC ownership/download, protected host AV/isolation, accessibility and operator acceptance remain pending; not VERIFIED or RELEASED."
+    },
+    {
+      "tool_id": "M11",
+      "state": "IMPLEMENTED",
+      "source_commit": "7b3d0497ed5c1b1bd32ea7e758f0b229b85daa61",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/236",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40718249607",
+      "supported_subset": "Default-OFF owner-scoped M11 Crop PDF via separate API/queue/worker/Web staging, strict PDF signature/MIME and expiry, validated user-space rectangle and optional 1-based page selection, preserving original; binary/page-box and negative tests reviewed in merged PR #236. CropBox only hides content and is NOT redaction.",
+      "acceptance_pending": "RCAT real Google Workspace owner/scopes, Thai multi-page mixed rotation and signed/complex source visual comparisons, actual host Compose/AV/isolation, crop geometry UX/accessibility and independently approved rollback remain outstanding; never advertise crop as irreversible redaction."
+    },
+    {
+      "tool_id": "M28",
+      "state": "IMPLEMENTED",
+      "source_commit": "7b3d0497ed5c1b1bd32ea7e758f0b229b85daa61",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/236",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40718249607",
+      "supported_subset": "Default-OFF owner-scoped M28 Resize PDF pages using validated exact width and height in PDF points, independently scaled X/Y; separate guarded API/queue/worker/Web staging with owner/MIME/expiry checks and PDF binary tests merged in PR #236. Not aspect-ratio preserving, layout/annotation fidelity is limited.",
+      "acceptance_pending": "RCAT Thai source/output visual fidelity, rotated or mixed-sized PDF pages, physical print margins/annotation/signature semantics, actual Google Workspace owner-scoped upload/download, pinned host AV/isolation and operator approval are still unverified; no Production activation."
     }
   ]
 }
