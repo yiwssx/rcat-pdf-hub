@@ -517,6 +517,31 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F08 PDF signature changed")
             pdf_to_editable_text_pptx(inputs[0], output)
+        elif job.operation == "edit-existing-pdf-text":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_text_replacement import (
+                MAX_SOURCE_BYTES as EDIT_MAX_SOURCE,
+                replace_pdf_text, validate_edit,
+            )
+            if (not settings.pdf_edit_text_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= EDIT_MAX_SOURCE
+                    or not isinstance(params, dict)
+                    or set(params) != {"page", "old_text", "new_text"}):
+                raise ValueError("M01 source, owner or parameters unauthorized")
+            try:
+                checked = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M01 PDF stored-file signature invalid") from None
+            if checked != "application/pdf":
+                raise ValueError("M01 source is no longer a PDF")
+            validate_edit(**params)
+            replace_pdf_text(inputs[0], output, **params)
         elif job.operation in {"pdf-extractive-summary", "pdf-extractive-evidence"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
