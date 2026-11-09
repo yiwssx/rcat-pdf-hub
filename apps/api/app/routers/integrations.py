@@ -8,7 +8,7 @@ from app.db import get_db
 from app.integrations.paperless import archive_to_paperless
 from app.models import ArchiveRecord, FileRecord
 from app.schemas import ArchiveOut
-from app.security import Principal, get_principal, require_scope
+from app.security import Principal, get_principal, may_bypass_file_ownership, require_scope
 from app.storage import path_for_stored_name
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
@@ -19,7 +19,7 @@ def _owned_file(db: Session, file_id: str, principal: Principal) -> FileRecord:
     record = db.get(FileRecord, file_id)
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
-    if "*" not in principal.scopes and record.source_system != principal.name:
+    if record.source_system != principal.name and not may_bypass_file_ownership(principal):
         raise HTTPException(status_code=403, detail="File belongs to another service")
     return record
 
@@ -45,7 +45,7 @@ def list_paperless_archives(
 ):
     stmt = select(ArchiveRecord).where(ArchiveRecord.integration_name == "paperless").order_by(desc(ArchiveRecord.created_at)).limit(limit)
     rows = db.scalars(stmt).all()
-    if "*" in principal.scopes:
+    if may_bypass_file_ownership(principal):
         return rows
     owned_ids = set(db.scalars(select(FileRecord.id).where(FileRecord.source_system == principal.name)).all())
     return [row for row in rows if row.file_id in owned_ids]
