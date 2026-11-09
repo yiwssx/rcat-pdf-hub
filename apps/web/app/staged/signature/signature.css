@@ -1,0 +1,10 @@
+.m12VisualSignature{max-width:960px}
+.m12SignatureCanvas{display:block;width:100%;max-width:720px;height:auto;border:1px solid #bec7db;background:transparent;border-radius:12px;touch-action:none;cursor:crosshair}
+.m12SignatureActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.m12SignatureActions button{min-height:42px;padding:9px 16px;border:1px solid #b9c4da;background:#fff;border-radius:9px;font:inherit;cursor:pointer}
+.m12SignatureGeometry{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.m12SignatureGeometry label{display:grid;gap:4px;font-weight:700}
+.m12SignatureGeometry input{width:100%;min-height:42px;border:1px solid #bcc7d8;border-radius:8px;padding:8px;font:inherit}
+.m12SignatureFile{width:100%;max-width:100%;font:inherit}
+.m12SignatureHint{font-size:13px;color:var(--v3-muted)}
+@media(max-width:680px){.m12SignatureGeometry{grid-template-columns:repeat(2,minmax(0,1fr))}.m12SignatureActions button{flex:1}}
