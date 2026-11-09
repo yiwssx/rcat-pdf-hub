@@ -78,7 +78,8 @@ def test_rcat_admin_file_library_metadata_download_and_delete_are_owner_scoped(m
             rows = rows["items"]
         assert [item["id"] for item in rows] == [own_id]
 
-    assert client.get(f"/api/v1/files/{own_id}").status_code == 200
+    owned_info = client.get(f"/api/v1/files/{own_id}")
+    assert owned_info.status_code == 200
     for url in (
         f"/api/v1/files/{foreign_id}",
         f"/api/v1/files/{foreign_id}/download",
@@ -86,13 +87,17 @@ def test_rcat_admin_file_library_metadata_download_and_delete_are_owner_scoped(m
     ):
         response = client.get(url)
         assert response.status_code == 403, (url, response.text)
-    assert client.delete(f"/api/v1/files/{foreign_id}").status_code == 403
-    assert client.post(
+    denied_delete = client.delete(f"/api/v1/files/{foreign_id}")
+    assert denied_delete.status_code == 403
+    denied_bulk = client.post(
         "/api/v1/files/bulk-delete",
         json={"file_ids": [own_id, foreign_id]},
-    ).status_code == 403
-    assert client.get(f"/api/v1/files/{own_id}").status_code == 200
-    assert client.get(f"/api/v1/files/{foreign_id}").status_code == 403
+    )
+    assert denied_bulk.status_code == 403
+    owned_after = client.get(f"/api/v1/files/{own_id}")
+    foreign_after = client.get(f"/api/v1/files/{foreign_id}")
+    assert owned_after.status_code == 200
+    assert foreign_after.status_code == 403
 
 
 def test_rcat_admin_cannot_process_foreign_files_even_with_wildcard(monkeypatch):
