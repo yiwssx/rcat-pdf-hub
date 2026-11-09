@@ -1,6 +1,6 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-10 after PRs #343–#349 and #351–#353 (including #353 after protected CI merge). This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
+**Snapshot:** 2026-11-10 after protected #354 and queued protected #355 (count assumes #355 merges only after all Required CI pass). This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
 
 ## Scope and definitions
 
@@ -11,20 +11,20 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
 - **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 has no accepted MOBI output engine. Blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup:** CODE COMPLETE **78**, PARTIAL **3**, MISSING **2**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
+**Dev-only rollup:** CODE COMPLETE **78**, PARTIAL **4**, MISSING **1**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Manage PDF | 29 | 2 | 2 | 0 | 33 |
+| Manage PDF | 29 | 3 | 1 | 0 | 33 |
 | Convert to PDF | 33 | 1 | 0 | 6 | 40 |
 | Convert from PDF | 16 | 0 | 0 | 1 | 17 |
-| **Total** | **78** | **3** | **2** | **7** | **90** |
+| **Total** | **78** | **4** | **1** | **7** | **90** |
 
 ## Prioritized engineering leverage
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports a strictly bounded exact Courier text-object edit (still PARTIAL); M05 general translation and M12 cryptographic signing remain MISSING.
+3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports a strictly bounded Courier text-object edit (PARTIAL), M12 visual e-signature is PARTIAL (no certificate-backed signature), and M05 general translation remains MISSING.
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -43,7 +43,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | M09 | Protect PDF | **CODE COMPLETE** | Pre-existing AES-256 protected PDF engine, distinct AEAD handoff + scoped institutional Web [PR #352](https://github.com/yiwssx/rcat-pdf-hub/pull/352) | No credential logging/storage in jobs; activation/QA deferred |
 | M10 | Rotate PDF | **CODE COMPLETE** | Legacy `rotate` | Defer independent QA; preserve code/CI |
 | M11 | Crop PDF | **CODE COMPLETE** | PR [#236](https://github.com/yiwssx/rcat-pdf-hub/pull/236) · bounded engine | Defer independent QA; preserve code/CI |
-| M12 | Sign PDF | **MISSING** | No dedicated engine found | Develop scoped adapter + tool workflow |
+| M12 | Sign PDF | **PARTIAL** | Real drawn/PNG visual signature uses owner-bound M23 PDF image overlay and [M12 workflow](t90-m12-visual-signature-engineering-first.md) | Image signature only; no certificate-backed CMS/PAdES cryptographic signature, QA deferred |
 | M13 | Edit metadata | **CODE COMPLETE** | PR [#235](https://github.com/yiwssx/rcat-pdf-hub/pull/235) · bounded engine | Defer independent QA; preserve code/CI |
 | M14 | Delete pages | **CODE COMPLETE** | Guarded owner-bound delete-pages backend + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
 | M15 | Rearrange pages | **CODE COMPLETE** | Guarded reorder-pages backend + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
