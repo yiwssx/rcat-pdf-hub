@@ -77,6 +77,8 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
     if operation in {"split-to-zip", "extract-pages-zip", "extract-images"}:
         return ".zip", "application/zip"
+    if operation == "pdf-extractive-summary":
+        return ".txt", "text/plain; charset=utf-8"
     if operation == "pdf-to-tiff":
         return ".tiff", "image/tiff"
     if operation == "pdf-to-gif":
@@ -562,6 +564,31 @@ def process_job(job_id: str) -> str:
                 raise ValueError("PDF markup input no longer matches PDF signature")
             validate_markup(**params)
             markup_pdf(inputs[0], output, **params)
+        elif job.operation == "pdf-extractive-summary":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_extractive_summary import (
+                MAX_SOURCE_BYTES as SUMMARY_MAX_SOURCE, summarize_pdf_text,
+            )
+            if (not settings.pdf_extractive_summary_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= SUMMARY_MAX_SOURCE
+                    or not isinstance(params, dict)
+                    or set(params) != {"sentence_count"}
+                    or type(params["sentence_count"]) is not int
+                    or not 1 <= params["sentence_count"] <= 10):
+                raise ValueError("M03 text summary source/owner/params denied")
+            try:
+                actual = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M03 original PDF signature invalid") from None
+            if actual != "application/pdf":
+                raise ValueError("M03 PDF signature mismatch")
+            summarize_pdf_text(inputs[0], output, sentence_count=params["sentence_count"])
         elif job.operation == "add-pdf-text":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
