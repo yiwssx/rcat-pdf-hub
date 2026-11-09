@@ -1,0 +1,7 @@
+.t90Markup{max-width:930px}
+.markupFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 22px}
+.markupFields label{display:grid;gap:6px;font-weight:700}
+.markupFields label.full{grid-column:1/-1}
+.markupFields input,.markupFields select,.markupFields textarea{width:100%;border:1px solid #c9cfe1;border-radius:10px;background:white;padding:10px;font:inherit;color:var(--v3-ink)}
+.markupFields textarea{min-height:80px}
+@media(max-width:650px){.markupFields{grid-template-columns:1fr}.markupFields label.full{grid-column:auto}}
