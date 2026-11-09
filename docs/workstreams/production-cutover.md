@@ -52,9 +52,7 @@ export PDFHUB_COMPOSE_MODE=prod  # or prod-nas to match the live installation
 export BACKUP=/absolute/path/to/verified-backup
 export DR_RUN_ID=<approved-GitHub-isolated-DR-run-number>
 
-bash scripts/production-cutover.sh check
-
-export RCAT_DEPLOY_SHA="$(git rev-parse HEAD)"
+# Optional diagnostic only; deploy runs every gate itself, so omit this\n# to avoid repeated backup checksums and CI attestation work:\n# bash scripts/production-cutover.sh check\n\nexport RCAT_DEPLOY_SHA="$(git rev-parse HEAD)"
 RCAT_DEPLOY_CONFIRM=YES bash scripts/production-cutover.sh deploy
 ```
 
@@ -65,8 +63,8 @@ Any mismatch is a hard block. It never prints `.env` or raw backup contents.
 
 The deploy mode needs an explicit exact SHA approval. It performs mandatory
 release-only vulnerability scans, builds images *while old containers run*,
-stops writer surfaces before running Alembic migrations, recreates only the
-app/worker/converter surfaces without stopping PostgreSQL/Valkey or deleting
+stops writer surfaces before running Alembic migrations, reconciles only the
+app/worker/converter/Caddy surfaces without stopping PostgreSQL/Valkey or deleting
 volumes, then requires actual /healthz + /readyz success. It does **not**
 invoke `docker compose down -v`, reset DNS, alter backup timers, or rerun
 `make validate-free`.
