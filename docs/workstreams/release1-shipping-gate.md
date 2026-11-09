@@ -1,6 +1,6 @@
 # RCAT PDF HUB — Release 1 shipping gate
 
-**Scope frozen 2026-11-05. Status: CODE CANDIDATE, NOT PILOT ACCEPTED OR DEPLOYED.**
+**Scope frozen 2026-11-05. Current status 2026-11-09: R1 deployed and operator-confirmed institutional login; independent Thai, negative authorization and restore acceptance still OPEN (see [#308](https://github.com/yiwssx/rcat-pdf-hub/issues/308)).** Historical code-candidate statements below do not override this status.
 
 Release 1 is a separate, small institution-only release. It does **not** depend
 on completing 90 PDF Candy capabilities. Existing tagged \`v0.6.0\` and Phase 7
@@ -66,8 +66,16 @@ regression, cross-user data exposure, bypass of Workspace membership, missing
 AV/isolation, missing real logs/backup/rollback, or absent operator approval.
 Do not infer RELEASED from \`make release1-check\`, green GitHub CI, or this file.
 
-90-tool tracker #172 and separate approval gates #262/#267 remain open for the
+90-tool tracker #172, independent T90 gate #262 and R1 institution acceptance #308 remain open for the
 later expansion. No automatic T90 state promotions or feature flag changes.
+
+## RCAT institutional file ownership boundary (source hardening)
+
+In institutional-only mode, a verified `@rcat.ac.th` administrator still has the ordinary file owner's privacy boundary. Wildcard `*` grants permission **scope**, not ownership of every user's uploaded documents. The file library, individual download/preview/delete/retention, legacy PDF conversion input and Paperless archive paths must filter by stable signed OIDC subject-derived owner for **every** human principal, including Admin.
+
+The reviewed non-institutional legacy service/bootstrap wildcard path remains available in other deployments. The institutional path remains fail-closed and does not add hidden support impersonation or cross-user file rescue. Audited admin triage should remain a separate least-privilege interface rather than a general document download.
+
+Code review and mock-cookie negative tests are not real RCAT Workspace/host acceptance. #308 still needs independent SSO denial, two-real-account owner checks, actual nine-tool original/output and recovery evidence. **No production change should be made on the strength of a green source test alone.**
 
 ## Non-mutating host configuration preflight
 

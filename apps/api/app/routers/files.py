@@ -16,7 +16,7 @@ from app.filetypes import validate_uploaded_file
 from app.models import ArchiveRecord, FileRecord, JobOutputArtifact, JobRecord
 from app.policy import ensure_storage_quota
 from app.schemas import FileBulkDeleteRequest, FileLibraryPageOut, FileOut, FileRetentionUpdate, PageInfoOut, SignedDownloadOut
-from app.security import Principal, require_scope
+from app.security import Principal, may_bypass_file_ownership, require_scope
 from app.services import pdf_tools
 from pypdf import PdfReader
 from app.storage import (
@@ -43,7 +43,7 @@ def _owned_file(db: Session, file_id: str, principal: Principal) -> FileRecord:
     record = db.get(FileRecord, file_id)
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
-    if "*" not in principal.scopes and record.source_system != principal.name:
+    if record.source_system != principal.name and not may_bypass_file_ownership(principal):
         raise HTTPException(status_code=403, detail="File belongs to another service")
     return record
 
@@ -95,7 +95,7 @@ def list_files(
     if not include_expired:
         now = datetime.now(timezone.utc)
         stmt = stmt.where(or_(FileRecord.expires_at.is_(None), FileRecord.expires_at > now))
-    if "*" not in principal.scopes:
+    if not may_bypass_file_ownership(principal):
         stmt = stmt.where(FileRecord.source_system == principal.name)
     return db.scalars(stmt).all()
 
@@ -115,7 +115,7 @@ def query_file_library(
     now = datetime.now(timezone.utc)
     filters = []
 
-    if "*" not in principal.scopes:
+    if not may_bypass_file_ownership(principal):
         filters.append(FileRecord.source_system == principal.name)
     if not include_expired:
         filters.append(or_(FileRecord.expires_at.is_(None), FileRecord.expires_at > now))
