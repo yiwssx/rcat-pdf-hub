@@ -35,21 +35,23 @@ class SiteCaddyMigrationTests(unittest.TestCase):
     def git(self, *args):
         return subprocess.check_output(["git", *args], cwd=self.root, text=True).strip()
 
-    def test_preserves_site_caddy_and_restores_clean_index(self):
+    def test_preserves_live_mount_and_verifies_site_exception(self):
         with patch.object(migration, "ROOT", self.root):
             self.assertIn("PASS", migration.migrate())
         site = self.root / ".local-config/caddy/Caddyfile"
         self.assertEqual(site.read_text(), self.original)
+        # The live bind-mount source is never overwritten or renamed.
         self.assertEqual((self.root / "ops/caddy/Caddyfile").read_text(),
-                         ':80 { respond "canonical" }\n')
-        self.assertEqual(self.git("status", "--porcelain"), "")
+                         self.original)
+        self.assertEqual(self.git("status", "--porcelain"), "M ops/caddy/Caddyfile")
         self.assertEqual(
             (self.root / ".env").read_text().count("PDFHUB_CADDYFILE_PATH="), 1,
         )
         self.assertIn("POSTGRES_PASSWORD=secret-do-not-output",
                       (self.root / ".env").read_text())
         with patch.object(migration, "ROOT", self.root):
-            self.assertIn("clean", migration.migrate())
+            self.assertIn("PASS", migration.migrate(check_only=True))
+            self.assertIn("PASS", migration.migrate())
 
     def test_refuses_to_discard_other_tracked_changes(self):
         (self.root / ".gitignore").write_text("different\n")
