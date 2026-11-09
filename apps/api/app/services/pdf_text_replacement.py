@@ -96,10 +96,9 @@ def replace_pdf_text(source: Path, destination: Path, *,
     render_mode = 0
     replaced = False
     for operands, command in content.operations:
-        if command == b"BT":
-            active_font = None
-            render_mode = 0
-        elif command == b"Tf" and len(operands) == 2:
+        # BT resets text matrices, not the graphics-state text font/render mode.
+        # ReportLab may choose a font in one BT block and draw in the next.
+        if command == b"Tf" and len(operands) == 2:
             active_font = str(operands[0])
         elif command == b"Tr" and len(operands) == 1:
             render_mode = int(operands[0])
