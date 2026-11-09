@@ -643,6 +643,40 @@ def process_job(job_id: str) -> str:
                 x=params["x"], y=params["y"],
                 font_size=params["font_size"], text=params["text"],
             )
+        elif job.operation == "watermark-pdf-image":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_image_watermark import (
+                MAX_PDF_BYTES as WATERMARK_MAX_PDF,
+                MAX_IMAGE_BYTES as WATERMARK_MAX_IMAGE,
+                watermark_pdf_image, validate_image_watermark,
+            )
+            images = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+            suffix = ("." + files[1].original_name.rsplit(".", 1)[-1].lower()
+                      if len(files) == 2 and files[1] is not None else "")
+            if (not settings.pdf_image_watermark_tools_enabled
+                    or len(files) != 2 or len(inputs) != 2
+                    or any(item is None for item in files)
+                    or files[0].id == files[1].id
+                    or any(item.source_system != job.requested_by
+                           or _is_expired(item) for item in files)
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= WATERMARK_MAX_PDF
+                    or images.get(suffix) != files[1].content_type
+                    or not 16 <= files[1].size <= WATERMARK_MAX_IMAGE
+                    or not isinstance(params, dict)
+                    or set(params) != {"relative_width", "opacity"}):
+                raise ValueError("M21 image watermark inputs/owner/params denied")
+            try:
+                pdf_type = validate_uploaded_file(inputs[0], files[0].original_name)
+                image_type = validate_uploaded_file(inputs[1], files[1].original_name)
+            except HTTPException:
+                raise ValueError("M21 source signature invalid") from None
+            if pdf_type != "application/pdf" or image_type != files[1].content_type:
+                raise ValueError("M21 stored file signature changed")
+            validate_image_watermark(**params)
+            watermark_pdf_image(inputs[0], inputs[1], output, **params)
         elif job.operation == "add-pdf-image":
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired

@@ -60,9 +60,11 @@ class Settings(BaseSettings):
     pdf_text_overlay_tools_enabled: bool = False
     # M23 bounded JPEG/PNG image-on-PDF stage, never enabled without review.
     pdf_image_overlay_tools_enabled: bool = False
+    # M21 repeated image watermark; kept separately default OFF.
+    pdf_image_watermark_tools_enabled: bool = False
     # M32 bounded qpdf structure repair. Not recovery of absent pages; default OFF.
     pdf_repair_structure_tools_enabled: bool = False
-    # M03 extractive summary / M06 evidence search; no LLM or network. OFF.
+    # M03 extractive summary / M06 evidence search; OFF.
     pdf_extractive_assist_tools_enabled: bool = False
     # M25/M26 actual annotations, M29 visible-only whiteout. All default OFF.
     pdf_markup_tools_enabled: bool = False
