@@ -20,7 +20,7 @@ settings = get_settings()
 
 
 class PdfMarkupRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="forbid")
     file_id: str = Field(min_length=1, max_length=36)
     mode: Literal["annotation", "highlight", "whiteout"]
     page: StrictInt = Field(ge=1, le=MAX_PAGES)
