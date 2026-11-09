@@ -90,6 +90,21 @@ for required in (
 ):
     assert required in dr_gate, f"Private DR execution missing {required}"
 assert "test_dr_runner_policy.py" in read(".github/workflows/lean-ci.yml")
+# The guarded host cutover is a deliberate operator action, never a PR step.
+cutover = read("scripts/production-cutover.sh")
+for expected in (
+    "RCAT_DEPLOY_CONFIRM", "RCAT_DEPLOY_SHA", "DR_RUN_ID",
+    "scripts/verify-release-dr-evidence.py",
+    "scripts/release1-host-preflight.py",
+    "scripts/verify-backup.sh", "scripts/verify-ci-evidence.sh",
+    "make validate-supply-chain-source", "make validate-supply-chain-images",
+    "curl -fsS",
+):
+    assert expected in cutover, f"Guarded production cutover missing required gate: {expected}"
+for forbidden in ("docker compose down", "docker volume rm", "PDFHUB_RELEASE_SKIP_DR=true"):
+    assert forbidden not in cutover, f"Unsafe production cutover bypass: {forbidden}"
+assert "test_verify_release_dr_evidence.py" in read(".github/workflows/lean-ci.yml")
+
 
 native_sandbox_workflow = read(".github/workflows/t90-2-native-sandbox.yml")
 for required in (

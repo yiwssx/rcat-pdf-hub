@@ -61,6 +61,7 @@ jobs:
           bash -n scripts/*.sh
           python3 -m unittest discover -s scripts/tests -p 'test_dr_drill_port.py'
           python3 -m unittest discover -s scripts/tests -p 'test_dr_runner_policy.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_verify_release_dr_evidence.py'
           make validate-compose
 
       - name: Build canonical Python 3.12 backend image
