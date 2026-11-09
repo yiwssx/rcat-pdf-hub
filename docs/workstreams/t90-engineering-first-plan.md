@@ -28,15 +28,17 @@ Development and QA have distinct endpoints: `CODE COMPLETE` can coexist with `QA
 - [x] [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339) Merge PASS — one shared guarded To-PDF Web workflow, 33 selectable formats, Publisher T21 withheld.
 - [x] [PR #340](https://github.com/yiwssx/rcat-pdf-hub/pull/340) Merge PASS — one shared guarded From-PDF Web workflow, 16 selectable exporters; F15 blocked.
 - [x] [PR #341](https://github.com/yiwssx/rcat-pdf-hub/pull/341) Merge PASS — genuine M23 add-image-to-PDF bounded engine, two-file owner-scoped API/worker, guarded UI and basic source tests.
-- **Updated 90-tool Engineering readiness:** **59 CODE COMPLETE / 14 PARTIAL / 10 MISSING / 7 BLOCKED**, as enumerated [per tool](t90-engineering-first-inventory.md). Before these 3 PRs it was 9/63/11/7.
+- [x] [PR #343](https://github.com/yiwssx/rcat-pdf-hub/pull/343) Merge PASS — M20 owner-scoped read-only PDF viewer, existing pages/preview/download, mobile controls, default OFF.
+- [x] [PR #344](https://github.com/yiwssx/rcat-pdf-hub/pull/344) Merge PASS — M07 existing authentic split-to-ZIP backend now has owner-scoped page-range Web workflow and ZIP result link, all gates OFF.
+- **Updated 90-tool Engineering readiness:** **61 CODE COMPLETE / 12 PARTIAL / 10 MISSING / 7 BLOCKED**, as enumerated [per tool](t90-engineering-first-inventory.md). Initial 2026-11-09 baseline was 9/63/11/7. Exact merged #343/#344 source passed four protected checks each.
 - QA certification ledger remains separately at **40 IMPLEMENTED / 1 STAGED / 49 UNASSESSED / 0 VERIFIED / 0 RELEASED**. Do not conflate QA ledger rows with code completion or claim live deployment.
 
 ## Working sequence (reduce duplicated integration work)
 
-1. **Inventory 90** — completed 2026-11-09; initial baseline 9/63/11/7, now tracked per ID at current 59/14/10/7. These are conservative *workflow* statuses, not the 40/1/49 independent source ledger.
+1. **Inventory 90** — completed 2026-11-09; initial baseline 9/63/11/7, now tracked per ID at current 61/12/10/7. These are conservative *workflow* statuses, not the 40/1/49 independent source ledger.
 2. **DONE #339: Shared T90-2 Web converter** — 33 of 34 prepared To-PDF formats selectable with default OFF. T21 withheld. Six separate native/URL prototypes remain BLOCKED.
 3. **DONE #340: Shared T90-3 Web exporter** — 16 selectable routes, owner/scopes, typed real outputs and existing download. F15 MOBI still BLOCKED.
-4. **NEXT: Manage PDF missing 10 + incomplete 13** — M23 image overlay delivered by #341. Next target M20 viewer/partial and M24 bounded flatten, using same file/auth/job primitives. AI/chat/translation items require explicit engines and no fabricated results.
+4. **NEXT: Manage PDF missing 10 + incomplete 11** — M23 image overlay (#341), M20 read-only viewer (#343) and M07 genuine multi-PDF ZIP user workflow (#344) are merged. Next prioritize M21 image watermark and remaining prepared Manage Web workflows, then bounded missing M24 flatten or similar genuine engines. AI/chat/translation require explicit engines; no fabricated results.
 5. **Batch checks later** — coordinate only once per capability family, without moving physical QA/DR into the tool-development issue. Release gates remain independent.
 
 ## Guardrails and status reporting
