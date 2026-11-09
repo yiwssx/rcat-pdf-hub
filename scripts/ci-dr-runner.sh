@@ -17,10 +17,12 @@ log="${state}/dr-${GITHUB_RUN_ID:-unknown}-${GITHUB_RUN_ATTEMPT:-1}.log"
 backup=""
 
 record_failure() {
+  local extra=()
+  if [[ -n "${backup}" ]]; then extra=(--backup "${backup}"); fi
   python3 scripts/dr-runner-policy.py report \
     --output "${report}" --status FAIL --sha "${sha}" \
     --started "${started}" --exit-code "${1:-1}" \
-    ${backup:+--backup "${backup}"}
+    "${extra[@]}"
 }
 
 # GitHub credentials are only used to read commit-check evidence. They are
