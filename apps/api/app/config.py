@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     pdf_image_overlay_tools_enabled: bool = False
     # M25/M26 actual annotations, M29 visible-only whiteout. All default OFF.
     pdf_markup_tools_enabled: bool = False
+    # M24 visual-only raster flatten; destroys editable/searchable layers, default OFF.
+    pdf_flatten_visual_tools_enabled: bool = False
     # Private/internal T90 pilot: exact authenticated principal names only.
     # Defaults OFF to preserve existing installations. When enabled with no
     # allowlist, all T90-2 submissions are denied (fail closed).
