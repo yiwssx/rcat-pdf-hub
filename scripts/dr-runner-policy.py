@@ -84,12 +84,18 @@ def require_rootless_empty_docker() -> None:
     options = json.loads(result.stdout)
     if not isinstance(options, list) or not any("rootless" in str(x) for x in options):
         raise ValueError("Docker daemon is not rootless; Production daemon forbidden")
-    running = subprocess.run(
-        ["docker", "ps", "-q"],
-        check=True, capture_output=True, text=True, timeout=15,
-    )
-    if running.stdout.strip():
-        raise ValueError("DR Docker daemon already has running containers; refusing shared daemon")
+    # A daemon with stopped containers or pre-existing named volumes is not
+    # dedicated either. Refuse rather than risk reusing, mutating or deleting
+    # another workload's persistent data during a restore rehearsal.
+    for command, label in (
+        (["docker", "ps", "-aq"], "containers"),
+        (["docker", "volume", "ls", "-q"], "named volumes"),
+    ):
+        found = subprocess.run(
+            command, check=True, capture_output=True, text=True, timeout=15,
+        )
+        if found.stdout.strip():
+            raise ValueError(f"DR Docker daemon already contains {label}; refusing shared daemon")
 
 
 def write_report(output: Path, *, status: str, sha: str, backup: Path | None,
