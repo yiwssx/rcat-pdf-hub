@@ -62,8 +62,8 @@ jobs:
           summary=(
               "### RCAT PDF HUB isolated DR\n"
               f"- Result: **{report['result']}**\n"
-              f"- Commit: \`{report['commit_sha']}\`\n"
-              f"- Backup stamp: \`{report['backup_stamp'] or 'unavailable'}\`\n"
+              f"- Commit: `{report['commit_sha']}`\n"
+              f"- Backup stamp: `{report['backup_stamp'] or 'unavailable'}`\n"
               "- Raw backup data and service logs: **not uploaded**\n"
           )
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
