@@ -98,11 +98,9 @@ for expected in (
     "scripts/release1-host-preflight.py",
     "scripts/verify-backup.sh", "scripts/verify-ci-evidence.sh",
     "make validate-supply-chain-source", "make validate-supply-chain-images",
-    "scripts/production-cutover.sh", "curl -fsS",
+    "curl -fsS",
 ):
-    assert expected in cutover or expected == "scripts/production-cutover.sh", (
-        f"Guarded production cutover missing required gate: {expected}"
-    )
+    assert expected in cutover, f"Guarded production cutover missing required gate: {expected}"
 for forbidden in ("docker compose down", "docker volume rm", "PDFHUB_RELEASE_SKIP_DR=true"):
     assert forbidden not in cutover, f"Unsafe production cutover bypass: {forbidden}"
 assert "test_verify_release_dr_evidence.py" in read(".github/workflows/lean-ci.yml")
