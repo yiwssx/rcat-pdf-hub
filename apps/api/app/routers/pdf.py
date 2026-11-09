@@ -26,7 +26,7 @@ from app.schemas import (
     StampRequest,
     WatermarkRequest,
 )
-from app.security import Principal, require_scope
+from app.security import Principal, may_bypass_file_ownership, require_scope
 from app.staged_to_pdf_adapters import STAGED_TO_PDF_INPUTS
 
 router = APIRouter(prefix="/api/v1/pdf", tags=["pdf"])
@@ -73,7 +73,7 @@ def _create_job(db: Session, principal: Principal, operation: str, file_ids: lis
     records = [item for item in files if item is not None]
     if any(_is_expired(item) for item in records):
         raise HTTPException(status_code=410, detail="One or more files have expired")
-    if "*" not in principal.scopes and any(item.source_system != principal.name for item in records):
+    if not may_bypass_file_ownership(principal) and any(item.source_system != principal.name for item in records):
         raise HTTPException(status_code=403, detail="One or more files belong to another service")
     if operation == "images-to-pdf" and any(not _is_image(item) for item in records):
         raise HTTPException(status_code=415, detail="images-to-pdf accepts JPEG, PNG, WebP, TIFF, or BMP files only")
