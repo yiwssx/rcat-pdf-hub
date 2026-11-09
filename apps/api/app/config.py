@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     pdf_text_overlay_tools_enabled: bool = False
     # M23 bounded JPEG/PNG image-on-PDF stage, never enabled without review.
     pdf_image_overlay_tools_enabled: bool = False
+    # M24 visual-only raster flatten; destroys editable/searchable layers, default OFF.
+    pdf_flatten_visual_tools_enabled: bool = False
     # Private/internal T90 pilot: exact authenticated principal names only.
     # Defaults OFF to preserve existing installations. When enabled with no
     # allowlist, all T90-2 submissions are denied (fail closed).
