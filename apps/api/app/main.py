@@ -133,6 +133,9 @@ if settings.pdf_markup_tools_enabled:
 if settings.pdf_repair_structure_tools_enabled:
     from app.routers import pdf_repair_structure
     app.include_router(pdf_repair_structure.router)
+if settings.pdf_extractive_assist_tools_enabled:
+    from app.routers import pdf_extractive_assist
+    app.include_router(pdf_extractive_assist.router)
 app.include_router(integrations.router)
 app.include_router(admin.router)
 
