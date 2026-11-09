@@ -340,6 +340,33 @@
       "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41971960969",
       "supported_subset": "Default-OFF owner-bound true PDF header/footer overlay with independently aligned text and {page}/{total}, 8-24 pt fonts, optional embedded Noto Sans Thai, mixed page sizes and rotated-page handling with strict immutable-source checks.",
       "acceptance_pending": "RCAT Thai font shaping and printed margin/geometry visual goldens, real Google Workspace OIDC job/download owner checks, target-host font/AV/isolation, document complexity and operator rollout approval remain pending."
+    },
+    {
+      "tool_id": "M13",
+      "state": "IMPLEMENTED",
+      "source_commit": "329ef359a6177fe73da91e7f31c22c10949bacbe",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/235",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40710634967",
+      "supported_subset": "Default-OFF owner-scoped staged M13 edits only PDF Info title/author/subject/keywords (UTF-8 Thai fields permitted), strict validated values, rejects conflicting XMP, immutable source; API, queue, worker, guarded Web and binary engine tests integrated via reviewed PR #235.",
+      "acceptance_pending": "RCAT actual Google Workspace OIDC user/owner download, multi-service Compose, Thai fonts/print/metadata viewer comparisons, original signed/XMP/complex PDFs, AV/isolation/cancellation/retention, accessibility and operator signoff are pending. No VERIFIED/RELEASED claim."
+    },
+    {
+      "tool_id": "M17",
+      "state": "IMPLEMENTED",
+      "source_commit": "329ef359a6177fe73da91e7f31c22c10949bacbe",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/235",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40710634967",
+      "supported_subset": "Default-OFF owner-scoped staged M17 extracts existing searchable PDF text layers to genuine UTF-8 TXT with page delimiters, refuses scanned image-only PDFs without OCR, preserves input; dedicated scoped API/worker and regression tests merged via PR #235. Not structured tables or OCR output.",
+      "acceptance_pending": "RCAT Thai language/reading-order golden originals, actual Google Workspace OIDC owner-bound TXT download, target-host font and AV/retention, malformed/signed document and browser/accessible UX tests, independent reviewer and operator release approval are still pending."
+    },
+    {
+      "tool_id": "M27",
+      "state": "IMPLEMENTED",
+      "source_commit": "329ef359a6177fe73da91e7f31c22c10949bacbe",
+      "pr": "https://github.com/yiwssx/rcat-pdf-hub/pull/235",
+      "ci_run": "https://github.com/yiwssx/rcat-pdf-hub/actions/runs/40710634967",
+      "supported_subset": "Default-OFF staged M27 owner-scoped API/worker clears supported PDF Document Info plus root/page XMP metadata, validates no sentinel remains in generated PDF binary while preserving original; tests merged via PR #235. This is not irreversible content redaction or a guarantee that every hidden identifier is removed.",
+      "acceptance_pending": "RCAT real PDF corpus incl Thai and signed/complex embedded objects, full privacy/forensic metadata residual checks, actual Google Workspace OIDC ownership/download, protected host AV/isolation, accessibility and operator acceptance remain pending; not VERIFIED or RELEASED."
     }
   ]
 }
