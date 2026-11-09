@@ -94,11 +94,23 @@ def replace_pdf_text(source: Path, destination: Path, *,
     content = ContentStream(selected.get_contents(), reader)
     active_font: str | None = None
     render_mode = 0
+    in_text = False
+    graphics_stack: list[tuple[str | None, int]] = []
     replaced = False
     for operands, command in content.operations:
-        # BT resets text matrices, not the graphics-state text font/render mode.
-        # ReportLab may choose a font in one BT block and draw in the next.
-        if command == b"Tf" and len(operands) == 2:
+        # PDF text font/render mode persist across BT/ET. q/Q save and restore
+        # graphics state, including those text-state parameters.
+        if command == b"q":
+            graphics_stack.append((active_font, render_mode))
+        elif command == b"Q":
+            if not graphics_stack:
+                raise ValueError("M01 unmatched PDF graphics state restore")
+            active_font, render_mode = graphics_stack.pop()
+        elif command == b"BT":
+            in_text = True
+        elif command == b"ET":
+            in_text = False
+        elif command == b"Tf" and len(operands) == 2:
             active_font = str(operands[0])
         elif command == b"Tr" and len(operands) == 1:
             render_mode = int(operands[0])
@@ -108,7 +120,8 @@ def replace_pdf_text(source: Path, destination: Path, *,
                 continue
             if str(value).count(old_text) != 1 or replaced:
                 raise ValueError("M01 source text is not unique on target page")
-            if render_mode != 0 or not active_font or not _simple_courier(selected, active_font):
+            if (not in_text or render_mode != 0 or not active_font
+                    or not _simple_courier(selected, active_font)):
                 raise ValueError("M01 only supports visible standard Courier text")
             operands[0] = TextStringObject(str(value).replace(old_text, new_text, 1))
             replaced = True
