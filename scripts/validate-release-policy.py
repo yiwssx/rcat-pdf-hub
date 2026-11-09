@@ -70,11 +70,11 @@ for required in (
     "if-no-files-found: warn",
 ):
     assert required in dr_workflow, f"DR runner workflow missing isolation guard: {required}"
-for forbidden in (
-    "\\n  pull_request:", "\\n  pull_request_target:", "\\n  push:",
-    "contents: write", "issues: write", "deployments: write",
-):
-    assert forbidden not in dr_workflow, f"DR runner workflow cannot use {forbidden}"
+assert not re.search(r"(?m)^  (?:pull_request|pull_request_target|push):", dr_workflow), (
+    "Private DR must never run on public PRs or pushes"
+)
+for forbidden in ("contents: write", "issues: write", "deployments: write"):
+    assert forbidden not in dr_workflow, f"DR runner cannot use {forbidden}"
 dr_policy = read("scripts/dr-runner-policy.py")
 for required in (
     "/mnt/rcat-dr-backups", "/etc/rcat-pdf-hub/dr-isolated-runner.enabled",
