@@ -1,0 +1,12 @@
+.t90PdfViewer{max-width:1080px}
+.m20Toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 0;border-top:1px solid var(--v3-line)}
+.m20Toolbar label{display:flex;align-items:center;gap:8px;font-weight:700}
+.m20Toolbar input{width:75px}
+.m20Toolbar input,.m20Toolbar select,.m20Toolbar button,.m20Footer button{min-height:42px;border:1px solid #c9cfe1;border-radius:10px;padding:8px 12px;background:#fff;color:var(--v3-ink);font:inherit}
+.m20Toolbar button,.m20Footer button{cursor:pointer}
+.m20Toolbar button:disabled,.m20Footer button:disabled{opacity:.5;cursor:not-allowed}
+.m20Preview{min-height:220px;display:flex;align-items:flex-start;justify-content:center;overflow:hidden;background:#f0f2f8;border:1px solid var(--v3-line);border-radius:14px;padding:16px}
+.m20Preview img{display:block;width:auto;box-shadow:0 3px 15px #3333;background:white}
+.m20Footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-top:16px}
+.m20Footer a{color:#5358c8;font-weight:700}
+@media(max-width:650px){.m20Toolbar{gap:8px}.m20Toolbar button{flex:1}.m20Toolbar label:last-child{width:100%}.m20Toolbar label:last-child select{flex:1}.m20Preview{padding:8px}.m20Footer button{width:100%}}
