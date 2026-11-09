@@ -78,6 +78,14 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "checksum"):
             self.verify()
 
+    def test_rejects_old_backup_even_with_recent_dr(self):
+        old = self.backup.parent / "20261101T020000Z"
+        self.backup.rename(old)
+        self.backup = old
+        self.report["backup_stamp"] = old.name
+        with self.assertRaisesRegex(ValueError, "not recent"):
+            self.verify()
+
     def test_rejects_different_backup_stamp(self):
         self.report["backup_stamp"] = "20261108T020000Z"
         with self.assertRaisesRegex(ValueError, "snapshot"):
