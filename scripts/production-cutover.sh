@@ -89,7 +89,9 @@ if ! dc run --rm --no-deps -T api python -c 'from app.migrate import run_migrati
   exit 1
 fi
 echo 'cutover: activating reviewed application containers; retaining database, queue and volumes'
-dc up -d --no-deps --no-build gotenberg "${services[@]}" >/dev/null
+# Reconcile the reverse proxy too: its routing/config may have changed.
+# Caddy is not stopped before the application containers are ready to start.
+dc up -d --no-deps --no-build gotenberg "${services[@]}" caddy >/dev/null
 
 # Get actual Caddy bound interface from the rendered Compose configuration,
 # without reading or sourcing shell commands from .env.
