@@ -13,7 +13,7 @@ import re
 import tempfile
 
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import ArrayObject, ContentStream, FloatObject, NumberObject, TextStringObject
+from pypdf.generic import ArrayObject, ByteStringObject, ContentStream, FloatObject, NumberObject, TextStringObject
 from reportlab.pdfbase import pdfmetrics
 
 MAX_SOURCE_BYTES = 12 * 1024 * 1024
@@ -42,8 +42,9 @@ def validate_edit(*, page: int, old_text: str, new_text: str) -> None:
             # Equal glyph and space counts preserve Tc/Tw text spacing.
             or old_text.count(" ") != new_text.count(" ")
             or not old_text.strip() or not new_text.strip()
-            or any(not 32 <= ord(ch) <= 126 for ch in old_text + new_text)):
-        raise ValueError("M01 requires distinct equal-length printable ASCII")
+            or any(not (32 <= ord(ch) <= 126 or 0x0E01 <= ord(ch) <= 0x0E2E)
+                   for ch in old_text + new_text)):
+        raise ValueError("M01 requires equal-length printable ASCII or Thai base consonants")
 
 
 def _digest(path: Path) -> bytes:
@@ -250,6 +251,128 @@ def _rewrite_tj(segments: ArrayObject, old: str, new: str, font: str,
     return answer
 
 
+
+def _thai_font_cmap(page, font_name: str | None):
+    """Resolve only witnessed single-byte TrueType bfchar mappings.
+
+    This is NOT general complex-script shaping or arbitrary PDF font parsing.
+    """
+    if not font_name:
+        return None
+    try:
+        font = page["/Resources"].get_object()["/Font"].get_object()[font_name].get_object()
+        if str(font["/Subtype"]) != "/TrueType":
+            return None
+        if str(font.get("/Encoding", "/WinAnsiEncoding")) != "/WinAnsiEncoding":
+            return None
+        if "/FontFile2" not in font["/FontDescriptor"].get_object():
+            return None
+        raw = font["/ToUnicode"].get_object().get_data()
+        if not 0 < len(raw) <= 64 * 1024 or b"beginbfchar" not in raw or b"beginbfrange" in raw:
+            return None
+        pairs = re.findall(rb"<([0-9A-Fa-f]{2})>\s*<([0-9A-Fa-f]{4})>", raw)
+        if not 1 <= len(pairs) <= 256:
+            return None
+        code_to_unicode: dict[int, str] = {}
+        unicode_to_code: dict[str, int] = {}
+        seen_codes: set[int] = set()
+        for code_hex, unicode_hex in pairs:
+            code, cp = int(code_hex, 16), int(unicode_hex, 16)
+            if code in seen_codes:
+                return None
+            seen_codes.add(code)
+            # Reject unsupported codes when used, not all unused font entries.
+            if code > 0x7F or not (32 <= cp <= 126 or 0x0E01 <= cp <= 0x0E2E):
+                continue
+            ch = chr(cp)
+            if ch in unicode_to_code:
+                return None
+            code_to_unicode[code] = ch
+            unicode_to_code[ch] = code
+        first, last = int(font["/FirstChar"]), int(font["/LastChar"])
+        widths = font["/Widths"].get_object()
+        if not 0 <= first <= last <= 127 or len(widths) != last - first + 1:
+            return None
+        metrics = {}
+        for code in code_to_unicode:
+            if first <= code <= last:
+                width = float(widths[code - first])
+                if 0 < width <= 2000:
+                    metrics[code] = width
+        if not code_to_unicode or not metrics:
+            return None
+        return code_to_unicode, unicode_to_code, metrics
+    except (KeyError, AttributeError, TypeError, ValueError, OverflowError):
+        return None
+
+
+def _edit_thai_tj(page, content: ContentStream, glyphs: dict[str, set[str]],
+                  old_text: str, new_text: str) -> None:
+    """Edit a unique Thai base-character span in a true embedded-font Tj run.
+
+    Every replacement code/glyph must be in the SAME actual PDF font resource
+    and visibly demonstrated elsewhere on the same page. No new glyphs/fonts.
+    """
+    current: str | None = None
+    inside = False
+    render_mode = 0
+    state_stack: list[tuple[str | None, int]] = []
+    matches = []
+    for index, (args, op) in enumerate(content.operations):
+        if op == b"q":
+            state_stack.append((current, render_mode))
+        elif op == b"Q":
+            if not state_stack:
+                raise ValueError("M01 unmatched PDF graphics state restore")
+            current, render_mode = state_stack.pop()
+        elif op == b"BT":
+            inside = True
+        elif op == b"ET":
+            inside = False
+        elif op == b"Tf" and len(args) == 2:
+            current = str(args[0])
+        elif op == b"Tr" and len(args) == 1:
+            render_mode = int(args[0])
+        if (op != b"Tj" or len(args) != 1 or
+                not isinstance(args[0], TextStringObject)):
+            continue
+        mapping = _thai_font_cmap(page, current)
+        if mapping is None:
+            continue
+        code_to_unicode, unicode_to_code, metrics = mapping
+        original_bytes = args[0].original_bytes
+        if any(code not in code_to_unicode for code in original_bytes):
+            continue
+        decoded = "".join(code_to_unicode[code] for code in original_bytes)
+        for match in re.finditer(re.escape(old_text), decoded):
+            matches.append((index, match.start(), original_bytes, current,
+                            unicode_to_code, metrics, inside, render_mode))
+    if not matches:
+        raise ValueError("M01 Thai text not found in a safe embedded-font Tj operator")
+    if len(matches) != 1:
+        raise ValueError("M01 Thai source text is not unique on target page")
+
+    index, start, raw_bytes, font_name, encode, widths, inside, render_mode = matches[0]
+    if not inside or render_mode != 0:
+        raise ValueError("M01 Thai text must use a visible PDF text operator")
+    if any(ch not in encode or encode[ch] not in widths
+           for ch in old_text + new_text):
+        raise ValueError("M01 Thai glyph lacks verifiable original font mapping or width")
+    if any(chr(encode[ch]) not in glyphs.get(font_name, set())
+           for ch in old_text + new_text):
+        raise ValueError("M01 Thai replacement requires visible same-font glyph witnesses")
+
+    end = start + len(old_text)
+    rewritten = raw_bytes[:start] + bytes(encode[ch] for ch in new_text)
+    delta = round(sum(widths[encode[ch]] for ch in new_text)
+                  - sum(widths[encode[ch]] for ch in old_text))
+    array = ArrayObject([ByteStringObject(rewritten)])
+    if delta:
+        array.append(NumberObject(delta))
+    if raw_bytes[end:]:
+        array.append(ByteStringObject(raw_bytes[end:]))
+    content.operations[index] = ([array], b"TJ")
+
 def _operator_texts(content: ContentStream) -> list[str]:
     """String fragments joined only within a single PDF text operator."""
     result = []
@@ -295,118 +418,122 @@ def replace_pdf_text(source: Path, destination: Path, *,
 
     content = ContentStream(selected.get_contents(), reader)
     glyphs = _demonstrated_glyphs(content)
-    active_font: str | None = None
-    render_mode = 0
-    in_text = False
-    graphics_stack: list[tuple[str | None, int]] = []
-    # Inspect all candidate matches before mutating any operator. In addition
-    # to a single Tj/TJ, a narrowly supported run may span EXACTLY two
-    # consecutive Tj operators within one BT/ET text object. No intervening
-    # text-state, positioning, graphics or font operation is permitted.
-    snapshots: list[tuple[bool, int, str | None]] = []
-    for operands, command in content.operations:
-        # PDF text font/render mode persist across BT/ET. q/Q save and restore
-        # graphics state, including those text-state parameters.
-        if command == b"q":
-            graphics_stack.append((active_font, render_mode))
-        elif command == b"Q":
-            if not graphics_stack:
-                raise ValueError("M01 unmatched PDF graphics state restore")
-            active_font, render_mode = graphics_stack.pop()
-        elif command == b"BT":
-            in_text = True
-        elif command == b"ET":
-            in_text = False
-        elif command == b"Tf" and len(operands) == 2:
-            active_font = str(operands[0])
-        elif command == b"Tr" and len(operands) == 1:
-            render_mode = int(operands[0])
-        snapshots.append((in_text, render_mode, active_font))
-
-    matches: list[tuple[str, int]] = []
-    for op_index, (operands, command) in enumerate(content.operations):
-        if command == b"Tj" and len(operands) == 1 and isinstance(
-            operands[0], TextStringObject
-        ):
-            visible = str(operands[0])
-        elif command == b"TJ" and len(operands) == 1 and isinstance(
-            operands[0], ArrayObject
-        ):
-            visible = "".join(str(part) for part in operands[0]
-                              if isinstance(part, TextStringObject))
-        else:
-            continue
-        matches.extend(("single", op_index) for _ in range(visible.count(old_text)))
-
-        # Only contiguous Tj operators are equivalent to one combined text
-        # showing operation. Never cross a matrix/spacing/font change or an
-        # arbitrary graphics instruction to manufacture a match.
-        if (command != b"Tj" or op_index + 1 >= len(content.operations)):
-            continue
-        following, following_command = content.operations[op_index + 1]
-        if (following_command != b"Tj" or len(following) != 1
-                or not isinstance(following[0], TextStringObject)):
-            continue
-        combined = visible + str(following[0])
-        boundary = len(visible)
-        search_at = 0
-        while True:
-            position = combined.find(old_text, search_at)
-            if position < 0:
-                break
-            if position < boundary < position + len(old_text):
-                matches.append(("adjacent-tj", op_index))
-            search_at = position + 1
-
-    if not matches:
-        raise ValueError("M01 text not found in a safely editable PDF text run")
-    if len(matches) != 1:
-        raise ValueError("M01 source text is not unique on target page")
-
-    match_kind, op_index = matches[0]
-    in_text, render_mode, active_font = snapshots[op_index]
-    font, widths = _metrics(selected, active_font, old_text, new_text, glyphs)
-    if not in_text or render_mode != 0 or font is None:
-        raise ValueError(
-            "M01 requires a visible supported built-in or witnessed embedded TrueType font"
-        )
-
-    operands, command = content.operations[op_index]
-    if match_kind == "adjacent-tj":
-        # Both operators are consecutive and use the same inherited text
-        # state. Combine them into a single TJ text-showing instruction;
-        # _rewrite_tj preserves per-fragment spaces and compensates the total
-        # glyph advance only after the changed span.
-        first, second = operands[0], content.operations[op_index + 1][0][0]
-        if (not _single_byte_ascii(first) or not _single_byte_ascii(second)):
-            raise ValueError("M01 adjacent Tj strings require literal ASCII bytes")
-        rewritten = _rewrite_tj(
-            ArrayObject([first, second]), old_text, new_text, font, widths
-        )
-        content.operations[op_index] = ([rewritten], b"TJ")
-        del content.operations[op_index + 1]
-    elif command == b"Tj":
-        part = operands[0]
-        if font == "embedded-ttf" and not _single_byte_ascii(part):
-            raise ValueError("M01 embedded font uses non-ASCII PDF text bytes")
-        original = str(part)
-        if "/" + font in COURIER_FONTS:
-            operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
-        else:
-            position = original.index(old_text)
-            before = original[:position] + new_text
-            after = original[position + len(old_text):]
-            array = ArrayObject([TextStringObject(before)])
-            delta = _width_delta(old_text, new_text, font, widths)
-            if delta:
-                array.append(NumberObject(delta))
-            if after:
-                array.append(TextStringObject(after))
-            content.operations[op_index] = ([array], b"TJ")
+    thai_mode = any(0x0E01 <= ord(ch) <= 0x0E2E for ch in old_text + new_text)
+    if thai_mode:
+        _edit_thai_tj(selected, content, glyphs, old_text, new_text)
     else:
-        content.operations[op_index] = ([
-            _rewrite_tj(operands[0], old_text, new_text, font, widths)
-        ], b"TJ")
+        active_font: str | None = None
+        render_mode = 0
+        in_text = False
+        graphics_stack: list[tuple[str | None, int]] = []
+        # Inspect all candidate matches before mutating any operator. In addition
+        # to a single Tj/TJ, a narrowly supported run may span EXACTLY two
+        # consecutive Tj operators within one BT/ET text object. No intervening
+        # text-state, positioning, graphics or font operation is permitted.
+        snapshots: list[tuple[bool, int, str | None]] = []
+        for operands, command in content.operations:
+            # PDF text font/render mode persist across BT/ET. q/Q save and restore
+            # graphics state, including those text-state parameters.
+            if command == b"q":
+                graphics_stack.append((active_font, render_mode))
+            elif command == b"Q":
+                if not graphics_stack:
+                    raise ValueError("M01 unmatched PDF graphics state restore")
+                active_font, render_mode = graphics_stack.pop()
+            elif command == b"BT":
+                in_text = True
+            elif command == b"ET":
+                in_text = False
+            elif command == b"Tf" and len(operands) == 2:
+                active_font = str(operands[0])
+            elif command == b"Tr" and len(operands) == 1:
+                render_mode = int(operands[0])
+            snapshots.append((in_text, render_mode, active_font))
+
+        matches: list[tuple[str, int]] = []
+        for op_index, (operands, command) in enumerate(content.operations):
+            if command == b"Tj" and len(operands) == 1 and isinstance(
+                operands[0], TextStringObject
+            ):
+                visible = str(operands[0])
+            elif command == b"TJ" and len(operands) == 1 and isinstance(
+                operands[0], ArrayObject
+            ):
+                visible = "".join(str(part) for part in operands[0]
+                                  if isinstance(part, TextStringObject))
+            else:
+                continue
+            matches.extend(("single", op_index) for _ in range(visible.count(old_text)))
+
+            # Only contiguous Tj operators are equivalent to one combined text
+            # showing operation. Never cross a matrix/spacing/font change or an
+            # arbitrary graphics instruction to manufacture a match.
+            if (command != b"Tj" or op_index + 1 >= len(content.operations)):
+                continue
+            following, following_command = content.operations[op_index + 1]
+            if (following_command != b"Tj" or len(following) != 1
+                    or not isinstance(following[0], TextStringObject)):
+                continue
+            combined = visible + str(following[0])
+            boundary = len(visible)
+            search_at = 0
+            while True:
+                position = combined.find(old_text, search_at)
+                if position < 0:
+                    break
+                if position < boundary < position + len(old_text):
+                    matches.append(("adjacent-tj", op_index))
+                search_at = position + 1
+
+        if not matches:
+            raise ValueError("M01 text not found in a safely editable PDF text run")
+        if len(matches) != 1:
+            raise ValueError("M01 source text is not unique on target page")
+
+        match_kind, op_index = matches[0]
+        in_text, render_mode, active_font = snapshots[op_index]
+        font, widths = _metrics(selected, active_font, old_text, new_text, glyphs)
+        if not in_text or render_mode != 0 or font is None:
+            raise ValueError(
+                "M01 requires a visible supported built-in or witnessed embedded TrueType font"
+            )
+
+        operands, command = content.operations[op_index]
+        if match_kind == "adjacent-tj":
+            # Both operators are consecutive and use the same inherited text
+            # state. Combine them into a single TJ text-showing instruction;
+            # _rewrite_tj preserves per-fragment spaces and compensates the total
+            # glyph advance only after the changed span.
+            first, second = operands[0], content.operations[op_index + 1][0][0]
+            if (not _single_byte_ascii(first) or not _single_byte_ascii(second)):
+                raise ValueError("M01 adjacent Tj strings require literal ASCII bytes")
+            rewritten = _rewrite_tj(
+                ArrayObject([first, second]), old_text, new_text, font, widths
+            )
+            content.operations[op_index] = ([rewritten], b"TJ")
+            del content.operations[op_index + 1]
+        elif command == b"Tj":
+            part = operands[0]
+            if font == "embedded-ttf" and not _single_byte_ascii(part):
+                raise ValueError("M01 embedded font uses non-ASCII PDF text bytes")
+            original = str(part)
+            if "/" + font in COURIER_FONTS:
+                operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
+            else:
+                position = original.index(old_text)
+                before = original[:position] + new_text
+                after = original[position + len(old_text):]
+                array = ArrayObject([TextStringObject(before)])
+                delta = _width_delta(old_text, new_text, font, widths)
+                if delta:
+                    array.append(NumberObject(delta))
+                if after:
+                    array.append(TextStringObject(after))
+                content.operations[op_index] = ([array], b"TJ")
+        else:
+            content.operations[op_index] = ([
+                _rewrite_tj(operands[0], old_text, new_text, font, widths)
+            ], b"TJ")
 
     # A complete fresh output must preserve all pages and keep source untouched.
     writer = PdfWriter(clone_from=reader)
@@ -431,7 +558,12 @@ def replace_pdf_text(source: Path, destination: Path, *,
         # text, instead of trusting a fabricated answer string.
         persisted = ContentStream(verified.pages[page - 1].get_contents(), verified)
         tokens = _operator_texts(persisted)
-        if not any(new_text in text for text in tokens) or any(
+        if thai_mode:
+            # The original content stores byte glyph codes; only the actual
+            # embedded ToUnicode mapping can attest the visible Thai result.
+            if new_text not in after or old_text in after:
+                raise ValueError("M01 Thai replacement failed round-trip text extraction")
+        elif not any(new_text in text for text in tokens) or any(
             old_text in text for text in tokens
         ) or not after.strip():
             raise ValueError("M01 replacement did not survive PDF text extraction")
