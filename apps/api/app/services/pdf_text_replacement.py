@@ -299,8 +299,12 @@ def replace_pdf_text(source: Path, destination: Path, *,
     render_mode = 0
     in_text = False
     graphics_stack: list[tuple[str | None, int]] = []
-    replaced = False
-    for op_index, (operands, command) in enumerate(content.operations):
+    # Inspect all candidate matches before mutating any operator. In addition
+    # to a single Tj/TJ, a narrowly supported run may span EXACTLY two
+    # consecutive Tj operators within one BT/ET text object. No intervening
+    # text-state, positioning, graphics or font operation is permitted.
+    snapshots: list[tuple[bool, int, str | None]] = []
+    for operands, command in content.operations:
         # PDF text font/render mode persist across BT/ET. q/Q save and restore
         # graphics state, including those text-state parameters.
         if command == b"q":
@@ -317,49 +321,92 @@ def replace_pdf_text(source: Path, destination: Path, *,
             active_font = str(operands[0])
         elif command == b"Tr" and len(operands) == 1:
             render_mode = int(operands[0])
-        elif command in {b"Tj", b"TJ"} and len(operands) == 1:
-            if command == b"Tj" and isinstance(operands[0], TextStringObject):
-                visible = str(operands[0])
-            elif command == b"TJ" and isinstance(operands[0], ArrayObject):
-                visible = "".join(str(part) for part in operands[0]
-                                  if isinstance(part, TextStringObject))
-            else:
-                continue
-            if old_text not in visible:
-                continue
-            if visible.count(old_text) != 1 or replaced:
-                raise ValueError("M01 source text is not unique on target page")
-            font, widths = _metrics(selected, active_font, old_text, new_text, glyphs)
-            if not in_text or render_mode != 0 or font is None:
-                raise ValueError(
-                    "M01 requires a visible supported built-in or witnessed embedded TrueType font"
-                )
-            if command == b"Tj":
-                part = operands[0]
-                if font == "embedded-ttf" and not _single_byte_ascii(part):
-                    raise ValueError("M01 embedded font uses non-ASCII PDF text bytes")
-                original = str(part)
-                if "/" + font in COURIER_FONTS:
-                    operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
-                else:
-                    position = original.index(old_text)
-                    before = original[:position] + new_text
-                    after = original[position + len(old_text):]
-                    array = ArrayObject([TextStringObject(before)])
-                    delta = _width_delta(old_text, new_text, font, widths)
-                    if delta:
-                        array.append(NumberObject(delta))
-                    if after:
-                        array.append(TextStringObject(after))
-                    content.operations[op_index] = ([array], b"TJ")
-            else:
-                content.operations[op_index] = ([
-                    _rewrite_tj(operands[0], old_text, new_text, font, widths)
-                ], b"TJ")
-            replaced = True
+        snapshots.append((in_text, render_mode, active_font))
 
-    if not replaced:
-        raise ValueError("M01 text not found in one safely editable PDF text operator")
+    matches: list[tuple[str, int]] = []
+    for op_index, (operands, command) in enumerate(content.operations):
+        if command == b"Tj" and len(operands) == 1 and isinstance(
+            operands[0], TextStringObject
+        ):
+            visible = str(operands[0])
+        elif command == b"TJ" and len(operands) == 1 and isinstance(
+            operands[0], ArrayObject
+        ):
+            visible = "".join(str(part) for part in operands[0]
+                              if isinstance(part, TextStringObject))
+        else:
+            continue
+        matches.extend(("single", op_index) for _ in range(visible.count(old_text)))
+
+        # Only contiguous Tj operators are equivalent to one combined text
+        # showing operation. Never cross a matrix/spacing/font change or an
+        # arbitrary graphics instruction to manufacture a match.
+        if (command != b"Tj" or op_index + 1 >= len(content.operations)):
+            continue
+        following, following_command = content.operations[op_index + 1]
+        if (following_command != b"Tj" or len(following) != 1
+                or not isinstance(following[0], TextStringObject)):
+            continue
+        combined = visible + str(following[0])
+        boundary = len(visible)
+        search_at = 0
+        while True:
+            position = combined.find(old_text, search_at)
+            if position < 0:
+                break
+            if position < boundary < position + len(old_text):
+                matches.append(("adjacent-tj", op_index))
+            search_at = position + 1
+
+    if not matches:
+        raise ValueError("M01 text not found in a safely editable PDF text run")
+    if len(matches) != 1:
+        raise ValueError("M01 source text is not unique on target page")
+
+    match_kind, op_index = matches[0]
+    in_text, render_mode, active_font = snapshots[op_index]
+    font, widths = _metrics(selected, active_font, old_text, new_text, glyphs)
+    if not in_text or render_mode != 0 or font is None:
+        raise ValueError(
+            "M01 requires a visible supported built-in or witnessed embedded TrueType font"
+        )
+
+    operands, command = content.operations[op_index]
+    if match_kind == "adjacent-tj":
+        # Both operators are consecutive and use the same inherited text
+        # state. Combine them into a single TJ text-showing instruction;
+        # _rewrite_tj preserves per-fragment spaces and compensates the total
+        # glyph advance only after the changed span.
+        first, second = operands[0], content.operations[op_index + 1][0][0]
+        if (not _single_byte_ascii(first) or not _single_byte_ascii(second)):
+            raise ValueError("M01 adjacent Tj strings require literal ASCII bytes")
+        rewritten = _rewrite_tj(
+            ArrayObject([first, second]), old_text, new_text, font, widths
+        )
+        content.operations[op_index] = ([rewritten], b"TJ")
+        del content.operations[op_index + 1]
+    elif command == b"Tj":
+        part = operands[0]
+        if font == "embedded-ttf" and not _single_byte_ascii(part):
+            raise ValueError("M01 embedded font uses non-ASCII PDF text bytes")
+        original = str(part)
+        if "/" + font in COURIER_FONTS:
+            operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
+        else:
+            position = original.index(old_text)
+            before = original[:position] + new_text
+            after = original[position + len(old_text):]
+            array = ArrayObject([TextStringObject(before)])
+            delta = _width_delta(old_text, new_text, font, widths)
+            if delta:
+                array.append(NumberObject(delta))
+            if after:
+                array.append(TextStringObject(after))
+            content.operations[op_index] = ([array], b"TJ")
+    else:
+        content.operations[op_index] = ([
+            _rewrite_tj(operands[0], old_text, new_text, font, widths)
+        ], b"TJ")
 
     # A complete fresh output must preserve all pages and keep source untouched.
     writer = PdfWriter(clone_from=reader)
