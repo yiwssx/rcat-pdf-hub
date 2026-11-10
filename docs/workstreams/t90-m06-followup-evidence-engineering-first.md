@@ -12,10 +12,10 @@
 
 ## Non-goals / truthful limits
 
-This remains a **PARTIAL** implementation of the named "Chat with PDF" tool, not a generative chatbot. It cannot resolve pronouns, perform semantic entailment, synthesize a new answer, translate, extract scans without OCR, or guarantee paragraph context beyond the quoted text. Thai search still relies on literal token matching; complex Thai segmentation and semantic paraphrase search are not claimed. User-supplied text is not sent to a model or external search service.
+This remains a **limited evidence-only** implementation of the named "Chat with PDF" tool, not a generative chatbot. It cannot resolve pronouns, perform semantic entailment, synthesize a new answer, translate, extract scans without OCR, or guarantee paragraph context beyond the quoted text. Thai search still relies on literal token matching; complex Thai segmentation and semantic paraphrase search are not claimed. User-supplied text is not sent to a model or external search service.
 
 ## Source tests and merge gates
 
 Regression covers direct-match preference, context-only explicit warning, no-context no-match, invalid context, M03 isolation, request schema controls, multi-question owner-only browser flow and context opt-out. Retain four protected checks on the exact PR head. Independent full institutional QA remains under #262/#308, not credited by source CI. Source flags stay OFF; no Production deploy, RBAC, network, DNS, DR, secrets or runner changes.
 
-**Parent:** [#172](https://github.com/yiwssx/rcat-pdf-hub/issues/172). **Snapshot classification:** M06 PARTIAL.
+**Parent:** [#172](https://github.com/yiwssx/rcat-pdf-hub/issues/172). **MAC-scoped development classification:** M06 CODE COMPLETE for the bounded question-and-cited-evidence workflow already implemented, explicitly NOT generative or semantic chat. See [five-tool MAC decision](t90-five-partial-mac-decision-20261110.md); QA and Production remain pending.

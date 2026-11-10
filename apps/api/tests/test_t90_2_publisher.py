@@ -19,7 +19,7 @@ from app.config import get_settings
 from app.filetypes import validate_uploaded_file
 from app.routers import to_pdf
 from app.services import to_pdf_engine
-from app.services.to_pdf_publisher import validate_publisher_ole
+from app.services.to_pdf_publisher import validate_publisher_ole, validate_publisher_pdf_pages
 from app.staged_to_pdf_adapters import checked_source, execute_staged_to_pdf_operation
 
 
@@ -188,3 +188,53 @@ def test_publisher_fails_closed_after_source_tampering(monkeypatch, tmp_path):
     with pytest.raises(ValueError, match="signature"):
         checked_source("pub-to-pdf", source, name=source.name,
                        mime="application/x-mspublisher")
+
+
+
+def _publisher_output(*, second_page_blank: bool):
+    """Real rendered PDF bytes to test the actual per-page raster guard."""
+    content = BytesIO()
+    doc = canvas.Canvas(content, pagesize=(595, 842))
+    doc.drawString(45, 750, "First Publisher page with visible text")
+    doc.showPage()
+    if not second_page_blank:
+        doc.drawString(45, 750, "Second Publisher page with visible text")
+    doc.showPage()
+    doc.save()
+    return content.getvalue()
+
+
+def test_t21_rejects_silent_blank_second_page_and_accepts_ink_on_both():
+    with pytest.raises(ValueError, match="page 2 rendered blank"):
+        validate_publisher_pdf_pages(_publisher_output(second_page_blank=True))
+    assert validate_publisher_pdf_pages(
+        _publisher_output(second_page_blank=False)
+    ) == (1, 2)
+    assert validate_publisher_pdf_pages(_pdf()) == (1,)
+
+
+def test_t21_disallows_blank_publisher_artifact_before_worker_delivery(monkeypatch, tmp_path):
+    monkeypatch.setattr(get_settings(), "to_pdf_tools_enabled", True)
+    source = tmp_path / "source.pub"
+    source.write_bytes(_small_structural_cfb())
+    output = tmp_path / "converted.pdf"
+    before = hashlib.sha256(source.read_bytes()).digest()
+
+    class Response:
+        content = _publisher_output(second_page_blank=True)
+        def raise_for_status(self): return None
+
+    class Client:
+        def __init__(self, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def post(self, *args, **kwargs): return Response()
+
+    monkeypatch.setattr(to_pdf_engine.httpx, "Client", Client)
+    with pytest.raises(ValueError, match="page 2 rendered blank"):
+        execute_staged_to_pdf_operation(
+            "pub-to-pdf", [source], output, {}, original_name=source.name,
+            content_type="application/x-mspublisher",
+        )
+    assert not output.exists()
+    assert hashlib.sha256(source.read_bytes()).digest() == before

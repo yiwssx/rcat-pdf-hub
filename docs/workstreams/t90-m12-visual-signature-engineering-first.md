@@ -1,4 +1,4 @@
-# M12 — Visual electronic signature (partial, not digital certificate signing)
+# M12 — Visual electronic signature (MAC-scoped development complete, NOT digital certificate signing)
 
 ## Genuine source functionality
 
@@ -8,7 +8,7 @@ The signature pad exports a transparent image/png. The same signed-in owner acco
 
 ## Boundaries and honest classification
 
-- **PARTIAL M12**, not fully cryptographically signed PDF.
+- **MAC-scoped CODE COMPLETE M12**, meaning only real visual PNG signing of a PDF through the existing M23 workflow. This is not a cryptographic signature, and is not a release claim.
 - A visual signature cannot prove the signer's identity or integrity of the original PDF. It creates no certificate-backed PDF CMS/PAdES signature and should not be described as legally verified.
 - The normal upload retention policy also applies to the saved PNG signature image. Its source file can remain in the private library until expiry; it is not public or reusable across accounts by ID.
 - The M23 engine rejects encrypted, interactive/signed, annotated or rotated PDFs, and applies source/image, page and geometry limits. The new Web workflow does not bypass those limits.
@@ -23,4 +23,4 @@ The signature pad exports a transparent image/png. The same signed-in owner acco
 - Existing files:read, files:write, jobs:read and pdf:stamp scopes, no RBAC extension.
 - Playwright basic tests cover 404 default OFF, owner filtering, real drawn PNG upload into M23, payload and denied-scope path. M23 already has independent binary engine tests.
 
-Formal cryptographic M12 remains a future independent engineering requirement, not an implied side effect of overlay.
+Formal cryptographic M12 remains a future independent engineering requirement, not an implied side effect of overlay. Source-only acceptance as visual signature is recorded in the [five-tool MAC decision](t90-five-partial-mac-decision-20261110.md).

@@ -492,6 +492,11 @@ def office_document_to_pdf(source: Path, output: Path, *, original_suffix: str) 
                     files={"files": (copy.name, fh, "application/octet-stream")},
                 )
         response.raise_for_status()
+        if original_suffix == ".pub":
+            # T21: the shared PDF gate checks any page. Publisher needs
+            # all output pages visibly nonblank or the job fails closed.
+            from app.services.to_pdf_publisher import validate_publisher_pdf_pages
+            validate_publisher_pdf_pages(response.content)
         _checked_pdf(response.content, output, expected_pages=slide_pages)
 
 
