@@ -23,10 +23,11 @@ class AssistRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     file_id: str = Field(min_length=1, max_length=36)
     question: str = Field(default="", max_length=250)
+    previous_question: str = Field(default="", max_length=250)
 
     @model_validator(mode="after")
     def check(self):
-        if any(ord(c) < 32 for c in self.question):
+        if any(ord(c) < 32 or ord(c) == 127 for c in self.question + self.previous_question):
             raise ValueError("Question contains control characters")
         return self
 
@@ -35,7 +36,7 @@ def _submit(req: AssistRequest, principal: Principal, db: Session,
             mode: Literal["summary", "evidence"]) -> JobOut:
     if not settings.pdf_extractive_assist_tools_enabled:
         raise HTTPException(status_code=404, detail="Document assist disabled")
-    if mode == "summary" and req.question:
+    if mode == "summary" and (req.question or req.previous_question):
         raise HTTPException(status_code=422, detail="Summary does not accept question")
     if mode == "evidence" and not 3 <= len(req.question.strip()) <= 250:
         raise HTTPException(status_code=422, detail="Question length outside 3–250")
@@ -50,8 +51,13 @@ def _submit(req: AssistRequest, principal: Principal, db: Session,
         raise HTTPException(status_code=415, detail="Verified PDF file required")
     if not 24 <= record.size <= MAX_SOURCE_BYTES:
         raise HTTPException(status_code=413, detail="PDF over assistant input budget")
+    params = {}
+    if mode == "evidence":
+        params = {"question": req.question}
+        if req.previous_question.strip():
+            params["previous_question"] = req.previous_question.strip()
     return _create_job(db, principal, "pdf-extractive-" + mode,
-                       [record.id], {"question": req.question} if mode == "evidence" else {})
+                       [record.id], params)
 
 
 @router.post("/summary", response_model=JobOut, status_code=202)
