@@ -45,7 +45,7 @@ Independent QA and Production remain deferred.
 
 **Development increment:** bilingual PDF review (the original selectable text alongside translated text per source page) has been proposed under Engineering First. Real end-to-end translation **still requires** an approved local model and remains unavailable without it; source-only tests mock the translation/renderer dependencies and must not be mistaken for on-premise model provisioning.
 
-**MAC operational improvement:** An authenticated, default-OFF /api/v1/pdf/translation/readiness route calls the existing private model probe with two fixed public test sentences. Staged Web checks it automatically and disables submission if either direction is unavailable. This is a fail-closed guard against queuing doomed jobs; a successful probe is NOT model-license, translation-quality, host or release acceptance. See [five-tool MAC decision](t90-five-partial-mac-decision-20261110.md).
+**MAC architecture finding:** The approved model, when provisioned, is reachable only from the isolated worker-heavy network. The existing worker-side `app.services.m05_offline_model_probe` uses two fixed public sentences; the API and Web are deliberately NOT connected directly to this private network. No misleading API readiness endpoint or extra network permission has been added. A successful model probe is still not license, translation-quality, host or release acceptance. See [five-tool MAC decision](t90-five-partial-mac-decision-20261110.md).
 
 **Next:** an [offline-model source profile](../../ops/translation/README.md)
 and a bilingual API probe now exist on a guarded development branch, but
