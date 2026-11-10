@@ -12,7 +12,7 @@ from pathlib import Path
 import subprocess
 
 
-LANES = ("backend", "frontend", "ops", "gotenberg", "database", "t90_stack", "web_regression")
+LANES = ("backend", "frontend", "ops", "gotenberg", "database", "t90_stack", "web_regression", "m05_model")
 
 # Extra, real-service integration is routed only when its contracts change.
 # Core unit/contract/coverage runs in the ordinary backend lane already.
@@ -64,6 +64,9 @@ def classify(paths: list[str], *, force_all: bool = False) -> dict[str, bool]:
         elif path.startswith("ops/gotenberg/"):
             selected["ops"] = True
             selected["gotenberg"] = True
+        elif path == "ops/translation/verify-real-model-mac.sh":
+            selected["ops"] = True
+            selected["m05_model"] = True
         elif path == "scripts/ci-risk-integration.sh":
             # A change to the integration harness itself must exercise both
             # real-service tracks before being trusted as a required gate.
