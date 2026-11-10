@@ -2,8 +2,9 @@
 
 Edits visible PDF text-showing operators using genuine original font codes.
 Supports ASCII in built-in fonts and bounded embedded TrueType, plus a narrow
-same-font/visible-glyph Thai base-consonant subset via a 1-byte ToUnicode CMap.
-Does NOT shape Thai vowels/tones, support general Unicode, overlay content,
+same-font/visible-glyph Thai consonants, non-combining spacing vowels
+and Thai numerals through a 1-byte ToUnicode CMap.
+Does NOT shape Thai combining vowels/tones, support arbitrary Unicode, overlay content,
 or edit signed/encrypted PDFs, forms or annotations. Not redaction.
 """
 from __future__ import annotations
@@ -32,6 +33,15 @@ SUPPORTED_FONTS = COURIER_FONTS | PROPORTIONAL_FONTS
 ENCODINGS = frozenset({"/WinAnsiEncoding", "/StandardEncoding"})
 
 
+def _plain_char(codepoint: int) -> bool:
+    """Bounded non-shaping 1-codepoint text alphabet, not general Thai Unicode."""
+    return (32 <= codepoint <= 126
+            or 0x0E01 <= codepoint <= 0x0E2E  # Thai base consonants
+            or codepoint in (0x0E30, 0x0E32)   # spacing sara a / sara aa
+            or 0x0E40 <= codepoint <= 0x0E44  # preposed spacing vowels
+            or 0x0E50 <= codepoint <= 0x0E59) # Thai decimal numerals
+
+
 def validate_edit(*, page: int, old_text: str, new_text: str) -> None:
     if type(page) is not int or not 1 <= page <= MAX_PAGES:
         raise ValueError("M01 page outside bound")
@@ -43,9 +53,8 @@ def validate_edit(*, page: int, old_text: str, new_text: str) -> None:
             # Equal glyph and space counts preserve Tc/Tw text spacing.
             or old_text.count(" ") != new_text.count(" ")
             or not old_text.strip() or not new_text.strip()
-            or any(not (32 <= ord(ch) <= 126 or 0x0E01 <= ord(ch) <= 0x0E2E)
-                   for ch in old_text + new_text)):
-        raise ValueError("M01 requires equal-length printable ASCII or Thai base consonants")
+            or any(not _plain_char(ord(ch)) for ch in old_text + new_text)):
+        raise ValueError("M01 requires equal-length ASCII or non-combining Thai letters/digits")
 
 
 def _digest(path: Path) -> bytes:
@@ -283,7 +292,7 @@ def _thai_font_cmap(page, font_name: str | None):
                 return None
             seen_codes.add(code)
             # Reject unsupported codes when used, not all unused font entries.
-            if code > 0x7F or not (32 <= cp <= 126 or 0x0E01 <= cp <= 0x0E2E):
+            if code > 0x7F or not _plain_char(cp):
                 continue
             ch = chr(cp)
             if ch in unicode_to_code:
@@ -309,7 +318,7 @@ def _thai_font_cmap(page, font_name: str | None):
 
 def _edit_thai_tj(page, content: ContentStream, glyphs: dict[str, set[str]],
                   old_text: str, new_text: str) -> None:
-    """Edit a unique Thai base-character span in a true embedded-font Tj run.
+    """Edit a unique non-combining Thai-letter/digit span in embedded Tj.
 
     Every replacement code/glyph must be in the SAME actual PDF font resource
     and visibly demonstrated elsewhere on the same page. No new glyphs/fonts.
@@ -419,7 +428,7 @@ def replace_pdf_text(source: Path, destination: Path, *,
 
     content = ContentStream(selected.get_contents(), reader)
     glyphs = _demonstrated_glyphs(content)
-    thai_mode = any(0x0E01 <= ord(ch) <= 0x0E2E for ch in old_text + new_text)
+    thai_mode = any(0x0E00 <= ord(ch) <= 0x0E7F for ch in old_text + new_text)
     if thai_mode:
         _edit_thai_tj(selected, content, glyphs, old_text, new_text)
     else:
