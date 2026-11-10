@@ -16,7 +16,7 @@ class ScopeTests(unittest.TestCase):
     def test_docs_are_not_full_stack(self):
         self.assertEqual(mod.classify(["README.md", "docs/guide.md"]), {
             "backend": False, "frontend": False, "ops": False, "gotenberg": False,
-            "database": False, "t90_stack": False, "web_regression": False
+            "database": False, "t90_stack": False, "web_regression": False, "m05_model": False
         })
 
     def test_backend_only(self):
@@ -92,6 +92,14 @@ class ScopeTests(unittest.TestCase):
         r = mod.classify(["apps/web/package-lock.json"])
         self.assertTrue(r["frontend"])
         self.assertFalse(r["web_regression"])
+
+    def test_m05_only_runs_on_model_proof_script(self):
+        selected = mod.classify(["ops/translation/verify-real-model-mac.sh"])
+        self.assertTrue(selected["m05_model"])
+        self.assertTrue(selected["ops"])
+        self.assertFalse(selected["gotenberg"])
+        self.assertFalse(mod.classify(["ops/translation/README.md"])["m05_model"])
+        self.assertFalse(mod.classify(["scripts/ci-risk-integration.sh"])["m05_model"])
 
     def test_force_all(self):
         self.assertTrue(all(mod.classify([], force_all=True).values()))

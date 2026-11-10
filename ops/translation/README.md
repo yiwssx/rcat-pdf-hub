@@ -10,11 +10,9 @@ self-hosted translation model, and a private bilingual capability probe.
 
 - English to Thai: `translate-en_th-1_9.argosmodel`
 - Thai to English: `translate-th_en-1_9.argosmodel`
-- LibreTranslate v1.9.6 is a version candidate, **not an approved image**.
-- LibreTranslate uses AGPLv3. Package-specific licenses, provenance, data
-  rights and redistribution terms must also be verified separately.
-- The repo intentionally ships neither licensed model weights nor institutional
-  content. No internet downloads or image pulls have been performed.
+- The exact LibreTranslate Docker digest was exercised on isolated CI in PR #368; it is **not a Production-approved deployment image**.
+- LibreTranslate and MiniSBD are AGPLv3; the Argos maintainer confirmed `.argosmodel` binaries MIT/CC0 in https://github.com/argosopentech/argos-translate/issues/533 (Aug 2, 2026). Package metadata itself has no license field. Third-party training-data and redistribution obligations remain subject to operator review.
+- No model weights or RCAT documents are committed. Disposable CI downloaded fixed public model binaries and pinned SHA-256. No on-premise installation, Production image pull or model service activation was performed.
 
 ## Development-only source integration
 
@@ -31,6 +29,7 @@ self-hosted translation model, and a private bilingual capability probe.
   package directories. These are intentionally ignored by Git.
   Raw `.argosmodel` archives must be verified and installed into the
   Argos package directory structure **before** staging, not merely copied.
+- Mount `ops/translation/offline-minisbd/` with `en.onnx` and `th.onnx`, downloaded from the pinned MiniSBD v0.0.1 release, hash-verified per the CI script; these are both required and mounted read-only. The Compose profile provides only disposable writable caches. Never fall back to internet downloads in the private network.
 - The model can fail to start if its offline packages are absent. Do not
   temporarily enable internet egress to bypass that condition.
 - This source-only overlay does not turn on either M05 API/Worker or Web
@@ -42,13 +41,9 @@ The module `app.services.m05_offline_model_probe` sends two fixed public
 sentences only. It validates both direct language paths through
 `GET /languages` and `POST /translate`, rejects empty, echo, bad JSON or
 wrong-script results. It never sends real PDFs or institutional material.
-Unit tests use mock HTTP transport. Passing this probe is NOT evidence of
-acceptable translation accuracy or license compliance.
+Unit tests use mock HTTP transport; independent disposable [real-model PR #368](https://github.com/yiwssx/rcat-pdf-hub/pull/368) also installs both Argos model binaries plus two MiniSBD ONNX splitters on an offline Docker internal network, asserts real bilingual translations using public agricultural sentences and checks no source PDF is sent. Output is clearly machine translation and Thai spacing remains imperfect. This is not institution-specific translation quality or Production acceptance.
 
-**Before CODE COMPLETE:** separately authorize model provisioning, verify
-actual local Thai/English translations and package licenses, assess latency
-and memory, and visually check Thai font shaping and PDF re-layout.
-M05 stays PARTIAL. Independent QA and Production remain deferred.
+**Engineering MAC:** authentic isolated bilingual model and source-grounded proof may justify CODE COMPLETE *for selectable-text machine translation only*, after exact-head protected PR checks and merge. Installed host model, institutional review, performance/Thai typography, licensing notices, security/DR and real-user QA remain Production acceptance gates; flags stay OFF. Never conflate a disposable CI image with an installed RCAT model.
 
 Sources:
 - https://docs.libretranslate.com/guides/supported_languages/
