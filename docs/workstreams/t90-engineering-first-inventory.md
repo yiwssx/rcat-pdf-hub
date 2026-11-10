@@ -1,31 +1,31 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-10, protected main after PR #365; five-tool [MAC decision](t90-five-partial-mac-decision-20261110.md) records three source-complete bounded workflows and two still incomplete external prerequisites, subject to this change passing protected merge. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
+**Snapshot:** 2026-11-10, scoped Engineering First #172; PR #367 adds a second authentic Publisher source with independently documented page-2 text and all-page visible output. M05 remains the only source-MAC PARTIAL. Promotion is conditional on the exact protected-PR checks and merge. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
 
 ## Scope and definitions
 
 The original requested deliverable is **90 discoverable user-facing tools**, not 90 independently implemented conversion engines. A shared backend may serve many tools; do not recreate or re-qualify it 90 times.
 
 - **CODE COMPLETE**: existing scoped engine, an existing UI route/workspace interaction and basic code tests for the supported subset; may still be feature-gated OFF and QA PENDING. Does **not** mean deployed or fully format-compatible.
-- **PARTIAL**: useful legacy/backend source path exists but the named tool still lacks a distinct selectable user workflow, or advertised feature subset is incomplete. After #339 and #340, 33 guarded To-PDF and all 16 guarded From-PDF choices have a shared user-facing workflow; T21 Publisher remains deliberately withheld for a known blank-page risk.
+- **PARTIAL**: useful legacy/backend source path exists but the named tool still lacks a distinct selectable user workflow, or advertised feature subset is incomplete. After #339 and #340, 33 guarded To-PDF and all 16 guarded From-PDF choices have a shared user-facing workflow; T21 Publisher has a limited documented two-page source-backed safe case after PR #367; unrelated blank-page cases still fail closed.
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
 - **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 has no accepted MOBI output engine. Blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup (MAC-scoped):** CODE COMPLETE **81**, PARTIAL **2**, MISSING **0**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
+**Dev-only rollup (MAC-scoped):** CODE COMPLETE **82**, PARTIAL **1**, MISSING **0**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Manage PDF | 32 | 1 | 0 | 0 | 33 |
-| Convert to PDF | 33 | 1 | 0 | 6 | 40 |
+| Convert to PDF | 34 | 0 | 0 | 6 | 40 |
 | Convert from PDF | 16 | 0 | 0 | 1 | 17 |
-| **Total** | **81** | **2** | **0** | **7** | **90** |
+| **Total** | **82** | **1** | **0** | **7** | **90** |
 
 ## Prioritized engineering leverage
 
-1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
+1. **DONE — shared To-PDF Web workflow PR #339:** 34 selectable source-code formats including bounded T21 Publisher after PR #367. Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
 3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search; six-turn contextual evidence follow-up was merged in PR #364 (not generative chat). M01 supports bounded single-operator text editing, multi-fragment TJ and exactly two adjacent Tj operators plus witnessed embedded TrueType ASCII; bounded Thai consonants, non-combining vowels and Thai digits are merged (MAC-scoped CODE COMPLETE for literal source text only), M12 visual e-signature is MAC-scoped CODE COMPLETE (no certificate-backed signature), M06 evidence-only question workflow is MAC-scoped CODE COMPLETE (not an LLM chatbot), and M05 translation remains PARTIAL (approved private model not provisioned; TXT, translated PDF and bilingual re-layout code exist).
-4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
+4. **True technical blockers:** six native/URL T formats and F15 MOBI; T21 remains a narrow source-backed, fail-closed importer, not general Publisher fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
 ## All 90 tools — current development snapshot (source only)
@@ -85,7 +85,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | T18 | RTF to PDF | **CODE COMPLETE** | `rtf-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T19 | MOBI to PDF | **CODE COMPLETE** | `mobi-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T20 | DWG to PDF | **BLOCKED** | Native/URL prototype only (OFF) | Runtime/license/egress dependency; keep OFF |
-| T21 | PUB to PDF | **PARTIAL** | Genuine bounded v3 OLE Publisher→LibreOffice PDF import plus new Publisher-only all-output-page PDFium ink guard; [source evidence](t90-2-t21-publisher-real-evidence.md) | MAC NOT MET: actual source page-2 contents/fidelity unverified; rejects suspicious blank page, T21 remains withheld and flags OFF |
+| T21 | PUB to PDF | **CODE COMPLETE** | Genuine bounded v3 CFB Publisher→LibreOffice PDF import; Apache POI two-page `Sample.pub` output preserves expected page-1/page-2 text from upstream `Sample.txt` and both pages show visible ink in disposable real CI [evidence](t90-2-t21-publisher-real-evidence.md); Publisher-only PDFium all-page guard remains | Only validated limited subset; unrelated blank pages fail closed, proprietary typography/geometry not fully proven; staged Web selectable, feature flags OFF and QA deferred |
 | T22 | XPS to PDF | **CODE COMPLETE** | `xps-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T23 | XML to PDF | **CODE COMPLETE** | `xml-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T24 | WebP to PDF | **CODE COMPLETE** | `webp-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
