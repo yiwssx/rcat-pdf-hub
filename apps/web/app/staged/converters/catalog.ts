@@ -149,8 +149,8 @@ export const STAGED_TO_PDF_FORMATS: readonly StagedToPdfFormat[] = [
     ],
   },
   {
-    id: "T21", title: "PUB", withheld: true,
-    limit: "bounded v3 OLE Publisher subset via pinned LibreOffice/libmspub; proprietary layout/font fidelity unverified",
+    id: "T21", title: "PUB", withheld: false,
+    limit: "limited v3 OLE Publisher via LibreOffice; genuine two-page text and ink proof for Apache POI sample; unsupported layouts and fonts may fail",
     variants: [
       { operation: "pub-to-pdf", route: "pub", mime: "application/x-mspublisher", suffixes: [".pub"] },
     ],
