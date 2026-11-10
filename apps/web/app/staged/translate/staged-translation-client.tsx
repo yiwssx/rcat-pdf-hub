@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  createJob, getMe, listFiles, SESSION_AUTH,
+  createJob, getMe, getPdfTranslationReadiness, listFiles, SESSION_AUTH,
   type AuthMe, type Job, type UploadedFile,
 } from "../../../lib/api";
 
@@ -32,6 +32,8 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [job, setJob] = useState<Job | null>(null);
+  const [modelReady, setModelReady] = useState(false);
+  const [modelNote, setModelNote] = useState("กำลังตรวจสอบโมเดลแปลภาษา…");
 
   useEffect(() => {
     let alive = true;
@@ -45,6 +47,22 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
         if (!alive) return;
         setFiles(found);
         setFileId(found.find((f) => f.id === requestedFileId)?.id ?? found[0]?.id ?? "");
+        if (has(me, "pdf:extract-text")) {
+          try {
+            const status = await getPdfTranslationReadiness(SESSION_AUTH);
+            if (alive) {
+              setModelReady(status.available);
+              setModelNote(status.available
+                ? "บริการแปลภาษาภายในตอบสนองแล้ว (ยังไม่ใช่การรับรองคุณภาพ)"
+                : "ยังไม่มีโมเดลแปลภาษาไทย–อังกฤษที่พร้อมใช้งาน กรุณาติดต่อผู้ดูแลระบบ");
+            }
+          } catch {
+            if (alive) {
+              setModelReady(false);
+              setModelNote("ตรวจสอบบริการแปลภาษาภายในไม่สำเร็จ กรุณาติดต่อผู้ดูแลระบบ");
+            }
+          }
+        }
       } catch {
         if (alive) setError("ตรวจสอบบัญชีหรือรายการ PDF ไม่สำเร็จ");
       } finally {
@@ -58,7 +76,7 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
   const selected = useMemo(() => files.find((f) => f.id === fileId), [files, fileId]);
   const allowed = has(identity, "files:read") && has(identity, "jobs:read")
     && has(identity, "pdf:extract-text");
-  const ready = allowed && Boolean(selected) && sourceLang !== targetLang && !busy;
+  const ready = allowed && modelReady && Boolean(selected) && sourceLang !== targetLang && !busy;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,6 +159,11 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
                   <option value="bilingual">สองภาษา: ข้อความต้นฉบับและคำแปลสำหรับตรวจทาน</option>
                 </select>
               </div>
+            )}
+            {allowed && identity && (
+              <p role="status" className={modelReady ? "t90DocumentStageNotice" : "t90DocumentStageError"}>
+                {modelNote}
+              </p>
             )}
             {!allowed && identity && <p role="alert" className="t90DocumentStageError">
               ต้องมีสิทธิ์ files:read, jobs:read และ pdf:extract-text
