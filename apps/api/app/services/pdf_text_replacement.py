@@ -1,9 +1,10 @@
 """M01: genuine, narrowly supported inline PDF text replacement.
 
-Edits a visible Tj substring in built-in Courier/Helvetica/Times Type1
-fonts. Proportional replacements use a TJ displacement preserving subsequent
-text advance. Does not overlay old text or edit Thai/Unicode/subset fonts,
-images, forms, annotations or encrypted/signed PDFs. Not redaction.
+Edits visible PDF text-showing operators using genuine original font codes.
+Supports ASCII in built-in fonts and bounded embedded TrueType, plus a narrow
+same-font/visible-glyph Thai base-consonant subset via a 1-byte ToUnicode CMap.
+Does NOT shape Thai vowels/tones, support general Unicode, overlay content,
+or edit signed/encrypted PDFs, forms or annotations. Not redaction.
 """
 from __future__ import annotations
 
@@ -349,7 +350,7 @@ def _edit_thai_tj(page, content: ContentStream, glyphs: dict[str, set[str]],
                             unicode_to_code, metrics, inside, render_mode))
     if not matches:
         raise ValueError("M01 Thai text not found in a safe embedded-font Tj operator")
-    if len(matches) != 1:
+    if len(matches) != 1 or (page.extract_text() or "").count(old_text) != 1:
         raise ValueError("M01 Thai source text is not unique on target page")
 
     index, start, raw_bytes, font_name, encode, widths, inside, render_mode = matches[0]
