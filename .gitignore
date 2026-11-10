@@ -19,3 +19,7 @@ artifacts/
 
 # Host-specific Caddy config and guarded release migration state (never commit).
 /.local-config/
+
+# Private offline translator packages and MiniSBD ONNX: never commit weights.
+/ops/translation/offline-models/
+/ops/translation/offline-minisbd/
