@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from hashlib import sha256
 from pathlib import Path
+import re
 import tempfile
 
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import ArrayObject, ContentStream, NumberObject, TextStringObject
+from pypdf.generic import ArrayObject, ContentStream, FloatObject, NumberObject, TextStringObject
 from reportlab.pdfbase import pdfmetrics
 
 MAX_SOURCE_BYTES = 12 * 1024 * 1024
@@ -74,6 +75,194 @@ def _standard_font_name(page, font_name: str) -> str | None:
         return None
 
 
+def _demonstrated_glyphs(content: ContentStream) -> dict[str, set[str]]:
+    """Characters visibly used with each font resource on the selected page.
+
+    This is a conservative font-coverage witness for simple embedded fonts:
+    the editor never introduces a glyph not already present in that font.
+    """
+    known: dict[str, set[str]] = {}
+    current: str | None = None
+    render_mode = 0
+    inside = False
+    stack: list[tuple[str | None, int]] = []
+    for args, operator in content.operations:
+        if operator == b"q":
+            stack.append((current, render_mode))
+        elif operator == b"Q" and stack:
+            current, render_mode = stack.pop()
+        elif operator == b"BT":
+            inside = True
+        elif operator == b"ET":
+            inside = False
+        elif operator == b"Tf" and len(args) == 2:
+            current = str(args[0])
+        elif operator == b"Tr" and len(args) == 1:
+            render_mode = int(args[0])
+        elif inside and render_mode == 0 and current and operator in {b"Tj", b"TJ"}:
+            if operator == b"Tj" and len(args) == 1:
+                parts = args
+            elif operator == b"TJ" and len(args) == 1 and isinstance(args[0], ArrayObject):
+                parts = args[0]
+            else:
+                continue
+            for chunk in parts:
+                if isinstance(chunk, TextStringObject):
+                    known.setdefault(current, set()).update(str(chunk))
+    return known
+
+
+def _single_byte_ascii(part: TextStringObject) -> bool:
+    """Enforce exact identity between displayed ASCII and PDF byte codes."""
+    if not str(part).isascii():
+        return False
+    try:
+        return part.original_bytes == str(part).encode("ascii")
+    except (UnicodeEncodeError, AttributeError, ValueError):
+        return False
+
+
+def _embedded_widths(page, font_name: str, old: str, new: str,
+                     glyphs: dict[str, set[str]]) -> dict[str, float] | None:
+    """Support only witnessed 1-byte ASCII TrueType with explicit identity CMap.
+
+    No name-based font substitution or guess about missing subset glyphs.
+    Only chars already displayed in this page's very same font resource may
+    be reused, and the source's explicit widths drive advance compensation.
+    """
+    try:
+        fonts = page["/Resources"].get_object()["/Font"].get_object()
+        font = fonts[font_name].get_object()
+        if str(font["/Subtype"]) != "/TrueType":
+            return None
+        if str(font.get("/Encoding", "/WinAnsiEncoding")) != "/WinAnsiEncoding":
+            return None
+        descriptor = font["/FontDescriptor"].get_object()
+        if "/FontFile2" not in descriptor:
+            return None
+        if "/ToUnicode" not in font:
+            return None
+        mapping = font["/ToUnicode"].get_object().get_data()
+        if len(mapping) > 64 * 1024 or b"beginbfchar" not in mapping or b"beginbfrange" in mapping:
+            return None
+        pairs = re.findall(rb"<([0-9A-Fa-f]{2})>\s*<([0-9A-Fa-f]{4})>", mapping)
+        if len(pairs) > 256:
+            return None
+        identity = {int(code, 16) for code, uni in pairs if int(code, 16) == int(uni, 16)}
+        first, last = int(font["/FirstChar"]), int(font["/LastChar"])
+        widths = font["/Widths"].get_object()
+        if not 0 <= first <= last <= 255 or len(widths) != last - first + 1:
+            return None
+        chars = set(old + new)
+        seen = glyphs.get(font_name, set())
+        if (not chars.issubset(seen)
+                or any(ord(char) not in identity or not 32 <= ord(char) <= 126
+                       for char in chars)):
+            return None
+        result = {char: float(widths[ord(char) - first]) for char in chars
+                  if first <= ord(char) <= last}
+        if len(result) != len(chars) or any(not 0 < width <= 2000 for width in result.values()):
+            return None
+        return result
+    except (KeyError, AttributeError, TypeError, ValueError, OverflowError):
+        return None
+
+
+def _metrics(page, font_name: str | None, old: str, new: str,
+             glyphs: dict[str, set[str]]) -> tuple[str | None, dict[str, float] | None]:
+    if font_name is None:
+        return None, None
+    standard = _standard_font_name(page, font_name)
+    if standard:
+        return standard, None
+    widths = _embedded_widths(page, font_name, old, new, glyphs)
+    return ("embedded-ttf", widths) if widths is not None else (None, None)
+
+
+def _width_delta(old: str, new: str, font: str,
+                 widths: dict[str, float] | None) -> int:
+    if widths is not None:
+        return round(sum(widths[ch] for ch in new) - sum(widths[ch] for ch in old))
+    return round(pdfmetrics.stringWidth(new, font, 1000)
+                 - pdfmetrics.stringWidth(old, font, 1000))
+
+
+def _rewrite_tj(segments: ArrayObject, old: str, new: str, font: str,
+                widths: dict[str, float] | None) -> ArrayObject:
+    """Keep source kerning intact; compensate only after the edited span."""
+    if len(segments) > 64:
+        raise ValueError("M01 TJ array exceeds bounded operator complexity")
+    texts = [str(part) for part in segments if isinstance(part, TextStringObject)]
+    if len(texts) < 1 or len(texts) > 32:
+        raise ValueError("M01 TJ array has no supported text fragments")
+    joined = "".join(texts)
+    if joined.count(old) != 1:
+        raise ValueError("M01 text is not unique within positioned glyph array")
+    begin = joined.index(old)
+    end = begin + len(old)
+    # Do not interpret whitespace created by large positioning jumps as a
+    # contiguous word: only ordinary sub-glyph kerning may split an edit.
+    cursor = 0
+    for part in segments:
+        if isinstance(part, TextStringObject):
+            cursor += len(part)
+        elif isinstance(part, (NumberObject, FloatObject)):
+            if begin < cursor < end and abs(float(part)) > 120:
+                raise ValueError("M01 cannot edit across a wide TJ positioning gap")
+        else:
+            raise ValueError("M01 unsupported TJ operand")
+    answer = ArrayObject()
+    cursor = 0
+    for part in segments:
+        if not isinstance(part, TextStringObject):
+            answer.append(part)
+            continue
+        text = str(part)
+        if font == "embedded-ttf" and not _single_byte_ascii(part):
+            raise ValueError("M01 embedded font uses non-ASCII PDF text bytes")
+        from_index = max(begin, cursor)
+        to_index = min(end, cursor + len(text))
+        if from_index < to_index:
+            left = from_index - cursor
+            right = to_index - cursor
+            replacement = new[from_index - begin:to_index - begin]
+            old_fragment = text[left:right]
+            if old_fragment.count(" ") != replacement.count(" "):
+                raise ValueError("M01 TJ fragment would change word spacing")
+            if to_index == end:
+                # Do not insert corrections BETWEEN edited glyph fragments:
+                # that can create an artificial visible gap inside a word.
+                # Correct the TOTAL advance once after the last edited glyph,
+                # before any untouched suffix or following positioned run.
+                answer.append(TextStringObject(text[:left] + replacement))
+                delta = _width_delta(old, new, font, widths)
+                if delta:
+                    answer.append(NumberObject(delta))
+                if text[right:]:
+                    answer.append(TextStringObject(text[right:]))
+            else:
+                answer.append(TextStringObject(
+                    text[:left] + replacement + text[right:]
+                ))
+        else:
+            answer.append(part)
+        cursor += len(text)
+    return answer
+
+
+def _operator_texts(content: ContentStream) -> list[str]:
+    """String fragments joined only within a single PDF text operator."""
+    result = []
+    for parts, command in content.operations:
+        if command == b"Tj" and len(parts) == 1 and isinstance(parts[0], TextStringObject):
+            result.append(str(parts[0]))
+        elif command == b"TJ" and len(parts) == 1 and isinstance(parts[0], ArrayObject):
+            result.append("".join(str(value) for value in parts[0]
+                                  if isinstance(value, TextStringObject)))
+    return result
+
+
+
 def replace_pdf_text(source: Path, destination: Path, *,
                      page: int, old_text: str, new_text: str) -> None:
     """Perform exact, single-occurrence same-length text-object replacement."""
@@ -105,6 +294,7 @@ def replace_pdf_text(source: Path, destination: Path, *,
         raise ValueError("M01 PDF page has no content stream")
 
     content = ContentStream(selected.get_contents(), reader)
+    glyphs = _demonstrated_glyphs(content)
     active_font: str | None = None
     render_mode = 0
     in_text = False
@@ -127,46 +317,49 @@ def replace_pdf_text(source: Path, destination: Path, *,
             active_font = str(operands[0])
         elif command == b"Tr" and len(operands) == 1:
             render_mode = int(operands[0])
-        elif command == b"Tj" and len(operands) == 1:
-            value = operands[0]
-            if not isinstance(value, TextStringObject) or old_text not in str(value):
+        elif command in {b"Tj", b"TJ"} and len(operands) == 1:
+            if command == b"Tj" and isinstance(operands[0], TextStringObject):
+                visible = str(operands[0])
+            elif command == b"TJ" and isinstance(operands[0], ArrayObject):
+                visible = "".join(str(part) for part in operands[0]
+                                  if isinstance(part, TextStringObject))
+            else:
                 continue
-            if str(value).count(old_text) != 1 or replaced:
+            if old_text not in visible:
+                continue
+            if visible.count(old_text) != 1 or replaced:
                 raise ValueError("M01 source text is not unique on target page")
-            font = _standard_font_name(selected, active_font) if active_font else None
+            font, widths = _metrics(selected, active_font, old_text, new_text, glyphs)
             if not in_text or render_mode != 0 or font is None:
                 raise ValueError(
-                    "M01 only supports visible built-in Courier, Helvetica or Times text"
+                    "M01 requires a visible supported built-in or witnessed embedded TrueType font"
                 )
-            original = str(value)
-            if "/" + font in COURIER_FONTS:
-                # Existing Courier Tj format stays unchanged.
-                operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
+            if command == b"Tj":
+                part = operands[0]
+                if font == "embedded-ttf" and not _single_byte_ascii(part):
+                    raise ValueError("M01 embedded font uses non-ASCII PDF text bytes")
+                original = str(part)
+                if "/" + font in COURIER_FONTS:
+                    operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
+                else:
+                    position = original.index(old_text)
+                    before = original[:position] + new_text
+                    after = original[position + len(old_text):]
+                    array = ArrayObject([TextStringObject(before)])
+                    delta = _width_delta(old_text, new_text, font, widths)
+                    if delta:
+                        array.append(NumberObject(delta))
+                    if after:
+                        array.append(TextStringObject(after))
+                    content.operations[op_index] = ([array], b"TJ")
             else:
-                # Positive TJ number moves the text cursor backward by
-                # thousandths of the font size. Same character/space counts
-                # cancel Tc/Tw; the following text remains at the same X.
-                compensation = round(
-                    pdfmetrics.stringWidth(new_text, font, 1000)
-                    - pdfmetrics.stringWidth(old_text, font, 1000)
-                )
-                start = original.index(old_text)
-                prefix_and_edit = original[:start] + new_text
-                suffix = original[start + len(old_text):]
-                array = ArrayObject([TextStringObject(prefix_and_edit)])
-                if compensation:
-                    array.append(NumberObject(compensation))
-                if suffix:
-                    array.append(TextStringObject(suffix))
-                content.operations[op_index] = ([array], b"TJ")
+                content.operations[op_index] = ([
+                    _rewrite_tj(operands[0], old_text, new_text, font, widths)
+                ], b"TJ")
             replaced = True
-        elif command == b"TJ" and len(operands) == 1:
-            if any(isinstance(value, TextStringObject) and old_text in str(value)
-                   for value in operands[0]):
-                raise ValueError("M01 cannot replace text in positioned glyph arrays")
 
     if not replaced:
-        raise ValueError("M01 text not found in one editable built-in font text object")
+        raise ValueError("M01 text not found in one safely editable PDF text operator")
 
     # A complete fresh output must preserve all pages and keep source untouched.
     writer = PdfWriter(clone_from=reader)
@@ -186,7 +379,14 @@ def replace_pdf_text(source: Path, destination: Path, *,
         if verified.is_encrypted or len(verified.pages) != len(reader.pages):
             raise ValueError("M01 output page inventory invalid")
         after = verified.pages[page - 1].extract_text() or ""
-        if new_text not in after or old_text in after:
+        # TJ arrays may be rendered with intentional kerning gaps. Verify
+        # the exact live glyph fragments after write, as well as extracted
+        # text, instead of trusting a fabricated answer string.
+        persisted = ContentStream(verified.pages[page - 1].get_contents(), verified)
+        tokens = _operator_texts(persisted)
+        if not any(new_text in text for text in tokens) or any(
+            old_text in text for text in tokens
+        ) or not after.strip():
             raise ValueError("M01 replacement did not survive PDF text extraction")
         if any(
             (verified.pages[index].extract_text() or "")

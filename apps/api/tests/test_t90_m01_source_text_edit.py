@@ -1,10 +1,12 @@
 """M01 source edit must alter the original Tj operator, not paint over it."""
 from hashlib import sha256
+from pathlib import Path
 
 import pytest
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import ContentStream
+from pypdf.generic import ArrayObject, ContentStream, NumberObject, TextStringObject
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from app.services.pdf_text_replacement import replace_pdf_text, validate_edit
@@ -149,3 +151,124 @@ def test_m01_queue_routing_is_explicitly_default_off(monkeypatch):
         queue, "settings", baseline.model_copy(update={"pdf_edit_text_tools_enabled": True}),
     )
     assert queue.queue_class_for_operation("edit-existing-pdf-text") == "pdf"
+
+
+def _tj_source(tmp_path, *, font="Helvetica", gap=-40):
+    """A real PDF whose original text spans two positioned TJ string parts."""
+    original = sample(tmp_path, font=font)
+    reader = PdfReader(str(original), strict=True)
+    stream = ContentStream(reader.pages[0].get_contents(), reader)
+    for i, (args, operator) in enumerate(stream.operations):
+        if operator == b"Tj" and args and "FIRST ORIGINAL WORD" in str(args[0]):
+            stream.operations[i] = ([ArrayObject([
+                TextStringObject("FIRST OR"),
+                NumberObject(gap),
+                TextStringObject("IGINAL WORD"),
+            ])], b"TJ")
+            break
+    else:
+        raise AssertionError("Expected genuine source Tj object")
+    writer = PdfWriter(clone_from=reader)
+    writer.pages[0].replace_contents(stream)
+    target = tmp_path / "source-tj.pdf"
+    with target.open("wb") as fh:
+        writer.write(fh)
+    return target
+
+
+@pytest.mark.parametrize("font", ["Courier", "Helvetica", "Times-Roman"])
+def test_edits_visible_text_across_positioned_tj_fragments(tmp_path, font):
+    src = _tj_source(tmp_path, font=font)
+    original_hash = sha256(src.read_bytes()).digest()
+    dest = tmp_path / "edited-tj.pdf"
+    replace_pdf_text(src, dest, page=1, old_text="ORIGINAL", new_text="MODIFIED")
+    verified = PdfReader(str(dest), strict=True)
+    assert len(verified.pages) == 2
+    chunks = [
+        args[0] for args, cmd in ContentStream(
+            verified.pages[0].get_contents(), verified
+        ).operations if cmd == b"TJ"
+    ]
+    assert len(chunks) == 1
+    assert "".join(str(x) for x in chunks[0] if isinstance(x, TextStringObject)) == (
+        "FIRST MODIFIED WORD"
+    )
+    # Keep the original positioning instruction, plus any compensations.
+    assert any(int(x) == -40 for x in chunks[0] if isinstance(x, NumberObject))
+    assert "MODIFIED" in (verified.pages[0].extract_text() or "")
+    assert "SECOND PAGE IS INTACT" in (verified.pages[1].extract_text() or "")
+    assert sha256(src.read_bytes()).digest() == original_hash
+
+
+def test_refuses_widely_spaced_tj_text_pieces(tmp_path):
+    src = _tj_source(tmp_path, gap=-900)
+    dest = tmp_path / "bad-layout.pdf"
+    with pytest.raises(ValueError, match="wide TJ positioning gap"):
+        replace_pdf_text(src, dest, page=1, old_text="ORIGINAL", new_text="MODIFIED")
+    assert not dest.exists()
+
+
+def _embedded_source(tmp_path):
+    # API Docker image already installs fonts-noto-core; no added dependency
+    # and no font file is distributed or committed with these tests.
+    fonts = [
+        Path("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"),
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+    ]
+    path = next((font for font in fonts if font.is_file()), None)
+    if path is None:
+        pytest.skip("No installed local TrueType font in this environment")
+    font_name = "M01TestEmbedded"
+    if font_name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(font_name, str(path)))
+    src = tmp_path / "embedded.pdf"
+    c = canvas.Canvas(str(src))
+    c.setFont(font_name, 14)
+    c.drawString(80, 730, "FIRST ORIGINAL WORD")
+    # Explicit same-font glyph witness: no new, unembedded subset letters.
+    c.drawString(80, 690, "MODIFIED")
+    c.save()
+    return src
+
+
+def test_embedded_truetype_only_reuses_demonstrated_glyphs(tmp_path):
+    src = _embedded_source(tmp_path)
+    out = tmp_path / "embedded-edited.pdf"
+    replace_pdf_text(src, out, page=1, old_text="ORIGINAL", new_text="MODIFIED")
+    reader = PdfReader(str(out), strict=True)
+    # PDF text extraction may infer extra whitespace at an unchanged text
+    # cursor when the replacement is narrower. Inspect actual operators too.
+    extracted = reader.pages[0].extract_text() or ""
+    assert "FIRST MODIFIED" in extracted and "WORD" in extracted
+    fonts = reader.pages[0]["/Resources"]["/Font"]
+    assert any(str(font.get_object().get("/Subtype")) == "/TrueType"
+               and font.get_object().get("/ToUnicode") is not None
+               for font in fonts.values())
+    assert out.stat().st_size >= 100
+
+
+def test_embedded_truetype_rejects_glyph_not_used_in_source(tmp_path):
+    src = _embedded_source(tmp_path)
+    out = tmp_path / "missing-glyph.pdf"
+    with pytest.raises(ValueError, match="witnessed embedded"):
+        replace_pdf_text(src, out, page=1,
+                         old_text="ORIGINAL", new_text="ZODIFIED")
+    assert not out.exists()
+
+
+def test_embedded_truetype_rejects_missing_to_unicode_mapping(tmp_path):
+    src = _embedded_source(tmp_path)
+    reader = PdfReader(str(src), strict=True)
+    writer = PdfWriter(clone_from=reader)
+    fonts = writer.pages[0]["/Resources"]["/Font"]
+    embedded = next(font.get_object() for font in fonts.values()
+                    if str(font.get_object().get("/Subtype")) == "/TrueType")
+    del embedded["/ToUnicode"]
+    altered = tmp_path / "embedded-no-cmap.pdf"
+    with altered.open("wb") as fh:
+        writer.write(fh)
+    out = tmp_path / "no-cmap-edited.pdf"
+    with pytest.raises(ValueError, match="witnessed embedded"):
+        replace_pdf_text(altered, out, page=1,
+                         old_text="ORIGINAL", new_text="MODIFIED")
+    assert not out.exists()
