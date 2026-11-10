@@ -134,7 +134,7 @@ def test_bad_renderer_status_refused(monkeypatch):
 
     monkeypatch.setattr(document.httpx, "Client", Client)
     with pytest.raises(ValueError, match="unavailable"):
-        document._render_local_pdf(b"<html><body>safe</body></html>")
+        document._render_local_pdf(document._html_document(["Safe text"], "en", "th"))
 
 
 def test_pdf_job_contract_and_separate_flag_gated_rq(monkeypatch):
