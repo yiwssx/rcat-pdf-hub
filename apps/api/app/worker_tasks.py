@@ -544,7 +544,7 @@ def process_job(job_id: str) -> str:
                 raise ValueError("M01 source is no longer a PDF")
             validate_edit(**params)
             replace_pdf_text(inputs[0], output, **params)
-        elif job.operation == "translate-pdf-text":
+        elif job.operation in {"translate-pdf-text", "translate-pdf-document"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
             from app.services.pdf_private_translation import (
@@ -568,7 +568,11 @@ def process_job(job_id: str) -> str:
             if actual != "application/pdf":
                 raise ValueError("M05 PDF source MIME mismatch")
             validate_languages(params["source_language"], params["target_language"])
-            translate_pdf_text(inputs[0], output, **params)
+            if job.operation == "translate-pdf-document":
+                from app.services.pdf_translated_document import translate_pdf_document
+                translate_pdf_document(inputs[0], output, **params)
+            else:
+                translate_pdf_text(inputs[0], output, **params)
         elif job.operation in {"pdf-extractive-summary", "pdf-extractive-evidence"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired

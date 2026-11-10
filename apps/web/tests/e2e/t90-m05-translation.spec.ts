@@ -40,6 +40,7 @@ test("M05 owner-isolated PDF creates typed language-pair job", async ({ page }) 
   });
   await page.goto("/staged/translate?file=foreign");
   await expect(page.getByLabel("PDF ของฉัน").locator("option")).toHaveCount(1);
+  await page.getByLabel("รูปแบบผลลัพธ์").selectOption("text");
   await page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" }).click();
   await expect(page.getByText("รหัสงาน: m05-job")).toBeVisible();
   expect(submissions).toEqual([{ file_id: pdf.id, source_language: "en", target_language: "th" }]);
