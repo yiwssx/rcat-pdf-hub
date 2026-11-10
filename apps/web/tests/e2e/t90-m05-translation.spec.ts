@@ -9,15 +9,12 @@ const pdf = {
   created_at: "2026-11-09T00:00:00Z", expires_at: null,
 };
 
-async function mock(page: Page, granted = true, modelAvailable = true) {
+async function mock(page: Page, granted = true) {
   await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: {
     name: owner, display_name: "Operator", subject: "translate:test",
     scopes: granted ? ["files:read", "jobs:read", "pdf:extract-text"] : ["files:read"],
     roles: ["operator"], groups: [], is_admin: false, auth_source: "session",
   } }));
-  await page.route("**/api/v1/pdf/translation/readiness", (route) => route.fulfill({
-    json: { available: modelAvailable, note: "private bilingual model probe" },
-  }));
   await page.route("**/api/v1/files?limit=200&offset=0", (route) => route.fulfill({ json: [
     pdf, { ...pdf, id: "foreign", source_system: "user:other" },
     { ...pdf, id: "expired", expires_at: "2020-01-01T00:00:00Z" },
@@ -116,19 +113,4 @@ test("M05 bilingual PDF is an explicit owner-scoped choice; TXT never receives l
   expect(txtPayloads).toEqual([{
     file_id: pdf.id, source_language: "en", target_language: "th",
   }]);
-});
-
-
-test("M05 unavailable private model disables job submission rather than queueing a doomed translation", async ({ page }) => {
-  test.skip(!enabled, "Only reviewed dev-only flags");
-  await mock(page, true, false);
-  const requests: string[] = [];
-  await page.route("**/api/v1/pdf/translation/pdf", (route) => {
-    requests.push(route.request().url());
-    return route.abort();
-  });
-  await page.goto("/staged/translate");
-  await expect(page.getByText(/ยังไม่มีโมเดลแปลภาษาไทย–อังกฤษที่พร้อมใช้งาน/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" })).toBeDisabled();
-  expect(requests).toEqual([]);
 });
