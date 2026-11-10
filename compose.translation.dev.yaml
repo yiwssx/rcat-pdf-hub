@@ -24,12 +24,23 @@ services:
       LT_CHAR_LIMIT: "3500"
       LT_REQ_LIMIT: "60"
       LT_THREADS: "2"
+      # Do not fetch a sentence splitter inside the network-isolated container.
+      ARGOS_CHUNK_TYPE: "MINISBD"
     volumes:
       # Installed and verified Argos en-th/th-en package folders, not raw ZIPs.
       - type: bind
         source: ./ops/translation/offline-models
         target: /home/libretranslate/.local/share/argos-translate/packages
         read_only: true
+      # Offline preverified MiniSBD language assets, no runtime downloads.
+      - type: bind
+        source: ./ops/translation/offline-minisbd
+        target: /home/libretranslate/.local/share/argos-translate/minisbd
+        read_only: true
+    # Language model packages are RO, only disposable local caches writable.
+    tmpfs:
+      - /home/libretranslate/.local/share/argos-translate:rw,nosuid,nodev,mode=1777
+      - /home/libretranslate/.local/cache:rw,nosuid,nodev,mode=1777
     networks: [m05-private]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
