@@ -68,3 +68,30 @@ def test_source_only_overlay_is_gated_and_has_no_model_egress():
     assert 'LT_LOAD_ONLY: "en,th"' in text
     assert "    ports:" not in text
     assert "PDFHUB_M05_LIBRETRANSLATE_IMAGE" in text
+
+
+
+def test_m05_authenticated_readiness_is_default_off_and_fails_closed(monkeypatch):
+    from fastapi import HTTPException
+    from app.routers import pdf_private_translation as router
+
+    monkeypatch.setattr(router, "settings", router.settings.model_copy(update={
+        "pdf_translation_tools_enabled": False,
+    }))
+    with pytest.raises(HTTPException) as err:
+        router.translation_readiness(principal=object())
+    assert err.value.status_code == 404
+
+    monkeypatch.setattr(router, "settings", router.settings.model_copy(update={
+        "pdf_translation_tools_enabled": True,
+    }))
+    monkeypatch.setattr(probe, "probe_local_translation_model", lambda: ("en->th", "th->en"))
+    assert router.translation_readiness(principal=object()).available is True
+
+    def unavailable():
+        raise ValueError("Internal service unavailable")
+    monkeypatch.setattr(probe, "probe_local_translation_model", unavailable)
+    failure = router.translation_readiness(principal=object())
+    assert failure.available is False
+    assert "unavailable" in failure.note
+    assert "Internal service unavailable" not in failure.note
