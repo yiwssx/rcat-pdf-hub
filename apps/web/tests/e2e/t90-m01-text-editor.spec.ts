@@ -65,3 +65,30 @@ test("M01 missing pdf:stamp permission denies operation", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText("pdf:stamp");
   await expect(page.getByRole("button", { name: "แก้ไขข้อความเดิมใน PDF" })).toBeDisabled();
 });
+
+
+test("M01 staged UI accepts bounded Thai base consonants without enabling Production", async ({ page }) => {
+  test.skip(!enabled, "Requires independent dev-only Web and backend flags");
+  await mock(page);
+  let submitted: unknown = null;
+  await page.route("**/api/v1/pdf/advanced/edit-existing-text", async (route) => {
+    submitted = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: {
+      id: "m01-thai-job", operation: "edit-existing-pdf-text", status: "queued",
+      progress: 0, input_file_ids: [original.id], output_file_id: null,
+      params: {}, error: null, requested_by: owner,
+    } });
+  });
+  await page.goto("/staged/edit-text");
+  const action = page.getByRole("button", { name: "แก้ไขข้อความเดิมใน PDF" });
+  await page.getByLabel("ข้อความเดิมที่ต้องการแก้ไข").fill("กขค");
+  await page.getByLabel("ข้อความใหม่ (จำนวนตัวอักษรเท่ากัน)").fill("คขก");
+  await expect(action).toBeEnabled();
+  await action.click();
+  await expect(page.getByText("รหัสงาน: m01-thai-job")).toBeVisible();
+  expect(submitted).toEqual({
+    file_id: original.id, page: 1, old_text: "กขค", new_text: "คขก",
+  });
+  await page.getByLabel("ข้อความใหม่ (จำนวนตัวอักษรเท่ากัน)").fill("คัข");
+  await expect(action).toBeDisabled();
+});
