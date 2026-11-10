@@ -82,6 +82,8 @@ docker network create --internal "$network" >/dev/null
 docker run --detach --rm --name "$container" --network "$network" \
   --memory 2g --cpus 2 --pids-limit 128 --cap-drop ALL \
   --security-opt no-new-privileges \
+  --tmpfs /home/libretranslate/.local/share/argos-translate:rw,nosuid,nodev,mode=1777 \
+  --tmpfs /home/libretranslate/.local/cache:rw,nosuid,nodev,mode=1777 \
   -e LT_HOST=0.0.0.0 -e LT_PORT=5000 -e LT_LOAD_ONLY=en,th \
   -e LT_UPDATE_MODELS=false -e LT_DISABLE_WEB_UI=true \
   -e LT_DISABLE_FILES_TRANSLATION=true -e LT_DEBUG=false \
