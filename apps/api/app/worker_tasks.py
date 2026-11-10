@@ -75,6 +75,8 @@ def _output_spec(operation: str) -> tuple[str, str]:
 
 def _output_spec_for_job(operation: str) -> tuple[str, str]:
     """Keep legacy two-branch output contract unchanged for T90-0 validation."""
+    if operation == "translate-pdf-text":
+        return ".txt", "text/plain; charset=utf-8"
     if operation in {"pdf-extractive-summary", "pdf-extractive-evidence"}:
         return ".txt", "text/plain; charset=utf-8"
     if operation in {"split-to-zip", "extract-pages-zip", "extract-images"}:
@@ -542,6 +544,31 @@ def process_job(job_id: str) -> str:
                 raise ValueError("M01 source is no longer a PDF")
             validate_edit(**params)
             replace_pdf_text(inputs[0], output, **params)
+        elif job.operation == "translate-pdf-text":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.pdf_private_translation import (
+                MAX_SOURCE_BYTES as TRANSLATE_MAX_BYTES,
+                translate_pdf_text, validate_languages,
+            )
+            if (not settings.pdf_translation_tools_enabled
+                    or len(files) != 1 or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= TRANSLATE_MAX_BYTES
+                    or not isinstance(params, dict)
+                    or set(params) != {"source_language", "target_language"}):
+                raise ValueError("M05 owner/source/flag/parameters unauthorized")
+            try:
+                actual = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException:
+                raise ValueError("M05 PDF source signature invalid") from None
+            if actual != "application/pdf":
+                raise ValueError("M05 PDF source MIME mismatch")
+            validate_languages(params["source_language"], params["target_language"])
+            translate_pdf_text(inputs[0], output, **params)
         elif job.operation in {"pdf-extractive-summary", "pdf-extractive-evidence"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired

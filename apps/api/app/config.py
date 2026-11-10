@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     pdf_repair_structure_tools_enabled: bool = False
     # M03 extractive summary / M06 evidence search; OFF.
     pdf_extractive_assist_tools_enabled: bool = False
+    # M05 text-only translation via fixed internal private model; default OFF.
+    pdf_translation_tools_enabled: bool = False
     # M01 exact, same-length visible Courier string replacement, default OFF.
     pdf_edit_text_tools_enabled: bool = False
     # M25/M26 actual annotations, M29 visible-only whiteout. All default OFF.
