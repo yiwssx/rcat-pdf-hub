@@ -7,7 +7,7 @@ import {
 } from "../../../lib/api";
 
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
-const TEXT = /^[\x20-\x7e]+$/;
+const TEXT = /^[\x20-\x7e\u0e01-\u0e2e]+$/;
 
 function ownedPdf(file: UploadedFile, owner: string): boolean {
   return file.source_system === owner
@@ -97,10 +97,10 @@ export function StagedPdfTextEditorClient({ requestedFileId }: { requestedFileId
         <h1>แก้ไขข้อความเดิมใน PDF</h1>
         <p>แทนที่ข้อความที่มีอยู่จริงใน PDF โดยแก้คำสั่งแสดงข้อความ ไม่ใช่วางข้อความทับ</p>
         <p className="t90DocumentStageNotice" role="note">
-          รองรับข้อความ ASCII ใน Courier, Helvetica, Times และฟอนต์ TrueType ที่ฝังอยู่บางชนิด
+          รองรับข้อความ ASCII ใน Courier, Helvetica, Times และฟอนต์ TrueType ที่ฝังอยู่บางชนิด รวมถึงพยัญชนะไทยพื้นฐานในฟอนต์ TrueType ที่มี ToUnicode แบบหนึ่งไบต์
           (ต้องพิสูจน์ได้ว่าตัวอักษรใหม่เคยแสดงด้วยฟอนต์เดียวกันในหน้านั้น)
           รองรับข้อความแบ่งช่วงภายใน TJ เดียว หรือ Tj สองคำสั่งที่ติดกันโดยไม่มีคำสั่งคั่น โดยต้องคงจำนวนตัวอักษรและช่องว่างเดิม
-          ข้อความเดิมต้องปรากฏครั้งเดียว ไม่รองรับภาษาไทย ฟอนต์ CID และข้อความข้ามคำสั่งที่มีการเปลี่ยนตำแหน่งหรือสถานะข้อความ
+          ข้อความเดิมต้องปรากฏครั้งเดียว ภาษาไทยรองรับเฉพาะพยัญชนะ ก–ฮ ใน Tj เดียวและ glyph ที่มีอยู่แล้ว ไม่รองรับสระ วรรณยุกต์ ฟอนต์ CID และข้อความข้ามคำสั่งที่เปลี่ยนสถานะ
           ไม่รองรับไฟล์สแกน ลายเซ็น แบบฟอร์ม หรือการ Redact
           ผลลัพธ์เป็นไฟล์สำเนาและยังไม่ได้เปิดใช้ Production
         </p>
