@@ -369,3 +369,112 @@ def test_adjacent_tj_embedded_font_requires_witnessed_glyphs(tmp_path):
     output = PdfReader(str(result), strict=True)
     assert "FIRST MODIFIED" in (output.pages[0].extract_text() or "")
     assert result.stat().st_size > 100
+
+
+
+def _thai_embedded_source(tmp_path, *, repeat_old=False, include_witness=True,
+                          remove_cmap=False):
+    """Build a real Thai Unicode PDF using installed Thai TrueType, never ship fonts."""
+    fonts = [
+        Path("/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansThaiUI-Regular.ttf"),
+    ]
+    font_path = next((candidate for candidate in fonts if candidate.is_file()), None)
+    if font_path is None:
+        pytest.skip("Thai test requires installed Noto Sans Thai font")
+    name = "M01ThaiBase"
+    if name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(name, str(font_path)))
+    source = tmp_path / "thai-source.pdf"
+    pdf = canvas.Canvas(str(source), pagesize=(595, 842))
+    pdf.setFont(name, 16)
+    pdf.drawString(80, 735, "กขค")
+    if repeat_old:
+        pdf.drawString(80, 700, "กขค")
+    if include_witness:
+        # All proposed glyphs were truly drawn on the SAME source page.
+        pdf.drawString(80, 670, "คขก")
+    pdf.showPage()
+    pdf.setFont("Courier", 12)
+    pdf.drawString(80, 700, "SECOND PAGE IS INTACT")
+    pdf.save()
+    if remove_cmap:
+        reader = PdfReader(str(source), strict=True)
+        writer = PdfWriter(clone_from=reader)
+        fonts = writer.pages[0]["/Resources"]["/Font"].get_object()
+        thai_font = next(value.get_object() for value in fonts.values()
+                         if str(value.get_object().get("/Subtype")) == "/TrueType")
+        del thai_font["/ToUnicode"]
+        source = tmp_path / "thai-without-cmap.pdf"
+        with source.open("wb") as stream:
+            writer.write(stream)
+    return source
+
+
+def test_thai_base_consonant_replacement_is_real_pdf_content_edit(tmp_path):
+    source = _thai_embedded_source(tmp_path)
+    digest = sha256(source.read_bytes()).hexdigest()
+    before = PdfReader(str(source), strict=True)
+    assert "กขค" in (before.pages[0].extract_text() or "")
+    result = tmp_path / "thai-edited.pdf"
+    replace_pdf_text(source, result, page=1, old_text="กขค", new_text="คขก")
+    after = PdfReader(str(result), strict=True)
+    assert len(after.pages) == 2
+    extracted = after.pages[0].extract_text() or ""
+    assert "คขก" in extracted
+    assert "กขค" not in extracted
+    assert after.pages[1].extract_text() == before.pages[1].extract_text()
+    assert sha256(source.read_bytes()).hexdigest() == digest
+    # Actual embedded PDF text-showing operator was edited (not painted over).
+    ops = ContentStream(after.pages[0].get_contents(), after).operations
+    assert any(command == b"TJ" and len(args) == 1 for args, command in ops)
+
+
+def test_thai_base_rejects_unwitnessed_glyph(tmp_path):
+    source = _thai_embedded_source(tmp_path)
+    output = tmp_path / "missing-glyph.pdf"
+    with pytest.raises(ValueError, match="mapping or width|glyph witnesses"):
+        replace_pdf_text(source, output, page=1,
+                         old_text="กขค", new_text="งขก")
+    assert not output.exists()
+
+
+def test_thai_base_rejects_undocumented_font_mapping(tmp_path):
+    source = _thai_embedded_source(tmp_path, remove_cmap=True)
+    result = tmp_path / "no-map.pdf"
+    with pytest.raises(ValueError, match="Thai text not found"):
+        replace_pdf_text(source, result, page=1, old_text="กขค", new_text="คขก")
+    assert not result.exists()
+
+
+def test_thai_base_rejects_duplicate_old_span(tmp_path):
+    source = _thai_embedded_source(tmp_path, repeat_old=True)
+    result = tmp_path / "duplicate.pdf"
+    with pytest.raises(ValueError, match="not unique"):
+        replace_pdf_text(source, result, page=1, old_text="กขค", new_text="คขก")
+    assert not result.exists()
+
+
+@pytest.mark.parametrize("old,new", [
+    ("ก่ข", "คขก"),   # combining tone mark: requires script shaping
+    ("กำข", "คขก"),   # complex composed vowel
+    ("กขค", "คัข"),   # combining vowel in replacement
+    ("กขค", "คข"),    # length mismatch
+])
+def test_thai_base_refuses_complex_script_or_length_changes(old, new):
+    with pytest.raises(ValueError, match="M01"):
+        validate_edit(page=1, old_text=old, new_text=new)
+
+
+def test_thai_base_consonant_width_delta_preserves_following_text(tmp_path):
+    source = _thai_embedded_source(tmp_path)
+    output = tmp_path / "thai-new-width.pdf"
+    replace_pdf_text(source, output, page=1, old_text="กขค", new_text="กกก")
+    result = PdfReader(str(output), strict=True)
+    assert "กกก" in (result.pages[0].extract_text() or "")
+    assert "กขค" not in (result.pages[0].extract_text() or "")
+    operations = ContentStream(result.pages[0].get_contents(), result).operations
+    edits = [args[0] for args, op in operations if op == b"TJ"]
+    assert len(edits) == 1
+    assert any(isinstance(value, NumberObject) and int(value) != 0
+               for value in edits[0])

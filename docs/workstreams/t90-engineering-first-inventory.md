@@ -1,6 +1,6 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-10, protected main after M05/M01 source merges (the adjacent-Tj enhancement is a proposed PR until its protected merge). This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
+**Snapshot:** 2026-11-10, protected main after PR #361; a new bounded Thai-base M01 implementation is proposed for source review and is NOT credited until merged. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
 
 ## Scope and definitions
 
@@ -24,7 +24,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports bounded single-operator text editing, multi-fragment TJ and exactly two adjacent Tj operators plus narrowly witnessed embedded TrueType ASCII editing (PARTIAL), M12 visual e-signature is PARTIAL (no certificate-backed signature), and M05 private-model text-only translation is PARTIAL (local model not provisioned and no translated PDF layout).
+3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports bounded single-operator text editing, multi-fragment TJ and exactly two adjacent Tj operators plus witnessed embedded TrueType ASCII; narrowly mapped Thai base-consonant support is proposed (PARTIAL), M12 visual e-signature is PARTIAL (no certificate-backed signature), and M05 private-model text-only translation is PARTIAL (local model not provisioned and no translated PDF layout).
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -32,7 +32,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 
 | ID | Tool | Dev status | Engine/source evidence | Next engineering work |
 | --- | --- | --- | --- | --- |
-| M01 | Edit PDF | **PARTIAL** | Real same-length ASCII edits in one Tj/TJ or two consecutive Tj operators, plus witnessed embedded TrueType with strict ToUnicode/Widths checks [M01 source workflow](t90-m01-text-editor-engineering-first.md) | No Thai/composite fonts, unseen subset glyphs or text crossing intervening operators; no general editor or Production activation |
+| M01 | Edit PDF | **PARTIAL** | Real same-length ASCII edits in one Tj/TJ or two consecutive Tj operators, plus witnessed embedded TrueType with strict ToUnicode/Widths checks; bounded Thai consonant CMap edit proposed [M01 source workflow](t90-m01-text-editor-engineering-first.md) | No Thai combining marks, vowels, tones, composite fonts, unseen subset glyphs or text crossing intervening operators; no general editor or Production activation |
 | M02 | Compress PDF | **CODE COMPLETE** | Legacy `compress` | Defer independent QA; preserve code/CI |
 | M03 | PDF Summarizer | **CODE COMPLETE** | Genuine bounded extractive PDF summary, quoted page-cited TXT [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353) | No abstraction, OCR or generative inference; QA deferred, flags OFF |
 | M04 | Merge PDF | **CODE COMPLETE** | Legacy `merge` | Defer independent QA; preserve code/CI |
