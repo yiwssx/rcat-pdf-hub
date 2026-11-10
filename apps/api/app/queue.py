@@ -91,6 +91,8 @@ def queue_class_for_operation(operation: str) -> QueueClass:
         return "pdf"
     if settings.pdf_edit_text_tools_enabled and operation == "edit-existing-pdf-text":
         return "pdf"
+    if settings.pdf_translation_tools_enabled and operation == "translate-pdf-text":
+        return "heavy"
     if settings.pdf_extractive_assist_tools_enabled and operation in {
         "pdf-extractive-summary", "pdf-extractive-evidence",
     }:

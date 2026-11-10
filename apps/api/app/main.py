@@ -139,6 +139,9 @@ if settings.pdf_repair_structure_tools_enabled:
 if settings.pdf_extractive_assist_tools_enabled:
     from app.routers import pdf_extractive_assist
     app.include_router(pdf_extractive_assist.router)
+if settings.pdf_translation_tools_enabled:
+    from app.routers import pdf_private_translation
+    app.include_router(pdf_private_translation.router)
 if settings.pdf_edit_text_tools_enabled:
     from app.routers import pdf_text_replacement
     app.include_router(pdf_text_replacement.router)
