@@ -1,0 +1,51 @@
+# M05 source-only OFFLINE development overlay. Not included by default.
+# Requires approved immutable image digest, preinstalled licensed model files,
+# explicit profile and separate authorization; this is NOT Production.
+# Compose with docker-compose.yml ONLY, not docker-compose.prod.yml.
+services:
+  worker-heavy:
+    networks:
+      - default
+      - m05-private
+
+  pdf-translate:
+    profiles: [m05-offline-dev]
+    image: ${PDFHUB_M05_LIBRETRANSLATE_IMAGE:?approved immutable libretranslate image digest required}
+    environment:
+      LT_HOST: "0.0.0.0"
+      LT_PORT: "5000"
+      LT_LOAD_ONLY: "en,th"
+      LT_UPDATE_MODELS: "false"
+      LT_DISABLE_WEB_UI: "true"
+      LT_DISABLE_FILES_TRANSLATION: "true"
+      LT_DEBUG: "false"
+      LT_SUGGESTIONS: "false"
+      LT_TRANSLATION_CACHE: "false"
+      LT_CHAR_LIMIT: "3500"
+      LT_REQ_LIMIT: "60"
+      LT_THREADS: "2"
+    volumes:
+      # Installed and verified Argos en-th/th-en package folders, not raw ZIPs.
+      - type: bind
+        source: ./ops/translation/offline-models
+        target: /home/libretranslate/.local/share/argos-translate/packages
+        read_only: true
+    networks: [m05-private]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    pids_limit: 128
+    mem_limit: 2g
+    cpus: 2.0
+    logging:
+      driver: "none"
+    healthcheck:
+      test: ["CMD-SHELL", "./venv/bin/python scripts/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    restart: "no"
+
+networks:
+  m05-private:
+    internal: true
