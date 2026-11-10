@@ -7,6 +7,8 @@ import {
 } from "../../../lib/api";
 
 type Mode = "summary" | "evidence";
+type EvidenceTurn = { question: string; previousQuestion: string; jobId: string; fileId: string };
+const MAX_VISIBLE_TURNS = 6;
 
 function isMine(file: UploadedFile, owner: string): boolean {
   return file.source_system === owner
@@ -34,6 +36,8 @@ export function StagedDocumentAssistClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [job, setJob] = useState<Job | null>(null);
+  const [turns, setTurns] = useState<EvidenceTurn[]>([]);
+  const [usePriorQuestion, setUsePriorQuestion] = useState(true);
 
   useEffect(() => {
     let live = true;
@@ -60,6 +64,8 @@ export function StagedDocumentAssistClient({
   const selected = useMemo(() => files.find((item) => item.id === fileId), [files, fileId]);
   const allowed = has(identity, "files:read") && has(identity, "jobs:read")
     && has(identity, "pdf:extract-text");
+  const fileTurns = useMemo(() => turns.filter((turn) => turn.fileId === fileId), [turns, fileId]);
+  const previousQuestion = fileTurns.length ? fileTurns[fileTurns.length - 1].question : "";
   const canSubmit = Boolean(selected) && allowed && !busy
     && (mode === "summary" || (question.trim().length >= 3 && question.trim().length <= 250));
 
@@ -70,12 +76,24 @@ export function StagedDocumentAssistClient({
     setJob(null);
     setBusy(true);
     try {
+      const submittedQuestion = question.trim();
+      const context = mode === "evidence" && usePriorQuestion ? previousQuestion : "";
       const result = await createJob(
         "document-assist/" + mode,
-        mode === "summary" ? { file_id: selected.id } : { file_id: selected.id, question: question.trim() },
+        mode === "summary"
+          ? { file_id: selected.id }
+          : { file_id: selected.id, question: submittedQuestion,
+              ...(context ? { previous_question: context } : {}) },
         SESSION_AUTH,
       );
       setJob(result);
+      if (mode === "evidence") {
+        setTurns((existing) => [...existing, {
+          question: submittedQuestion, previousQuestion: context,
+          jobId: result.id, fileId: selected.id,
+        }].slice(-MAX_VISIBLE_TURNS));
+        setQuestion("");
+      }
     } catch {
       setError("ไม่สามารถส่งงานได้ กรุณาตรวจสอบสิทธิ์และไฟล์ที่เลือก");
     } finally {
@@ -102,7 +120,7 @@ export function StagedDocumentAssistClient({
             <div className="t90DocumentStageField">
               <label htmlFor="assist-source">PDF ของฉัน</label>
               <select id="assist-source" value={fileId} required disabled={!files.length || busy}
-                onChange={(event) => { setFileId(event.target.value); setJob(null); }}>
+                onChange={(event) => { setFileId(event.target.value); setJob(null); setTurns([]); }}>
                 {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                 {files.map((item) =>
                   <option key={item.id} value={item.id}>{item.original_name}</option>)}
@@ -126,7 +144,14 @@ export function StagedDocumentAssistClient({
                 <label htmlFor="assist-question">คำถามหรือข้อความที่ต้องการค้นหา (3–250 ตัวอักษร)</label>
                 <input id="assist-question" type="text" value={question} minLength={3} maxLength={250}
                   onChange={(event) => setQuestion(event.target.value)} disabled={busy}
-                  placeholder="เช่น สรุปข้อกำหนดการใช้บริการ" required />
+                  placeholder="เช่น รายงานกล่าวถึงอุณหภูมิน้ำอย่างไร" required />
+                {previousQuestion && (
+                  <label>
+                    <input type="checkbox" checked={usePriorQuestion} disabled={busy}
+                      onChange={(event) => setUsePriorQuestion(event.target.checked)} />
+                    ใช้คำถามก่อนหน้าเป็นบริบทช่วยค้นหา (ไม่ใช่ AI ตอบคำถาม)
+                  </label>
+                )}
               </div>
             )}
             {!allowed && identity && <p role="alert" className="t90DocumentStageError">
@@ -137,6 +162,26 @@ export function StagedDocumentAssistClient({
               {busy ? "กำลังสร้างงาน…" : mode === "summary" ? "สร้างสรุปจากต้นฉบับ" : "ค้นหลักฐานใน PDF"}
             </button>
           </form>
+        )}
+        {mode === "evidence" && fileTurns.length > 0 && (
+          <section className="t90DocumentStageResult" aria-label="ประวัติคำถามใน PDF นี้">
+            <h2>ประวัติคำถามใน PDF นี้</h2>
+            <p role="note">เป็นผลค้นข้อความจริงจาก PDF แต่ละคำถาม ไม่ใช่คำตอบที่ AI เขียนขึ้น ประวัติอยู่เฉพาะในหน้าเว็บนี้</p>
+            <ol>
+              {fileTurns.map((turn) => (
+                <li key={turn.jobId}>
+                  <strong>{turn.question}</strong>
+                  {turn.previousQuestion && <span> · ใช้บริบทจากคำถามก่อนหน้า</span>}
+                  {" · "}
+                  <a href={"/jobs/" + encodeURIComponent(turn.jobId) + "/result"}>
+                    ดูหลักฐานที่อ้างเลขหน้า
+                  </a>
+                </li>
+              ))}
+            </ol>
+            <button type="button" onClick={() => { setTurns([]); setJob(null); }}
+              disabled={busy}>ล้างประวัติคำถามในหน้านี้</button>
+          </section>
         )}
         {job && (
           <div className="t90DocumentStageResult" role="status">
