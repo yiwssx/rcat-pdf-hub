@@ -15,3 +15,7 @@ COPY fonts/ /usr/local/share/fonts/rcat/
 RUN fc-cache -f
 
 USER gotenberg
+
+# T21 native acceptance: the disposable CI harness verifies an actual Apache POI
+# Publisher source against its separately published page-2 text reference.
+# This comment changes no installed package or runtime converter behavior.

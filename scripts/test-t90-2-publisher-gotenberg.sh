@@ -102,3 +102,66 @@ output_sha="$(sha256sum "$work/publisher.pdf" | cut -d' ' -f1)"
 test "${#output_sha}" -eq 64
 printf 'T90_2_T21_REAL_PUBLISHER_EVIDENCE source_sha256=%s output_sha256=%s pages=2 pages_rasterized=2 first_page_nonblank=true page2_source_visual_reference=pending original_unchanged=true corpus=LibreOffice-writerperfect-fdo59355-1.pub\n' \
   "$sha_before" "$output_sha"
+
+
+# Independent second authentic source: Apache POI Sample.pub + its human-authored
+# Sample.txt contains explicit text for BOTH pages. Unlike the LibreOffice
+# fdo59355 fixture above, a page-two source reference is available here.
+poi_commit="cdcdcf1833beb8483229be5989db1ee3b98232c2"
+poi_blob="b870168319048c9e8631c2338eb937e6f8f62b5b"
+poi_source="$work/apache-poi-Sample.pub"
+curl --fail --silent --show-error --location --retry 3 --max-time 60 \
+  --proto '=https' --proto-redir '=https' \
+  "https://raw.githubusercontent.com/apache/poi/$poi_commit/test-data/publisher/Sample.pub" \
+  -o "$poi_source"
+test "$(git hash-object "$poi_source")" = "$poi_blob"
+PYTHONPATH="$repo_root/apps/api" python3 - "$poi_source" <<'PY'
+from pathlib import Path
+import sys
+from app.services.to_pdf_publisher import validate_publisher_ole
+names = validate_publisher_ole(Path(sys.argv[1]))
+assert len(names) >= 2, "No Publisher document streams"
+print("T21: authentic Apache POI Publisher v3 CFB source accepted")
+PY
+poi_before="$(sha256sum "$poi_source" | cut -d' ' -f1)"
+curl --fail --silent --show-error --max-time 100 \
+  -F "files=@$poi_source;filename=Sample.pub;type=application/octet-stream" \
+  "http://127.0.0.1:$port/forms/libreoffice/convert" > "$work/apache-poi.pdf"
+test "$(head -c 5 "$work/apache-poi.pdf")" = "%PDF-"
+pdfinfo "$work/apache-poi.pdf" > "$work/apache-poi.info"
+pdftotext -f 1 -l 1 -enc UTF-8 "$work/apache-poi.pdf" "$work/apache-poi-1.txt"
+pdftotext -f 2 -l 2 -enc UTF-8 "$work/apache-poi.pdf" "$work/apache-poi-2.txt"
+pdftoppm -f 1 -l 2 -scale-to 450 -gray "$work/apache-poi.pdf" "$work/apache-poi-page"
+python3 - "$work/apache-poi.info" "$work/apache-poi-1.txt" \
+  "$work/apache-poi-2.txt" "$work/apache-poi-page-1.pgm" \
+  "$work/apache-poi-page-2.pgm" <<'PY'
+from pathlib import Path
+import re
+import sys
+meta, p1, p2, image1, image2 = map(Path, sys.argv[1:])
+pages = re.search(r"^Pages:\s*(\d+)$", meta.read_text("utf-8"), re.M)
+if pages is None or int(pages.group(1)) != 2:
+    raise SystemExit("T21: Apache POI Publisher source should yield two pages")
+first = " ".join(p1.read_text("utf-8").split()).lower()
+second = " ".join(p2.read_text("utf-8").split()).lower()
+# Exact cross-implementation content reference: apache/poi
+# test-data/publisher/Sample.txt, same pinned commit as Sample.pub.
+for no, actual, fragment in (
+    (1, first, "this is some text on the first page"),
+    (2, second, "this is the second page"),
+    (2, second, "this text is on page two"),
+):
+    if fragment not in actual:
+        raise SystemExit(f"T21: upstream reference absent on page {no}: {fragment!r}")
+for no, pgm in enumerate((image1, image2), 1):
+    data = pgm.read_bytes()
+    pos = data.find(b"\n255\n")
+    if not data.startswith(b"P5\n") or pos < 0 or len(data[pos+5:]) < 3000:
+        raise SystemExit(f"T21: missing page {no} raster")
+    if sum(px < 240 for px in data[pos+5:]) < 100:
+        raise SystemExit(f"T21: page {no} visibly blank despite source reference")
+    print(f"T21_SOURCE_TO_OUTPUT page={no} original_text=preserved raster=nonblank")
+PY
+test "$(sha256sum "$poi_source" | cut -d' ' -f1)" = "$poi_before"
+printf 'T21_PUBLISHER_POI_EVIDENCE source_sha256=%s output_sha256=%s pages=2 source_reference=Apache-POI-Sample.txt page2_text_preserved=true both_pages_nonblank=true immutable_source=true\n' \
+  "$poi_before" "$(sha256sum "$work/apache-poi.pdf" | cut -d' ' -f1)"
