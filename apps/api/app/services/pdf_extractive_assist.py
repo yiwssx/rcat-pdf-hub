@@ -86,13 +86,13 @@ def _validate_question(value: str, *, optional: bool = False) -> str:
     """Apply identical bounds to primary and previous-question search terms."""
     if type(value) is not str:
         raise ValueError("Question must be text")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
+        raise ValueError("Question contains control characters")
     normalized = value.strip()
     if optional and not normalized:
         return ""
     if not 3 <= len(normalized) <= 250:
         raise ValueError("Question must be between 3 and 250 characters")
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
-        raise ValueError("Question contains control characters")
     if not _tokens(normalized):
         raise ValueError("Question has no searchable words")
     return normalized
