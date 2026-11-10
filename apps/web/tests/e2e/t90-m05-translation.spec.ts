@@ -74,3 +74,43 @@ test("M05 creates an independently typed PDF document job", async ({ page }) => 
     { file_id: pdf.id, source_language: "en", target_language: "th" },
   ]);
 });
+
+
+test("M05 bilingual PDF is an explicit owner-scoped choice; TXT never receives layout", async ({ page }) => {
+  test.skip(!enabled, "Only reviewed dev-only flags");
+  await mock(page);
+  const pdfPayloads: unknown[] = [];
+  const txtPayloads: unknown[] = [];
+  await page.route("**/api/v1/pdf/translation/pdf", async (route) => {
+    pdfPayloads.push(route.request().postDataJSON());
+    await route.fulfill({ status: 202, json: {
+      id: "bilingual-review", operation: "translate-pdf-document", status: "queued",
+      progress: 0, input_file_ids: [pdf.id], output_file_id: null,
+      params: {}, error: null, requested_by: owner,
+    } });
+  });
+  await page.route("**/api/v1/pdf/translation/text", async (route) => {
+    txtPayloads.push(route.request().postDataJSON());
+    await route.fulfill({ status: 202, json: {
+      id: "translation-text", operation: "translate-pdf-text", status: "queued",
+      progress: 0, input_file_ids: [pdf.id], output_file_id: null,
+      params: {}, error: null, requested_by: owner,
+    } });
+  });
+  await page.goto("/staged/translate?file=foreign");
+  await expect(page.getByLabel("PDF ของฉัน").locator("option")).toHaveCount(1);
+  await page.getByLabel("รูปแบบหน้า PDF").selectOption("bilingual");
+  await page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" }).click();
+  await expect(page.getByText("รหัสงาน: bilingual-review")).toBeVisible();
+  expect(pdfPayloads).toEqual([{
+    file_id: pdf.id, source_language: "en", target_language: "th",
+    layout: "bilingual",
+  }]);
+  await page.getByLabel("รูปแบบผลลัพธ์").selectOption("text");
+  await expect(page.getByLabel("รูปแบบหน้า PDF")).toHaveCount(0);
+  await page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" }).click();
+  await expect(page.getByText("รหัสงาน: translation-text")).toBeVisible();
+  expect(txtPayloads).toEqual([{
+    file_id: pdf.id, source_language: "en", target_language: "th",
+  }]);
+});
