@@ -40,6 +40,7 @@ test("M05 owner-isolated PDF creates typed language-pair job", async ({ page }) 
   });
   await page.goto("/staged/translate?file=foreign");
   await expect(page.getByLabel("PDF ของฉัน").locator("option")).toHaveCount(1);
+  await page.getByLabel("รูปแบบผลลัพธ์").selectOption("text");
   await page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" }).click();
   await expect(page.getByText("รหัสงาน: m05-job")).toBeVisible();
   expect(submissions).toEqual([{ file_id: pdf.id, source_language: "en", target_language: "th" }]);
@@ -51,4 +52,25 @@ test("M05 rejects submission without extraction permission", async ({ page }) =>
   await page.goto("/staged/translate");
   await expect(page.getByRole("alert")).toContainText("ต้องมีสิทธิ์");
   await expect(page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" })).toBeDisabled();
+});
+
+test("M05 creates an independently typed PDF document job", async ({ page }) => {
+  test.skip(!enabled, "Only reviewed default-off pilot");
+  await mock(page);
+  const submitted: unknown[] = [];
+  await page.route("**/api/v1/pdf/translation/pdf", async (route) => {
+    submitted.push(route.request().postDataJSON());
+    await route.fulfill({ status: 202, json: {
+      id: "translated-document", operation: "translate-pdf-document", status: "queued",
+      progress: 0, input_file_ids: [pdf.id], output_file_id: null,
+      params: {}, error: null, requested_by: owner,
+    } });
+  });
+  await page.goto("/staged/translate");
+  await page.getByLabel("รูปแบบผลลัพธ์").selectOption("pdf");
+  await page.getByRole("button", { name: "แปลข้อความ PDF ภายในระบบ" }).click();
+  await expect(page.getByText("รหัสงาน: translated-document")).toBeVisible();
+  expect(submitted).toEqual([
+    { file_id: pdf.id, source_language: "en", target_language: "th" },
+  ]);
 });

@@ -4,7 +4,7 @@
 
 This source implements a bounded PDF selectable-text extraction pipeline, actual
 LibreTranslate-compatible HTTP translation requests, typed owner-scoped API,
-heavy RQ worker, private UTF-8 output and guarded Web UI. It is not a dictionary
+heavy RQ worker, private UTF-8 TXT or newly composed PDF output and guarded Web UI. It is not a dictionary
 mock, online API or translated-layout PDF.
 
 ## Current capability and restrictions
@@ -13,7 +13,16 @@ mock, online API or translated-layout PDF.
 - Translation pairs: English to Thai and Thai to English.
 - Source: one PDF of at most 8 MiB and 20 pages, maximum 3,000 characters
   per page and 30,000 characters total. Strict source and output budgets.
-- Output: page-marked UTF-8 TXT, NOT a translated PDF and NOT layout-preserving.
+- Output: page-marked UTF-8 TXT **or newly composed translated PDF**. The PDF
+  is typeset by existing internal Gotenberg Chromium with Thai-capable Noto Sans
+  Thai/Sarabun, text escaping, strict content security policy, PDF parse and
+  visible-ink checks. No source geometry, tables, images or exact page counts
+  are promised; the output is readable re-layout, NOT original-layout editing.
+- The PDF render origin is fixed to http://gotenberg:3000 (internal-only), with
+  no ambient HTTP proxy, redirects, external HTML references or public API.
+- The PDF selection is a separate typed /translation/pdf operation, with
+  owner/MIME/expiry/flag checks repeated in the heavy Worker and unchanged
+  authorization. The existing TXT route remains available.
 - Private provider: fixed HTTP address http://pdf-translate:5000/translate;
   compatible with self-hosted LibreTranslate REST translation endpoint.
 - The translator model and Thai/English language packages are NOT included or
@@ -34,6 +43,7 @@ Required CI and small service/queue/browser tests are the development gate.
 No integrated model QA, Thai golden-document tests or production acceptance.
 Independent QA and Production remain deferred.
 
-**Next:** deploy and validate a licensed on-premise model only after explicit
-operator authorization; add translated PDF output with visually reviewed Thai
-typesetting before declaring this tool CODE COMPLETE.
+**Next:** an authorized operator must separately provision/validate a licensed
+local English↔Thai model, then visually inspect real Thai shaping, overflow
+and page semantics on trusted examples. No claim that all original PDF
+formatting or genuine model quality is solved; M05 remains PARTIAL.

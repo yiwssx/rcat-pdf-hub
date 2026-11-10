@@ -26,6 +26,7 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
   const [fileId, setFileId] = useState("");
   const [sourceLang, setSourceLang] = useState<Lang>("en");
   const [targetLang, setTargetLang] = useState<Lang>("th");
+  const [format, setFormat] = useState<"pdf" | "text">("pdf");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -65,7 +66,7 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
     setError("");
     setJob(null);
     try {
-      setJob(await createJob("translation/text", {
+      setJob(await createJob("translation/" + (format === "pdf" ? "pdf" : "text"), {
         file_id: selected.id, source_language: sourceLang, target_language: targetLang,
       }, SESSION_AUTH));
     } catch {
@@ -86,7 +87,8 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
         <h1>แปลข้อความจาก PDF</h1>
         <p role="note" className="t90DocumentStageNotice">
           รองรับภาษาอังกฤษและไทย เฉพาะ PDF ที่เลือกข้อความได้
-          ผลลัพธ์เป็นข้อความแปล TXT UTF-8 พร้อมเลขหน้า ไม่ใช่ PDF ที่คง Layout
+          เลือกผลลัพธ์ PDF ที่จัดหน้าใหม่ด้วยฟอนต์ภาษาไทย หรือ TXT UTF-8 ได้
+          โดยมีหมายเลขหน้าต้นฉบับประกอบ แต่ PDF ใหม่ไม่คง Layout เดิม
           ต้องมีระบบแปลภาษาที่รันภายในและได้รับอนุมัติก่อนใช้งาน
           ไฟล์สแกนต้อง OCR ก่อน และคำแปลควรตรวจทานก่อนนำไปใช้จริง
         </p>
@@ -119,6 +121,14 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
                 <option value="en">English</option>
               </select>
             </div>
+            <div className="t90DocumentStageField">
+              <label htmlFor="m05-format">รูปแบบผลลัพธ์</label>
+              <select id="m05-format" value={format} disabled={busy}
+                onChange={(event) => { setFormat(event.target.value as "pdf" | "text"); setJob(null); }}>
+                <option value="pdf">PDF ฉบับแปล (จัดหน้าใหม่)</option>
+                <option value="text">TXT ข้อความแปล</option>
+              </select>
+            </div>
             {!allowed && identity && <p role="alert" className="t90DocumentStageError">
               ต้องมีสิทธิ์ files:read, jobs:read และ pdf:extract-text
             </p>}
@@ -133,7 +143,7 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
             <strong>รับงานแปลภาษาแล้ว</strong>
             <span>รหัสงาน: {job.id}</span>
             <a href={"/jobs/" + encodeURIComponent(job.id) + "/result"}>
-              ดูผลและดาวน์โหลด TXT
+              {"ดูผลและดาวน์โหลด " + (format === "pdf" ? "PDF ฉบับแปล" : "TXT")}
             </a>
           </div>
         )}

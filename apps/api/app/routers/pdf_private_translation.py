@@ -31,12 +31,8 @@ class TranslatePdfRequest(BaseModel):
         return self
 
 
-@router.post("/text", response_model=JobOut, status_code=202)
-def translate_text(
-    req: TranslatePdfRequest,
-    principal: Principal = Depends(require_scope("pdf:extract-text")),
-    db: Session = Depends(get_db),
-) -> JobOut:
+def _submit(req: TranslatePdfRequest, principal: Principal,
+            db: Session, operation: str) -> JobOut:
     if not settings.pdf_translation_tools_enabled:
         raise HTTPException(status_code=404, detail="M05 translation disabled")
     pdf = db.get(FileRecord, req.file_id)
@@ -50,7 +46,25 @@ def translate_text(
         raise HTTPException(status_code=415, detail="Verified PDF required")
     if not 24 <= pdf.size <= MAX_SOURCE_BYTES:
         raise HTTPException(status_code=413, detail="PDF outside M05 source budget")
-    return _create_job(db, principal, "translate-pdf-text", [pdf.id], {
+    return _create_job(db, principal, operation, [pdf.id], {
         "source_language": req.source_language,
         "target_language": req.target_language,
     })
+
+
+@router.post("/text", response_model=JobOut, status_code=202)
+def translate_text(
+    req: TranslatePdfRequest,
+    principal: Principal = Depends(require_scope("pdf:extract-text")),
+    db: Session = Depends(get_db),
+) -> JobOut:
+    return _submit(req, principal, db, "translate-pdf-text")
+
+
+@router.post("/pdf", response_model=JobOut, status_code=202)
+def translate_document(
+    req: TranslatePdfRequest,
+    principal: Principal = Depends(require_scope("pdf:extract-text")),
+    db: Session = Depends(get_db),
+) -> JobOut:
+    return _submit(req, principal, db, "translate-pdf-document")
