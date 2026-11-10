@@ -99,3 +99,58 @@ def validate_publisher_ole(source: Path) -> tuple[str, ...]:
     if root_count != 1 or streams == 0:
         raise ValueError("Publisher OLE is missing root storage or document streams")
     return tuple(names)
+
+
+
+def validate_publisher_pdf_pages(pdf: bytes) -> tuple[int, ...]:
+    """Fail closed for any visually blank Publisher output page.
+
+    LibreOffice's Publisher import can produce formally valid, rasterizable
+    pages with no content. Unlike the shared converter's any-page ink test,
+    this strictly bounded PUB subset requires visible ink on *every* page.
+    Intentionally blank original pages are outside the accepted subset.
+    This does NOT establish geometry, text, font or original-page fidelity.
+    """
+    import pypdfium2 as pdfium
+
+    if not isinstance(pdf, bytes) or not pdf.startswith(b"%PDF-") or len(pdf) > 40 * 1024 * 1024:
+        raise ValueError("Publisher converter returned invalid PDF")
+    try:
+        document = pdfium.PdfDocument(pdf)
+        try:
+            count = len(document)
+            if not 1 <= count <= 24:
+                raise ValueError("Publisher PDF page count exceeds bounded subset")
+            visible = []
+            for index in range(count):
+                page = document[index]
+                try:
+                    width, height = page.get_size()
+                    if not (1 <= width <= 14400 and 1 <= height <= 14400):
+                        raise ValueError("Publisher PDF page dimensions unsupported")
+                    scale = min(700.0 / max(width, height),
+                                max(0.5, 96.0 / max(width, height)))
+                    bitmap = page.render(scale=scale, grayscale=True)
+                    try:
+                        grayscale = bitmap.to_pil().convert("L")
+                        try:
+                            pixels = grayscale.histogram()
+                        finally:
+                            grayscale.close()
+                        if sum(pixels[:245]) < 10:
+                            raise ValueError(
+                                f"Publisher PDF page {index + 1} rendered blank; "
+                                "source page fidelity cannot be confirmed"
+                            )
+                        visible.append(index + 1)
+                    finally:
+                        bitmap.close()
+                finally:
+                    page.close()
+            return tuple(visible)
+        finally:
+            document.close()
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError("Publisher PDF output could not be visually checked") from None
