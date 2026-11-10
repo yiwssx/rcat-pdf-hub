@@ -1,0 +1,22 @@
+name: M05 Real Offline Model MAC Proof
+
+on:
+  pull_request:
+    paths:
+      - 'ops/translation/verify-real-model-mac.sh'
+      - '.github/workflows/m05-real-offline-model.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove-real-local-model:
+    name: Real en-th/th-en isolated model (no private data)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout source only
+        uses: actions/checkout@v4
+      - name: Verify actual model packages and two translations without network egress
+        run: bash ops/translation/verify-real-model-mac.sh
