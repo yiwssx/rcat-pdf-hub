@@ -45,7 +45,7 @@ def test_replaces_existing_courier_text_without_overlay(tmp_path):
 
 @pytest.mark.parametrize("previous,replacement", [
     ("ORIGINAL", "NEW"), ("ORIGINAL", "ORIGINAL"),
-    ("ไทย", "abc"), ("WORD", "NO\n!"), ("  ", "ab"), ("A" * 97, "B" * 97),
+    ("ที้", "abc"), ("WORD", "NO\n!"), ("  ", "ab"), ("A" * 97, "B" * 97),
     ("A B", "ABC"),
 ])
 def test_invalid_text_parameters_rejected(previous, replacement):
@@ -478,3 +478,79 @@ def test_thai_base_consonant_width_delta_preserves_following_text(tmp_path):
     assert len(edits) == 1
     assert any(isinstance(value, NumberObject) and int(value) != 0
                for value in edits[0])
+
+
+
+def _thai_word_pdf(tmp_path, first: str, witness: str):
+    """Real source-backed one-byte Thai PDF, with same-font glyph witnesses."""
+    fonts = [
+        Path("/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansThaiUI-Regular.ttf"),
+    ]
+    path = next((f for f in fonts if f.is_file()), None)
+    if path is None:
+        pytest.skip("Thai development regression requires installed Noto Sans Thai")
+    font_name = "M01ThaiSpacing"
+    if font_name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(font_name, str(path)))
+    source = tmp_path / "thai-words.pdf"
+    pdf = canvas.Canvas(str(source), pagesize=(595, 842))
+    pdf.setFont(font_name, 16)
+    pdf.drawString(80, 735, first)
+    pdf.drawString(80, 695, witness)
+    pdf.showPage()
+    pdf.setFont("Courier", 12)
+    pdf.drawString(80, 700, "UNCHANGED SECOND PAGE")
+    pdf.save()
+    return source
+
+
+@pytest.mark.parametrize("original,old,replacement,witness,expected", [
+    ("กาข", "กาข", "มาข", "มาข", "มาข"),
+    ("เลข ๑๒๓", "๑๒๓", "๓๒๑", "๓๒๑", "เลข ๓๒๑"),
+    ("ราคา", "ราคา", "ราชา", "ราชา", "ราชา"),
+    ("กาขขาย", "กาข", "มาข", "มาข", "มาขขาย"),
+])
+def test_thai_spacing_vowels_and_numbers_edit_source_pdf(
+        tmp_path, original, old, replacement, witness, expected):
+    source = _thai_word_pdf(tmp_path, original, witness)
+    original_hash = sha256(source.read_bytes()).digest()
+    before = PdfReader(str(source), strict=True)
+    assert old in (before.pages[0].extract_text() or "")
+    output = tmp_path / "word-edited.pdf"
+    replace_pdf_text(source, output, page=1, old_text=old, new_text=replacement)
+    after = PdfReader(str(output), strict=True)
+    extracted = after.pages[0].extract_text() or ""
+    assert expected in extracted
+    assert old not in extracted
+    assert after.pages[1].extract_text() == before.pages[1].extract_text()
+    assert sha256(source.read_bytes()).digest() == original_hash
+    # Verify actual content stream contains the replacement, not a whiteout.
+    assert any(op == b"TJ" for args, op in
+               ContentStream(after.pages[0].get_contents(), after).operations)
+
+
+@pytest.mark.parametrize("old,new", [
+    ("กาข", "กิข"),   # U+0E34 combining upper vowel
+    ("กาข", "กุข"),   # U+0E38 combining lower vowel
+    ("กาข", "ก่ข"),   # U+0E48 tone mark
+    ("กาข", "กำข"),   # U+0E33 composite vowel
+    ("กาข", "กะ"),    # variable codepoint count
+])
+def test_thai_plain_text_grammar_remains_fail_closed(old, new):
+    with pytest.raises(ValueError, match="M01"):
+        validate_edit(page=1, old_text=old, new_text=new)
+
+
+
+def test_thai_to_latin_digits_needs_genuine_same_font_witness(tmp_path):
+    """ReportLab's ASCII digits in this Thai font fixture are 0x00, not glyphs.
+
+    A superficial witness label must not allow the engine to synthesize glyphs.
+    Only a PDF with genuine single-byte mappings and visible glyphs may pass.
+    """
+    source = _thai_word_pdf(tmp_path, "ราคา ๑๒๓", "123")
+    output = tmp_path / "unwitnessed-digit.pdf"
+    with pytest.raises(ValueError, match="visible same-font glyph witnesses"):
+        replace_pdf_text(source, output, page=1, old_text="๑๒๓", new_text="123")
+    assert not output.exists()

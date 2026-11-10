@@ -91,4 +91,9 @@ test("M01 staged UI accepts bounded Thai base consonants without enabling Produc
   });
   await page.getByLabel("ข้อความใหม่ (จำนวนตัวอักษรเท่ากัน)").fill("คัข");
   await expect(action).toBeDisabled();
+  await page.getByLabel("ข้อความเดิมที่ต้องการแก้ไข").fill("เลข ๑๒๓");
+  await page.getByLabel("ข้อความใหม่ (จำนวนตัวอักษรเท่ากัน)").fill("เลข ๓๒๑");
+  await expect(action).toBeEnabled();
+  await page.getByLabel("ข้อความใหม่ (จำนวนตัวอักษรเท่ากัน)").fill("เลข ๓่๑");
+  await expect(action).toBeDisabled();
 });
