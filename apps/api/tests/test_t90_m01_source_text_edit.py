@@ -464,3 +464,17 @@ def test_thai_base_rejects_duplicate_old_span(tmp_path):
 def test_thai_base_refuses_complex_script_or_length_changes(old, new):
     with pytest.raises(ValueError, match="M01"):
         validate_edit(page=1, old_text=old, new_text=new)
+
+
+def test_thai_base_consonant_width_delta_preserves_following_text(tmp_path):
+    source = _thai_embedded_source(tmp_path)
+    output = tmp_path / "thai-new-width.pdf"
+    replace_pdf_text(source, output, page=1, old_text="กขค", new_text="กกก")
+    result = PdfReader(str(output), strict=True)
+    assert "กกก" in (result.pages[0].extract_text() or "")
+    assert "กขค" not in (result.pages[0].extract_text() or "")
+    operations = ContentStream(result.pages[0].get_contents(), result).operations
+    edits = [args[0] for args, op in operations if op == b"TJ"]
+    assert len(edits) == 1
+    assert any(isinstance(value, NumberObject) and int(value) != 0
+               for value in edits[0])
