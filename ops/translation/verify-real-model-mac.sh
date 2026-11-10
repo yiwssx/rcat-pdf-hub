@@ -75,6 +75,19 @@ with zipfile.ZipFile(archive) as z:
 PY
 done
 
+# MiniSBD sentence splitters are additional language model dependencies.
+# Pre-fetch on the throwaway host and supply them read-only to the runtime;
+# missing models must NEVER trigger runtime egress.
+mkdir -p "$root/minisbd"
+for language in en th; do
+  curl --fail --location --retry 3 --max-time 60 --silent --show-error \
+    --proto '=https' --proto-redir '=https' \
+    "https://github.com/LibreTranslate/MiniSBD/releases/download/v0.0.1/$language.onnx" \
+    -o "$root/minisbd/$language.onnx"
+  test "$(wc -c < "$root/minisbd/$language.onnx")" -gt 100000
+  sha256sum "$root/minisbd/$language.onnx"
+done
+
 # Immutable image digest, no host ports, no egress after packages are downloaded.
 image="libretranslate/libretranslate@sha256:1de2d7056bb8ad607a412f4563d9abe324ff632b43b5be9428bcc8e213aebb32"
 docker pull "$image" >/dev/null
@@ -88,6 +101,7 @@ docker run --detach --rm --name "$container" --network "$network" \
   -e LT_UPDATE_MODELS=false -e LT_DISABLE_WEB_UI=true \
   -e LT_DISABLE_FILES_TRANSLATION=true -e LT_DEBUG=false \
   -v "$root/packages:/home/libretranslate/.local/share/argos-translate/packages:ro" \
+  -v "$root/minisbd:/home/libretranslate/.local/share/argos-translate/minisbd:ro" \
   "$image" >/dev/null
 
 ready=0
