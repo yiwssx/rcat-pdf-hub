@@ -66,6 +66,13 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_migrate_site_caddy.py'
           make validate-compose
 
+      # Only when the opt-in M05 public-fixture model proof changes. Reuses
+      # the allowlisted required workflow; no new workflow/security permissions.
+      - name: Prove real isolated M05 English Thai model on public sentences
+        if: steps.scope.outputs.m05_model == 'true'
+        timeout-minutes: 15
+        run: bash ops/translation/verify-real-model-mac.sh
+
       - name: Build canonical Python 3.12 backend image
         if: steps.scope.outputs.backend == 'true'
         run: |
