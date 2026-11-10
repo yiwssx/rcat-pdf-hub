@@ -86,6 +86,10 @@ for language in en th; do
     -o "$root/minisbd/$language.onnx"
   test "$(wc -c < "$root/minisbd/$language.onnx")" -gt 100000
   sha256sum "$root/minisbd/$language.onnx"
+  case "$language" in
+    en) test "$(sha256sum "$root/minisbd/en.onnx" | cut -d" " -f1)" = "6fa9f3a3b201687bd43e329b2b0736789efc97b37883b5b759b31988dca9f353" ;;
+    th) test "$(sha256sum "$root/minisbd/th.onnx" | cut -d" " -f1)" = "62b94ddf5af61ddde4e99dbb4087be71135e26b897e898e5bcb8679842691450" ;;
+  esac
 done
 
 # Immutable image digest, no host ports, no egress after packages are downloaded.
@@ -144,6 +148,11 @@ for source, target, phrase in (
         raise SystemExit("M05: English-to-Thai output has no Thai glyphs")
     if target=="en" and not any(ch.isascii() and ch.isalpha() for ch in output):
         raise SystemExit("M05: Thai-to-English output has no English letters")
+    # Public fixed-sentence semantic sanity check, not universal Thai quality QA.
+    if source=="en" and not ("เกษตรกร" in output and "ดิน" in output):
+        raise SystemExit("M05: Thai translation lost key agricultural concepts")
+    if source=="th" and not ("soil" in output.lower() and "moisture" in output.lower()):
+        raise SystemExit("M05: English translation lost key agricultural concepts")
     print("M05_REAL_MODEL_TRANSLATION", f"{source}->{target}", repr(output))
 print("M05_REAL_MODEL_PROBE_PASS: both directions, isolated offline runtime, fixed public input")
 PY
