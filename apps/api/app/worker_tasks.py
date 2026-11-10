@@ -559,7 +559,15 @@ def process_job(job_id: str) -> str:
                     or not files[0].original_name.lower().endswith(".pdf")
                     or not 24 <= files[0].size <= TRANSLATE_MAX_BYTES
                     or not isinstance(params, dict)
-                    or set(params) != {"source_language", "target_language"}):
+                    or (set(params) not in (
+                        {"source_language", "target_language"},
+                        {"source_language", "target_language", "layout"},
+                    ))
+                    or (job.operation == "translate-pdf-text" and "layout" in params)
+                    or (job.operation == "translate-pdf-document"
+                        and params.get("layout", "translated") not in (
+                            "translated", "bilingual",
+                        ))):
                 raise ValueError("M05 owner/source/flag/parameters unauthorized")
             try:
                 actual = validate_uploaded_file(inputs[0], files[0].original_name)
