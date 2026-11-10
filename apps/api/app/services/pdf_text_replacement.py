@@ -1,9 +1,9 @@
 """M01: genuine, narrowly supported inline PDF text replacement.
 
-Only replaces an existing displayed Tj string in a standard fixed-width Courier
-font on one plain PDF page. It does NOT overlay or cover old text. This limited
-editor cannot alter arbitrary text, Thai/subset fonts, layout, images, forms,
-annotations or encrypted/signed PDFs. Never describe it as secure redaction.
+Edits a visible Tj substring in built-in Courier/Helvetica/Times Type1
+fonts. Proportional replacements use a TJ displacement preserving subsequent
+text advance. Does not overlay old text or edit Thai/Unicode/subset fonts,
+images, forms, annotations or encrypted/signed PDFs. Not redaction.
 """
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from pathlib import Path
 import tempfile
 
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import ContentStream, TextStringObject
+from pypdf.generic import ArrayObject, ContentStream, NumberObject, TextStringObject
+from reportlab.pdfbase import pdfmetrics
 
 MAX_SOURCE_BYTES = 12 * 1024 * 1024
 MAX_OUTPUT_BYTES = 24 * 1024 * 1024
@@ -21,6 +22,11 @@ MAX_TEXT_CHARS = 96
 COURIER_FONTS = frozenset({
     "/Courier", "/Courier-Bold", "/Courier-Oblique", "/Courier-BoldOblique",
 })
+PROPORTIONAL_FONTS = frozenset({
+    "/Helvetica", "/Helvetica-Bold", "/Helvetica-Oblique", "/Helvetica-BoldOblique",
+    "/Times-Roman", "/Times-Bold", "/Times-Italic", "/Times-BoldItalic",
+})
+SUPPORTED_FONTS = COURIER_FONTS | PROPORTIONAL_FONTS
 ENCODINGS = frozenset({"/WinAnsiEncoding", "/StandardEncoding"})
 
 
@@ -32,6 +38,8 @@ def validate_edit(*, page: int, old_text: str, new_text: str) -> None:
     if (not 3 <= len(old_text) <= MAX_TEXT_CHARS
             or len(new_text) != len(old_text)
             or old_text == new_text
+            # Equal glyph and space counts preserve Tc/Tw text spacing.
+            or old_text.count(" ") != new_text.count(" ")
             or not old_text.strip() or not new_text.strip()
             or any(not 32 <= ord(ch) <= 126 for ch in old_text + new_text)):
         raise ValueError("M01 requires distinct equal-length printable ASCII")
@@ -45,7 +53,7 @@ def _digest(path: Path) -> bytes:
     return digest.digest()
 
 
-def _simple_courier(page, font_name: str) -> bool:
+def _standard_font_name(page, font_name: str) -> str | None:
     try:
         resources = page["/Resources"].get_object()
         fonts = resources["/Font"].get_object()
@@ -53,12 +61,17 @@ def _simple_courier(page, font_name: str) -> bool:
         basefont = str(font["/BaseFont"])
         subtype = str(font["/Subtype"])
         encoding = str(font.get("/Encoding", "/StandardEncoding"))
-        return (subtype == "/Type1" and basefont in COURIER_FONTS
+        # AFM widths are valid only for unmodified built-in Type1 metrics.
+        if (subtype == "/Type1" and basefont in SUPPORTED_FONTS
                 and encoding in ENCODINGS
-                and "/ToUnicode" not in font
-                and "/FontDescriptor" not in font)
+                and not any(key in font for key in (
+                    "/ToUnicode", "/FontDescriptor", "/Widths", "/FirstChar",
+                    "/LastChar", "/FontFile", "/FontFile2", "/FontFile3",
+                ))):
+            return basefont[1:]
+        return None
     except (KeyError, AttributeError, TypeError):
-        return False
+        return None
 
 
 def replace_pdf_text(source: Path, destination: Path, *,
@@ -97,7 +110,7 @@ def replace_pdf_text(source: Path, destination: Path, *,
     in_text = False
     graphics_stack: list[tuple[str | None, int]] = []
     replaced = False
-    for operands, command in content.operations:
+    for op_index, (operands, command) in enumerate(content.operations):
         # PDF text font/render mode persist across BT/ET. q/Q save and restore
         # graphics state, including those text-state parameters.
         if command == b"q":
@@ -120,10 +133,32 @@ def replace_pdf_text(source: Path, destination: Path, *,
                 continue
             if str(value).count(old_text) != 1 or replaced:
                 raise ValueError("M01 source text is not unique on target page")
-            if (not in_text or render_mode != 0 or not active_font
-                    or not _simple_courier(selected, active_font)):
-                raise ValueError("M01 only supports visible standard Courier text")
-            operands[0] = TextStringObject(str(value).replace(old_text, new_text, 1))
+            font = _standard_font_name(selected, active_font) if active_font else None
+            if not in_text or render_mode != 0 or font is None:
+                raise ValueError(
+                    "M01 only supports visible built-in Courier, Helvetica or Times text"
+                )
+            original = str(value)
+            if "/" + font in COURIER_FONTS:
+                # Existing Courier Tj format stays unchanged.
+                operands[0] = TextStringObject(original.replace(old_text, new_text, 1))
+            else:
+                # Positive TJ number moves the text cursor backward by
+                # thousandths of the font size. Same character/space counts
+                # cancel Tc/Tw; the following text remains at the same X.
+                compensation = round(
+                    pdfmetrics.stringWidth(new_text, font, 1000)
+                    - pdfmetrics.stringWidth(old_text, font, 1000)
+                )
+                start = original.index(old_text)
+                prefix_and_edit = original[:start] + new_text
+                suffix = original[start + len(old_text):]
+                array = ArrayObject([TextStringObject(prefix_and_edit)])
+                if compensation:
+                    array.append(NumberObject(compensation))
+                if suffix:
+                    array.append(TextStringObject(suffix))
+                content.operations[op_index] = ([array], b"TJ")
             replaced = True
         elif command == b"TJ" and len(operands) == 1:
             if any(isinstance(value, TextStringObject) and old_text in str(value)
@@ -131,7 +166,7 @@ def replace_pdf_text(source: Path, destination: Path, *,
                 raise ValueError("M01 cannot replace text in positioned glyph arrays")
 
     if not replaced:
-        raise ValueError("M01 text not found in one editable Courier text object")
+        raise ValueError("M01 text not found in one editable built-in font text object")
 
     # A complete fresh output must preserve all pages and keep source untouched.
     writer = PdfWriter(clone_from=reader)
