@@ -88,3 +88,72 @@ def test_m03_m06_reject_oversized_source_before_hashing(tmp_path):
     with pytest.raises(ValueError, match="size cap"):
         analyze_pdf(src, tmp_path / "no-output.txt", mode="summary")
     assert not (tmp_path / "no-output.txt").exists()
+
+
+
+def test_m06_followup_context_prioritizes_current_question(tmp_path):
+    source = make_pdf(tmp_path)
+    output = tmp_path / "followup-direct.txt"
+    digest = sha256(source.read_bytes()).hexdigest()
+    analyze_pdf(source, output, mode="evidence", question="water temperature",
+                previous_question="dissolved oxygen")
+    result = output.read_text("utf-8")
+    assert "Question / คำถาม: water temperature" in result
+    assert "Previous search context / บริบทคำถามก่อนหน้า: dissolved oxygen" in result
+    assert "[Page 2]" in result  # Direct water-temperature evidence
+    assert "WARNING: No direct match" not in result
+    assert sha256(source.read_bytes()).hexdigest() == digest
+
+
+def test_m06_followup_fallback_is_clearly_not_an_answer(tmp_path):
+    source = make_pdf(tmp_path)
+    output = tmp_path / "prior-topic-only.txt"
+    analyze_pdf(source, output, mode="evidence", question="quantum reactor xyzzy",
+                previous_question="dissolved oxygen")
+    result = output.read_text("utf-8")
+    assert "WARNING: No direct match for the current question" in result
+    assert "they do not answer the new question" in result
+    assert "[Page 1]" in result
+    assert "dissolved oxygen" in result
+    assert "[Page 2]" not in result
+    assert "quantum reactor" in result.split("Question / คำถาม: ")[1]
+    # An identical new question without context must NOT reuse prior snippets.
+    second = tmp_path / "fresh-question.txt"
+    analyze_pdf(source, second, mode="evidence", question="quantum reactor xyzzy")
+    assert "No matching quoted evidence found" in second.read_text("utf-8")
+
+
+@pytest.mark.parametrize("prior", [
+    "x", "q" * 251, "\n", "dissolved\noxygen", "\x7f",
+])
+def test_m06_invalid_previous_question_rejected(tmp_path, prior):
+    source = make_pdf(tmp_path)
+    output = tmp_path / "blocked.txt"
+    with pytest.raises(ValueError, match="Question"):
+        analyze_pdf(source, output, mode="evidence", question="water temperature",
+                    previous_question=prior)
+    assert not output.exists()
+
+
+def test_m03_rejects_context_and_m06_requires_new_question(tmp_path):
+    source = make_pdf(tmp_path)
+    with pytest.raises(ValueError, match="Unexpected question"):
+        analyze_pdf(source, tmp_path / "summary-context.txt",
+                    mode="summary", previous_question="dissolved oxygen")
+    with pytest.raises(ValueError, match="Question"):
+        analyze_pdf(source, tmp_path / "empty-followup.txt",
+                    mode="evidence", question="", previous_question="dissolved oxygen")
+
+
+def test_m06_request_schema_rejects_unexpected_and_control_context():
+    from pydantic import ValidationError
+    from app.routers.pdf_extractive_assist import AssistRequest
+    req = AssistRequest(file_id="one-file", question="water temperature",
+                        previous_question="dissolved oxygen")
+    assert req.previous_question == "dissolved oxygen"
+    with pytest.raises(ValidationError):
+        AssistRequest(file_id="one-file", question="water temperature",
+                      previous_question="oxygen\npressure")
+    with pytest.raises(ValidationError):
+        AssistRequest(file_id="one-file", question="water temperature",
+                      previous_question="oxygen", unknown_field="abc")
