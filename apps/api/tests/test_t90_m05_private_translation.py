@@ -5,9 +5,11 @@ import pytest
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 
-from app.services.pdf_private_translation import (
-    _translate_local, translate_pdf_text, validate_languages,
-)
+from app.services import pdf_private_translation as service
+
+_translate_local = service._translate_local
+translate_pdf_text = service.translate_pdf_text
+validate_languages = service.validate_languages
 
 
 def sample(tmp_path):
@@ -98,7 +100,7 @@ def test_scanned_page_and_oversized_source_refused(tmp_path):
     with pytest.raises(ValueError, match="selectable text"):
         translate_pdf_text(blank, tmp_path / "empty.txt", source_language="en",
                            target_language="th", translator=lambda *_: "translated")
-    from app.services.pdf_private_translation import MAX_SOURCE_BYTES
+    MAX_SOURCE_BYTES = service.MAX_SOURCE_BYTES
     large = tmp_path / "oversize.pdf"
     with large.open("wb") as handle:
         handle.write(b"%PDF-")
@@ -110,7 +112,6 @@ def test_scanned_page_and_oversized_source_refused(tmp_path):
 
 
 def test_model_transport_is_internal_proxy_free_and_nonredirecting(monkeypatch):
-    import app.services.pdf_private_translation as service
     seen = {}
     class FakeResponse:
         status_code = 200
