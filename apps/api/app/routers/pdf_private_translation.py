@@ -24,6 +24,7 @@ class TranslatePdfRequest(BaseModel):
     file_id: str = Field(min_length=1, max_length=36)
     source_language: Literal["en", "th"]
     target_language: Literal["en", "th"]
+    layout: Literal["translated", "bilingual"] | None = None
 
     @model_validator(mode="after")
     def check_language_pair(self):
@@ -46,10 +47,15 @@ def _submit(req: TranslatePdfRequest, principal: Principal,
         raise HTTPException(status_code=415, detail="Verified PDF required")
     if not 24 <= pdf.size <= MAX_SOURCE_BYTES:
         raise HTTPException(status_code=413, detail="PDF outside M05 source budget")
-    return _create_job(db, principal, operation, [pdf.id], {
+    if operation == "translate-pdf-text" and req.layout is not None:
+        raise HTTPException(status_code=422, detail="TXT translation has no PDF layout")
+    params = {
         "source_language": req.source_language,
         "target_language": req.target_language,
-    })
+    }
+    if operation == "translate-pdf-document" and req.layout is not None:
+        params["layout"] = req.layout
+    return _create_job(db, principal, operation, [pdf.id], params)
 
 
 @router.post("/text", response_model=JobOut, status_code=202)

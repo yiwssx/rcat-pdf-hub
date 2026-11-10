@@ -27,6 +27,7 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
   const [sourceLang, setSourceLang] = useState<Lang>("en");
   const [targetLang, setTargetLang] = useState<Lang>("th");
   const [format, setFormat] = useState<"pdf" | "text">("pdf");
+  const [layout, setLayout] = useState<"translated" | "bilingual">("translated");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +69,7 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
     try {
       setJob(await createJob("translation/" + (format === "pdf" ? "pdf" : "text"), {
         file_id: selected.id, source_language: sourceLang, target_language: targetLang,
+        ...(format === "pdf" && layout === "bilingual" ? { layout: "bilingual" } : {}),
       }, SESSION_AUTH));
     } catch {
       setError("ส่งงานแปลภาษาไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และบริการแปลภาษาภายใน");
@@ -88,7 +90,8 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
         <p role="note" className="t90DocumentStageNotice">
           รองรับภาษาอังกฤษและไทย เฉพาะ PDF ที่เลือกข้อความได้
           เลือกผลลัพธ์ PDF ที่จัดหน้าใหม่ด้วยฟอนต์ภาษาไทย หรือ TXT UTF-8 ได้
-          โดยมีหมายเลขหน้าต้นฉบับประกอบ แต่ PDF ใหม่ไม่คง Layout เดิม
+          โดยมีหมายเลขหน้าต้นฉบับประกอบ สามารถเลือกรูปแบบ PDF สองภาษาเพื่อเทียบต้นฉบับกับคำแปลได้
+          แต่ PDF ใหม่ไม่คง Layout เดิม
           ต้องมีระบบแปลภาษาที่รันภายในและได้รับอนุมัติก่อนใช้งาน
           ไฟล์สแกนต้อง OCR ก่อน และคำแปลควรตรวจทานก่อนนำไปใช้จริง
         </p>
@@ -129,6 +132,16 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
                 <option value="text">TXT ข้อความแปล</option>
               </select>
             </div>
+            {format === "pdf" && (
+              <div className="t90DocumentStageField">
+                <label htmlFor="m05-layout">รูปแบบหน้า PDF</label>
+                <select id="m05-layout" value={layout} disabled={busy}
+                  onChange={(event) => { setLayout(event.target.value as "translated" | "bilingual"); setJob(null); }}>
+                  <option value="translated">คำแปลอย่างเดียว (จัดหน้าใหม่)</option>
+                  <option value="bilingual">สองภาษา: ข้อความต้นฉบับและคำแปลสำหรับตรวจทาน</option>
+                </select>
+              </div>
+            )}
             {!allowed && identity && <p role="alert" className="t90DocumentStageError">
               ต้องมีสิทธิ์ files:read, jobs:read และ pdf:extract-text
             </p>}
