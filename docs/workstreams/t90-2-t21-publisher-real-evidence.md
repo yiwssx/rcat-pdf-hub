@@ -40,3 +40,7 @@ goldens, AV/abuse/sandbox tests, and independent operator signoff.
 ## New factual observation from real CI
 
 During PR #276 preliminary [Core API CI](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/41424089415), job 125206365292, Poppler rendered page 1 with nonwhite pixels but **page 2 returned a visually blank raster**. The PDF remains two A4 pages. Without a trustworthy visual reference of the source page 2, this observation cannot distinguish intentional blank-page semantics from a LibreOffice import defect. The corrected QA script records each page's visible/blank status instead of falsely labeling both pages as nonblank. T21 remains **STAGED** and this is an unresolved `VERIFIED` gate.
+
+## MAC-safe runtime rejection (Engineering First, 2026-11-10)
+
+The existing converter previously accepted a PDF if *any* output page contained visible ink. Publisher output is now independently checked with bounded PDFium rasterization across **every** page (maximum 24 pages and limited dimensions), before delivery. A visually blank page causes an explicit failed job with no delivered PDF. This rejects also intentionally blank source pages, which are outside the narrowly supported source set; it does **not** prove the output geometry or number of source pages matches the original. The known real fixture's blank second page still leaves T21 PARTIAL and withheld in the staged converter UI. See the [five-tool MAC decision](t90-five-partial-mac-decision-20261110.md).
