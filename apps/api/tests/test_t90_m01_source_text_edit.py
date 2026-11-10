@@ -272,3 +272,100 @@ def test_embedded_truetype_rejects_missing_to_unicode_mapping(tmp_path):
         replace_pdf_text(altered, out, page=1,
                          old_text="ORIGINAL", new_text="MODIFIED")
     assert not out.exists()
+
+
+def _adjacent_tj_source(tmp_path, *, font="Helvetica", intervening=False,
+                        duplicate=False):
+    """Generate genuine adjacent Tj text operators from a real PDF."""
+    base = sample(tmp_path, font=font, duplicate=duplicate)
+    reader = PdfReader(str(base), strict=True)
+    content = ContentStream(reader.pages[0].get_contents(), reader)
+    for i, (args, command) in enumerate(content.operations):
+        if command == b"Tj" and len(args) == 1 and str(args[0]) == "FIRST ORIGINAL WORD":
+            replacement = [
+                ([TextStringObject("FIRST OR")], b"Tj"),
+                ([TextStringObject("IGINAL WORD")], b"Tj"),
+            ]
+            if intervening:
+                # Even a zero-valued state change must prevent a cross-op edit.
+                replacement.insert(1, ([NumberObject(0)], b"Tc"))
+            content.operations[i:i + 1] = replacement
+            break
+    else:
+        raise AssertionError("Expected original source Tj operator")
+    writer = PdfWriter(clone_from=reader)
+    writer.pages[0].replace_contents(content)
+    source = tmp_path / "adjacent-tj.pdf"
+    with source.open("wb") as stream:
+        writer.write(stream)
+    return source
+
+
+@pytest.mark.parametrize("font", ["Courier", "Helvetica", "Times-Roman"])
+def test_edits_across_two_adjacent_tj_operators(tmp_path, font):
+    source = _adjacent_tj_source(tmp_path, font=font)
+    original_hash = sha256(source.read_bytes()).hexdigest()
+    result = tmp_path / "two-tj-edited.pdf"
+    replace_pdf_text(source, result, page=1,
+                     old_text="ORIGINAL", new_text="MODIFIED")
+    after = PdfReader(str(result), strict=True)
+    operations = ContentStream(after.pages[0].get_contents(), after).operations
+    arrays = [args[0] for args, command in operations if command == b"TJ"]
+    assert len(arrays) == 1
+    assert "".join(str(part) for part in arrays[0]
+                   if isinstance(part, TextStringObject)) == "FIRST MODIFIED WORD"
+    expected = round(
+        pdfmetrics.stringWidth("MODIFIED", font, 1000)
+        - pdfmetrics.stringWidth("ORIGINAL", font, 1000)
+    )
+    if expected:
+        assert any(int(part) == expected for part in arrays[0]
+                   if isinstance(part, NumberObject))
+    assert "MODIFIED" in (after.pages[0].extract_text() or "")
+    assert "ORIGINAL" not in (after.pages[0].extract_text() or "")
+    assert "SECOND PAGE IS INTACT" in (after.pages[1].extract_text() or "")
+    assert sha256(source.read_bytes()).hexdigest() == original_hash
+
+
+def test_refuses_two_tj_operators_with_intervening_text_state(tmp_path):
+    source = _adjacent_tj_source(tmp_path, intervening=True)
+    output = tmp_path / "must-not-write.pdf"
+    with pytest.raises(ValueError, match="not found"):
+        replace_pdf_text(source, output, page=1,
+                         old_text="ORIGINAL", new_text="MODIFIED")
+    assert not output.exists()
+
+
+def test_refuses_ambiguous_cross_operator_and_standalone_match(tmp_path):
+    source = _adjacent_tj_source(tmp_path, duplicate=True)
+    output = tmp_path / "ambiguous.pdf"
+    with pytest.raises(ValueError, match="not unique"):
+        replace_pdf_text(source, output, page=1,
+                         old_text="ORIGINAL", new_text="MODIFIED")
+    assert not output.exists()
+
+
+def test_adjacent_tj_embedded_font_requires_witnessed_glyphs(tmp_path):
+    base = _embedded_source(tmp_path)
+    reader = PdfReader(str(base), strict=True)
+    content = ContentStream(reader.pages[0].get_contents(), reader)
+    for i, (args, command) in enumerate(content.operations):
+        if command == b"Tj" and len(args) == 1 and str(args[0]) == "FIRST ORIGINAL WORD":
+            content.operations[i:i + 1] = [
+                ([TextStringObject("FIRST OR")], b"Tj"),
+                ([TextStringObject("IGINAL WORD")], b"Tj"),
+            ]
+            break
+    else:
+        raise AssertionError("Expected embedded Tj operator")
+    writer = PdfWriter(clone_from=reader)
+    writer.pages[0].replace_contents(content)
+    source = tmp_path / "embedded-two-tj.pdf"
+    with source.open("wb") as stream:
+        writer.write(stream)
+    result = tmp_path / "embedded-two-tj-edited.pdf"
+    replace_pdf_text(source, result, page=1,
+                     old_text="ORIGINAL", new_text="MODIFIED")
+    output = PdfReader(str(result), strict=True)
+    assert "FIRST MODIFIED" in (output.pages[0].extract_text() or "")
+    assert result.stat().st_size > 100
