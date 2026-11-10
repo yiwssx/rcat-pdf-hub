@@ -1,6 +1,6 @@
 # M05 — private PDF text translator (Engineering First)
 
-**Classification: PARTIAL, no deployment authorization.**
+**Classification: PARTIAL / MAC NOT MET, no deployment authorization.**
 
 This source implements a bounded PDF selectable-text extraction pipeline, actual
 LibreTranslate-compatible HTTP translation requests, typed owner-scoped API,
@@ -44,6 +44,8 @@ No integrated model QA, Thai golden-document tests or production acceptance.
 Independent QA and Production remain deferred.
 
 **Development increment:** bilingual PDF review (the original selectable text alongside translated text per source page) has been proposed under Engineering First. Real end-to-end translation **still requires** an approved local model and remains unavailable without it; source-only tests mock the translation/renderer dependencies and must not be mistaken for on-premise model provisioning.
+
+**MAC operational improvement:** An authenticated, default-OFF /api/v1/pdf/translation/readiness route calls the existing private model probe with two fixed public test sentences. Staged Web checks it automatically and disables submission if either direction is unavailable. This is a fail-closed guard against queuing doomed jobs; a successful probe is NOT model-license, translation-quality, host or release acceptance. See [five-tool MAC decision](t90-five-partial-mac-decision-20261110.md).
 
 **Next:** an [offline-model source profile](../../ops/translation/README.md)
 and a bilingual API probe now exist on a guarded development branch, but
