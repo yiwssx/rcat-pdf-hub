@@ -93,7 +93,7 @@ if [[ "$ready" != 1 ]]; then
 fi
 
 # Query from inside the same offline service container. No institutional PDFs.
-docker exec "$container" /app/venv/bin/python - <<'PY'
+docker exec -i "$container" /app/venv/bin/python - <<'PY'
 import json
 import urllib.request
 base = "http://127.0.0.1:5000"
