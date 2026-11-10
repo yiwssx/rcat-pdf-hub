@@ -43,7 +43,8 @@ Required CI and small service/queue/browser tests are the development gate.
 No integrated model QA, Thai golden-document tests or production acceptance.
 Independent QA and Production remain deferred.
 
-**Next:** an authorized operator must separately provision/validate a licensed
-local English↔Thai model, then visually inspect real Thai shaping, overflow
-and page semantics on trusted examples. No claim that all original PDF
-formatting or genuine model quality is solved; M05 remains PARTIAL.
+**Next:** an [offline-model source profile](../../ops/translation/README.md)
+and a bilingual API probe now exist on a guarded development branch, but
+no actual local models are installed or verified. A separately authorized
+operator must validate the license and provision the model, then inspect real
+Thai quality and layout. M05 remains PARTIAL.
