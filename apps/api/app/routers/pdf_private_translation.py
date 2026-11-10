@@ -19,11 +19,6 @@ router = APIRouter(prefix="/api/v1/pdf/translation", tags=["pdf-translation (sta
 settings = get_settings()
 
 
-class TranslationReadiness(BaseModel):
-    available: bool
-    note: str
-
-
 class TranslatePdfRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     file_id: str = Field(min_length=1, max_length=36)
@@ -79,28 +74,3 @@ def translate_document(
     db: Session = Depends(get_db),
 ) -> JobOut:
     return _submit(req, principal, db, "translate-pdf-document")
-
-
-@router.get("/readiness", response_model=TranslationReadiness)
-def translation_readiness(
-    principal: Principal = Depends(require_scope("pdf:extract-text")),
-) -> TranslationReadiness:
-    """Read-only staged readiness, with fixed public probes and no user PDF.
-
-    A responsive model API is not a license, quality or Production approval.
-    Clients must not enqueue jobs when the private translator is unavailable.
-    """
-    if not settings.pdf_translation_tools_enabled:
-        raise HTTPException(status_code=404, detail="M05 translation disabled")
-    from app.services.m05_offline_model_probe import probe_local_translation_model
-    try:
-        probe_local_translation_model()
-    except ValueError:
-        return TranslationReadiness(
-            available=False,
-            note="Private en/th translation model unavailable; ask administrator",
-        )
-    return TranslationReadiness(
-        available=True,
-        note="Private en/th API responded; translation quality not certified",
-    )
