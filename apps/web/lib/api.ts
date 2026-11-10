@@ -389,6 +389,14 @@ export async function bulkDeleteFiles(fileIds: string[], auth: string): Promise<
   }));
 }
 
+export type PdfTranslationReadiness = { available: boolean; note: string };
+
+export async function getPdfTranslationReadiness(auth: string): Promise<PdfTranslationReadiness> {
+  return expectJson<PdfTranslationReadiness>(await request("/api/v1/pdf/translation/readiness", {
+    headers: headers(auth), cache: "no-store",
+  }));
+}
+
 export async function createJob(path: string, payload: object, auth: string): Promise<Job> {
   return expectJson<Job>(await request(`/api/v1/pdf/${path}`, {
     method: "POST",
