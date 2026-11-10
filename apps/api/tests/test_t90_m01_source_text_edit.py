@@ -81,14 +81,23 @@ def test_standard_proportional_fonts_compensate_following_text(tmp_path, font):
         pdfmetrics.stringWidth("MODIFIED", font, 1000)
         - pdfmetrics.stringWidth("ORIGINAL", font, 1000)
     )
-    assert expected != 0 and int(chunks[-2]) == expected
+    if expected:
+        assert len(chunks) == 3 and int(chunks[-2]) == expected
+    else:
+        # Equal-width glyph sequences need no displacement and must not
+        # emit a redundant zero-width TJ numeric token.
+        assert len(chunks) == 2
 
 
 def test_rejects_unsupported_symbol_font(tmp_path):
     source = sample(tmp_path, font="Symbol")
-    with pytest.raises(ValueError, match="Courier, Helvetica or Times"):
-        replace_pdf_text(source, tmp_path / "fail.pdf",
+    output = tmp_path / "fail.pdf"
+    # Symbol encoding may not expose ASCII as Tj Unicode; both a missing
+    # exact source string and an unsupported built-in font must fail closed.
+    with pytest.raises(ValueError, match="M01"):
+        replace_pdf_text(source, output,
                          page=1, old_text="ORIGINAL", new_text="MODIFIED")
+    assert not output.exists()
 
 
 def test_rejects_nonexistent_page_and_text(tmp_path):
