@@ -60,3 +60,44 @@ test("M03/M06 missing text scope rejects submission", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText("ไม่มีสิทธิ์");
   await expect(page.getByRole("button", { name: "สร้างสรุปจากต้นฉบับ" })).toBeDisabled();
 });
+
+
+test("M06 can ask again with explicit prior-question context and retains bounded result links", async ({ page }) => {
+  test.skip(!enabled, "Requires reviewed dev-only M06 flags");
+  await mock(page);
+  const requests: unknown[] = [];
+  await page.route("**/api/v1/pdf/document-assist/evidence", async (route) => {
+    requests.push(route.request().postDataJSON());
+    await route.fulfill({ status: 202, json: {
+      id: "m06-turn-" + requests.length,
+      operation: "pdf-extractive-evidence", status: "queued",
+      progress: 0, input_file_ids: [pdf.id], output_file_id: null,
+      params: {}, error: null, requested_by: owner,
+    } });
+  });
+  await page.goto("/staged/document-assist?tool=evidence");
+  const input = page.getByLabel(/คำถามหรือข้อความที่ต้องการค้นหา/);
+  const submit = page.getByRole("button", { name: "ค้นหลักฐานใน PDF" });
+  await input.fill("dissolved oxygen");
+  await submit.click();
+  await expect(page.getByRole("region", { name: "ประวัติคำถามใน PDF นี้" })
+    .getByRole("link", { name: "ดูหลักฐานที่อ้างเลขหน้า" })).toHaveCount(1);
+  await expect(page.getByLabel(/ใช้คำถามก่อนหน้าเป็นบริบทช่วยค้นหา/)).toBeChecked();
+
+  await input.fill("water temperature");
+  await submit.click();
+  await expect(page.getByRole("region", { name: "ประวัติคำถามใน PDF นี้" })
+    .getByRole("link", { name: "ดูหลักฐานที่อ้างเลขหน้า" })).toHaveCount(2);
+  expect(requests).toEqual([
+    { file_id: pdf.id, question: "dissolved oxygen" },
+    { file_id: pdf.id, question: "water temperature", previous_question: "dissolved oxygen" },
+  ]);
+  await page.getByLabel(/ใช้คำถามก่อนหน้าเป็นบริบทช่วยค้นหา/).uncheck();
+  await input.fill("school reports");
+  await submit.click();
+  expect(requests[2]).toEqual({ file_id: pdf.id, question: "school reports" });
+  await expect(page.getByRole("region", { name: "ประวัติคำถามใน PDF นี้" })
+    .getByRole("link", { name: "ดูหลักฐานที่อ้างเลขหน้า" })).toHaveCount(3);
+  await page.getByRole("button", { name: "ล้างประวัติคำถามในหน้านี้" }).click();
+  await expect(page.getByRole("region", { name: "ประวัติคำถามใน PDF นี้" })).toHaveCount(0);
+});

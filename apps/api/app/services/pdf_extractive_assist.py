@@ -82,33 +82,67 @@ def _summary(rows: list[tuple[int, str]]) -> list[tuple[int, str]]:
     return [rows[index] for index in selected]
 
 
-def _evidence(rows: list[tuple[int, str]], question: str) -> list[tuple[int, str]]:
-    if type(question) is not str or not 3 <= len(question.strip()) <= 250:
-        raise ValueError("Question must be between 3 and 250 characters")
-    if any(ord(c) < 32 for c in question):
+def _validate_question(value: str, *, optional: bool = False) -> str:
+    """Apply identical bounds to primary and previous-question search terms."""
+    if type(value) is not str:
+        raise ValueError("Question must be text")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
         raise ValueError("Question contains control characters")
-    terms = set(_tokens(question))
-    if not terms:
+    normalized = value.strip()
+    if optional and not normalized:
+        return ""
+    if not 3 <= len(normalized) <= 250:
+        raise ValueError("Question must be between 3 and 250 characters")
+    if not _tokens(normalized):
         raise ValueError("Question has no searchable words")
-    phrase = question.casefold().strip()
-    ranked = []
+    return normalized
+
+
+def _evidence(rows: list[tuple[int, str]], question: str,
+              previous_question: str = "") -> tuple[list[tuple[int, str]], bool]:
+    """Select only actual source excerpts; use previous query as a weak hint.
+
+    Direct matches always outrank previous-context terms. When there are no
+    direct matches, any previous-topic excerpts are explicitly labeled as
+    fallback and must not be represented as an answer to the new question.
+    """
+    current = _validate_question(question)
+    previous = _validate_question(previous_question, optional=True)
+    terms = set(_tokens(current))
+    context_terms = set(_tokens(previous)) if previous else set()
+    phrase = current.casefold()
+    direct = []
+    fallback = []
     for index, (_, fragment) in enumerate(rows):
+        folded = fragment.casefold()
         found = set(_tokens(fragment))
-        matches = len(terms.intersection(found))
-        if phrase in fragment.casefold():
-            matches += len(terms) + 2
-        if matches:
-            ranked.append((matches, -index, index))
-    return [rows[item[2]] for item in sorted(ranked, reverse=True)[:MAX_SNIPPETS]]
+        hits = len(terms.intersection(found))
+        # Prefer a literal question phrase but never manufacture an excerpt.
+        direct_score = 4 * hits + (4 + len(terms) if phrase in folded else 0)
+        context_score = len(context_terms.intersection(found))
+        if direct_score:
+            direct.append((direct_score, context_score, -index, index))
+        elif context_score:
+            fallback.append((context_score, -index, index))
+    if direct:
+        return ([rows[item[3]] for item in sorted(direct, reverse=True)[:MAX_SNIPPETS]], False)
+    if fallback:
+        return ([rows[item[2]] for item in sorted(fallback, reverse=True)[:MAX_SNIPPETS]], True)
+    return ([], False)
 
 
 def analyze_pdf(source: Path, destination: Path, *,
-                mode: str, question: str = "") -> None:
+                mode: str, question: str = "", previous_question: str = "") -> None:
     """Write bounded UTF-8 evidence with page citations and immutable source."""
     if type(mode) is not str or mode not in {"summary", "evidence"}:
         raise ValueError("Unsupported M03/M06 mode")
-    if type(question) is not str or (mode == "summary" and question):
+    if type(question) is not str or type(previous_question) is not str:
+        raise ValueError("Questions must be strings")
+    if mode == "summary" and (question or previous_question):
         raise ValueError("Unexpected question for extractive summary")
+    if mode == "evidence":
+        _validate_question(question)
+        _validate_question(previous_question, optional=True)
     if source.resolve() == destination.resolve() or destination.exists() or destination.is_symlink():
         raise ValueError("Source and output must be separate new files")
     # Enforce source budget BEFORE hashing (do not read oversized uploads into memory).
@@ -116,7 +150,11 @@ def analyze_pdf(source: Path, destination: Path, *,
         raise ValueError("PDF exceeds extractive assistant source size cap")
     before = sha256(source.read_bytes()).digest()
     rows = _load(source)
-    found = _summary(rows) if mode == "summary" else _evidence(rows, question)
+    fallback_used = False
+    if mode == "summary":
+        found = _summary(rows)
+    else:
+        found, fallback_used = _evidence(rows, question, previous_question)
     title = (
         "EXTRACTIVE PDF SUMMARY / สรุปแบบคัดข้อความจากต้นฉบับ\n"
         if mode == "summary"
@@ -130,7 +168,22 @@ def analyze_pdf(source: Path, destination: Path, *,
                    for page, excerpt in found)
     if not found:
         body = "No matching quoted evidence found in the available text layer.\n"
-    result = (title + caveat + body).encode("utf-8")
+    if mode == "evidence":
+        # Inform the operator when lexical matching could not find a direct
+        # excerpt; a previous topic is a search fallback, NOT an answer.
+        provenance = "Question / คำถาม: " + question.strip() + "\n"
+        if previous_question.strip():
+            provenance += "Previous search context / บริบทคำถามก่อนหน้า: " + previous_question.strip() + "\n"
+        if fallback_used:
+            provenance += (
+                "WARNING: No direct match for the current question. The "
+                "excerpts below match only the previous topic; they do not "
+                "answer the new question.\n"
+            )
+        provenance += "\n"
+    else:
+        provenance = ""
+    result = (title + caveat + provenance + body).encode("utf-8")
     if not 10 <= len(result) <= MAX_OUTPUT_BYTES:
         raise ValueError("Extractive result exceeds output budget")
     with TemporaryDirectory(prefix="pdfhub-m03-m06-", dir=destination.parent) as temp:

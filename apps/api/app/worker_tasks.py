@@ -589,7 +589,9 @@ def process_job(job_id: str) -> str:
                     or not files[0].original_name.lower().endswith(".pdf")
                     or not 24 <= files[0].size <= ASSIST_MAX_BYTES
                     or not isinstance(params, dict)
-                    or (set(params) != (set() if mode == "summary" else {"question"}))):
+                    or (mode == "summary" and bool(params))
+                    or (mode == "evidence" and set(params) not in (
+                        {"question"}, {"question", "previous_question"}))):
                 raise ValueError("M03/M06 owner, source, flag or parameters unauthorized")
             try:
                 checked = validate_uploaded_file(inputs[0], files[0].original_name)
@@ -598,7 +600,8 @@ def process_job(job_id: str) -> str:
             if checked != "application/pdf":
                 raise ValueError("M03/M06 source PDF MIME mismatch")
             analyze_pdf(inputs[0], output, mode=mode,
-                        question=params.get("question", ""))
+                        question=params.get("question", ""),
+                        previous_question=params.get("previous_question", ""))
 
         elif job.operation == "flatten-pdf-visual":
             from app.filetypes import validate_uploaded_file
