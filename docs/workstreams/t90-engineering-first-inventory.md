@@ -1,6 +1,6 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-10, protected main after PR #364; M05 bilingual PDF source-review mode is proposed under Engineering First, subject to the protected PR checks and merge. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
+**Snapshot:** 2026-11-10, protected main after PR #365; five-tool [MAC decision](t90-five-partial-mac-decision-20261110.md) records three source-complete bounded workflows and two still incomplete external prerequisites, subject to this change passing protected merge. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
 
 ## Scope and definitions
 
@@ -11,20 +11,20 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
 - **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 has no accepted MOBI output engine. Blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup:** CODE COMPLETE **78**, PARTIAL **5**, MISSING **0**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
+**Dev-only rollup (MAC-scoped):** CODE COMPLETE **81**, PARTIAL **2**, MISSING **0**, BLOCKED **7** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Manage PDF | 29 | 4 | 0 | 0 | 33 |
+| Manage PDF | 32 | 1 | 0 | 0 | 33 |
 | Convert to PDF | 33 | 1 | 0 | 6 | 40 |
 | Convert from PDF | 16 | 0 | 0 | 1 | 17 |
-| **Total** | **78** | **5** | **0** | **7** | **90** |
+| **Total** | **81** | **2** | **0** | **7** | **90** |
 
 ## Prioritized engineering leverage
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search; six-turn contextual evidence follow-up was merged in PR #364 (not generative chat). M01 supports bounded single-operator text editing, multi-fragment TJ and exactly two adjacent Tj operators plus witnessed embedded TrueType ASCII; bounded Thai consonants, non-combining vowels and Thai digits are merged (PARTIAL), M12 visual e-signature is PARTIAL (no certificate-backed signature), and M05 private-model text-only translation is PARTIAL (local model not provisioned and no translated PDF layout).
+3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search; six-turn contextual evidence follow-up was merged in PR #364 (not generative chat). M01 supports bounded single-operator text editing, multi-fragment TJ and exactly two adjacent Tj operators plus witnessed embedded TrueType ASCII; bounded Thai consonants, non-combining vowels and Thai digits are merged (MAC-scoped CODE COMPLETE for literal source text only), M12 visual e-signature is MAC-scoped CODE COMPLETE (no certificate-backed signature), M06 evidence-only question workflow is MAC-scoped CODE COMPLETE (not an LLM chatbot), and M05 translation remains PARTIAL (approved private model not provisioned; TXT, translated PDF and bilingual re-layout code exist).
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -32,18 +32,18 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 
 | ID | Tool | Dev status | Engine/source evidence | Next engineering work |
 | --- | --- | --- | --- | --- |
-| M01 | Edit PDF | **PARTIAL** | Real same-length ASCII edits in one Tj/TJ or two consecutive Tj operators, plus witnessed embedded TrueType with strict ToUnicode/Widths checks; bounded Thai consonant CMap edit merged; non-combining vowels/Thai numerals proposed [M01 source workflow](t90-m01-text-editor-engineering-first.md) | No Thai combining vowels, composite Sara Am, tone marks, composite fonts or unseen subset glyphs or text crossing intervening operators; no general editor or Production activation |
+| M01 | Edit PDF | **CODE COMPLETE** | MAC-scoped exact, same-length source-object text replacement with real content-byte changes; bounded ASCII and witnessed embedded TrueType plain Thai consonants, non-combining vowels and numerals; original source immutable; [scope](t90-m01-text-editor-engineering-first.md) | Not a general PDF editor: no Thai marks/complex shaping, CID, unseen subset glyphs, OCR, annotations or geometry edits; default OFF, QA deferred |
 | M02 | Compress PDF | **CODE COMPLETE** | Legacy `compress` | Defer independent QA; preserve code/CI |
 | M03 | PDF Summarizer | **CODE COMPLETE** | Genuine bounded extractive PDF summary, quoted page-cited TXT [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353) | No abstraction, OCR or generative inference; QA deferred, flags OFF |
 | M04 | Merge PDF | **CODE COMPLETE** | Legacy `merge` | Defer independent QA; preserve code/CI |
-| M05 | PDF Translator | **PARTIAL** | Owner-bound API→RQ→worker→TXT/new PDF; guarded Web, plus optional [offline Argos model source](../../ops/translation/README.md) and bilingual endpoint probe; proposed [bilingual PDF source-review mode](t90-m05-private-translator-engineering-first.md) prints extracted original and translated text together by source page | Real approved offline model not installed or Thai quality validated; text-only re-layout, not original geometry; flags OFF |
-| M06 | Chat with PDF | **PARTIAL** | Actual quoted PDF evidence search [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353); merged [bounded follow-up evidence workflow PR #364](https://github.com/yiwssx/rcat-pdf-hub/pull/364) retains six local questions, per-job result links and previous-question lexical context | Direct excerpt matches always precede context-only excerpts; fallback clearly labeled as non-answer. Generative conversation, semantic inference and OCR still unavailable; gates OFF |
+| M05 | PDF Translator | **PARTIAL** | Real owner-bound API→RQ→worker→TXT, translated PDF and bilingual review PDF engine; staged Web; [offline model profile](../../ops/translation/README.md) plus new authenticated, default-OFF model-readiness check prevents unsupported submissions | MAC NOT MET: approved local en/th translator and real bilingual quality proof absent; text-only re-layout, not source geometry; flags OFF |
+| M06 | Chat with PDF | **CODE COMPLETE** | MAC-scoped question-driven cited evidence lookup; [PR #364](https://github.com/yiwssx/rcat-pdf-hub/pull/364) six local questions, job links and optional previous-topic lexical context; original PDF quotes only | Not generative or semantic chat: no synthesized answers or OCR; prior-topic fallback explicitly marked non-answer; flags OFF, QA deferred |
 | M07 | Split PDF | **CODE COMPLETE** | PR [#300](https://github.com/yiwssx/rcat-pdf-hub/pull/300) bounded ZIP engine + [#344](https://github.com/yiwssx/rcat-pdf-hub/pull/344) guarded owner-scoped Web input/submit/results | Supports non-encrypted, unsigned, non-form, non-annotated PDF ≤16 MiB/200 pages; up to 80 unique pages; all gates OFF; QA deferred |
 | M08 | Unlock PDF | **CODE COMPLETE** | Pre-existing AES-GCM one-use password handoff, typed owner API/worker + separate institutional Web [PR #352](https://github.com/yiwssx/rcat-pdf-hub/pull/352) | No persistent passwords, external activation/QA deferred |
 | M09 | Protect PDF | **CODE COMPLETE** | Pre-existing AES-256 protected PDF engine, distinct AEAD handoff + scoped institutional Web [PR #352](https://github.com/yiwssx/rcat-pdf-hub/pull/352) | No credential logging/storage in jobs; activation/QA deferred |
 | M10 | Rotate PDF | **CODE COMPLETE** | Legacy `rotate` | Defer independent QA; preserve code/CI |
 | M11 | Crop PDF | **CODE COMPLETE** | PR [#236](https://github.com/yiwssx/rcat-pdf-hub/pull/236) · bounded engine | Defer independent QA; preserve code/CI |
-| M12 | Sign PDF | **PARTIAL** | Real drawn/PNG visual signature uses owner-bound M23 PDF image overlay and [M12 workflow](t90-m12-visual-signature-engineering-first.md) | Image signature only; no certificate-backed CMS/PAdES cryptographic signature, QA deferred |
+| M12 | Sign PDF | **CODE COMPLETE** | MAC-scoped authentic drawn/PNG **visual** signature on owned PDF using M23 overlay; page/geometry and owner-scoped Web→worker→PDF [workflow](t90-m12-visual-signature-engineering-first.md) | No cryptographic CMS/PAdES, certificate, timestamp or identity proof; image signature only, QA/activation deferred |
 | M13 | Edit metadata | **CODE COMPLETE** | PR [#235](https://github.com/yiwssx/rcat-pdf-hub/pull/235) · bounded engine | Defer independent QA; preserve code/CI |
 | M14 | Delete pages | **CODE COMPLETE** | Guarded owner-bound delete-pages backend + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
 | M15 | Rearrange pages | **CODE COMPLETE** | Guarded reorder-pages backend + shared Web [PR #346](https://github.com/yiwssx/rcat-pdf-hub/pull/346) | Limited source types, QA deferred |
@@ -85,7 +85,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | T18 | RTF to PDF | **CODE COMPLETE** | `rtf-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T19 | MOBI to PDF | **CODE COMPLETE** | `mobi-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T20 | DWG to PDF | **BLOCKED** | Native/URL prototype only (OFF) | Runtime/license/egress dependency; keep OFF |
-| T21 | PUB to PDF | **PARTIAL** | `pub-to-pdf` (guarded) | Known Publisher page 2 blank risk; keep subset under review |
+| T21 | PUB to PDF | **PARTIAL** | Genuine bounded v3 OLE Publisher→LibreOffice PDF import plus new Publisher-only all-output-page PDFium ink guard; [source evidence](t90-2-t21-publisher-real-evidence.md) | MAC NOT MET: actual source page-2 contents/fidelity unverified; rejects suspicious blank page, T21 remains withheld and flags OFF |
 | T22 | XPS to PDF | **CODE COMPLETE** | `xps-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T23 | XML to PDF | **CODE COMPLETE** | `xml-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T24 | WebP to PDF | **CODE COMPLETE** | `webp-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
