@@ -3,6 +3,8 @@ from hashlib import sha256
 
 import pytest
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import ContentStream
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 
 from app.services.pdf_text_replacement import replace_pdf_text, validate_edit
@@ -42,6 +44,7 @@ def test_replaces_existing_courier_text_without_overlay(tmp_path):
 @pytest.mark.parametrize("previous,replacement", [
     ("ORIGINAL", "NEW"), ("ORIGINAL", "ORIGINAL"),
     ("ไทย", "abc"), ("WORD", "NO\n!"), ("  ", "ab"), ("A" * 97, "B" * 97),
+    ("A B", "ABC"),
 ])
 def test_invalid_text_parameters_rejected(previous, replacement):
     with pytest.raises(ValueError):
@@ -56,9 +59,34 @@ def test_rejects_duplicate_source_without_writing(tmp_path):
     assert not result.exists()
 
 
-def test_rejects_unsupported_proportional_fonts(tmp_path):
-    source = sample(tmp_path, font="Helvetica")
-    with pytest.raises(ValueError, match="Courier"):
+@pytest.mark.parametrize("font", ["Helvetica", "Helvetica-Bold", "Times-Roman", "Times-Bold"])
+def test_standard_proportional_fonts_compensate_following_text(tmp_path, font):
+    source = sample(tmp_path, font=font)
+    before = PdfReader(str(source), strict=True)
+    output = tmp_path / "proportional.pdf"
+    replace_pdf_text(source, output, page=1,
+                     old_text="ORIGINAL", new_text="MODIFIED")
+    after = PdfReader(str(output), strict=True)
+    extracted = after.pages[0].extract_text() or ""
+    assert "MODIFIED" in extracted and "ORIGINAL" not in extracted
+    assert "WORD" in extracted
+    assert after.pages[1].extract_text() == before.pages[1].extract_text()
+    operations = ContentStream(after.pages[0].get_contents(), after).operations
+    arrays = [args[0] for args, cmd in operations if cmd == b"TJ"]
+    assert len(arrays) == 1
+    chunks = arrays[0]
+    assert "MODIFIED" in str(chunks[0])
+    assert str(chunks[-1]) == " WORD"
+    expected = round(
+        pdfmetrics.stringWidth("MODIFIED", font, 1000)
+        - pdfmetrics.stringWidth("ORIGINAL", font, 1000)
+    )
+    assert expected != 0 and int(chunks[-2]) == expected
+
+
+def test_rejects_unsupported_symbol_font(tmp_path):
+    source = sample(tmp_path, font="Symbol")
+    with pytest.raises(ValueError, match="Courier, Helvetica or Times"):
         replace_pdf_text(source, tmp_path / "fail.pdf",
                          page=1, old_text="ORIGINAL", new_text="MODIFIED")
 

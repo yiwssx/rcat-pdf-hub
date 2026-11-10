@@ -23,6 +23,7 @@ function hasScope(me: AuthMe | null, scope: string): boolean {
 function validReplacement(oldText: string, newText: string): boolean {
   return oldText.length >= 3 && oldText.length <= 96
     && oldText.length === newText.length && oldText !== newText
+    && oldText.split(" ").length === newText.split(" ").length
     && Boolean(oldText.trim() && newText.trim())
     && TEXT.test(oldText) && TEXT.test(newText);
 }
@@ -79,7 +80,7 @@ export function StagedPdfTextEditorClient({ requestedFileId }: { requestedFileId
         file_id: selected.id, page, old_text: oldText, new_text: newText,
       }, SESSION_AUTH));
     } catch {
-      setError("ไม่สามารถแก้ไขข้อความได้ ไฟล์อาจไม่ใช่ Courier แบบที่รองรับ หรือข้อความไม่ตรงหนึ่งตำแหน่ง");
+      setError("ไม่สามารถแก้ไขข้อความได้ ไฟล์อาจไม่ใช้ฟอนต์มาตรฐานที่รองรับ หรือข้อความไม่ได้ปรากฏใน Tj เพียงตำแหน่งเดียว");
     } finally {
       setBusy(false);
     }
@@ -96,9 +97,10 @@ export function StagedPdfTextEditorClient({ requestedFileId }: { requestedFileId
         <h1>แก้ไขข้อความเดิมใน PDF</h1>
         <p>แทนที่ข้อความที่มีอยู่จริงใน PDF โดยแก้คำสั่งแสดงข้อความ ไม่ใช่วางข้อความทับ</p>
         <p className="t90DocumentStageNotice" role="note">
-          รองรับข้อความ ASCII ที่มองเห็นได้ในฟอนต์ Courier มาตรฐานเท่านั้น
-          ข้อความใหม่ต้องมีจำนวนตัวอักษรเท่ากับเดิม และข้อความเดิมต้องปรากฏหนึ่งครั้งในหน้าที่เลือก
-          ไม่รองรับ PDF ภาษาไทย ฟอนต์ฝัง ไฟล์สแกน ลายเซ็น แบบฟอร์ม หรือการ Redact
+          รองรับข้อความ ASCII ในฟอนต์มาตรฐาน Courier, Helvetica และ Times
+          ข้อความใหม่ต้องยาวเท่าเดิมและมีจำนวนช่องว่างเท่าเดิม เพื่อคงระยะข้อความถัดไป
+          ข้อความเดิมต้องปรากฏครั้งเดียวในหน้าที่เลือก ไม่รองรับ PDF ภาษาไทย
+          ฟอนต์ฝัง ไฟล์สแกน ลายเซ็น แบบฟอร์ม หรือการ Redact
           ผลลัพธ์เป็นไฟล์สำเนาและยังไม่ได้เปิดใช้ Production
         </p>
         {loading ? <p role="status">กำลังตรวจสอบบัญชีและ PDF ของฉัน…</p> : (

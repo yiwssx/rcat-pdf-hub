@@ -24,7 +24,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 33 selectable source-code formats (T21 Publisher withheld). Existing upload, queue, worker, result/download reused; default OFF and not certified.
 2. **DONE — shared From-PDF Web workflow PR #340:** 16 selectable guarded exporter source-code tools using existing scopes and queues. No F15 MOBI claim, default OFF.
-3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports a strictly bounded Courier text-object edit (PARTIAL), M12 visual e-signature is PARTIAL (no certificate-backed signature), and M05 private-model text-only translation is PARTIAL (local model not provisioned and no translated PDF layout).
+3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search. M01 supports bounded Courier/Helvetica/Times text editing with proportional-width compensation (PARTIAL), M12 visual e-signature is PARTIAL (no certificate-backed signature), and M05 private-model text-only translation is PARTIAL (local model not provisioned and no translated PDF layout).
 4. **True technical blockers:** six native/URL T formats, F15 MOBI, and T21 publisher incomplete page source fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
@@ -32,7 +32,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 
 | ID | Tool | Dev status | Engine/source evidence | Next engineering work |
 | --- | --- | --- | --- | --- |
-| M01 | Edit PDF | **PARTIAL** | Real, bounded same-length Courier text-object replacement in [M01 source workflow](t90-m01-text-editor-engineering-first.md) | Existing Tj text edited, but not a general PDF/Thai/layout editor; no Production activation |
+| M01 | Edit PDF | **PARTIAL** | Real same-length ASCII Tj replacement in built-in Courier/Helvetica/Times with proportional-width TJ compensation [M01 source workflow](t90-m01-text-editor-engineering-first.md) | No Thai/custom fonts, embedded glyphs, general PDF layout editing or Production activation |
 | M02 | Compress PDF | **CODE COMPLETE** | Legacy `compress` | Defer independent QA; preserve code/CI |
 | M03 | PDF Summarizer | **CODE COMPLETE** | Genuine bounded extractive PDF summary, quoted page-cited TXT [PR #353](https://github.com/yiwssx/rcat-pdf-hub/pull/353) | No abstraction, OCR or generative inference; QA deferred, flags OFF |
 | M04 | Merge PDF | **CODE COMPLETE** | Legacy `merge` | Defer independent QA; preserve code/CI |
