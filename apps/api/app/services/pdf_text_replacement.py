@@ -189,7 +189,7 @@ def _width_delta(old: str, new: str, font: str,
 
 def _rewrite_tj(segments: ArrayObject, old: str, new: str, font: str,
                 widths: dict[str, float] | None) -> ArrayObject:
-    """Retain existing kerning offsets; repair each changed segment's advance."""
+    """Keep source kerning intact; compensate only after the edited span."""
     if len(segments) > 64:
         raise ValueError("M01 TJ array exceeds bounded operator complexity")
     texts = [str(part) for part in segments if isinstance(part, TextStringObject)]
@@ -229,11 +229,21 @@ def _rewrite_tj(segments: ArrayObject, old: str, new: str, font: str,
             old_fragment = text[left:right]
             if old_fragment.count(" ") != replacement.count(" "):
                 raise ValueError("M01 TJ fragment would change word spacing")
-            revised = text[:left] + replacement + text[right:]
-            answer.append(TextStringObject(revised))
-            delta = _width_delta(old_fragment, replacement, font, widths)
-            if delta:
-                answer.append(NumberObject(delta))
+            if to_index == end:
+                # Do not insert corrections BETWEEN edited glyph fragments:
+                # that can create an artificial visible gap inside a word.
+                # Correct the TOTAL advance once after the last edited glyph,
+                # before any untouched suffix or following positioned run.
+                answer.append(TextStringObject(text[:left] + replacement))
+                delta = _width_delta(old, new, font, widths)
+                if delta:
+                    answer.append(NumberObject(delta))
+                if text[right:]:
+                    answer.append(TextStringObject(text[right:]))
+            else:
+                answer.append(TextStringObject(
+                    text[:left] + replacement + text[right:]
+                ))
         else:
             answer.append(part)
         cursor += len(text)
