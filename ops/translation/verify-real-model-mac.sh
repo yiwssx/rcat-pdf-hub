@@ -7,6 +7,11 @@ root="$(mktemp -d)"
 network="m05-ci-$RANDOM"
 container="pdf-translate-mac-$RANDOM"
 cleanup() {
+  result=$?
+  if [[ "$result" -ne 0 ]]; then
+    echo "M05 disposable offline model diagnostic (bounded log tail):" >&2
+    docker logs --tail 80 "$container" >&2 || true
+  fi
   docker rm -f "$container" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
   rm -rf "$root"
@@ -21,6 +26,10 @@ for pair in en_th th_en; do
     -o "$archive"
   test "$(wc -c < "$archive")" -gt 20000000
   sha256sum "$archive"
+  case "$pair" in
+    en_th) test "$(sha256sum "$archive" | cut -d" " -f1)" = "b0fd94eceb04b967b91c2c7d8d1f7b5493c25362e43027a52649242385d0b2a3" ;;
+    th_en) test "$(sha256sum "$archive" | cut -d" " -f1)" = "b6642c07389b156f568aa08c64140243bc1b1926f82df2559a2eae08316f84ce" ;;
+  esac
   python3 - "$archive" "$root/packages/translate-$pair-1_9" "$pair" <<'PY'
 import json
 from pathlib import Path
