@@ -45,7 +45,7 @@ def test_replaces_existing_courier_text_without_overlay(tmp_path):
 
 @pytest.mark.parametrize("previous,replacement", [
     ("ORIGINAL", "NEW"), ("ORIGINAL", "ORIGINAL"),
-    ("ไทย", "abc"), ("WORD", "NO\n!"), ("  ", "ab"), ("A" * 97, "B" * 97),
+    ("ที้", "abc"), ("WORD", "NO\n!"), ("  ", "ab"), ("A" * 97, "B" * 97),
     ("A B", "ABC"),
 ])
 def test_invalid_text_parameters_rejected(previous, replacement):
@@ -509,7 +509,6 @@ def _thai_word_pdf(tmp_path, first: str, witness: str):
     ("กาข", "กาข", "มาข", "มาข", "มาข"),
     ("เลข ๑๒๓", "๑๒๓", "๓๒๑", "๓๒๑", "เลข ๓๒๑"),
     ("ราคา", "ราคา", "ราชา", "ราชา", "ราชา"),
-    ("ราคา ๑๒๓", "๑๒๓", "123", "123", "ราคา 123"),
     ("กาขขาย", "กาข", "มาข", "มาข", "มาขขาย"),
 ])
 def test_thai_spacing_vowels_and_numbers_edit_source_pdf(
@@ -541,3 +540,17 @@ def test_thai_spacing_vowels_and_numbers_edit_source_pdf(
 def test_thai_plain_text_grammar_remains_fail_closed(old, new):
     with pytest.raises(ValueError, match="M01"):
         validate_edit(page=1, old_text=old, new_text=new)
+
+
+
+def test_thai_to_latin_digits_needs_genuine_same_font_witness(tmp_path):
+    """ReportLab's ASCII digits in this Thai font fixture are 0x00, not glyphs.
+
+    A superficial witness label must not allow the engine to synthesize glyphs.
+    Only a PDF with genuine single-byte mappings and visible glyphs may pass.
+    """
+    source = _thai_word_pdf(tmp_path, "ราคา ๑๒๓", "123")
+    output = tmp_path / "unwitnessed-digit.pdf"
+    with pytest.raises(ValueError, match="visible same-font glyph witnesses"):
+        replace_pdf_text(source, output, page=1, old_text="๑๒๓", new_text="123")
+    assert not output.exists()
