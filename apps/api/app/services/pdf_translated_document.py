@@ -1,8 +1,9 @@
-"""M05: render actual translated text into a newly composed, page-marked PDF.
+"""M05: render translated-only or bilingual-review text into a new page-marked PDF.
 
 Does not preserve original PDF geometry or images. Translation is supplied by a
 private model; Chromium/Gotenberg only typesets escaped Unicode (Thai included).
 No arbitrary HTML, cloud provider URL, executable input or user-chosen endpoint.
+The bilingual mode adds verbatim *extracted text*, not the source page layout.
 """
 from __future__ import annotations
 
@@ -30,27 +31,50 @@ _PDF_STYLES = """<style>
 .m05-part{break-before:page;min-width:0}
 .m05-part:first-of-type{break-before:auto}
 .m05-part h2{font-size:13pt;margin-bottom:8mm;color:#243244}
+.m05-source-label{font-size:10pt;color:#37516b;margin:5mm 0 2mm}
+.m05-source{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
+  font-family:"Noto Sans Thai","Sarabun",sans-serif;font-size:10pt;line-height:1.6;
+  background:#f2f6fa;border:1px solid #cbd5e1;padding:3mm}
+.m05-target-label{font-size:10pt;color:#243244;margin:5mm 0 2mm}
 .m05-note{font-size:9pt;color:#46505a;border-bottom:1px solid #cbd5e1;padding-bottom:4mm}
 .m05-translated{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
   font-family:"Noto Sans Thai","Sarabun",sans-serif;font-size:11pt;line-height:1.75}
 </style>"""
 
 
-def _html_document(pages: list[str], source_language: str, target_language: str) -> bytes:
+def _html_document(pages: list[str], source_language: str, target_language: str,
+                   *, source_pages: list[str] | None = None) -> bytes:
     """Only fixed HTML tags/CSS; all provider-controlled content is escaped."""
     translation.validate_languages(source_language, target_language)
     if not 1 <= len(pages) <= translation.MAX_PAGES:
         raise ValueError("M05 translated page count outside bounds")
+    if source_pages is not None and (
+            type(source_pages) is not list or len(source_pages) != len(pages)):
+        raise ValueError("M05 bilingual review must match each source page")
     blocks = []
     for index, translated in enumerate(pages, 1):
         if (not isinstance(translated, str) or not translated.strip()
                 or len(translated) > 12000):
             raise ValueError("M05 translation model returned unusable text")
+        source_block = ""
+        if source_pages is not None:
+            original = source_pages[index - 1]
+            if (type(original) is not str or not original.strip()
+                    or len(original) > translation.MAX_PAGE_CHARS):
+                raise ValueError("M05 bilingual source page invalid")
+            source_block = (
+                '<h3 class="m05-source-label">Extracted source text / ข้อความต้นฉบับ ('
+                + source_language + ')</h3><pre class="m05-source">'
+                + escape(original, quote=True) + '</pre>'
+                '<h3 class="m05-target-label">Machine translation / คำแปล ('
+                + target_language + ')</h3>'
+            )
         blocks.append(
             '<section class="m05-part"><h2>Translation of source page '
             + str(index) + '</h2><p class="m05-note">Machine translated from '
             + source_language + ' to ' + target_language
             + '. Review before use; source layout is not preserved.</p>'
+            + source_block
             + '<pre class="m05-translated">' + escape(translated, quote=True)
             + '</pre></section>'
         )
@@ -91,9 +115,12 @@ def translate_pdf_document(
     source: Path, destination: Path, *, source_language: str,
     target_language: str, translator: Callable[[str, str, str], str] | None = None,
     renderer: Callable[[bytes], bytes] | None = None,
+    layout: str = "translated",
 ) -> None:
     """Build PDF output atomically after real translation and rendering."""
     translation.validate_languages(source_language, target_language)
+    if type(layout) is not str or layout not in {"translated", "bilingual"}:
+        raise ValueError("M05 PDF layout must be translated or bilingual")
     if (source.resolve() == destination.resolve()
             or destination.exists() or destination.is_symlink()):
         raise ValueError("PDF source and new output must be distinct")
@@ -109,7 +136,10 @@ def translate_pdf_document(
         if not isinstance(result, str) or not result.strip() or len(result) > 12000:
             raise ValueError("Internal translation model response invalid")
         translated.append(result)
-    html = _html_document(translated, source_language, target_language)
+    html = _html_document(
+        translated, source_language, target_language,
+        source_pages=pages if layout == "bilingual" else None,
+    )
     render = _render_local_pdf if renderer is None else renderer
     pdf = render(html)
     if not isinstance(pdf, bytes) or not 64 <= len(pdf) <= MAX_RENDER_BYTES or not pdf.startswith(b"%PDF-"):
