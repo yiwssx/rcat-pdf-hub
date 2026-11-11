@@ -61,6 +61,16 @@ def call(*argv: str, env: dict[str, str] | None = None,
     return (result.stdout or "").strip()
 
 
+def compose_profile_args(full_runtime: bool) -> tuple[str, ...]:
+    """Include optional services during preflight only for full-runtime mode.
+
+    production-cutover.sh already exports these same two profiles when
+    full_runtime=true. Without this, docker compose config omits all three
+    profiled services and falsely blocks a healthy, pre-provisioned host.
+    """
+    return ("--profile", "native-dev", "--profile", "url-import-dev") if full_runtime else ()
+
+
 def live_compose_mode() -> tuple[str, bool, bool]:
     ids = call(
         "docker", "ps", "-q",
@@ -163,7 +173,8 @@ def main() -> None:
         overlays += ["-f", "compose.native-sidecar.yaml",
                      "-f", "compose.url-fetcher.yaml",
                      "-f", "compose.t90-full-runtime.yaml"]
-    config = call("docker", "compose", *overlays, "config", "--format", "json")
+    config = call("docker", "compose", *overlays,
+                  *compose_profile_args(t90_full), "config", "--format", "json")
     call("python3", "scripts/release1-host-preflight.py", input_text=config)
 
     root = backup_root()
