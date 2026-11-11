@@ -19,6 +19,7 @@ from tempfile import TemporaryDirectory
 from PIL import Image, ImageChops
 from pypdf import PdfReader
 from app.services.to_pdf_chm_native import chm_to_pdf
+from app.services.to_pdf_chm_worker import _read_chm  # diagnostic inside isolated CI-only container
 
 SOURCE = Path("/fixtures/sample.chm")
 GIT_BLOB = "dca0776bc86f555c8e5ce516959c215e17bf893a"
@@ -43,6 +44,15 @@ def main() -> int:
         if len(src) != SIZE or git_blob_sha(src) != GIT_BLOB or not src.startswith(b"ITSF"):
             raise ValueError("Real CHM sample failed immutable Git object validation")
         original_sha256 = hashlib.sha256(src).hexdigest()
+        # Diagnose the exact accepted/denied archive shape *only within the*
+        # unprivileged, network-denied CI native decoder. Never run this
+        # ctypes parser in the application's credential-bearing RQ worker.
+        try:
+            decoded_preview = _read_chm(SOURCE)
+            if not decoded_preview.strip():
+                raise ValueError("CHM isolated direct parser produced empty HTML")
+        except Exception as exc:
+            raise ValueError("Public fixture native CHM diagnosis: " + str(exc)[:160]) from exc
         with TemporaryDirectory(prefix="pdfhub-chm-real-") as folder:
             workspace = Path(folder)
             pdf_path = workspace / "sample.pdf"
