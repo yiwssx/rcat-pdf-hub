@@ -35,7 +35,7 @@ class OneCommandTests(unittest.TestCase):
                 "example-container",
                 self.container("docker-compose.yml", "docker-compose.prod.yml"),
             ]):
-                self.assertEqual(release.live_compose_mode(), "prod")
+                self.assertEqual(release.live_compose_mode(), ("prod", False))
 
     def test_detects_nas_without_guessing(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
@@ -44,7 +44,16 @@ class OneCommandTests(unittest.TestCase):
                 self.container("docker-compose.yml", "docker-compose.prod.yml",
                                "docker-compose.nas.yml"),
             ]):
-                self.assertEqual(release.live_compose_mode(), "prod-nas")
+                self.assertEqual(release.live_compose_mode(), ("prod-nas", False))
+
+    def test_existing_t90_code_overlay_survives_later_production_releases(self):
+        with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
+            with patch.object(release, "call", side_effect=[
+                "example-container",
+                self.container("docker-compose.yml", "docker-compose.prod.yml",
+                               "compose.t90-code-first.yaml"),
+            ]):
+                self.assertEqual(release.live_compose_mode(), ("prod", True))
 
     def test_refuses_dev_stack(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
