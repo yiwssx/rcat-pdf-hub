@@ -99,12 +99,15 @@ def pdf_to_legacy_mobi(source: Path, output: Path) -> None:
 
     # Exclusive output, parser-validated before use by the shared job/artifact
     # contract. Failure never leaves a truncated downloadable MOBI behind.
+    created = False
     try:
         with output.open("xb") as target:
+            created = True
             target.write(blob)
         checked_html = mobi_to_safe_html(output)
         if any(escape(line, quote=False) not in checked_html for line in lines):
             raise ValueError("MOBI round-trip lost source text")
     except Exception:
-        output.unlink(missing_ok=True)
+        if created:
+            output.unlink(missing_ok=True)
         raise
