@@ -8,6 +8,9 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from contextlib import redirect_stderr
+from io import StringIO
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -28,6 +31,38 @@ class OneCommandTests(unittest.TestCase):
             ),
         }
         return json.dumps([{"Config": {"Labels": labels}}])
+
+    def test_safe_preflight_error_prints_only_key_names(self):
+        source = (
+            "R1 HOST PREFLIGHT: BLOCKED; no secrets printed\\n"
+            " - insecure_setting:PDFHUB_OIDC_ENABLED\\n"
+            " - service_environment_mismatch:worker-heavy:PDFHUB_TO_PDF_TOOLS_ENABLED\\n"
+            "PDFHUB_OIDC_CLIENT_SECRET=please-never-print-me\\n"
+            " - unsafe_public_base_url\\n"
+        ).replace("\\\\n", "\\n")
+        out = StringIO()
+        with redirect_stderr(out):
+            release.print_safe_preflight_errors(source)
+        result = out.getvalue()
+        self.assertIn("insecure_setting:PDFHUB_OIDC_ENABLED", result)
+        self.assertIn("service_environment_mismatch:worker-heavy", result)
+        self.assertIn("unsafe_public_base_url", result)
+        self.assertNotIn("please-never-print-me", result)
+
+    def test_release_reports_safe_host_preflight_diagnostics_on_failure(self):
+        failed = subprocess.CompletedProcess(
+            ["python3", "scripts/release1-host-preflight.py"], 1, "",
+            "R1 HOST PREFLIGHT: BLOCKED; no secrets printed\\n"
+            " - missing_or_invalid_secret:PDFHUB_NATIVE_SIDECAR_SHARED_SECRET\\n"
+            "SECRET=do-not-log\\n",
+        )
+        stderr = StringIO()
+        with patch.object(release.subprocess, "run", return_value=failed), redirect_stderr(stderr):
+            with self.assertRaisesRegex(SystemExit, "required step failed"):
+                release.call("python3", "scripts/release1-host-preflight.py")
+        log = stderr.getvalue()
+        self.assertIn("missing_or_invalid_secret:PDFHUB_NATIVE_SIDECAR_SHARED_SECRET", log)
+        self.assertNotIn("do-not-log", log)
 
     def test_detects_existing_prod_compose_not_assumed_mode(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
