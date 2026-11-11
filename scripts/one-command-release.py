@@ -10,6 +10,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import os
+import re
+import sys
 from pathlib import Path
 import shutil
 import subprocess
@@ -22,6 +24,29 @@ def blocked(message: str) -> None:
     raise SystemExit("one-command-release: BLOCKED — " + message)
 
 
+# The R1/T90 host preflight emits ONLY diagnostic categories / configuration
+# KEY NAMES. Production orchestrator must display these when it blocks.
+# Never print a failed docker compose config result, which may include secrets.
+_SAFE_PREFLIGHT_LINE = re.compile(
+    r"^ - [a-z_]+(?::[a-zA-Z0-9_-]+)*$"
+)
+
+
+def print_safe_preflight_errors(stderr: str) -> None:
+    """Surface key-name-only R1/T90 failures; no private env values or DSNs."""
+    shown = 0
+    for line in stderr.splitlines()[:100]:
+        if line == "R1 HOST PREFLIGHT: BLOCKED; no secrets printed":
+            print(line, file=sys.stderr)
+            shown += 1
+        elif _SAFE_PREFLIGHT_LINE.fullmatch(line):
+            print(line, file=sys.stderr)
+            shown += 1
+    if not shown:
+        print("R1/T90 host preflight failed without safe diagnostic categories",
+              file=sys.stderr)
+
+
 def call(*argv: str, env: dict[str, str] | None = None,
          capture: bool = True, input_text: str | None = None,
          timeout: int | None = 60) -> str:
@@ -30,6 +55,8 @@ def call(*argv: str, env: dict[str, str] | None = None,
         text=True, capture_output=capture, check=False, timeout=timeout,
     )
     if result.returncode:
+        if argv == ("python3", "scripts/release1-host-preflight.py"):
+            print_safe_preflight_errors(result.stderr or "")
         blocked("required step failed: " + " ".join(argv[:3]))
     return (result.stdout or "").strip()
 
