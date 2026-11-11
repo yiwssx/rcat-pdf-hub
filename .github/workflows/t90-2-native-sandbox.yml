@@ -133,7 +133,7 @@ jobs:
             curl --fail --silent --show-error --location --retry 2 \
               --max-time 45 --proto '=https' --proto-redir '=https' \
               "https://heic.fyi/samples/$filename" -o "$sample_dir/$filename"
-            printf '%s  %s\\n' "$expected" "$sample_dir/$filename" | sha256sum -c -
+            printf '%s  %s\n' "$expected" "$sample_dir/$filename" | sha256sum -c -
           done <<'HEIF_CC0_CHECKSUMS'
           80b615ae433d7ec53e9aaaeee081ecd11c0d9931350da13d6ce4e2b363d12c12 orientation-6.heic
           1c3cb942025bce0d3d45c7d98ecb94846c9da760700d5c025d3e80852027dede generic-mif1-brand.heif
