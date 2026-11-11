@@ -56,12 +56,22 @@ for host, port in [
         conn = socket.create_connection((host, port), timeout=1.8)
     except OSError as exc:
         elapsed = time.monotonic() - start
+        # This one address is Docker's LOCAL host gateway, so the
+        # exact host INPUT rule is DROP (timeout), not FORWARD REJECT.
+        # The installer and verifier have already checked the first
+        # INPUT rule matches br-pdfhub-url. Don't mistake the gateway
+        # timeout for proof of FORWARD packet rejection.
+        if host == "172.30.243.1":
+            if exc.errno != errno.ETIMEDOUT:
+                raise AssertionError(f"Host-gateway INPUT-DROP semantics changed: {exc!r}")
+            print(f"PASS HOST INPUT-DROP {host}:{port} with verified host rule")
+            continue
         if elapsed > 1.7 or exc.errno not in {
             errno.ECONNREFUSED, errno.ENETUNREACH,
             errno.EHOSTUNREACH, errno.EACCES, errno.EPERM,
         }:
-            raise AssertionError(f"Packet denied without verified firewall semantics: {host}:{port}, {exc!r}")
-        print(f"PASS HOST FIREWALL DENY {host}:{port} errno={exc.errno}")
+            raise AssertionError(f"Packet denied without verified FORWARD REJECT: {host}:{port}, {exc!r}")
+        print(f"PASS HOST FIREWALL REJECT {host}:{port} errno={exc.errno}")
     else:
         conn.close()
         raise AssertionError(f"Private or prohibited network destination reachable: {host}:{port}")
