@@ -24,10 +24,11 @@ export const STAGED_FROM_PDF_FORMATS: readonly StagedFromPdfFormat[] = [
   { id: "F12", label: "PDF to SVG", route: "svg", requiredScope: "pdf:pdf-to-image", fileKind: "SVG ZIP", limitation: "One bounded SVG per page in a ZIP" },
   { id: "F13", label: "PDF to CSV", route: "csv", requiredScope: "pdf:pdf-to-image", fileKind: "CSV", limitation: "Bounded ruled-table extraction; unsuitable PDFs are rejected" },
   { id: "F14", label: "PDF to RTF", route: "rtf", requiredScope: "pdf:pdf-to-image", fileKind: "RTF", limitation: "Text-only RTF subset; complex layout not preserved" },
+  { id: "F15", label: "PDF to MOBI", route: "mobi", requiredScope: "pdf:pdf-to-image", fileKind: "MOBI6", limitation: "Legacy DRM-free UTF-8 text only; selectable single-column PDF, no images, tables, fonts, original layout or KF8" },
   { id: "F16", label: "PDF to GIF", route: "gif", requiredScope: "pdf:pdf-to-image", fileKind: "Animated GIF", limitation: "PDF pages become GIF frames; default 96 DPI, 1200 ms per frame" },
   { id: "F17", label: "PDF to BMP", route: "bmp", requiredScope: "pdf:pdf-to-image", fileKind: "BMP ZIP", limitation: "One BMP per page in a ZIP, default 96 DPI" },
 ] as const;
 
-// F15 is intentionally absent: no accepted legitimate PDF-to-MOBI exporter.
+// F15 is a real bounded classic MOBI6 PalmDB output, not modern KF8/Kindle publishing.
 // PDF-to-Word/PPT/Excel names are explicitly scoped to DOCX/PPTX/XLSX, not
 // misleading binary .doc/.ppt/.xls output.
