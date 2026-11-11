@@ -86,16 +86,20 @@ def docker_subnets():
     return occupied, own
 
 
-def host_subnets():
+def host_subnets(*, ignore_iface: str | None = None):
     occupied = []
     routes = json.loads(execute("ip", "-j", "-4", "route", "show", "table", "all"))
     addresses = json.loads(execute("ip", "-j", "-4", "address", "show"))
     for item in routes:
+        if item.get("dev") == ignore_iface:
+            continue
         dst = item.get("dst")
         if not dst or dst == "default":
             continue
         occupied.append(ipaddress.ip_network(dst, strict=False))
     for interface in addresses:
+        if interface.get("ifname") == ignore_iface:
+            continue
         for addr in interface.get("addr_info", []):
             if addr.get("family") == "inet":
                 occupied.append(ipaddress.ip_network(
@@ -112,9 +116,7 @@ def pick(existing: ipaddress.IPv4Network | None,
         current = own[0]
         if existing is not None and existing != current:
             raise ValueError("existing URL egress Docker network differs from host configuration")
-        if current.overlaps(next((n for n in occupied if current.overlaps(n)), current)) and any(
-            current.overlaps(n) for n in occupied
-        ):
+        if any(current.overlaps(n) for n in occupied):
             raise ValueError("existing URL egress network conflicts with another host subnet")
         # Keep the running network stable; never readdress an active deployment.
         return parse_subnet(str(current))
@@ -151,7 +153,7 @@ def provision() -> tuple[str, str]:
     if existing is not None and found[IP_KEY][1] != str(egress_ip(existing)):
         raise ValueError("configured URL egress address must be subnet network + 2")
     docker, own = docker_subnets()
-    occupied = docker + host_subnets()
+    occupied = docker + host_subnets(ignore_iface=BRIDGE if own else None)
     chosen = pick(existing, occupied, own)
     for key, value in ((SUBNET_KEY, str(chosen)), (IP_KEY, str(egress_ip(chosen)))):
         if key in found:
