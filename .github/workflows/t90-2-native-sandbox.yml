@@ -12,6 +12,7 @@ on:
       - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
       - "apps/api/app/services/t90_2_external_heic_selftest.py"
       - "apps/api/app/services/t90_2_cc0_heif_corpus_selftest.py"
+      - "apps/api/app/services/t90_2_works_nonempty_corpus_selftest.py"
       - "apps/api/app/services/to_pdf_heif_native.py"
       - "apps/api/Dockerfile"
       - "compose.native-sidecar.yaml"
@@ -25,7 +26,7 @@ jobs:
   bwrap-real-runtime:
     name: Docker-native unprivileged file + network isolation
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v5
       - name: Build exact locked API image
@@ -45,6 +46,70 @@ jobs:
             --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
             pdfhub-t90-2-native-qa \
             python -m app.services.t90_2_native_docker_selftest
+
+
+      - name: Test publicly released Works OSS-Fuzz corpus through exact app pipeline
+        run: |
+          set -euo pipefail
+          # Source: libwps official public OSS-Fuzz seed, NOT a generated
+          # mock and NOT an assertion that every legacy Works WPS is readable.
+          corpus="$(mktemp -d)"
+          bridge="rcat-t90-works-qa"
+          cleanup() {
+            docker rm -f t90-works-gotenberg >/dev/null 2>&1 || true
+            docker network rm "$bridge" >/dev/null 2>&1 || true
+            rm -rf "$corpus"
+          }
+          trap cleanup EXIT
+          curl --fail --silent --show-error --location --retry 3 \
+            --max-time 80 --proto '=https' --proto-redir '=https' \
+            'https://downloads.sourceforge.net/project/libwps/corpus/wpsfuzzer_seed_corpus.zip' \
+            -o "$corpus/wpsfuzzer_seed_corpus.zip"
+          file "$corpus/wpsfuzzer_seed_corpus.zip"
+          sha256sum "$corpus/wpsfuzzer_seed_corpus.zip"
+          unzip -t "$corpus/wpsfuzzer_seed_corpus.zip"
+          chmod 0755 "$corpus"
+          chmod 0444 "$corpus/wpsfuzzer_seed_corpus.zip"
+          # Add only independent source-text reader to QA image; deployment
+          # image and default production API/Gotenberg remain unchanged.
+          cat > "$corpus/Dockerfile" <<'DOCKER'
+          FROM pdfhub-t90-2-native-qa
+          USER root
+          RUN apt-get update -qq && \
+              DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+                libwps-tools && rm -rf /var/lib/apt/lists/*
+          USER pdfhub
+          DOCKER
+          docker build -f "$corpus/Dockerfile" -t t90-works-readable-image "$corpus"
+          docker network create --internal "$bridge"
+          docker build -t t90-works-gotenberg-image ops/gotenberg
+          docker run -d --name t90-works-gotenberg \
+            --network "$bridge" --network-alias native-gotenberg \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit 128 --memory 1024m \
+            --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+            t90-works-gotenberg-image
+          ready=0
+          for attempt in $(seq 1 30); do
+            if docker run --rm --network "$bridge" \
+              --entrypoint curl t90-works-readable-image \
+              -fsS --max-time 2 http://native-gotenberg:3000/health >/dev/null 2>&1; then
+              ready=1; break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          docker run --rm \
+            --network "$bridge" \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --pids-limit 96 --memory 1024m \
+            --mount "type=bind,src=$corpus,dst=/fixtures,readonly" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            -e HOME=/tmp -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_GOTENBERG_URL=http://native-gotenberg:3000 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true -e PDFHUB_WPS_NATIVE_DEV_ENABLED=true \
+            t90-works-readable-image \
+            python -m app.services.t90_2_works_nonempty_corpus_selftest
 
   patched-heif-runtime:
     name: Build libheif 1.23.7, verify runtime version inside nonroot Docker
