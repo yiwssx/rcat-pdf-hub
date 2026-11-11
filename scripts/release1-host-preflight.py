@@ -7,6 +7,7 @@ Does not start/stop containers or contact any external endpoint.
 from __future__ import annotations
 
 import json
+import ipaddress
 import sys
 from urllib.parse import urlparse
 
@@ -133,6 +134,40 @@ def service_network_names(config: dict) -> set[str]:
     return set()
 
 
+
+def valid_url_egress_network(data: dict, services: dict) -> bool:
+    """Reject malformed / non-private subnet, changed bridge or unsafe IP.
+
+    The real Host also rejects overlap with *other* Docker/OS routes before
+    provisioning. Compose's static config cannot establish live host topology.
+    """
+    try:
+        net = data["networks"]["url_fetch_egress"]
+        if (net.get("driver") != "bridge"
+                or net.get("enable_ipv6") is not False
+                or net["driver_opts"]["com.docker.network.bridge.name"] != "br-pdfhub-url"):
+            return False
+        configs = net["ipam"]["config"]
+        if not isinstance(configs, list) or len(configs) != 1:
+            return False
+        cidr = ipaddress.ip_network(configs[0]["subnet"], strict=True)
+        if not isinstance(cidr, ipaddress.IPv4Network) or cidr.prefixlen != 28:
+            return False
+        allowed = (
+            ipaddress.IPv4Network("10.0.0.0/8"),
+            ipaddress.IPv4Network("172.16.0.0/12"),
+            ipaddress.IPv4Network("192.168.0.0/16"),
+        )
+        if not any(cidr.subnet_of(parent) for parent in allowed):
+            return False
+        sidecar_network = services["url-fetcher"]["networks"]["url_fetch_egress"]
+        ip = ipaddress.ip_address(sidecar_network["ipv4_address"])
+        return isinstance(ip, ipaddress.IPv4Address) and ip == cidr.network_address + 2
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return False
+
+
+
 def valid_secret(name: str, value: str) -> bool:
     # Errors expose only KEY NAMES, never decoded values or credential strings.
     if name in T90_HMAC_KEYS:
@@ -226,6 +261,8 @@ def inspect_compose(data: object) -> list[str]:
                     if web_env.get(key, "false").lower() != expected:
                         failures.append("insecure_web_runtime_setting:" + key)
     if t90_full:
+        if not valid_url_egress_network(data, services):
+            failures.append("invalid_url_egress_network")
         # No remote URL fetch may run from the privileged API/RQ service.
         # Native decoder has NO DB, NAS, host Docker or public network.
         for service_name in ("native-decoder", "native-gotenberg", "url-fetcher"):
