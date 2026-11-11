@@ -4,6 +4,8 @@
 # BEFORE the URL importer service is ever started. No public sidecar ports.
 x-t90-full-flags: &t90-full-flags
   PDFHUB_T90_FULL_RUNTIME_ENABLED: "true"
+  # Native/URL overlays reset this core flag; restore it last.
+  PDFHUB_TO_PDF_TOOLS_ENABLED: "true"
   PDFHUB_UNLOCK_PDF_TOOLS_ENABLED: "true"
   PDFHUB_PROTECT_PDF_TOOLS_ENABLED: "true"
   PDFHUB_CHM_NATIVE_DEV_ENABLED: "true"
@@ -31,6 +33,7 @@ services:
       PDFHUB_WPS_NATIVE_DEV_ENABLED: "true"
       PDFHUB_DWG_NATIVE_DEV_ENABLED: "true"
       PDFHUB_T90_FULL_RUNTIME_ENABLED: "true"
+      PDFHUB_TO_PDF_TOOLS_ENABLED: "true"
       PDFHUB_UNLOCK_PDF_HANDOFF_KEY: ${PDFHUB_UNLOCK_PDF_HANDOFF_KEY:?Set unique private handoff key}
       PDFHUB_PROTECT_PDF_HANDOFF_KEY: ${PDFHUB_PROTECT_PDF_HANDOFF_KEY:?Set separate private handoff key}
       PDFHUB_NATIVE_SIDECAR_SHARED_SECRET: ${PDFHUB_NATIVE_SIDECAR_SHARED_SECRET:?Set private HMAC secret}
