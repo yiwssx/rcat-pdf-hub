@@ -266,5 +266,32 @@ export const AVAILABLE_STAGED_TO_PDF_FORMATS = STAGED_TO_PDF_FORMATS.filter(
   (item) => !item.withheld
 );
 
-// Publisher T21 stays deliberately unavailable while its real fixture has
-// visibly blank page 2. Six native/URL prototypes are not in this allowlist.
+// Experimental candidates reuse the same owner-bound upload/queue/result UI.
+// Their API routes are independently gated by per-format backend flags and
+// their appearance is opt-in through the server-side staged page. These are
+// NOT entries in the 34 accepted STAGED To-PDF capabilities.
+export const EXPERIMENTAL_TO_PDF_FORMATS: readonly StagedToPdfFormat[] = [
+  { id: "T09", title: "HEIC (experimental)", withheld: false,
+    limit: "HEVC HEIC only; pinned libheif, camera orientation/ICC and target host acceptance pending",
+    variants: [{ operation: "heic-to-pdf", route: "heic", mime: "image/heic", suffixes: [".heic"] }] },
+  { id: "T20", title: "DWG Basic 2D (experimental)", withheld: false,
+    limit: "restricted LINE/CIRCLE only, no fonts/blocks/layers/custom scale/3D; audited LibreDWG runtime required",
+    variants: [{ operation: "dwg-to-pdf", route: "dwg", mime: "image/vnd.dwg", suffixes: [".dwg"] }] },
+  { id: "T25", title: "HEIF (experimental)", withheld: false,
+    limit: "pinned libheif, compatible primary image subsets only; external variant and source-fidelity approval pending",
+    variants: [{ operation: "heif-to-pdf", route: "heif", mime: "image/heif", suffixes: [".heif"] }] },
+  { id: "T30", title: "CHM (experimental)", withheld: false,
+    limit: "bounded offline printable chapters from MS HTML Help; native LZX/Thai corpus and isolation acceptance pending",
+    variants: [{ operation: "chm-to-pdf", route: "chm", mime: "application/vnd.ms-htmlhelp", suffixes: [".chm"] }] },
+  { id: "T33", title: "Public HTTPS URL (experimental)", withheld: false,
+    limit: "HTTPS public text-only snapshot, not original webpage rendering; signed fetcher and verified host egress required",
+    variants: [] },
+  { id: "T34", title: "Microsoft Works WPS (experimental)", withheld: false,
+    limit: "Microsoft Works .wps only, not WPS Office; genuine files and nonblank font/layout acceptance pending",
+    variants: [{ operation: "wps-to-pdf", route: "wps", mime: "application/vnd.ms-works", suffixes: [".wps"] }] },
+];
+
+// This intentionally does not change the normal 34-format staged allowlist.
+// The server chooses which individual experimental tools can be shown only
+// when the corresponding existing backend feature flag is also explicit.
+
