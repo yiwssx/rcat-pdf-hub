@@ -127,7 +127,7 @@ export function StagedFromPdfClient({
         <p>เลือกผลลัพธ์จากตัวแปลงที่มี Backend พร้อมแล้ว ใช้การอัปโหลด คิวงาน และดาวน์โหลดร่วมกับระบบเดิม</p>
         <p className="t90DocumentStageNotice" role="note">
           ฟีเจอร์นี้ยังไม่เปิดใช้งาน Production และไม่ได้รับรองความเที่ยงตรงของทุกเอกสาร
-          ตัวเลือก Word/PPT/Excel หมายถึง DOCX/PPTX/XLSX ตามลำดับ ส่วน MOBI ไม่มี Engine ที่ยอมรับได้และไม่แสดงให้เลือก
+          ตัวเลือก Word/PPT/Excel หมายถึง DOCX/PPTX/XLSX ตามลำดับ ส่วน MOBI เป็นรูปแบบเก่าสำหรับ PDF ข้อความแบบคอลัมน์เดียวเท่านั้น ไม่รองรับรูป ตาราง หรือ KF8
         </p>
 
         {loading ? <p role="status">กำลังตรวจสอบบัญชีและไฟล์ PDF …</p> : (
