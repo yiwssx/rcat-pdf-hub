@@ -7,7 +7,7 @@ import {
 } from "../../../lib/api";
 import {
   AVAILABLE_STAGED_TO_PDF_FORMATS,
-  STAGED_TO_PDF_FORMATS,
+  EXPERIMENTAL_TO_PDF_FORMATS,
   type StagedToPdfVariant,
 } from "./catalog";
 
@@ -33,28 +33,50 @@ function hasScope(me: AuthMe | null, name: string): boolean {
   return Boolean(me && (me.scopes.includes("*") || me.scopes.includes(name)));
 }
 
+function looksLikePublicHttpsInput(value: string): boolean {
+  // This is only a browser form sanity check, NOT an SSRF authorization.
+  // The API, signed sidecar, DNS-pinned TLS and host firewall own that proof.
+  if (value.length < 10 || value.length > 1800) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && Boolean(url.hostname)
+      && !url.username && !url.password && !url.hash
+      && (!url.port || url.port === "443");
+  } catch {
+    return false;
+  }
+}
+
 export function StagedToPdfClient({
-  requestedFileId, requestedToolId,
+  requestedFileId, requestedToolId, enabledExperimentalIds = [],
 }: {
   requestedFileId?: string;
   requestedToolId?: string;
+  enabledExperimentalIds?: readonly string[];
 }) {
-  const initiallySelected = AVAILABLE_STAGED_TO_PDF_FORMATS.find(
+  const availableFormats = [
+    ...AVAILABLE_STAGED_TO_PDF_FORMATS,
+    ...EXPERIMENTAL_TO_PDF_FORMATS.filter((item) =>
+      enabledExperimentalIds.includes(item.id)),
+  ];
+  const initiallySelected = availableFormats.find(
     (item) => item.id === requestedToolId
-  ) ?? AVAILABLE_STAGED_TO_PDF_FORMATS[0];
+  ) ?? availableFormats[0];
   const [formatId, setFormatId] = useState(initiallySelected.id);
   const [identity, setIdentity] = useState<AuthMe | null>(null);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [uploadCandidate, setUploadCandidate] = useState<File | null>(null);
+  const [urlInput, setUrlInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState<Job | null>(null);
 
-  const format = STAGED_TO_PDF_FORMATS.find((item) => item.id === formatId)
+  const format = availableFormats.find((item) => item.id === formatId)
     ?? initiallySelected;
+  const isUrl = format.id === "T33";
   const choices = useMemo(
     () => files.filter((file) => identity && ownedAndLive(file, identity.name)
       && variantFor(file, format.variants)),
@@ -92,8 +114,9 @@ export function StagedToPdfClient({
 
   // When changing formats, never submit a stale file from another MIME/tool.
   function changeFormat(value: string) {
-    if (!AVAILABLE_STAGED_TO_PDF_FORMATS.some((item) => item.id === value)) return;
+    if (!availableFormats.some((item) => item.id === value)) return;
     setFormatId(value);
+    setUrlInput("");
     setSelectedId("");
     setUploadCandidate(null);
     setSubmitted(null);
@@ -101,7 +124,7 @@ export function StagedToPdfClient({
   }
 
   async function upload() {
-    if (!uploadCandidate || uploading || !identity || !canUpload) return;
+    if (isUrl || !uploadCandidate || uploading || !identity || !canUpload) return;
     const name = uploadCandidate.name.toLowerCase();
     if (!format.variants.some((variant) =>
       variant.suffixes.some((suffix) => name.endsWith(suffix)))) {
@@ -129,18 +152,26 @@ export function StagedToPdfClient({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (loading || submitting || uploading || !identity || !selected || !route
-      || !allowed || !canDownload || format.withheld
+    if (loading || submitting || uploading || !identity
+      || !allowed || !canDownload || format.withheld) return;
+    if (!isUrl && (!selected || !route
       || !ownedAndLive(selected, identity.name)
-      || !matchesVariant(selected, route)) return;
+      || !matchesVariant(selected, route))) return;
+    const publicUrl = urlInput.trim();
+    if (isUrl && !looksLikePublicHttpsInput(publicUrl)) {
+      setError("ต้องเป็น URL แบบ HTTPS สาธารณะที่ถูกต้อง ไม่ใช่ไฟล์หรือที่อยู่ภายในเครือข่าย");
+      return;
+    }
     setSubmitting(true);
     setSubmitted(null);
     setError("");
     try {
       // The server revalidates ownership, MIME, suffix, scopes, stored
       // signature, active flags and quotas. Never pass a user-supplied owner.
-      const job = await createJob("to-pdf/" + route.route,
-        { file_id: selected.id }, SESSION_AUTH);
+      const job = isUrl
+        ? await createJob("to-pdf/url", { url: publicUrl }, SESSION_AUTH)
+        : await createJob("to-pdf/" + route!.route,
+          { file_id: selected!.id }, SESSION_AUTH);
       setSubmitted(job);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "ไม่สามารถสร้างงานได้");
@@ -161,7 +192,7 @@ export function StagedToPdfClient({
         <p>ใช้หน้าจอเดียวสำหรับตัวแปลงไฟล์ที่มี Backend อยู่แล้ว โดยรักษาไฟล์ต้นฉบับและสิทธิ์เจ้าของไฟล์</p>
         <p className="t90DocumentStageNotice" role="note">
           เป็นเครื่องมือระหว่างพัฒนา ไม่ใช่การรับรองรูปแบบไฟล์ทั้งหมดหรือการเปิดใช้งาน Production
-          รูปแบบ Native/URL 6 ประเภทถูกพักไว้ และ Publisher (T21) งดใช้งานจนกว่าจะแก้ปัญหาหน้าว่าง
+          Native/URL จะแสดงเฉพาะเมื่อผู้ดูแลเปิด Development Flags แยกเป็นรายเครื่องมือ และยังต้องผ่านการตรวจ Runtime, Firewall และไฟล์ต้นฉบับจริง
         </p>
         {loading ? <p role="status">กำลังตรวจสอบสิทธิ์และไฟล์ที่มีอยู่…</p> : (
           <>
@@ -170,14 +201,14 @@ export function StagedToPdfClient({
               <select id="t90-to-pdf-format" value={formatId}
                 onChange={(event) => changeFormat(event.target.value)}
                 disabled={uploading || submitting}>
-                {AVAILABLE_STAGED_TO_PDF_FORMATS.map((item) => (
+                {availableFormats.map((item) => (
                   <option key={item.id} value={item.id}>{item.id} · {item.title}</option>
                 ))}
               </select>
             </div>
             <p className="t90ConverterNote" role="note">ขอบเขตที่รองรับ: {format.limit}</p>
-            <p className="t90ConverterMeta">นามสกุลไฟล์: {accepting}</p>
-            <div className="t90DocumentStageField">
+            {!isUrl && <p className="t90ConverterMeta">นามสกุลไฟล์: {accepting}</p>}
+            {!isUrl && <div className="t90DocumentStageField">
               <label htmlFor="t90-to-pdf-upload">อัปโหลดไฟล์ต้นฉบับ</label>
               <input id="t90-to-pdf-upload" type="file" accept={accepting}
                 disabled={!canUpload || uploading || submitting}
@@ -187,25 +218,38 @@ export function StagedToPdfClient({
                 onClick={() => { void upload(); }}>
                 {uploading ? "กำลังอัปโหลด…" : "อัปโหลดไฟล์"}
               </button>
-            </div>
+            </div>}
             <form onSubmit={(event) => { void submit(event); }}>
-              <div className="t90DocumentStageField">
-                <label htmlFor="t90-to-pdf-source">ไฟล์ที่ผ่านการตรวจชนิดและเป็นของบัญชีนี้</label>
-                <select id="t90-to-pdf-source" value={selected?.id ?? ""}
-                  onChange={(event) => { setSelectedId(event.target.value); setSubmitted(null); }}
-                  disabled={uploading || submitting || !choices.length} required>
-                  <option value="">เลือกไฟล์ที่ต้องการแปลง</option>
-                  {choices.map((file) => <option key={file.id} value={file.id}>
-                    {file.original_name}
-                  </option>)}
-                </select>
-              </div>
-              {!canUpload && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ files:write สำหรับอัปโหลด</p>}
+              {isUrl ? (
+                <div className="t90DocumentStageField">
+                  <label htmlFor="t90-to-pdf-url">URL เว็บไซต์สาธารณะ (HTTPS)</label>
+                  <input id="t90-to-pdf-url" type="url" value={urlInput}
+                    placeholder="https://example.org/article"
+                    minLength={10} maxLength={1800} required
+                    disabled={submitting || uploading}
+                    onChange={(event) => { setUrlInput(event.target.value); setSubmitted(null); }} />
+                  <p role="note">บริการจะโหลดเฉพาะเนื้อหาข้อความที่อนุญาต ไม่ใช่ภาพหน้าจอทั้งเว็บไซต์ และจะไม่เข้าถึงเครือข่ายภายใน</p>
+                </div>
+              ) : (
+                <div className="t90DocumentStageField">
+                  <label htmlFor="t90-to-pdf-source">ไฟล์ที่ผ่านการตรวจชนิดและเป็นของบัญชีนี้</label>
+                  <select id="t90-to-pdf-source" value={selected?.id ?? ""}
+                    onChange={(event) => { setSelectedId(event.target.value); setSubmitted(null); }}
+                    disabled={uploading || submitting || !choices.length} required>
+                    <option value="">เลือกไฟล์ที่ต้องการแปลง</option>
+                    {choices.map((file) => <option key={file.id} value={file.id}>
+                      {file.original_name}
+                    </option>)}
+                  </select>
+                </div>
+              )}
+              {!isUrl && !canUpload && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ files:write สำหรับอัปโหลด</p>}
               {!allowed && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ {requiredScope}</p>}
               {!canDownload && identity && <p role="alert">ต้องมีสิทธิ์ files:read และ jobs:read เพื่อรับผลลัพธ์</p>}
               {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
               <button type="submit" className="t90DocumentStageSubmit"
-                disabled={uploading || submitting || !selected || !allowed || !canDownload || format.withheld}>
+                disabled={uploading || submitting || !allowed || !canDownload || format.withheld
+                  || (isUrl ? !looksLikePublicHttpsInput(urlInput.trim()) : !selected)}>
                 {submitting ? "กำลังสร้างงาน…" : "แปลงเป็น PDF"}
               </button>
             </form>
