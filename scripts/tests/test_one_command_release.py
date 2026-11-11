@@ -66,6 +66,15 @@ class OneCommandTests(unittest.TestCase):
         self.assertIn("missing_or_invalid_secret:PDFHUB_NATIVE_SIDECAR_SHARED_SECRET", log)
         self.assertNotIn("do-not-log", log)
 
+    def test_full_runtime_preflight_includes_both_profiled_sidecars(self):
+        self.assertEqual(
+            release.compose_profile_args(True),
+            ("--profile", "native-dev", "--profile", "url-import-dev"),
+        )
+
+    def test_normal_release_preflight_does_not_enable_optional_sidecars(self):
+        self.assertEqual(release.compose_profile_args(False), ())
+
     def test_detects_existing_prod_compose_not_assumed_mode(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
             with patch.object(release, "call", side_effect=[
