@@ -17,6 +17,7 @@ from tempfile import TemporaryDirectory
 from pypdf import PdfReader
 from app.services.to_pdf_chm_native import chm_to_pdf, chm_to_safe_html
 from app.services.chm_html_boundary import validate_chm_html_fragment
+from app.services.to_pdf_chm_worker import _read_chm  # diagnostic exclusively in unprivileged QA
 
 SOURCE = Path("/fixtures/rcat-chaptered.chm")
 EXPECTED = ("RCAT T90 CHM chapter one visible content",
@@ -34,6 +35,14 @@ def main() -> int:
         source_sha256 = hashlib.sha256(data).hexdigest()
         # Untrusted native decode takes place ONLY in this independent
         # container, never in the user/credential-bearing queue worker.
+        # Inspect the exact generated archive with the native reader in
+        # the same already isolated QA container; do not weaken bounds.
+        try:
+            raw_html = _read_chm(SOURCE)
+        except Exception as exc:
+            raise ValueError("CHM native parser diagnosis: " + str(exc)[:180]) from exc
+        if not raw_html.strip():
+            raise ValueError("CHM compiled parser unexpectedly returned blank")
         html = validate_chm_html_fragment(chm_to_safe_html(SOURCE))
         if not all(token in html for token in EXPECTED):
             raise ValueError("CHM reader omitted or corrupted a known input chapter")
