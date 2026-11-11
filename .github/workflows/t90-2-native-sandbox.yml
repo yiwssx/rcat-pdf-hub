@@ -12,6 +12,9 @@ on:
       - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
       - "apps/api/app/services/t90_2_external_heic_selftest.py"
       - "apps/api/app/services/t90_2_cc0_heif_corpus_selftest.py"
+      - "apps/api/app/services/t90_2_dwg_real_selftest.py"
+      - "ops/native-sandbox/Dockerfile.cad-ci"
+      - "apps/api/app/services/to_pdf_dwg_native.py"
       - "apps/api/app/services/to_pdf_heif_native.py"
       - "apps/api/Dockerfile"
       - "compose.native-sidecar.yaml"
@@ -25,7 +28,7 @@ jobs:
   bwrap-real-runtime:
     name: Docker-native unprivileged file + network isolation
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 24
     steps:
       - uses: actions/checkout@v5
       - name: Build exact locked API image
@@ -45,6 +48,26 @@ jobs:
             --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
             pdfhub-t90-2-native-qa \
             python -m app.services.t90_2_native_docker_selftest
+
+
+      - name: Build pinned external LibreDWG only in disposable CI
+        run: |
+          set -euo pipefail
+          docker build -f ops/native-sandbox/Dockerfile.cad-ci \
+            -t pdfhub-t90-2-cad-pinned .
+      - name: Prove actual R2000 DWG LINE/CIRCLE to vector PDF without network
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --network none --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only --pids-limit 96 --memory 1024m \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            -e HOME=/tmp -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true \
+            -e PDFHUB_DWG_NATIVE_DEV_ENABLED=true \
+            pdfhub-t90-2-cad-pinned \
+            python -m app.services.t90_2_dwg_real_selftest
 
   patched-heif-runtime:
     name: Build libheif 1.23.7, verify runtime version inside nonroot Docker
