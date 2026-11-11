@@ -33,13 +33,13 @@ class OneCommandTests(unittest.TestCase):
         return json.dumps([{"Config": {"Labels": labels}}])
 
     def test_safe_preflight_error_prints_only_key_names(self):
-        source = (
-            "R1 HOST PREFLIGHT: BLOCKED; no secrets printed\\n"
-            " - insecure_setting:PDFHUB_OIDC_ENABLED\\n"
-            " - service_environment_mismatch:worker-heavy:PDFHUB_TO_PDF_TOOLS_ENABLED\\n"
-            "PDFHUB_OIDC_CLIENT_SECRET=please-never-print-me\\n"
-            " - unsafe_public_base_url\\n"
-        ).replace("\\\\n", "\\n")
+        source = chr(10).join([
+            "R1 HOST PREFLIGHT: BLOCKED; no secrets printed",
+            " - insecure_setting:PDFHUB_OIDC_ENABLED",
+            " - service_environment_mismatch:worker-heavy:PDFHUB_TO_PDF_TOOLS_ENABLED",
+            "PDFHUB_OIDC_CLIENT_SECRET=please-never-print-me",
+            " - unsafe_public_base_url",
+        ]) + chr(10)
         out = StringIO()
         with redirect_stderr(out):
             release.print_safe_preflight_errors(source)
@@ -52,9 +52,11 @@ class OneCommandTests(unittest.TestCase):
     def test_release_reports_safe_host_preflight_diagnostics_on_failure(self):
         failed = subprocess.CompletedProcess(
             ["python3", "scripts/release1-host-preflight.py"], 1, "",
-            "R1 HOST PREFLIGHT: BLOCKED; no secrets printed\\n"
-            " - missing_or_invalid_secret:PDFHUB_NATIVE_SIDECAR_SHARED_SECRET\\n"
-            "SECRET=do-not-log\\n",
+            chr(10).join([
+                "R1 HOST PREFLIGHT: BLOCKED; no secrets printed",
+                " - missing_or_invalid_secret:PDFHUB_NATIVE_SIDECAR_SHARED_SECRET",
+                "SECRET=do-not-log",
+            ]) + chr(10),
         )
         stderr = StringIO()
         with patch.object(release.subprocess, "run", return_value=failed), redirect_stderr(stderr):
