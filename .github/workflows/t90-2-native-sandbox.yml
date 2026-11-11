@@ -93,9 +93,9 @@ jobs:
           [FILES]
           index.html
           second.html
-          toc.hhc
           HHP
           chmcmd --no-html-scan printable.hhp
+          chmls --no-page list rcat-chaptered.chm | head -n 45
           test -s rcat-chaptered.chm
           test "$(head -c 4 rcat-chaptered.chm)" = "ITSF"
           cd -
