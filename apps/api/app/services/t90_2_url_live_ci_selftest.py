@@ -45,8 +45,13 @@ def main() -> int:
                 if pdf.is_encrypted or not 1 <= len(pdf.pages) <= 10:
                     raise ValueError("URL PDF page count invalid")
                 txt = " ".join(page.extract_text() or "" for page in pdf.pages)
-                if "Example Domain" not in txt:
-                    raise ValueError("Real public page text was missing from PDF")
+                normalized = " ".join(txt.split())
+                if "Example Domain" not in normalized:
+                    # The public IANA example.org page contains no secrets.
+                    # This is a CI-only diagnostic of actual extracted text,
+                    # not a log of arbitrary user-provided URLs or documents.
+                    raise ValueError("Real public example.org text absent; pdf_extract="
+                                     + repr(normalized[:180]))
                 pages = len(pdf.pages)
             result.update(status="PASS", pages=pages, unsafe_urls_rejected=rejected,
                           source="https://example.org/",
