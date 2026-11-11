@@ -1,6 +1,6 @@
 # RCAT PDF HUB — T90 Engineering-First inventory
 
-**Snapshot:** 2026-11-11 Engineering First #172; Publisher PR #367, real bilingual model PR #370 and bounded DRM-free PDF→MOBI6 PR #371 merged. Six external native/URL prerequisites remain. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
+**Snapshot:** 2026-11-11 Engineering First #172; Publisher PR #367, real bilingual model PR #370 and bounded DRM-free PDF→MOBI6 PR #371 merged. Four external native/URL prerequisites remain (T20/T30/T33/T34); T09/T25 now have bounded disposable-CI source MAC only, not deployed or certified. This is Engineering source readiness, not live RCAT certification. Canonical registry: [pdf-tools.v1.json](../../contracts/pdf-tools.v1.json).
 
 ## Scope and definitions
 
@@ -9,23 +9,25 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 - **CODE COMPLETE**: existing scoped engine, an existing UI route/workspace interaction and basic code tests for the supported subset; may still be feature-gated OFF and QA PENDING. Does **not** mean deployed or fully format-compatible.
 - **PARTIAL**: useful legacy/backend source path exists but the named tool still lacks a distinct selectable user workflow, or advertised feature subset is incomplete. After #339 and #340, 33 guarded To-PDF and all 16 guarded From-PDF choices have a shared user-facing workflow; T21 Publisher has a limited documented two-page source-backed safe case after PR #367; unrelated blank-page cases still fail closed.
 - **MISSING**: no dedicated usable engine+workflow demonstrated in source audit; proposed adapter alone is not proof of code.
-- **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 now has a bounded real MOBI6 output engine for selectable PDF text, but external device/Calibre and RCAT QA are still pending. The remaining six blockers remain explicit; not 100% delivery claims.
+- **BLOCKED**: code prototype exists but production-usable capability needs a genuine external codec/engine, validated license, restricted network/container dependency or other technical prerequisite. F15 now has a bounded real MOBI6 output engine for selectable PDF text, but external device/Calibre and RCAT QA are still pending. The remaining four blockers remain explicit; not 100% delivery claims.
 
-**Dev-only rollup (MAC-scoped):** CODE COMPLETE **84**, PARTIAL **0**, MISSING **0**, BLOCKED **6** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
+**Dev-only rollup (MAC-scoped):** CODE COMPLETE **86**, PARTIAL **0**, MISSING **0**, BLOCKED **4** = **90**. This conservative *user-facing workflow readiness* is deliberately different from independent T90 source evidence ledger **40 IMPLEMENTED + 1 STAGED + 49 UNASSESSED** (source credit not yet reconciled for M20). Source evidence counts and tool usability may change independently.
 
 | Family | CODE COMPLETE | PARTIAL | MISSING | BLOCKED | Total |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Manage PDF | 33 | 0 | 0 | 0 | 33 |
-| Convert to PDF | 34 | 0 | 0 | 6 | 40 |
+| Convert to PDF | 36 | 0 | 0 | 4 | 40 |
 | Convert from PDF | 17 | 0 | 0 | 0 | 17 |
-| **Total** | **84** | **0** | **0** | **6** | **90** |
+| **Total** | **86** | **0** | **0** | **4** | **90** |
 
 ## Prioritized engineering leverage
 
 1. **DONE — shared To-PDF Web workflow PR #339:** 34 selectable source-code formats including bounded T21 Publisher after PR #367. Existing upload, queue, worker, result/download reused; default OFF and not certified.
-2. **DONE — shared From-PDF Web workflow PR #340:** 17 selectable guarded exporters after F15 [PR #371](https://github.com/yiwssx/rcat-pdf-hub/pull/371); classic MOBI6 UTF-8 selectable text only, no DRM/KF8/images/layout. Existing scopes and queues; default OFF.
+2. **DONE — six-format experimental staged Web integration PR #373:** All six candidates selectable only with existing explicit per-format backend development flags, global staged UI OFF by default; no Production activation or false independent QA promotion.
+3. **DONE — bounded real T09/T25 source MAC evidence PR #374:** CC0 SHA256-pinned external HEIC/HEIF originals processed by actual isolated pinned libheif v1.23.7 decoder; orientation, four-image completeness, corrupted-input fail-closed. Scope-only Engineering credit, not RCAT licensed codec approval, actual phone corpus or independent release.
+4. **DONE — shared From-PDF Web workflow PR #340:** 17 selectable guarded exporters after F15 [PR #371](https://github.com/yiwssx/rcat-pdf-hub/pull/371); classic MOBI6 UTF-8 selectable text only, no DRM/KF8/images/layout. Existing scopes and queues; default OFF.
 3. **Manage progress:** Existing workflows reconciled; genuine engines for M21/M24/M25/M26/M29/M32 and guarded UI for M08/M09 plus eight previously partial Manage tools. New M03 extractive summary and limited M06 evidence search; six-turn contextual evidence follow-up was merged in PR #364 (not generative chat). M01 supports bounded single-operator text editing, multi-fragment TJ and exactly two adjacent Tj operators plus witnessed embedded TrueType ASCII; bounded Thai consonants, non-combining vowels and Thai digits are merged (MAC-scoped CODE COMPLETE for literal source text only), M12 visual e-signature is MAC-scoped CODE COMPLETE (no certificate-backed signature), M06 evidence-only question workflow is MAC-scoped CODE COMPLETE (not an LLM chatbot), and M05 is now MAC-scoped CODE COMPLETE for selectable-text offline EN↔TH real model translation (PR #368) with TXT, newly typeset PDF and bilingual re-layout; original document layout and production approval are not claimed.
-4. **True technical blockers:** six native/URL T formats (T09/T20/T25/T30/T33/T34); T21 remains a narrow source-backed, fail-closed importer, not general Publisher fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
+4. **True technical blockers:** four unaccepted native/URL T formats (T20/T30/T33/T34). T09/T25 earned limited engineering MAC after [PR #373](https://github.com/yiwssx/rcat-pdf-hub/pull/373) and [PR #374](https://github.com/yiwssx/rcat-pdf-hub/pull/374), not independent format VERIFICATION or host deployment; T21 remains a narrow source-backed, fail-closed importer, not general Publisher fidelity. Record honest scope/requirements and only revisit after ordinary capabilities.
 5. **QA/Operations parked:** R1 negative identity/owner tests, native/SSRF host tests, Thai physical/visual goldens, load/DR and independent RELEASED proof stay in [QA #262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), [R1 #308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), [CI #195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), [DR #323](https://github.com/yiwssx/rcat-pdf-hub/issues/323). These do NOT block closing an otherwise complete engineering subtask.
 
 ## All 90 tools — current development snapshot (source only)
@@ -73,7 +75,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | T06 | Excel to PDF | **CODE COMPLETE** | `xls-to-pdf, xlsx-to-pdf, ods-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T07 | PPT to PDF | **CODE COMPLETE** | `ppt-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T08 | PPTX to PDF | **CODE COMPLETE** | `pptx-to-pdf, odp-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
-| T09 | HEIC to PDF | **BLOCKED** | Native/URL prototype only (OFF) | Runtime/license/egress dependency; keep OFF |
+| T09 | HEIC to PDF | **CODE COMPLETE** | [PR #373](https://github.com/yiwssx/rcat-pdf-hub/pull/373) adds separately default-OFF native Web choice; [PR #374](https://github.com/yiwssx/rcat-pdf-hub/pull/374) independently proves real pinned CC0 HEVC HEIC→nonblank one-page PDF, orientation 6 landscape, four-image burst→4 pages, invalid/truncated header rejection through libheif v1.23.7 and unprivileged isolated Docker ([run](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/42956297187)) | Explicit MAC: supported CC0 subset only; no actual camera corpus, every HEVC flavor, ICC/HDR fidelity, licensing redistribution signoff, RCAT host install or independent T90-5 QA; flags remain OFF |
 | T10 | HTML to PDF | **CODE COMPLETE** | `html-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T11 | DjVu to PDF | **CODE COMPLETE** | `djvu-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T12 | PAGES to PDF | **CODE COMPLETE** | `pages-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
@@ -89,7 +91,7 @@ The original requested deliverable is **90 discoverable user-facing tools**, not
 | T22 | XPS to PDF | **CODE COMPLETE** | `xps-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T23 | XML to PDF | **CODE COMPLETE** | `xml-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T24 | WebP to PDF | **CODE COMPLETE** | `webp-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
-| T25 | HEIF to PDF | **BLOCKED** | Native/URL prototype only (OFF) | Runtime/license/egress dependency; keep OFF |
+| T25 | HEIF to PDF | **CODE COMPLETE** | Shared [PR #373](https://github.com/yiwssx/rcat-pdf-hub/pull/373) staged Web selection and [PR #374](https://github.com/yiwssx/rcat-pdf-hub/pull/374) actual independent CC0 generic mif1-brand HEVC .heif→strict one-page visible PDF; generated uncompressed HEIF smoke and pinned runtime verifications PASS in the same offline [CI](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/42956297187) | Explicit MAC: supported HEVC mif1 still-image only; auxiliary/AV1/sequence/color fidelity, every HEIF codec, target host, licenses and independent QA NOT certified; flags remain OFF |
 | T26 | JFIF to PDF | **CODE COMPLETE** | `jfif-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T27 | GIF to PDF | **CODE COMPLETE** | `gif-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
 | T28 | BMP to PDF | **CODE COMPLETE** | `bmp-to-pdf` (guarded) | Shared gated To-PDF UI [PR #339](https://github.com/yiwssx/rcat-pdf-hub/pull/339); QA deferred, flags OFF |
