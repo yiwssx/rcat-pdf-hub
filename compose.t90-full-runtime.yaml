@@ -1,0 +1,67 @@
+# Explicit second-phase T90 runtime. This is NEVER applied by default.
+# Order: base + prod (+ nas) + code-first + native + URL + THIS FILE LAST.
+# URL network+attestation must be installed by the privileged host setup
+# BEFORE the URL importer service is ever started. No public sidecar ports.
+x-t90-full-flags: &t90-full-flags
+  PDFHUB_T90_FULL_RUNTIME_ENABLED: "true"
+  PDFHUB_UNLOCK_PDF_TOOLS_ENABLED: "true"
+  PDFHUB_PROTECT_PDF_TOOLS_ENABLED: "true"
+  PDFHUB_CHM_NATIVE_DEV_ENABLED: "true"
+  PDFHUB_HEIF_NATIVE_DEV_ENABLED: "true"
+  PDFHUB_URL_TO_PDF_DEV_ENABLED: "true"
+  PDFHUB_WPS_NATIVE_DEV_ENABLED: "true"
+  PDFHUB_DWG_NATIVE_DEV_ENABLED: "true"
+  PDFHUB_UNLOCK_PDF_HANDOFF_KEY: ${PDFHUB_UNLOCK_PDF_HANDOFF_KEY:?Set unique private 32-byte base64url handoff key}
+  PDFHUB_PROTECT_PDF_HANDOFF_KEY: ${PDFHUB_PROTECT_PDF_HANDOFF_KEY:?Set a DIFFERENT private 32-byte base64url handoff key}
+
+services:
+  api:
+    environment: *t90-full-flags
+  worker-interactive:
+    environment: *t90-full-flags
+  worker:
+    environment: *t90-full-flags
+  cleanup:
+    environment: *t90-full-flags
+  webhook:
+    environment: *t90-full-flags
+  worker-heavy:
+    environment:
+      PDFHUB_UNLOCK_PDF_TOOLS_ENABLED: "true"
+      PDFHUB_PROTECT_PDF_TOOLS_ENABLED: "true"
+      PDFHUB_CHM_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_HEIF_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_URL_TO_PDF_DEV_ENABLED: "true"
+      PDFHUB_WPS_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_DWG_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_T90_FULL_RUNTIME_ENABLED: "true"
+      PDFHUB_UNLOCK_PDF_HANDOFF_KEY: ${PDFHUB_UNLOCK_PDF_HANDOFF_KEY:?Set unique private handoff key}
+      PDFHUB_PROTECT_PDF_HANDOFF_KEY: ${PDFHUB_PROTECT_PDF_HANDOFF_KEY:?Set separate private handoff key}
+      PDFHUB_NATIVE_SIDECAR_SHARED_SECRET: ${PDFHUB_NATIVE_SIDECAR_SHARED_SECRET:?Set private HMAC secret}
+      PDFHUB_URL_FETCHER_SHARED_SECRET: ${PDFHUB_URL_FETCHER_SHARED_SECRET:?Set private HMAC secret}
+    # CRITICAL: don't drop Production DB/Valkey networks when adding sidecars.
+    networks: [data, management, egress, native_converter_internal, url_fetch_internal]
+  web:
+    environment:
+      PDFHUB_UNLOCK_PDF_TOOLS_ENABLED: "true"
+      PDFHUB_PROTECT_PDF_TOOLS_ENABLED: "true"
+      PDFHUB_CHM_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_HEIF_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_URL_TO_PDF_DEV_ENABLED: "true"
+      PDFHUB_WPS_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_DWG_NATIVE_DEV_ENABLED: "true"
+      PDFHUB_T90_FULL_RUNTIME_ENABLED: "true"
+  native-decoder:
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; assert urlopen('http://127.0.0.1:8098/healthz', timeout=4).status == 200"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 15s
+  url-fetcher:
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; assert urlopen('http://127.0.0.1:8099/healthz', timeout=4).status == 200"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 15s
