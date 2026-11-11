@@ -52,6 +52,8 @@ def main() -> int:
         if CORPUS.is_symlink() or not CORPUS.is_file() or not 100 < CORPUS.stat().st_size <= MAX_ARCHIVE:
             raise ValueError("Published Works corpus missing or oversized")
         archive_sha = hashlib.sha256(CORPUS.read_bytes()).hexdigest()
+        if archive_sha != "95c919a7506f6be30d90c100df6f5fa29bcf9e75a1bbef7a509de65b42e5aa5a":
+            raise ValueError("Published Microsoft Works source corpus changed")
         results: list[dict[str, object]] = []
         successes = 0
         readable = 0
