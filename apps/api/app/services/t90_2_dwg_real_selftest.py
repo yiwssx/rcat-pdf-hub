@@ -18,7 +18,7 @@ from tempfile import TemporaryDirectory
 from pypdf import PdfReader
 from app.services.to_pdf_dwg_native import restricted_dwg_to_pdf
 
-SOURCE = Path("/fixtures/simple-geometry.dwg")
+SOURCE_NAME = "simple-geometry.dwg"
 SIMPLE_DXF = """0
 SECTION
 2
@@ -71,13 +71,24 @@ EOF
 def main() -> int:
     report = {"test": "T20 genuine LibreDWG r2000 2D LINE/CIRCLE PDF", "status": "FAIL"}
     try:
-        if not SOURCE.is_file() or SOURCE.is_symlink() or not SOURCE.read_bytes().startswith(b"AC1015"):
-            raise ValueError("Real r2000 DWG binary was not generated")
-        original_sha = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
         with TemporaryDirectory(prefix="dwg-native-ci-") as work:
             folder = Path(work)
+            source_dxf = folder / "simple-geometry.dxf"
+            source_dxf.write_text(SIMPLE_DXF, encoding="ascii")
+            source = folder / SOURCE_NAME
+            generator = subprocess.run(
+                ["/opt/pdfhub/cad/bin/dwgwrite", "--as", "r2000",
+                 "-I", "DXF", "-o", str(source), str(source_dxf)],
+                capture_output=True, check=False, timeout=40, text=True,
+            )
+            if generator.returncode or not source.is_file():
+                raise ValueError("Pinned LibreDWG cannot create an authentic DWG from known DXF: "
+                                 + generator.stderr[-240:])
+            if not source.read_bytes().startswith(b"AC1015"):
+                raise ValueError("LibreDWG did not write an authentic r2000 DWG")
+            original_sha = hashlib.sha256(source.read_bytes()).hexdigest()
             result = folder / "vector.pdf"
-            restricted_dwg_to_pdf(SOURCE, result)
+            restricted_dwg_to_pdf(source, result)
             with result.open("rb") as fd:
                 pdf = PdfReader(fd, strict=True)
                 if pdf.is_encrypted or len(pdf.pages) != 1:
@@ -85,7 +96,7 @@ def main() -> int:
                 body = pdf.pages[0].get_contents().get_data()
                 if not (b" m " in body or b" m\n" in body or b" l " in body or b" l\n" in body):
                     raise ValueError("DWG PDF lost LINE/CIRCLE drawing operators")
-            if hashlib.sha256(SOURCE.read_bytes()).hexdigest() != original_sha:
+            if hashlib.sha256(source.read_bytes()).hexdigest() != original_sha:
                 raise ValueError("DWG source bytes were modified")
             corrupt = folder / "fake.dwg"
             corrupt.write_bytes(b"AC1015" + b"\x00" * 2048)
