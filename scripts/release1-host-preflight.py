@@ -223,7 +223,7 @@ def inspect_compose(data: object) -> list[str]:
                         failures.append("insecure_web_rollout_setting:" + key)
                 for key in T90_LIMITED_FLAGS:
                     expected = "true" if t90_full else "false"
-                    if web_env.get(key, "").lower() != expected:
+                    if web_env.get(key, "false").lower() != expected:
                         failures.append("insecure_web_runtime_setting:" + key)
     if t90_full:
         # No remote URL fetch may run from the privileged API/RQ service.
