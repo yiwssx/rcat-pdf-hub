@@ -275,6 +275,7 @@ assert config["services"]["api"]["environment"]["PDFHUB_CLAMAV_ENABLED"] == "tru
 assert "clamav" in config["services"], config["services"].keys()
 '
   # Source configuration only: no extra per-tool QA or host-side actions.
+  python3 -m unittest discover -s scripts/tests -p 'test_provision_t90_url_egress_network.py'
   bash scripts/test-t90-full-runtime-compose.sh
   echo 'compose: PASS'
 }

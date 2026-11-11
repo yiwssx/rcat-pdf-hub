@@ -1,6 +1,9 @@
 # T90-2 URL importer opt-in overlay. DO NOT START until host firewall
 # installer has run and network isolation acceptance has been completed.
 # Base docker-compose.yml stays unchanged; feature flags stay OFF by default.
+# Production host must allocate a nonoverlapping /28 in .env using
+# scripts/provision-t90-url-egress-network.py before starting URL sidecar.
+# The bridge interface name stays fixed for the already-verified firewall.
 services:
   api:
     environment:
@@ -39,7 +42,7 @@ services:
     networks:
       url_fetch_internal: {}
       url_fetch_egress:
-        ipv4_address: 172.30.243.2
+        ipv4_address: ${PDFHUB_URL_EGRESS_IPV4:-172.30.243.2}
         gw_priority: 100
     expose:
       - "8099"
@@ -57,4 +60,4 @@ networks:
     enable_ipv6: false
     ipam:
       config:
-        - subnet: 172.30.243.0/28
+        - subnet: ${PDFHUB_URL_EGRESS_SUBNET:-172.30.243.0/28}

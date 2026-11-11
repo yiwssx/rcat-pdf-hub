@@ -183,9 +183,20 @@ class HostPreflightTests(unittest.TestCase):
             "networks": {"native_converter_internal": {}},
         }
         self.config["services"]["url-fetcher"] = {
-            "networks": {"url_fetch_internal": {}, "url_fetch_egress": {}},
+            "networks": {
+                "url_fetch_internal": {},
+                "url_fetch_egress": {"ipv4_address": "172.30.243.2"},
+            },
             "environment": {mod.T90_HMAC_KEYS[1]: hmac_url},
             "cap_drop": ["ALL"], "read_only": True,
+        }
+        self.config["networks"] = {
+            "url_fetch_egress": {
+                "driver": "bridge",
+                "enable_ipv6": False,
+                "driver_opts": {"com.docker.network.bridge.name": "br-pdfhub-url"},
+                "ipam": {"config": [{"subnet": "172.30.243.0/28"}]},
+            }
         }
 
     def test_full_runtime_requires_owner_restricted_services_and_credentials(self):
@@ -201,6 +212,28 @@ class HostPreflightTests(unittest.TestCase):
         del self.config["services"]["worker-heavy"]["networks"]["data"]
         self.assertIn("missing_production_heavy_worker_networks",
                       mod.inspect_compose(self.config))
+
+    def test_full_runtime_allows_host_selected_nonconflicting_private_url_subnet(self):
+        self.configure_t90_full_runtime()
+        self.config["networks"]["url_fetch_egress"]["ipam"]["config"][0]["subnet"] = "10.254.240.0/28"
+        self.config["services"]["url-fetcher"]["networks"]["url_fetch_egress"]["ipv4_address"] = "10.254.240.2"
+        self.assertEqual(mod.inspect_compose(self.config), [])
+
+    def test_full_runtime_rejects_mismatched_ip_and_renamed_firewall_bridge(self):
+        self.configure_t90_full_runtime()
+        self.config["services"]["url-fetcher"]["networks"]["url_fetch_egress"]["ipv4_address"] = "172.30.243.3"
+        self.assertIn("invalid_url_egress_network", mod.inspect_compose(self.config))
+        self.configure_t90_full_runtime()
+        self.config["networks"]["url_fetch_egress"]["driver_opts"]["com.docker.network.bridge.name"] = "br-other"
+        self.assertIn("invalid_url_egress_network", mod.inspect_compose(self.config))
+
+    def test_full_runtime_rejects_public_or_too_broad_url_egress_subnet(self):
+        self.configure_t90_full_runtime()
+        self.config["networks"]["url_fetch_egress"]["ipam"]["config"][0]["subnet"] = "172.30.0.0/16"
+        self.assertIn("invalid_url_egress_network", mod.inspect_compose(self.config))
+        self.configure_t90_full_runtime()
+        self.config["networks"]["url_fetch_egress"]["ipam"]["config"][0]["subnet"] = "8.8.8.0/28"
+        self.assertIn("invalid_url_egress_network", mod.inspect_compose(self.config))
 
     def test_full_runtime_fails_closed_on_secret_or_oidc_mismatch(self):
         self.configure_t90_full_runtime()

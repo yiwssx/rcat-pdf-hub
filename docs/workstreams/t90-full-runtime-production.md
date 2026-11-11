@@ -25,9 +25,44 @@ bash scripts/deploy-t90-full-runtime.sh
 
 **What happens in order:**
 1. Git fast-forward retains existing local changes. If blocked by non-Caddy tracked changes, stop rather than force-reset. Preserve custom Caddy through the reviewed `migrate-site-caddy.py` process.
-2. Root provisioning generates/reuses 4 independent secrets only in local `.env`; installs the known exact URL firewall rules and root systemd boot/lease units. Existing conflicting firewall policy or unsupported Docker backend must **fail closed**, not be overridden. It never changes database, DNS or containers.
+2. Root provisioning generates/reuses 4 independent secrets only in local `.env`, selects a collision-free private URL egress /28 from the Host Docker/route inventory, and installs the known exact URL firewall rules and root systemd boot/lease units. Existing conflicting firewall policy or unsupported Docker backend must **fail closed**, not be overridden. It never changes database, DNS or containers.
 3. Host-only full release selects existing Production Compose mode (with NAS if already used), requires `PDFHUB_T90_CODE_ROLLOUT_ENABLED=true` and `PDFHUB_T90_FULL_RUNTIME_ENABLED=true`, validates real institutional configuration and sidecar/network/secret shapes. It reuses protected-main CI evidence, creates/verifies a private **live database/storage backup**, builds all existing app and isolated native/URL images, starts the lower-trust sidecars and confirms their health **before stopping existing writers**; then performs guarded migration/cutover and probes `/healthz`+`/readyz`. It refuses to run from GitHub Actions and never skips the core safety checks.
 4. Production URL egress is **not** certified by disposable CI alone. Only the real root firewall guard + container's live fresh-lease check can allow actual URL requests. Full independent document/Thai/source-output quality QA #262 remains deferred as requested.
+
+## Existing RCAT Host — resolving the observed URL network overlap (2026-11-11)
+
+The first approved full-runtime attempt successfully passed authenticated Production
+preflight, verified a fresh backup, built all eight app images, built the native
+decoder (including pinned HEIF and LibreDWG), built URL fetcher and confirmed
+ClamAV PING. It then stopped **before writer shutdown/migration** while Docker
+attempted to create network `pdf-hub_url_fetch_egress` using the former fixed
+`172.30.243.0/28` and returned `Pool overlaps with other one`.
+
+The fix is host-specific **IPAM allocation, not a firewall rule change**. The
+reviewed allocator lists Docker-assigned subnets and local host routes/address
+ranges, chooses a free private /28, and persists its subnet and the matching
+network-address-plus-2 URL sidecar IPv4 in the existing `.env`, retaining
+ownership, permissions and every unrelated secret. It refuses to readdress an
+existing live URL network or accept a broad/public network. The host firewall
+remains anchored to the unmodified `br-pdfhub-url` interface.
+
+**Once only, after the fix has merged into protected `main`:**
+
+```bash
+cd /opt/rcat-pdf-hub || exit 1
+git fetch origin main &&
+git merge --ff-only origin/main &&
+sudo python3 scripts/provision-t90-url-egress-network.py &&
+bash scripts/deploy-t90-full-runtime.sh
+```
+
+Do **NOT** repeat the four-secret provisioning or reinstall the already-active
+root firewall / timer. No Docker network deletion and no `docker compose down`
+are needed. Existing app/native Docker image layers are cached; the reviewed
+release still enforces its own new verified backup before an eventual cutover.
+The allocator does not guarantee that Docker networking is functional; if a
+conflicting external change happens between discovery and creation it fails
+closed, and operators should report the exact Docker error (without `.env`).
 
 ## Expected outputs and truthful status
 

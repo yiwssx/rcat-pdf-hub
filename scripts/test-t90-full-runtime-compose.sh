@@ -20,6 +20,9 @@ export PDFHUB_UNLOCK_PDF_HANDOFF_KEY="$unlock"
 export PDFHUB_PROTECT_PDF_HANDOFF_KEY="$protect"
 export PDFHUB_NATIVE_SIDECAR_SHARED_SECRET="$(printf '%064d' 1)"
 export PDFHUB_URL_FETCHER_SHARED_SECRET="$(printf '%064d' 2)"
+# Simulate a Host-selected /28, not the legacy hard-coded subnet.
+export PDFHUB_URL_EGRESS_SUBNET=10.254.240.0/28
+export PDFHUB_URL_EGRESS_IPV4=10.254.240.2
 docker compose -p pdfhub-t90-runtime-ci \
   -f docker-compose.yml -f docker-compose.prod.yml \
   -f compose.t90-code-first.yaml \

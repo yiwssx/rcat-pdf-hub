@@ -12,6 +12,8 @@ command -v systemctl >/dev/null || { echo 'systemd required' >&2; exit 2; }
 command -v docker >/dev/null || { echo 'Docker host required' >&2; exit 2; }
 
 python3 scripts/provision-t90-runtime-secrets.py
+# Reserve a free, Host-specific /28; never touch existing Docker networks.
+python3 scripts/provision-t90-url-egress-network.py
 # Retain the immutable reviewed scripts outside the Git checkout for boot.
 install -d -m 0755 /usr/local/libexec/pdfhub
 install -m 0755 ops/url-fetcher/install-host-egress-firewall.sh \
