@@ -298,21 +298,37 @@ def _read_chm(path: Path) -> str:
         names_seen: set[str] = set()
         total_html = 0
         failure = []
+        enumerated_count = 0
 
         @enum_callback
         def collect(_handle, unit_pointer, _context):
-            nonlocal total_html
+            nonlocal total_html, enumerated_count
             unit = unit_pointer.contents
             try:
+                enumerated_count += 1
+                if enumerated_count > MAX_MEMBERS:
+                    raise ValueError("CHM archive member inventory exceeds limit")
                 raw = bytes(unit.path).split(b"\0", 1)[0]
-                name = _safe_name(raw.decode("utf-8"))
-                folded = name.casefold()
-                if folded in names_seen or len(names_seen) >= MAX_MEMBERS:
-                    raise ValueError("CHM member inventory has duplicate or too many entries")
-                names_seen.add(folded)
-                suffix = Path(name).suffix.lower()
+                if not raw:
+                    raise ValueError("CHM member name is missing")
+                # Genuine CHM archives contain internal /#SYSTEM, ::DataSpace,
+                # /$FIftiMain and directory entries. These are not printable
+                # files and must never be presented to Chromium. Select only
+                # the already-allowlisted document/image suffixes first.
+                # All selected printable paths still undergo exact strict
+                # traversal/encoding/duplicate/size validation below.
+                try:
+                    decoded = raw.decode("utf-8", errors="strict")
+                except UnicodeDecodeError as exc:
+                    raise ValueError("CHM member name is not UTF-8") from exc
+                suffix = Path(decoded).suffix.lower()
                 if suffix not in {".html", ".htm", ".hhc", ".hhk", *IMAGE_MIMES}:
                     return 1
+                name = _safe_name(decoded)
+                folded = name.casefold()
+                if folded in names_seen:
+                    raise ValueError("CHM printable member names overlap")
+                names_seen.add(folded)
                 if unit.space not in (0, 1):
                     raise ValueError("CHM member uses unsupported storage")
                 size_limit = MAX_IMAGE_BYTES if suffix in IMAGE_MIMES else MAX_HTML_BYTES
