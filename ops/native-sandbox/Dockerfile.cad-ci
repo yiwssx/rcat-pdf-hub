@@ -23,5 +23,6 @@ RUN set -eux; \
     ldconfig; \
     /opt/pdfhub/cad/bin/dwgread --version; \
     /opt/pdfhub/cad/bin/dwgwrite --version; \
+    /opt/venv/bin/python -m pip install --no-cache-dir 'ezdxf==1.4.5'; \
     rm -rf /tmp/libredwg-build /tmp/libredwg-0.14.tar.gz /var/lib/apt/lists/*
 USER pdfhub
