@@ -62,7 +62,7 @@ for host, port in [
         # INPUT rule matches br-pdfhub-url. Don't mistake the gateway
         # timeout for proof of FORWARD packet rejection.
         if host == "172.30.243.1":
-            if exc.errno != errno.ETIMEDOUT:
+            if not isinstance(exc, TimeoutError) and exc.errno != errno.ETIMEDOUT:
                 raise AssertionError(f"Host-gateway INPUT-DROP semantics changed: {exc!r}")
             print(f"PASS HOST INPUT-DROP {host}:{port} with verified host rule")
             continue
