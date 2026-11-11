@@ -56,6 +56,8 @@ services:
         PDFHUB_NATIVE_ONLY: "1"
         # Builds v1.23.7 by immutable upstream Git commit, decoder-only.
         PDFHUB_HEIF_FROM_SOURCE: "1"
+        # Pinned GNU LibreDWG source, isolated-image only; internal use.
+        PDFHUB_DWG_FROM_SOURCE: "1"
     command: ["python", "-m", "app.services.native_sidecar_server"]
     user: "10001:10001"
     read_only: true
