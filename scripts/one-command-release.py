@@ -34,7 +34,7 @@ def call(*argv: str, env: dict[str, str] | None = None,
     return (result.stdout or "").strip()
 
 
-def live_compose_mode() -> tuple[str, bool]:
+def live_compose_mode() -> tuple[str, bool, bool]:
     ids = call(
         "docker", "ps", "-q",
         "--filter", "label=com.docker.compose.service=api",
@@ -57,6 +57,7 @@ def live_compose_mode() -> tuple[str, bool]:
             modes.append((
                 "prod-nas" if "docker-compose.nas.yml" in files else "prod",
                 "compose.t90-code-first.yaml" in files,
+                "compose.t90-full-runtime.yaml" in files,
             ))
     if len(modes) != 1:
         blocked("running production API Compose project is not uniquely verifiable")
@@ -102,17 +103,27 @@ def main() -> None:
     remote = call("git", "ls-remote", "origin", "refs/heads/main").split()[0]
     if sha != remote:
         blocked("current working tree does not equal protected origin/main")
-    mode, t90_currently_live = live_compose_mode()
+    mode, t90_currently_live, t90_full_currently_live = live_compose_mode()
     requested = os.environ.get("PDFHUB_T90_PRODUCTION_CODE_ENABLED", "").lower()
-    if requested not in ("", "true", "false"):
-        blocked("PDFHUB_T90_PRODUCTION_CODE_ENABLED must be true, false or unset")
-    if requested == "false" and t90_currently_live:
-        blocked("cannot silently remove the currently live T90 code overlay")
-    t90_code_first = requested == "true" or t90_currently_live
+    requested_full = os.environ.get("PDFHUB_T90_FULL_RUNTIME_ENABLED", "").lower()
+    if requested not in ("", "true", "false") or requested_full not in ("", "true", "false"):
+        blocked("T90 production/full runtime selection must be true, false or unset")
+    if requested == "false" and (t90_currently_live or t90_full_currently_live):
+        blocked("cannot silently remove the currently live T90 overlay")
+    if requested_full == "false" and t90_full_currently_live:
+        blocked("cannot silently remove the currently live native/URL runtime")
+    t90_full = requested_full == "true" or t90_full_currently_live
+    t90_code_first = requested == "true" or t90_currently_live or t90_full
     if t90_code_first and not (ROOT / "compose.t90-code-first.yaml").is_file():
         blocked("T90 code-first overlay file is missing")
+    if t90_full:
+        for path in ("compose.native-sidecar.yaml", "compose.url-fetcher.yaml",
+                     "compose.t90-full-runtime.yaml"):
+            if not (ROOT / path).is_file():
+                blocked("T90 full-runtime overlay missing: " + path)
     print(f"one-command-release: production Compose={mode}, "
-          f"T90 code-first={t90_code_first}, target SHA={sha[:12]}", flush=True)
+          f"T90 code-first={t90_code_first} full-runtime={t90_full}, "
+          f"target SHA={sha[:12]}", flush=True)
 
     # Read-only trust gates BEFORE creating a backup.
     call("bash", "scripts/verify-ci-evidence.sh", timeout=90)
@@ -121,6 +132,10 @@ def main() -> None:
         overlays += ["-f", "docker-compose.nas.yml"]
     if t90_code_first:
         overlays += ["-f", "compose.t90-code-first.yaml"]
+    if t90_full:
+        overlays += ["-f", "compose.native-sidecar.yaml",
+                     "-f", "compose.url-fetcher.yaml",
+                     "-f", "compose.t90-full-runtime.yaml"]
     config = call("docker", "compose", *overlays, "config", "--format", "json")
     call("python3", "scripts/release1-host-preflight.py", input_text=config)
 
@@ -150,6 +165,7 @@ def main() -> None:
         RCAT_DEPLOY_SHA=sha,
         RCAT_DEPLOY_CONFIRM="YES",
         PDFHUB_T90_PRODUCTION_CODE_ENABLED="true" if t90_code_first else "false",
+        PDFHUB_T90_FULL_RUNTIME_ENABLED="true" if t90_full else "false",
     )
     print("one-command-release: starting standard backup-gated production cutover", flush=True)
     call("bash", "scripts/production-cutover.sh", "deploy", env=deploy_env,
