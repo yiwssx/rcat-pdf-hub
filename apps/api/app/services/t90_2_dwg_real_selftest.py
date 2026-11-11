@@ -73,8 +73,17 @@ def main() -> int:
     try:
         with TemporaryDirectory(prefix="dwg-native-ci-") as work:
             folder = Path(work)
+            # Use MIT-licensed, version-pinned ezdxf only in this
+            # disposable CI build to emit a *complete* R2000 ASCII DXF.
+            # The previous hand-written 185-byte DXF was not a genuine
+            # valid dwgwrite input; never relax the app's DXF security.
+            import ezdxf
             source_dxf = folder / "simple-geometry.dxf"
-            source_dxf.write_text(SIMPLE_DXF, encoding="ascii")
+            drawing = ezdxf.new("R2000", setup=False)
+            modelspace = drawing.modelspace()
+            modelspace.add_line((10.0, 10.0), (90.0, 40.0))
+            modelspace.add_circle((50.0, 70.0), radius=15.0)
+            drawing.saveas(str(source_dxf))
             source = folder / SOURCE_NAME
             generator = subprocess.run(
                 ["/opt/pdfhub/cad/bin/dwgwrite", "--as", "r2000",
