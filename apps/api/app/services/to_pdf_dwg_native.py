@@ -37,6 +37,10 @@ ENTITY_COORD_CODES = frozenset({10, 20, 11, 21, 30, 31, 40})
 # may be dropped. Layers, colors, lineweights, scale overrides, visibility
 # and layout selection must NOT be silently erased from engineering drawings.
 IGNORED_ENTITY_HEADER_CODES = frozenset({5, 100, 330})
+# Standard CAD frontends may emit zero thickness and a canonical +Z
+# extrusion direction even for pure 2D LINE/CIRCLE. Accept only these exact
+# semantic defaults; reject tilted planes, 3D geometry or styled drawings.
+RESTRICTED_2D_NUMERIC_DEFAULTS = {39: 0.0, 210: 0.0, 220: 0.0, 230: 1.0}
 RESTRICTED_ENTITY_DEFAULTS = {
     8: "0",       # default layer only
     6: "BYLAYER", # no custom line types
@@ -93,9 +97,17 @@ def _normalize_dwg_dxf(source: Path, target: Path) -> int:
     for i in range(0, len(lines), 2):
         raw_code = lines[i].strip()
         value = lines[i + 1].strip()
-        if not re.fullmatch(r"[0-9]{1,3}", raw_code) or len(value) > 1000:
+        # Native DXF streams can contain negative temporary group codes and
+        # extended 1000–1071 XDATA codes in HEADER/OBJECTS sections. They are
+        # legitimate structural metadata, but MUST NOT enter our rendered
+        # ENTITIES projection. Validate this standard outer envelope here;
+        # semantic rendering restrictions are checked inside ENTITIES below.
+        if not re.fullmatch(r"-?[0-9]{1,4}", raw_code) or len(value) > 1000:
             raise ValueError("DWG DXF has invalid group-code structure")
-        pairs.append((int(raw_code), value))
+        code = int(raw_code)
+        if not -5 <= code <= 1071:
+            raise ValueError("DWG DXF group code is outside standard ranges")
+        pairs.append((code, value))
 
     # Locate exactly one ENTITIES section; do not rely on native program
     # headers or mutate potentially attacker-controlled intermediate text.
@@ -139,6 +151,13 @@ def _normalize_dwg_dxf(source: Path, target: Path) -> int:
                     raise ValueError("DWG entity has ambiguous repeated coordinates")
                 coords.add(code)
                 clean.append((code, value))
+            elif code in RESTRICTED_2D_NUMERIC_DEFAULTS:
+                # Explicit +Z normal/zero thickness have no visible effect
+                # on supported modelspace 2D geometry. Any nondefault tilt,
+                # thickness or malformed number MUST fail closed.
+                if (not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]{1,3})?", value)
+                        or float(value) != RESTRICTED_2D_NUMERIC_DEFAULTS[code]):
+                    raise ValueError("DWG uses nondefault 3D extrusion or thickness")
             elif code in RESTRICTED_ENTITY_DEFAULTS:
                 # Preserve visual honesty. Our existing vector renderer
                 # ignores styles, layers and print scale: only their exact

@@ -131,3 +131,24 @@ def test_native_dispatch_rejects_bad_inputs_and_params(monkeypatch, tmp_path,
     with pytest.raises(ValueError):
         execute_native_dev_to_pdf_operation(operation, [source], target, {}, **kwargs)
     assert not target.exists()
+
+
+def test_t20_groupcode_metadata_is_allowed_but_entity_xdata_is_rejected(tmp_path):
+    """Real DWG readers may emit DXF XDATA codes outside modelspace only."""
+    from app.services.to_pdf_dwg_native import _normalize_dwg_dxf
+
+    source = tmp_path / "whole.dxf"
+    canonical = tmp_path / "geometry.dxf"
+    header = "0\nSECTION\n2\nHEADER\n1000\nmetadata-only\n0\nENDSEC\n"
+    entities = ("0\nSECTION\n2\nENTITIES\n0\nLINE\n"
+                "10\n10\n20\n10\n11\n90\n21\n40\n"
+                "210\n0\n220\n0\n230\n1\n"
+                "0\nENDSEC\n0\nEOF\n")
+    source.write_text(header + entities, encoding="ascii")
+    assert _normalize_dwg_dxf(source, canonical) == 1
+    assert "1000" not in canonical.read_text(encoding="ascii")
+    source.write_text(header + entities.replace(
+        "0\nLINE\n", "0\nLINE\n1000\nunsafe-entity-xdata\n",
+    ), encoding="ascii")
+    with pytest.raises(ValueError, match="unsupported semantics"):
+        _normalize_dwg_dxf(source, canonical)

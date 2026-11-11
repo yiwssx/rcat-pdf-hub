@@ -1,0 +1,28 @@
+# Disposable T20 CI binary: NOT in the app or production image/Compose.
+# GNU LibreDWG is GPL-3.0-or-later; embedding this binary in distribution
+# requires an independent legal/provenance review and license compliance.
+FROM pdfhub-t90-2-native-qa
+USER root
+RUN set -eux; \
+    apt-get update -qq; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+      build-essential autoconf automake libtool pkg-config texinfo \
+      libxml2-dev zlib1g-dev libgmp-dev libpcre2-dev curl xz-utils; \
+    curl --fail --silent --show-error --location --retry 3 --max-time 180 \
+      --proto '=https' --proto-redir '=https' \
+      'https://ftpmirror.gnu.org/libredwg/libredwg-0.14.tar.gz' \
+      -o /tmp/libredwg-0.14.tar.gz; \
+    echo 'cb6ee0b078c6d9e0f09d66f1feac33ba6342df88ae544e9f9335fab475218351  /tmp/libredwg-0.14.tar.gz' | sha256sum -c -; \
+    mkdir -p /tmp/libredwg-build; \
+    tar -xzf /tmp/libredwg-0.14.tar.gz --directory /tmp/libredwg-build --strip-components=1; \
+    cd /tmp/libredwg-build; \
+    ./configure --prefix=/opt/pdfhub/cad --disable-python --disable-silent-rules; \
+    make -j 2; \
+    make install; \
+    echo '/opt/pdfhub/cad/lib' > /etc/ld.so.conf.d/pdfhub-cad.conf; \
+    ldconfig; \
+    /opt/pdfhub/cad/bin/dwgread --version; \
+    /opt/pdfhub/cad/bin/dwgwrite --version; \
+    /opt/venv/bin/python -m pip install --no-cache-dir 'ezdxf==1.4.5'; \
+    rm -rf /tmp/libredwg-build /tmp/libredwg-0.14.tar.gz /var/lib/apt/lists/*
+USER pdfhub

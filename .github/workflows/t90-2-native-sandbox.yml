@@ -12,6 +12,16 @@ on:
       - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
       - "apps/api/app/services/t90_2_external_heic_selftest.py"
       - "apps/api/app/services/t90_2_cc0_heif_corpus_selftest.py"
+      - "apps/api/app/services/t90_2_chm_compiled_selftest.py"
+      - "apps/api/app/services/to_pdf_chm_worker.py"
+      - "apps/api/app/services/t90_2_dwg_real_selftest.py"
+      - "ops/native-sandbox/Dockerfile.cad-ci"
+      - "apps/api/app/services/t90_2_url_live_ci_selftest.py"
+      - "scripts/test-t90-2-url-egress-ci.sh"
+      - "apps/api/app/services/to_pdf_url.py"
+      - "apps/api/app/services/url_fetch_core.py"
+      - "ops/url-fetcher/**"
+      - "compose.url-fetcher.yaml"
       - "apps/api/app/services/t90_2_works_nonempty_corpus_selftest.py"
       - "apps/api/app/services/to_pdf_heif_native.py"
       - "apps/api/Dockerfile"
@@ -110,6 +120,134 @@ jobs:
             -e PDFHUB_TO_PDF_TOOLS_ENABLED=true -e PDFHUB_WPS_NATIVE_DEV_ENABLED=true \
             t90-works-readable-image \
             python -m app.services.t90_2_works_nonempty_corpus_selftest
+
+  t30-chm-compiled:
+    name: T30 real compiled LZX CHM→PDF
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build exact locked API image
+        run: docker build --build-arg PDFHUB_NATIVE_ONLY=1 -t pdfhub-t90-2-native-qa apps/api
+      - name: Compile authentic two-chapter CHM and render through isolated LZX decoder
+        run: |
+          set -euo pipefail
+          # Real Free Pascal compiler generates Microsoft's ITSF + LZX
+          # container; no synthetic header, extraction fallback or user data.
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq fp-utils
+          fixture="$(mktemp -d)"
+          bridge="rcat-t90-chm-qa"
+          cleanup() {
+            docker rm -f t90-chm-gotenberg >/dev/null 2>&1 || true
+            docker network rm "$bridge" >/dev/null 2>&1 || true
+            rm -rf "$fixture"
+          }
+          trap cleanup EXIT
+          cd "$fixture"
+          cat > index.html <<'HTML'
+          <!doctype html><html><head><meta charset="utf-8"><title>Chapter One</title></head><body>
+          <h1>Chapter One</h1><p>RCAT T90 CHM chapter one visible content</p>
+          <p>This chapter proves the genuine compressed HTML Help reader.</p></body></html>
+          HTML
+          cat > second.html <<'HTML'
+          <!doctype html><html><head><meta charset="utf-8"><title>Chapter Two</title></head><body>
+          <h1>Chapter Two</h1><p>RCAT T90 CHM chapter two visible content</p>
+          <p>All internal sources remain local and read only.</p></body></html>
+          HTML
+          cat > toc.hhc <<'HHC'
+          <html><body><ul>
+          <li><object type="text/sitemap"><param name="Name" value="Chapter One"><param name="Local" value="index.html"></object></li>
+          <li><object type="text/sitemap"><param name="Name" value="Chapter Two"><param name="Local" value="second.html"></object></li>
+          </ul></body></html>
+          HHC
+          cat > printable.hhp <<'HHP'
+          [OPTIONS]
+          Compatibility=1.1 or later
+          Compiled file=rcat-chaptered.chm
+          Contents file=toc.hhc
+          Default topic=index.html
+          Display compile progress=No
+          Full-text search=No
+          Language=0x409 English (United States)
+          Title=RCAT T90 Two Chapter Help
+          [FILES]
+          index.html
+          second.html
+          HHP
+          chmcmd --no-html-scan printable.hhp
+          test -s rcat-chaptered.chm
+          test "$(head -c 4 rcat-chaptered.chm)" = "ITSF"
+          cd -
+          chmod 0755 "$fixture"
+          chmod 0444 "$fixture/rcat-chaptered.chm"
+          docker network create --internal "$bridge"
+          docker build -t t90-chm-gotenberg-image ops/gotenberg
+          docker run -d --name t90-chm-gotenberg \
+            --network "$bridge" --network-alias native-gotenberg \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit 128 --memory 1024m \
+            --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+            t90-chm-gotenberg-image
+          ready=0
+          for attempt in $(seq 1 30); do
+            if docker run --rm --network "$bridge" \
+              --entrypoint curl pdfhub-t90-2-native-qa \
+              -fsS --max-time 2 http://native-gotenberg:3000/health >/dev/null 2>&1; then
+              ready=1; break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          docker run --rm \
+            --network "$bridge" \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --pids-limit 96 --memory 1024m \
+            --mount "type=bind,src=$fixture,dst=/fixtures,readonly" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            -e HOME=/tmp -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_GOTENBERG_URL=http://native-gotenberg:3000 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true -e PDFHUB_CHM_NATIVE_DEV_ENABLED=true \
+            pdfhub-t90-2-native-qa \
+            python -m app.services.t90_2_chm_compiled_selftest
+
+  t20-dwg-real:
+    name: T20 real R2000 binary DWG→PDF
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build exact locked API image
+        run: docker build --build-arg PDFHUB_NATIVE_ONLY=1 -t pdfhub-t90-2-native-qa apps/api
+      - name: Build pinned external LibreDWG only in disposable CI
+        run: |
+          set -euo pipefail
+          docker build -f ops/native-sandbox/Dockerfile.cad-ci \
+            -t pdfhub-t90-2-cad-pinned .
+      - name: Prove actual R2000 DWG LINE/CIRCLE to vector PDF without network
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --network none --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only --pids-limit 96 --memory 1024m \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            -e HOME=/tmp -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true \
+            -e PDFHUB_DWG_NATIVE_DEV_ENABLED=true \
+            pdfhub-t90-2-cad-pinned \
+            python -m app.services.t90_2_dwg_real_selftest
+
+  t33-url-real:
+    name: T33 signed public HTTPS URL→PDF and kernel isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build exact locked API image
+        run: docker build --build-arg PDFHUB_NATIVE_ONLY=1 -t pdfhub-t90-2-native-qa apps/api
+      - name: Prove T33 real public HTTPS source to PDF with kernel egress rules
+        run: bash scripts/test-t90-2-url-egress-ci.sh
 
   patched-heif-runtime:
     name: Build libheif 1.23.7, verify runtime version inside nonroot Docker
