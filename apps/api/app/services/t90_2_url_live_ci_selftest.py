@@ -46,11 +46,15 @@ def main() -> int:
                     raise ValueError("URL PDF page count invalid")
                 txt = " ".join(page.extract_text() or "" for page in pdf.pages)
                 normalized = " ".join(txt.split())
-                if "Example Domain" not in normalized:
-                    # The public IANA example.org page contains no secrets.
-                    # This is a CI-only diagnostic of actual extracted text,
-                    # not a log of arbitrary user-provided URLs or documents.
-                    raise ValueError("Real public example.org text absent; pdf_extract="
+                # The public documentation domain currently renders its
+                # title in browser metadata and a stable printable body. The
+                # sanitizer intentionally omits HEAD and external resources;
+                # prove the actual public body survives the signed fetcher,
+                # strict HTML boundary and PDF extraction, not the page title.
+                source_body = ("This domain is for use in documentation examples "
+                               "without needing permission.")
+                if source_body not in normalized:
+                    raise ValueError("Real public example.org body absent; pdf_extract="
                                      + repr(normalized[:180]))
                 pages = len(pdf.pages)
             result.update(status="PASS", pages=pages, unsafe_urls_rejected=rejected,

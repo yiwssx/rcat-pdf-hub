@@ -58,9 +58,24 @@ def main() -> int:
                 pdf = PdfReader(stream, strict=True)
                 if pdf.is_encrypted or not 1 <= len(pdf.pages) <= 12:
                     raise ValueError("CHM PDF page count/structure invalid")
-                text = " ".join(page.extract_text() or "" for page in pdf.pages)
-                if not all(token in text for token in EXPECTED):
-                    raise ValueError("CHM PDF did not preserve the source text")
+                text = " ".join((page.extract_text() or "") for page in pdf.pages)
+                normalized = " ".join(text.split())
+                if not all(token in normalized for token in EXPECTED):
+                    # Independent Poppler checks text emitted by Chromium where
+                    # pypdf may split words at font/glyph run boundaries.
+                    # It is still mandatory that BOTH original sentences are
+                    # actually recoverable from the generated PDF.
+                    poppler = subprocess.run(
+                        ["pdftotext", "-layout", "-enc", "UTF-8", str(pdf_path), "-"],
+                        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                        check=False, timeout=30,
+                    )
+                    alt = (" ".join(poppler.stdout.decode("utf-8", errors="replace").split())
+                           if poppler.returncode == 0 else "")
+                    if not all(token in alt for token in EXPECTED):
+                        raise ValueError("CHM PDF lost known chapter text; pypdf="
+                                         + repr(normalized[:220]) + "; poppler="
+                                         + repr(alt[:220]))
                 pages = len(pdf.pages)
             if hashlib.sha256(SOURCE.read_bytes()).hexdigest() != source_sha256:
                 raise ValueError("CHM decoder modified read-only source")
