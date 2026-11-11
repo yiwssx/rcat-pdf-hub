@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # T90-2 — MANUAL host-side firewall installer for the optional URL sidecar.
 # Never invoked by Docker build/Compose/CI. Must be reviewed and run by root.
-# Targets the fixed source IP 172.30.243.2/32 of the egress bridge only.
+# Firewall binds to a fixed bridge interface name, not a fixed IPv4 source.
+# Host-specific URL egress /28 selection cannot bypass this interface guard.
 # Refuses to create an attestation unless all rules are installed.
 set -euo pipefail
 
