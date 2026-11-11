@@ -100,5 +100,56 @@ class HostPreflightTests(unittest.TestCase):
                       mod.inspect_compose(self.config))
 
 
+    def configure_t90_code_first(self):
+        for name in mod.SERVICES:
+            env = self.config["services"][name]["environment"]
+            env[mod.T90_MARKER] = "true"
+            env["PDFHUB_FROM_PDF_TOOLS_ENABLED"] = "true"
+            for key in mod.OPTIONAL_OFF:
+                env[key] = "true" if key in mod.T90_CORE_REQUIRED else "false"
+        self.config["services"]["web"] = {
+            "environment": {
+                **{key: "true" for key in mod.T90_CORE_REQUIRED},
+                **{key: "true" for key in mod.T90_WEB_REQUIRED},
+                "PDFHUB_FROM_PDF_TOOLS_ENABLED": "true",
+            }
+        }
+
+    def test_explicit_t90_code_first_with_institutional_login_passes(self):
+        self.configure_t90_code_first()
+        self.assertEqual(mod.inspect_compose(self.config), [])
+
+    def test_t90_rollout_requires_ui_and_worker_flag_consistency(self):
+        self.configure_t90_code_first()
+        del self.config["services"]["web"]["environment"]["PDFHUB_STAGED_TO_PDF_WEB_ENABLED"]
+        self.assertIn("insecure_web_rollout_setting:PDFHUB_STAGED_TO_PDF_WEB_ENABLED",
+                      mod.inspect_compose(self.config))
+        self.configure_t90_code_first()
+        del self.config["services"]["worker"]["environment"][mod.T90_MARKER]
+        self.assertIn("service_environment_mismatch:worker:" + mod.T90_MARKER,
+                      mod.inspect_compose(self.config))
+
+    def test_t90_code_first_never_opens_native_or_url_without_host_guards(self):
+        self.configure_t90_code_first()
+        for key in ("PDFHUB_CHM_NATIVE_DEV_ENABLED", "PDFHUB_HEIF_NATIVE_DEV_ENABLED",
+                    "PDFHUB_DWG_NATIVE_DEV_ENABLED", "PDFHUB_WPS_NATIVE_DEV_ENABLED",
+                    "PDFHUB_URL_TO_PDF_DEV_ENABLED",
+                    "PDFHUB_PROTECT_PDF_TOOLS_ENABLED", "PDFHUB_UNLOCK_PDF_TOOLS_ENABLED"):
+            with self.subTest(key=key):
+                self.config["services"]["api"]["environment"][key] = "true"
+                self.assertIn("insecure_setting:" + key, mod.inspect_compose(self.config))
+                self.config["services"]["api"]["environment"][key] = "false"
+
+    def test_t90_code_first_does_not_disable_google_oidc_or_av(self):
+        self.configure_t90_code_first()
+        env = self.config["services"]["api"]["environment"]
+        for key in ("PDFHUB_OIDC_ENABLED", "PDFHUB_CLAMAV_ENABLED",
+                    "PDFHUB_RCAT_INSTITUTIONAL_ONLY"):
+            with self.subTest(key=key):
+                env[key] = "false"
+                self.assertIn("insecure_setting:" + key, mod.inspect_compose(self.config))
+                env[key] = "true"
+
+
 if __name__ == "__main__":
     unittest.main()
