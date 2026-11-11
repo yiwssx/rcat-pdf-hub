@@ -12,6 +12,7 @@ on:
       - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
       - "apps/api/app/services/t90_2_external_heic_selftest.py"
       - "apps/api/app/services/t90_2_cc0_heif_corpus_selftest.py"
+      - "apps/api/app/services/t90_2_chm_real_selftest.py"
       - "apps/api/app/services/to_pdf_heif_native.py"
       - "apps/api/Dockerfile"
       - "compose.native-sidecar.yaml"
@@ -45,6 +46,63 @@ jobs:
             --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
             pdfhub-t90-2-native-qa \
             python -m app.services.t90_2_native_docker_selftest
+
+
+      - name: Convert immutable real LZX CHM through isolated libchm and Gotenberg
+        run: |
+          set -euo pipefail
+          # Fixed MIT-licensed upstream test archive, pinned by Git blob and
+          # repository commit. Only the runner fetches; decoder has internal
+          # network access to the disposable PDF renderer, no Internet.
+          revision="3cf1091492467ec100f0435e786eb29136ffc080"
+          sample_dir="$(mktemp -d)"
+          network="pdfhub-native-chm-ci"
+          cleanup() {
+            docker rm -f native-gotenberg >/dev/null 2>&1 || true
+            docker network rm "$network" >/dev/null 2>&1 || true
+            rm -rf "$sample_dir"
+          }
+          trap cleanup EXIT
+          curl --fail --silent --show-error --location --retry 3 --max-time 60 \
+            --proto '=https' --proto-redir '=https' \
+            "https://raw.githubusercontent.com/bwhitn/pylibmspack/$revision/tests/fixtures/sample.chm" \
+            -o "$sample_dir/sample.chm"
+          test "$(wc -c < "$sample_dir/sample.chm")" -eq 414860
+          test "$(git hash-object "$sample_dir/sample.chm")" = "dca0776bc86f555c8e5ce516959c215e17bf893a"
+          chmod 0755 "$sample_dir"
+          chmod 0444 "$sample_dir/sample.chm"
+          docker network create --internal "$network"
+          docker build -t pdfhub-t90-2-gotenberg-chm ops/gotenberg
+          docker run -d --name native-gotenberg \
+            --network "$network" \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --pids-limit 128 --memory 1024m \
+            --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+            pdfhub-t90-2-gotenberg-chm
+          ready=0
+          for attempt in $(seq 1 40); do
+            if docker run --rm --network "$network" \
+                --entrypoint curl pdfhub-t90-2-native-qa \
+                -fsS --max-time 2 http://native-gotenberg:3000/health >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          docker run --rm \
+            --network "$network" \
+            --cap-drop=ALL --security-opt=no-new-privileges \
+            --read-only --pids-limit 96 --memory 1024m \
+            --mount "type=bind,src=$sample_dir,dst=/fixtures,readonly" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            -e HOME=/tmp \
+            -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_GOTENBERG_URL=http://native-gotenberg:3000 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true \
+            -e PDFHUB_CHM_NATIVE_DEV_ENABLED=true \
+            pdfhub-t90-2-native-qa \
+            python -m app.services.t90_2_chm_real_selftest
 
   patched-heif-runtime:
     name: Build libheif 1.23.7, verify runtime version inside nonroot Docker
