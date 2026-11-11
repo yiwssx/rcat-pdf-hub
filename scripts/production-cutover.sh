@@ -20,6 +20,19 @@ case "${PDFHUB_COMPOSE_MODE:-prod}" in
   prod-nas) compose=(-f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.nas.yml) ;;
   *) echo 'cutover: only prod or prod-nas is authorized' >&2; exit 2 ;;
 esac
+# Explicit code-first production overlay. Always retain existing OIDC/AV,
+# protected-main CI, verified backup, database and readiness safety gates.
+# Never activate native/URL sidecars implicitly by adding this overlay.
+case "${PDFHUB_T90_PRODUCTION_CODE_ENABLED:-false}" in
+  true)
+    [[ -f compose.t90-code-first.yaml ]] || {
+      echo "cutover: T90 code-first overlay is missing" >&2; exit 2;
+    }
+    compose+=(-f compose.t90-code-first.yaml)
+    ;;
+  false) ;;
+  *) echo 'cutover: invalid T90 code-first release selection' >&2; exit 2 ;;
+esac
 if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
   echo 'cutover: refuses to operate from GitHub Actions' >&2; exit 2
 fi
