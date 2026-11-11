@@ -11,6 +11,7 @@ on:
       - "apps/api/app/services/t90_2_native_docker_selftest.py"
       - "apps/api/app/services/t90_2_heif_runtime_selftest.py"
       - "apps/api/app/services/t90_2_external_heic_selftest.py"
+      - "apps/api/app/services/t90_2_cc0_heif_corpus_selftest.py"
       - "apps/api/app/services/to_pdf_heif_native.py"
       - "apps/api/Dockerfile"
       - "compose.native-sidecar.yaml"
@@ -118,3 +119,41 @@ jobs:
             -e LD_LIBRARY_PATH=/opt/pdfhub/heif/lib \
             pdfhub-t90-2-heif-pinned \
             python -m app.services.t90_2_external_heic_selftest
+
+      - name: Check rights-cleared HEIC and HEIF source-to-PDF on pinned offline decoder
+        run: |
+          set -euo pipefail
+          # Rights-cleared, CC0 test charts with publisher SHA-256 assertions:
+          # https://heic.fyi/heic-sample-files
+          # The runner fetches only fixed test files; the native decoder has
+          # --network none, no caps, read-only root and no secrets.
+          sample_dir="$(mktemp -d)"
+          trap 'rm -rf "$sample_dir"' EXIT
+          while read -r expected filename; do
+            curl --fail --silent --show-error --location --retry 2 \
+              --max-time 45 --proto '=https' --proto-redir '=https' \
+              "https://heic.fyi/samples/$filename" -o "$sample_dir/$filename"
+            printf '%s  %s\n' "$expected" "$sample_dir/$filename" | sha256sum -c -
+          done <<'HEIF_CC0_CHECKSUMS'
+          80b615ae433d7ec53e9aaaeee081ecd11c0d9931350da13d6ce4e2b363d12c12 orientation-6.heic
+          1c3cb942025bce0d3d45c7d98ecb94846c9da760700d5c025d3e80852027dede generic-mif1-brand.heif
+          a3f76e9b8552b1deca83b7196bfa637e2742894b7ff2a17deddcef24f010d813 multi-image-burst.heic
+          142c0331e97c23ea0e094e9cac529dcba098968ab447a690179d0664790909a9 broken-ftyp.heic
+          7c95d6452f3dadf6da09a5dce3e05f81d26b6043fee00026fbd67a5158d555e0 broken-truncated.heic
+          HEIF_CC0_CHECKSUMS
+          chmod 0755 "$sample_dir"
+          chmod 0444 "$sample_dir"/*
+          docker run --rm \
+            --network none \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --read-only \
+            --mount "type=bind,src=$sample_dir,dst=/fixtures,readonly" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            -e HOME=/tmp \
+            -e PDFHUB_NATIVE_ISOLATED_CONTAINER=1 \
+            -e PDFHUB_TO_PDF_TOOLS_ENABLED=true \
+            -e PDFHUB_HEIF_NATIVE_DEV_ENABLED=true \
+            -e LD_LIBRARY_PATH=/opt/pdfhub/heif/lib \
+            pdfhub-t90-2-heif-pinned \
+            python -m app.services.t90_2_cc0_heif_corpus_selftest
