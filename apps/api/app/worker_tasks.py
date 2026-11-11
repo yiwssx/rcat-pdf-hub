@@ -91,6 +91,8 @@ def _output_spec_for_job(operation: str) -> tuple[str, str]:
         return ".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     if operation == "pdf-to-epub":
         return ".epub", "application/epub+zip"
+    if operation == "pdf-to-mobi":
+        return ".mobi", "application/x-mobipocket-ebook"
     if operation == "pdf-to-odt":
         return ".odt", "application/vnd.oasis.opendocument.text"
     if operation in {"pdf-to-word", "pdf-to-docx"}:
@@ -472,6 +474,27 @@ def process_job(job_id: str) -> str:
             if verified_type != "application/pdf":
                 raise ValueError("Staged F05 PDF signature changed")
             pdf_to_reflowable_epub(inputs[0], output)
+        elif job.operation == "pdf-to-mobi":
+            from app.filetypes import validate_uploaded_file
+            from app.routers.pdf import _is_expired
+            from app.services.from_pdf_mobi import pdf_to_legacy_mobi
+            from app.services.from_pdf_rtf import MAX_SOURCE_BYTES as MOBI_MAX_SOURCE
+            if (not settings.from_pdf_tools_enabled or len(files) != 1
+                    or files[0] is None or len(inputs) != 1
+                    or files[0].source_system != job.requested_by
+                    or _is_expired(files[0])
+                    or files[0].content_type != "application/pdf"
+                    or not files[0].original_name.lower().endswith(".pdf")
+                    or not 24 <= files[0].size <= MOBI_MAX_SOURCE
+                    or params):
+                raise ValueError("Staged F15 source or parameters unauthorized")
+            try:
+                verified_type = validate_uploaded_file(inputs[0], files[0].original_name)
+            except HTTPException as exc:
+                raise ValueError("Staged F15 PDF signature invalid") from exc
+            if verified_type != "application/pdf":
+                raise ValueError("Staged F15 PDF signature changed")
+            pdf_to_legacy_mobi(inputs[0], output)
         elif job.operation in {"pdf-to-jpg", "pdf-to-png"}:
             from app.filetypes import validate_uploaded_file
             from app.routers.pdf import _is_expired
