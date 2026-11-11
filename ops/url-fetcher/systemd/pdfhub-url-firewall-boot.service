@@ -1,0 +1,19 @@
+[Unit]
+Description=RCAT PDF HUB T90 host URL egress firewall (fail closed)
+Documentation=docs/workstreams/t90-2-url-fetcher-egress.md
+Requires=docker.service
+After=docker.service
+Before=pdfhub-url-firewall-guard.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/bash /usr/local/libexec/pdfhub/ensure-host-egress-firewall.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

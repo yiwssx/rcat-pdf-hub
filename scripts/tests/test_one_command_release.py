@@ -35,7 +35,7 @@ class OneCommandTests(unittest.TestCase):
                 "example-container",
                 self.container("docker-compose.yml", "docker-compose.prod.yml"),
             ]):
-                self.assertEqual(release.live_compose_mode(), ("prod", False))
+                self.assertEqual(release.live_compose_mode(), ("prod", False, False))
 
     def test_detects_nas_without_guessing(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
@@ -44,7 +44,7 @@ class OneCommandTests(unittest.TestCase):
                 self.container("docker-compose.yml", "docker-compose.prod.yml",
                                "docker-compose.nas.yml"),
             ]):
-                self.assertEqual(release.live_compose_mode(), ("prod-nas", False))
+                self.assertEqual(release.live_compose_mode(), ("prod-nas", False, False))
 
     def test_existing_t90_code_overlay_survives_later_production_releases(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
@@ -53,7 +53,19 @@ class OneCommandTests(unittest.TestCase):
                 self.container("docker-compose.yml", "docker-compose.prod.yml",
                                "compose.t90-code-first.yaml"),
             ]):
-                self.assertEqual(release.live_compose_mode(), ("prod", True))
+                self.assertEqual(release.live_compose_mode(), ("prod", True, False))
+
+    def test_live_full_runtime_is_not_silently_removed(self):
+        with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):
+            with patch.object(release, "call", side_effect=[
+                "example-container",
+                self.container("docker-compose.yml", "docker-compose.prod.yml",
+                               "compose.t90-code-first.yaml",
+                               "compose.native-sidecar.yaml",
+                               "compose.url-fetcher.yaml",
+                               "compose.t90-full-runtime.yaml"),
+            ]):
+                self.assertEqual(release.live_compose_mode(), ("prod", True, True))
 
     def test_refuses_dev_stack(self):
         with patch.object(release, "ROOT", Path("/opt/rcat-pdf-hub")):

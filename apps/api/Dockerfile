@@ -35,16 +35,21 @@ ARG PDFHUB_NATIVE_ONLY=0
 # regular API image stays unchanged; this separately sourced runtime is
 # pinned by upstream v1.23.7's exact full commit SHA in the installer.
 ARG PDFHUB_HEIF_FROM_SOURCE=0
+ARG PDFHUB_DWG_FROM_SOURCE=0
+COPY build-pinned-cad.sh /tmp/build-pinned-cad.sh
 COPY build-pinned-heif.sh /tmp/build-pinned-heif.sh
 RUN if [ "$PDFHUB_NATIVE_ONLY" = "1" ]; then \
       rmdir /data; \
       if [ "$PDFHUB_HEIF_FROM_SOURCE" = "1" ]; then \
         bash /tmp/build-pinned-heif.sh; \
       fi; \
-    elif [ "$PDFHUB_HEIF_FROM_SOURCE" != "0" ]; then \
+      if [ "$PDFHUB_DWG_FROM_SOURCE" = "1" ]; then \
+        bash /tmp/build-pinned-cad.sh; \
+      fi; \
+    elif [ "$PDFHUB_HEIF_FROM_SOURCE" != "0" ] || [ "$PDFHUB_DWG_FROM_SOURCE" != "0" ]; then \
       echo "Only the dedicated native image may build the HEIF runtime" >&2; exit 1; \
     fi \
-    && rm -f /tmp/build-pinned-heif.sh
+    && rm -f /tmp/build-pinned-heif.sh /tmp/build-pinned-cad.sh
 USER pdfhub
 
 EXPOSE 8000

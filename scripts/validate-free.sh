@@ -274,6 +274,8 @@ assert mounts[0]["read_only"] is True, mounts
 assert config["services"]["api"]["environment"]["PDFHUB_CLAMAV_ENABLED"] == "true"
 assert "clamav" in config["services"], config["services"].keys()
 '
+  # Source configuration only: no extra per-tool QA or host-side actions.
+  bash scripts/test-t90-full-runtime-compose.sh
   echo 'compose: PASS'
 }
 

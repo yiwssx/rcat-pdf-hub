@@ -151,5 +151,74 @@ class HostPreflightTests(unittest.TestCase):
                 env[key] = "true"
 
 
+    def configure_t90_full_runtime(self):
+        import base64
+        self.configure_t90_code_first()
+        secret_a = base64.urlsafe_b64encode(bytes([1]) * 32).decode()
+        secret_b = base64.urlsafe_b64encode(bytes([2]) * 32).decode()
+        hmac_native = "a" * 64
+        hmac_url = "b" * 64
+        for name in mod.SERVICES:
+            env = self.config["services"][name]["environment"]
+            env[mod.T90_FULL_MARKER] = "true"
+            env.update({key: "true" for key in mod.T90_LIMITED_FLAGS})
+            env[mod.T90_AEAD_KEYS[0]] = secret_a
+            env[mod.T90_AEAD_KEYS[1]] = secret_b
+        self.config["services"]["web"]["environment"].update(
+            {key: "true" for key in mod.T90_LIMITED_FLAGS}
+        )
+        heavy = self.config["services"]["worker-heavy"]
+        heavy["networks"] = {key: {} for key in (
+            "data", "management", "egress",
+            "native_converter_internal", "url_fetch_internal"
+        )}
+        heavy["environment"][mod.T90_HMAC_KEYS[0]] = hmac_native
+        heavy["environment"][mod.T90_HMAC_KEYS[1]] = hmac_url
+        self.config["services"]["native-decoder"] = {
+            "networks": {"native_converter_internal": {}},
+            "environment": {mod.T90_HMAC_KEYS[0]: hmac_native},
+            "cap_drop": ["ALL"], "read_only": True,
+        }
+        self.config["services"]["native-gotenberg"] = {
+            "networks": {"native_converter_internal": {}},
+        }
+        self.config["services"]["url-fetcher"] = {
+            "networks": {"url_fetch_internal": {}, "url_fetch_egress": {}},
+            "environment": {mod.T90_HMAC_KEYS[1]: hmac_url},
+            "cap_drop": ["ALL"], "read_only": True,
+        }
+
+    def test_full_runtime_requires_owner_restricted_services_and_credentials(self):
+        self.configure_t90_full_runtime()
+        self.assertEqual(mod.inspect_compose(self.config), [])
+
+    def test_full_runtime_refuses_missing_url_sidecar_and_network_access(self):
+        self.configure_t90_full_runtime()
+        del self.config["services"]["url-fetcher"]
+        self.assertIn("missing_runtime_service:url-fetcher",
+                      mod.inspect_compose(self.config))
+        self.configure_t90_full_runtime()
+        del self.config["services"]["worker-heavy"]["networks"]["data"]
+        self.assertIn("missing_production_heavy_worker_networks",
+                      mod.inspect_compose(self.config))
+
+    def test_full_runtime_fails_closed_on_secret_or_oidc_mismatch(self):
+        self.configure_t90_full_runtime()
+        self.config["services"]["url-fetcher"]["environment"][
+            mod.T90_HMAC_KEYS[1]] = "incorrect"
+        self.assertIn("sidecar_secret_mismatch:" + mod.T90_HMAC_KEYS[1],
+                      mod.inspect_compose(self.config))
+        self.configure_t90_full_runtime()
+        self.config["services"]["api"]["environment"]["PDFHUB_OIDC_ENABLED"] = "false"
+        self.assertIn("insecure_setting:PDFHUB_OIDC_ENABLED",
+                      mod.inspect_compose(self.config))
+
+    def test_full_runtime_never_accepts_unconfined_sidecar(self):
+        self.configure_t90_full_runtime()
+        self.config["services"]["native-decoder"]["cap_drop"] = []
+        self.assertIn("unconfined_runtime_service:native-decoder",
+                      mod.inspect_compose(self.config))
+
+
 if __name__ == "__main__":
     unittest.main()

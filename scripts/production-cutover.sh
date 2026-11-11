@@ -33,6 +33,24 @@ case "${PDFHUB_T90_PRODUCTION_CODE_ENABLED:-false}" in
   false) ;;
   *) echo 'cutover: invalid T90 code-first release selection' >&2; exit 2 ;;
 esac
+# Full runtime is an independently root-provisioned extension: never enable
+# URL/NATIVE services without the protected code-first option and private keys.
+full_runtime=false
+case "${PDFHUB_T90_FULL_RUNTIME_ENABLED:-false}" in
+  true)
+    [[ "${PDFHUB_T90_PRODUCTION_CODE_ENABLED:-false}" == "true" ]] || {
+      echo 'cutover: T90 full runtime needs explicit code-first mode' >&2; exit 2;
+    }
+    for overlay in compose.native-sidecar.yaml compose.url-fetcher.yaml compose.t90-full-runtime.yaml; do
+      [[ -f "$overlay" ]] || { echo "cutover: missing reviewed runtime overlay $overlay" >&2; exit 2; }
+      compose+=(-f "$overlay")
+    done
+    export COMPOSE_PROFILES=native-dev,url-import-dev
+    full_runtime=true
+    ;;
+  false) ;;
+  *) echo 'cutover: invalid full-runtime flag' >&2; exit 2 ;;
+esac
 if [[ "${GITHUB_ACTIONS:-false}" == "true" ]]; then
   echo 'cutover: refuses to operate from GitHub Actions' >&2; exit 2
 fi
@@ -122,8 +140,23 @@ case "${PDFHUB_RELEASE_EXTRA_SCANS:-false}" in
     ;;
   *) echo 'cutover: PDFHUB_RELEASE_EXTRA_SCANS must be true or false' >&2; exit 2 ;;
 esac
+if [[ "${full_runtime}" == true ]]; then
+  # This trust comes from root-installed systemd iptables guard, not a CI
+  # green or a self-asserted environment variable. Require a fresh boot-lease.
+  command -v systemctl >/dev/null || { echo 'cutover: systemd host required' >&2; exit 1; }
+  systemctl is-active --quiet pdfhub-url-firewall-guard.timer || {
+    echo 'cutover: host URL firewall guard timer inactive' >&2; exit 1;
+  }
+  python3 scripts/check-t90-host-url-lease.py || {
+    echo 'cutover: URL host egress lease not valid' >&2; exit 1;
+  }
+fi
 echo 'cutover: building reviewed application images (existing containers remain running)'
 dc build gotenberg "${services[@]}"
+if [[ "${full_runtime}" == true ]]; then
+  echo 'cutover: building isolated native/URL services before downtime'
+  dc build native-gotenberg native-decoder url-fetcher
+fi
 
 # The Production OIDC/AV policy requires ClamAV fail-closed, but the Compose
 # service is intentionally hidden behind the optional "security" profile.
@@ -145,6 +178,29 @@ if [[ "${scanner_ready}" != true ]]; then
   exit 1
 fi
 echo 'cutover: ClamAV PING PASS, safe to proceed with schema migration'
+if [[ "${full_runtime}" == true ]]; then
+  # Start lower-trust sidecars before touching ordinary application writers.
+  # URL's own healthz requires the current real-host signed firewall lease.
+  echo 'cutover: starting isolated Native and URL services'
+  dc up -d --no-deps --no-build native-gotenberg native-decoder url-fetcher >/dev/null
+  all_healthy=false
+  for _ in $(seq 1 40); do
+    ready_count=0
+    for name in native-decoder url-fetcher; do
+      cid="$(dc ps -q "$name")"
+      if [[ -n "$cid" ]] && [[ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}absent{{end}}' "$cid" 2>/dev/null)" == healthy ]]; then
+        ready_count=$((ready_count + 1))
+      fi
+    done
+    if [[ "$ready_count" -eq 2 ]]; then all_healthy=true; break; fi
+    sleep 3
+  done
+  if [[ "$all_healthy" != true ]]; then
+    echo 'cutover: native/URL service readiness failed BEFORE application downtime' >&2
+    exit 1
+  fi
+  echo 'cutover: isolated Native and URL services healthy'
+fi
 echo 'cutover: stopping writers before the schema migration'
 dc stop "${services[@]}" >/dev/null
 # One migration under the new image, while old workers cannot write.
@@ -155,7 +211,11 @@ fi
 echo 'cutover: activating reviewed application containers; retaining database, queue and volumes'
 # Reconcile the reverse proxy too: its routing/config may have changed.
 # Caddy is not stopped before the application containers are ready to start.
-dc up -d --no-deps --no-build gotenberg "${services[@]}" caddy >/dev/null
+if [[ "${full_runtime}" == true ]]; then
+  dc up -d --no-deps --no-build gotenberg "${services[@]}" caddy native-gotenberg native-decoder url-fetcher >/dev/null
+else
+  dc up -d --no-deps --no-build gotenberg "${services[@]}" caddy >/dev/null
+fi
 
 # Get actual Caddy bound interface from the rendered Compose configuration,
 # without reading or sourcing shell commands from .env.
