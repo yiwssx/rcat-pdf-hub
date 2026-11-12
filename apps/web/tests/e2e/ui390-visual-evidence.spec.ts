@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { T90_DIRECTORY_TOOLS } from "../../app/components/t90-directory-catalog";
+import { hasDedicatedT90Icon } from "../../app/components/v4-tool-icons";
 import { authConfigFixture, emptyLibraryPage, integrationStatusFixture, operatorIdentityFixture } from "./api-fixtures";
 
 /**
@@ -59,10 +61,11 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
   const captureRoot = resolve("visual-evidence/ui390", variant);
   mkdirSync(captureRoot, { recursive: true });
   const results: Array<{ viewport: string; view: string; pathname: string; overflow: number }> = [];
-  for (const [name, width, height] of [["desktop", 1366, 768], ["mobile", 390, 844]] as const) {
+  for (const [name, width, height] of [["desktop", 1366, 768], ["tablet", 768, 1024], ["mobile", 390, 844]] as const) {
     await page.setViewportSize({ width, height });
     for (const [view, target, selector] of [
       ["dashboard-directory", "/", "#workspace"],
+      ["tools-explorer", variant === "before" ? "/" : "/tools", variant === "before" ? "#t90-tools" : ".v4Explorer"],
       ["files", "/files", ".v3FileLibrary"],
       ["jobs", "/jobs", ".v3JobsHistory"],
       ["admin", "/admin?section=overview", ".v3AdminMain"],
@@ -70,6 +73,13 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
       await page.goto(target, { waitUntil: "domcontentloaded" });
       await expect(page.locator(selector)).toBeVisible({ timeout: 15000 });
       // Snapshot only settled UI state, not a transient fetch/loading frame.
+      if (view === "tools-explorer" && variant === "before") {
+        await page.locator("#t90-tools").scrollIntoViewIfNeeded();
+      }
+      if (view === "tools-explorer" && variant === "after") {
+        await expect(page.getByRole("navigation", { name: "ประเภทเครื่องมือ PDF" })).toBeVisible();
+        await expect(page.locator(".v4ToolListItem")).toHaveCount(12);
+      }
       if (view === "files") {
         const fileRow = page.locator(".v3LibraryRow").first();
         await expect(fileRow.getByText("RCAT-document.pdf", { exact: true })).toBeVisible({ timeout: 15000 });
@@ -110,4 +120,38 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
     browser: "playwright-chromium", data: "deterministic API fixtures (not Production UAT)",
     screenshots: results,
   }, null, 2));
+});
+
+
+test("V4 critical journeys: tool search, semantic icons, deep links, navigation and responsive shell", async ({ page }) => {
+  test.skip(process.env.PDFHUB_VISUAL_VARIANT !== "after", "V4 interactions only apply to candidate");
+  await installEvidenceFixtures(page);
+  expect(T90_DIRECTORY_TOOLS).toHaveLength(90);
+  expect(T90_DIRECTORY_TOOLS.every(item => hasDedicatedT90Icon(item.id))).toBe(true);
+  for (const [name, width, height] of [["desktop", 1366, 768], ["tablet", 768, 1024], ["mobile", 390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "งานเอกสาร ง่ายขึ้นในที่เดียว" })).toBeVisible();
+    const nav = width <= 760
+      ? page.getByRole("navigation", { name: "เมนูหลักบนมือถือ" })
+      : page.getByRole("navigation", { name: "เมนูหลัก" });
+    await expect(nav).toBeVisible();
+    await nav.getByRole("link", { name: /เครื่องมือ/ }).click();
+    await expect(page).toHaveURL(/\/tools$/);
+    await expect(page.getByRole("heading", { name: "ค้นหาเครื่องมือ PDF" })).toBeVisible();
+    const search = page.getByRole("searchbox", { name: "ค้นหาเครื่องมือ T90" });
+    await search.fill("Merge PDF");
+    const first = page.locator(".v4ToolListItem").first();
+    await expect(first).toContainText("Merge PDF");
+    await first.click();
+    await expect(page).toHaveURL(/tool=M04/);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Merge PDF" })).toBeVisible();
+    await expect(page.locator(".v4ToolDetail a[href='/tools/merge-pdf']")).toBeVisible();
+    await search.fill("");
+    await page.getByRole("button", { name: /แปลงจาก PDF/ }).first().click();
+    await expect(page.locator(".v4ToolListItem").first()).toContainText("PDF");
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `${name} V4 explorer overflow`).toBeLessThanOrEqual(1);
+  }
 });
