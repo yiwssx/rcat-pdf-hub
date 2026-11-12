@@ -599,9 +599,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       ) : initialView === "job" && initialJobId ? (
         <JobDetailScreen jobId={initialJobId} auth={auth} />
       ) : initialView === "admin" ? (
-        <main className="v3Main v3AdminMain">
+        <main className="v3Main v3AdminMain vdAdminPage">
           <section className="v3HomeTitle">
-            <div><span className="v3Kicker">ADMIN CONSOLE</span><h1>จัดการระบบ</h1><p>การตั้งค่าระบบถูกแยกจาก Workspace ของผู้ใช้แล้ว</p></div>
+            <div><span className="v3Kicker">CONTROL CENTER / RCAT PDF HUB</span><h1>ศูนย์ควบคุมระบบ</h1><p>ติดตามภาพรวมบริการ งานประมวลผล และการจัดการระบบตามสิทธิ์ที่ได้รับ</p></div>
             <a className="v3TextLink" href="/">← กลับ Workspace</a>
           </section>
           {identity.is_admin ? <>
