@@ -3,6 +3,7 @@ import "./tailwind.css";
 import "./app-v3.css";
 import "./t90-directory.css";
 import "./v4-application.css";
+import { PdfHubAuthProvider } from "./components/pdf-hub-auth-provider";
 
 export const metadata = {
   title: "RCAT PDF Hub",
