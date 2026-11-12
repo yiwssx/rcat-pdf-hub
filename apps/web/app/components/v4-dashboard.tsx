@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { ArrowRight, ArrowUpRight, Clock3, CloudUpload, FileText, FolderOpen, LayoutGrid, Sparkles, Workflow } from "lucide-react";
 import type { Job, UploadedFile } from "../../lib/api";
 import type { ToolDefinition } from "./v3-ui";
@@ -31,13 +33,13 @@ export function V4Dashboard({
           <h1>งานเอกสาร ง่ายขึ้นในที่เดียว</h1>
           <p>เลือกไฟล์ เลือกเครื่องมือ และจัดการงาน PDF ได้อย่างเป็นขั้นตอน</p>
         </div>
-        <a className="v4SecondaryButton" href="/tools"><LayoutGrid aria-hidden="true" size={18}/> สำรวจเครื่องมือ <ArrowRight aria-hidden="true" size={17}/></a>
+        <Link className="v4SecondaryButton" href="/tools"><LayoutGrid aria-hidden="true" size={18}/> สำรวจเครื่องมือ <ArrowRight aria-hidden="true" size={17}/></Link>
       </section>
 
       <div className="v4OverviewStats" aria-label="ข้อมูลภาพรวมพื้นที่ทำงาน">
-        <a href="/files" className="v4StatCard"><span><FolderOpen aria-hidden="true" size={20}/> ไฟล์ในรายการล่าสุด</span><strong>{files.length.toLocaleString("th-TH")}</strong><small>เปิดคลังไฟล์ <ArrowUpRight aria-hidden="true" size={14}/></small></a>
-        <a href="/jobs" className="v4StatCard"><span><Workflow aria-hidden="true" size={20}/> งานที่กำลังดำเนินการ</span><strong>{running.length.toLocaleString("th-TH")}</strong><small>ดูสถานะงาน <ArrowUpRight aria-hidden="true" size={14}/></small></a>
-        <a href="/jobs" className="v4StatCard"><span><Clock3 aria-hidden="true" size={20}/> ประวัติงานล่าสุด</span><strong>{jobs.length.toLocaleString("th-TH")}</strong><small>ดูประวัติ <ArrowUpRight aria-hidden="true" size={14}/></small></a>
+        <Link href="/files" className="v4StatCard"><span><FolderOpen aria-hidden="true" size={20}/> ไฟล์ในรายการล่าสุด</span><strong>{files.length.toLocaleString("th-TH")}</strong><small>เปิดคลังไฟล์ <ArrowUpRight aria-hidden="true" size={14}/></small></Link>
+        <Link href="/jobs" className="v4StatCard"><span><Workflow aria-hidden="true" size={20}/> งานที่กำลังดำเนินการ</span><strong>{running.length.toLocaleString("th-TH")}</strong><small>ดูสถานะงาน <ArrowUpRight aria-hidden="true" size={14}/></small></Link>
+        <Link href="/jobs" className="v4StatCard"><span><Clock3 aria-hidden="true" size={20}/> ประวัติงานล่าสุด</span><strong>{jobs.length.toLocaleString("th-TH")}</strong><small>ดูประวัติ <ArrowUpRight aria-hidden="true" size={14}/></small></Link>
       </div>
 
       <section className="v4DashboardCore" aria-label="เริ่มใช้งาน">
@@ -76,12 +78,12 @@ export function V4Dashboard({
               </button>
             ))}
           </div>
-          <a className="v4TextAction" href="/tools">เครื่องมือทั้งหมด <ArrowRight aria-hidden="true" size={16}/></a>
+          <Link className="v4TextAction" href="/tools">เครื่องมือทั้งหมด <ArrowRight aria-hidden="true" size={16}/></Link>
         </section>
       </section>
 
       <section className="v4RecentSection" aria-labelledby="v4-recent-heading">
-        <div className="v4SectionTitle"><div><span className="v4SectionOverline">YOUR DOCUMENTS</span><h2 id="v4-recent-heading">ไฟล์ล่าสุด</h2></div><a href="/files">ดูคลังไฟล์ <ArrowRight aria-hidden="true" size={17}/></a></div>
+        <div className="v4SectionTitle"><div><span className="v4SectionOverline">YOUR DOCUMENTS</span><h2 id="v4-recent-heading">ไฟล์ล่าสุด</h2></div><Link href="/files">ดูคลังไฟล์ <ArrowRight aria-hidden="true" size={17}/></Link></div>
         <div className="v4RecentList">
           {files.length === 0 && <div className="v4EmptyState"><FileText aria-hidden="true" size={28}/><strong>ยังไม่มีไฟล์ในพื้นที่ทำงาน</strong><p>เริ่มต้นโดยเพิ่มไฟล์ด้านบน</p></div>}
           {files.slice(0, 4).map(file => (
