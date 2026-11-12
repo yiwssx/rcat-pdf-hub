@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useState } from "react";
 import {
   createJob, getMe, listFiles, uploadFile, SESSION_AUTH,
@@ -134,7 +137,7 @@ export function StagedFromPdfClient({
           <>
             <div className="t90DocumentStageField">
               <label htmlFor="t90-export-format">รูปแบบไฟล์ผลลัพธ์</label>
-              <select id="t90-export-format" value={toolId}
+              <NativeSelect id="t90-export-format" value={toolId}
                 onChange={(event) => {
                   if (!STAGED_FROM_PDF_FORMATS.some((t) => t.id === event.target.value)) return;
                   setToolId(event.target.value);
@@ -144,7 +147,7 @@ export function StagedFromPdfClient({
                 {STAGED_FROM_PDF_FORMATS.map((t) => (
                   <option key={t.id} value={t.id}>{t.id} · {t.label} → {t.fileKind}</option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <p className="t90ExportLimit" role="note">ขอบเขต: {selectedTool.limitation}</p>
             <div className="t90DocumentStageField">
@@ -152,30 +155,30 @@ export function StagedFromPdfClient({
               <input id="t90-export-upload" type="file" accept=".pdf,application/pdf"
                 disabled={uploading || submitting || !canUpload}
                 onChange={(event) => setCandidate(event.target.files?.[0] ?? null)} />
-              <button type="button" className="t90DocumentStageSubmit"
+              <Button type="button" className="t90DocumentStageSubmit"
                 disabled={!candidate || !canUpload || uploading || submitting}
                 onClick={() => { void upload(); }}>
                 {uploading ? "กำลังอัปโหลด…" : "อัปโหลด PDF"}
-              </button>
+              </Button>
             </div>
             <form onSubmit={(event) => { void submit(event); }}>
               <div className="t90DocumentStageField">
                 <label htmlFor="t90-export-file">ไฟล์ PDF ของบัญชีนี้</label>
-                <select id="t90-export-file" value={selectedFile?.id ?? ""}
+                <NativeSelect id="t90-export-file" value={selectedFile?.id ?? ""}
                   onChange={(event) => { setSelectedId(event.target.value); setJob(null); }}
                   disabled={submitting || uploading || !owned.length} required>
                   <option value="">เลือกไฟล์ที่ต้องการแปลง</option>
                   {owned.map((f) => <option key={f.id} value={f.id}>{f.original_name}</option>)}
-                </select>
+                </NativeSelect>
               </div>
               {!canUpload && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ files:write</p>}
               {!allowed && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ {selectedTool.requiredScope}</p>}
               {!canReadResults && identity && <p role="alert">ต้องมีสิทธิ์ files:read และ jobs:read</p>}
               {error && <p className="t90DocumentStageError" role="alert">{error}</p>}
-              <button type="submit" className="t90DocumentStageSubmit"
+              <Button type="submit" className="t90DocumentStageSubmit"
                 disabled={!selectedFile || !allowed || !canReadResults || uploading || submitting}>
                 {submitting ? "กำลังสร้างงาน…" : "แปลง PDF"}
-              </button>
+              </Button>
             </form>
           </>
         )}

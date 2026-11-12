@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, getPageInfo, listFiles, SESSION_AUTH,
@@ -124,7 +128,7 @@ export function StagedSplitZipClient({ requestedFileId }: { requestedFileId?: st
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="m07-file">PDF ของฉัน</label>
-              <select id="m07-file" value={selectedId}
+              <NativeSelect id="m07-file" value={selectedId}
                 onChange={(event) => {
                   setSelectedId(event.target.value);
                   setPages("1");
@@ -134,12 +138,12 @@ export function StagedSplitZipClient({ requestedFileId }: { requestedFileId?: st
                 }} disabled={!files.length || submitting} required>
                 {!files.length && <option value="">ไม่มี PDF ที่รองรับ</option>}
                 {files.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             {chosen && <p role="status">จำนวนหน้า: {pageCount ?? "กำลังอ่าน…"} หน้า</p>}
             <div className="t90DocumentStageField">
               <label htmlFor="m07-pages">หน้าที่จะแยก</label>
-              <input id="m07-pages" type="text" autoComplete="off" value={pages}
+              <Input id="m07-pages" type="text" autoComplete="off" value={pages}
                 maxLength={256} placeholder="1,3-5 หรือ 1-z"
                 onChange={(event) => { setPages(event.target.value); setJob(null); }}
                 disabled={submitting || !chosen} required />
@@ -151,10 +155,10 @@ export function StagedSplitZipClient({ requestedFileId }: { requestedFileId?: st
             {identity && !hasScope(identity, "jobs:read") &&
               <p role="alert">บัญชีนี้ไม่มีสิทธิ์ jobs:read</p>}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-            <button type="submit" className="t90DocumentStageSubmit"
+            <Button type="submit" className="t90DocumentStageSubmit"
               disabled={!canSubmit || !chosen || pageCount === null || submitting}>
               {submitting ? "กำลังสร้างงาน…" : "แยก PDF เป็น ZIP"}
-            </button>
+            </Button>
           </form>
         )}
         {job && (

@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -119,12 +123,12 @@ export function StagedDocumentAssistClient({
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="assist-source">PDF ของฉัน</label>
-              <select id="assist-source" value={fileId} required disabled={!files.length || busy}
+              <NativeSelect id="assist-source" value={fileId} required disabled={!files.length || busy}
                 onChange={(event) => { setFileId(event.target.value); setJob(null); setTurns([]); }}>
                 {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                 {files.map((item) =>
                   <option key={item.id} value={item.id}>{item.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <fieldset className="t90DocumentStageFieldset">
               <legend>เลือกการประมวลผล</legend>
@@ -142,7 +146,7 @@ export function StagedDocumentAssistClient({
             {mode === "evidence" && (
               <div className="t90DocumentStageField">
                 <label htmlFor="assist-question">คำถามหรือข้อความที่ต้องการค้นหา (3–250 ตัวอักษร)</label>
-                <input id="assist-question" type="text" value={question} minLength={3} maxLength={250}
+                <Input id="assist-question" type="text" value={question} minLength={3} maxLength={250}
                   onChange={(event) => setQuestion(event.target.value)} disabled={busy}
                   placeholder="เช่น รายงานกล่าวถึงอุณหภูมิน้ำอย่างไร" required />
                 {previousQuestion && (
@@ -158,9 +162,9 @@ export function StagedDocumentAssistClient({
               บัญชีนี้ยังไม่มีสิทธิ์ files:read, jobs:read และ pdf:extract-text ครบถ้วน
             </p>}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-            <button className="t90DocumentStageSubmit" type="submit" disabled={!canSubmit}>
+            <Button className="t90DocumentStageSubmit" type="submit" disabled={!canSubmit}>
               {busy ? "กำลังสร้างงาน…" : mode === "summary" ? "สร้างสรุปจากต้นฉบับ" : "ค้นหลักฐานใน PDF"}
-            </button>
+            </Button>
           </form>
         )}
         {mode === "evidence" && fileTurns.length > 0 && (
@@ -179,8 +183,8 @@ export function StagedDocumentAssistClient({
                 </li>
               ))}
             </ol>
-            <button type="button" onClick={() => { setTurns([]); setJob(null); }}
-              disabled={busy}>ล้างประวัติคำถามในหน้านี้</button>
+            <Button type="button" onClick={() => { setTurns([]); setJob(null); }}
+              disabled={busy}>ล้างประวัติคำถามในหน้านี้</Button>
           </section>
         )}
         {job && (

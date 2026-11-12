@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -108,31 +112,31 @@ export function StagedPdfTextEditorClient({ requestedFileId }: { requestedFileId
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="m01-source">PDF ของฉัน</label>
-              <select id="m01-source" value={selectedId} disabled={!files.length || busy}
+              <NativeSelect id="m01-source" value={selectedId} disabled={!files.length || busy}
                 onChange={(event) => { setSelectedId(event.target.value); setJob(null); }}
                 required>
                 {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                 {files.map((item) =>
                   <option key={item.id} value={item.id}>{item.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <div className="m01Fields">
               <div className="t90DocumentStageField">
                 <label htmlFor="m01-page">หน้า PDF (1–80)</label>
-                <input id="m01-page" aria-label="หน้า PDF" type="number" min={1} max={80}
+                <Input id="m01-page" aria-label="หน้า PDF" type="number" min={1} max={80}
                   value={page} onChange={(event) => {
                     setPage(Number(event.target.value)); setJob(null);
                   }} disabled={busy} required/>
               </div>
               <div className="t90DocumentStageField">
                 <label htmlFor="m01-existing">ข้อความเดิมที่ต้องการแก้ไข</label>
-                <input id="m01-existing" type="text" maxLength={96} value={oldText}
+                <Input id="m01-existing" type="text" maxLength={96} value={oldText}
                   onChange={(event) => { setOldText(event.target.value); setJob(null); }}
                   placeholder="ORIGINAL" disabled={busy} required />
               </div>
               <div className="t90DocumentStageField">
                 <label htmlFor="m01-replacement">ข้อความใหม่ (จำนวนตัวอักษรเท่ากัน)</label>
-                <input id="m01-replacement" type="text" maxLength={96} value={newText}
+                <Input id="m01-replacement" type="text" maxLength={96} value={newText}
                   onChange={(event) => { setNewText(event.target.value); setJob(null); }}
                   placeholder="REVISED!" disabled={busy} required />
               </div>
@@ -146,9 +150,9 @@ export function StagedPdfTextEditorClient({ requestedFileId }: { requestedFileId
               </p>
             )}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-            <button className="t90DocumentStageSubmit" type="submit" disabled={!ready}>
+            <Button className="t90DocumentStageSubmit" type="submit" disabled={!ready}>
               {busy ? "กำลังสร้างงาน…" : "แก้ไขข้อความเดิมใน PDF"}
-            </button>
+            </Button>
           </form>
         )}
         {job && (

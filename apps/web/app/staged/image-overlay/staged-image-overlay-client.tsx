@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   createJob, getMe, listFiles, uploadFile, SESSION_AUTH,
@@ -157,30 +161,30 @@ export function StagedImageOverlayClient({ requestedFileId }: { requestedFileId?
               <input id="m23-upload" type="file" accept=".pdf,.png,.jpg,.jpeg"
                 disabled={!canUpload || uploading || submitting}
                 onChange={(event) => setCandidate(event.target.files?.[0] ?? null)} />
-              <button className="t90DocumentStageSubmit" type="button"
+              <Button className="t90DocumentStageSubmit" type="button"
                 onClick={() => { void upload(); }}
                 disabled={!candidate || !canUpload || uploading || submitting}>
                 {uploading ? "กำลังอัปโหลด…" : "อัปโหลด"}
-              </button>
+              </Button>
             </div>
             <form onSubmit={(event) => { void submit(event); }}>
               <div className="t90DocumentStageField">
                 <label htmlFor="m23-pdf">PDF ต้นฉบับที่เป็นของบัญชีนี้</label>
-                <select id="m23-pdf" value={pdfId} required
+                <NativeSelect id="m23-pdf" value={pdfId} required
                   onChange={(event) => { setPdfId(event.target.value); setJob(null); }}
                   disabled={submitting || uploading || !pdfs.length}>
                   <option value="">เลือก PDF</option>
                   {pdfs.map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}
-                </select>
+                </NativeSelect>
               </div>
               <div className="t90DocumentStageField">
                 <label htmlFor="m23-image">ภาพ JPEG/PNG ของบัญชีนี้</label>
-                <select id="m23-image" value={imageId} required
+                <NativeSelect id="m23-image" value={imageId} required
                   onChange={(event) => { setImageId(event.target.value); setJob(null); }}
                   disabled={submitting || uploading || !images.length}>
                   <option value="">เลือกรูปภาพ</option>
                   {images.map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}
-                </select>
+                </NativeSelect>
               </div>
               <fieldset className="t90DocumentStageFieldset">
                 <legend>ตำแหน่งและขนาดใน PDF points (จุดกำเนิดล่างซ้าย)</legend>
@@ -194,7 +198,7 @@ export function StagedImageOverlayClient({ requestedFileId }: { requestedFileId?
                   ] as const).map(([key, label, min, max, step]) => (
                     <label key={key} htmlFor={"m23-" + key}>
                       {label}
-                      <input type="number" id={"m23-" + key}
+                      <Input type="number" id={"m23-" + key}
                         min={min} max={max} step={step} required
                         value={geometry[key]}
                         onChange={(event) => changeGeometry(key, event.target.value)}
@@ -206,11 +210,11 @@ export function StagedImageOverlayClient({ requestedFileId }: { requestedFileId?
               {!canWork && identity && <p role="alert">ต้องมีสิทธิ์ pdf:stamp, files:read และ jobs:read</p>}
               {!canUpload && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ files:write</p>}
               {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-              <button type="submit" className="t90DocumentStageSubmit"
+              <Button type="submit" className="t90DocumentStageSubmit"
                 disabled={!selectedPdf || !selectedImage || !canWork
                   || !validGeometry() || uploading || submitting}>
                 {submitting ? "กำลังสร้างงาน…" : "เพิ่มรูปภาพลงใน PDF"}
-              </button>
+              </Button>
             </form>
           </>
         )}

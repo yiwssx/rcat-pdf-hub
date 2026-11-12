@@ -1,5 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, getPageInfo, listFiles, SESSION_AUTH,
@@ -248,41 +253,41 @@ export function StagedManageClient({
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90ManageOptions">
               <label>เครื่องมือที่เปิดในสภาพแวดล้อมนี้
-                <select aria-label="เครื่องมือ Manage PDF" value={tool?.id ?? ""}
+                <NativeSelect aria-label="เครื่องมือ Manage PDF" value={tool?.id ?? ""}
                   onChange={(event) => {
                     setToolId(event.target.value as ManageId); setJob(null); setError("");
                   }} disabled={!available.length || busy}>
                   {!available.length && <option value="">ไม่มีเครื่องมือที่อนุญาต</option>}
                   {available.map((item) => <option key={item.id} value={item.id}>{item.id} · {item.title}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <label>PDF ต้นฉบับ (เฉพาะของฉัน)
-                <select aria-label="PDF ต้นฉบับ (เฉพาะของฉัน)" value={fileId}
+                <NativeSelect aria-label="PDF ต้นฉบับ (เฉพาะของฉัน)" value={fileId}
                   onChange={(event) => { setFileId(event.target.value); setJob(null); }}
                   disabled={!files.length || busy}>
                   {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                   {files.map((item) =>
                     <option key={item.id} value={item.id}>{item.original_name}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <label>จำนวนหน้าต้นฉบับ
-                <input aria-label="จำนวนหน้าต้นฉบับ" value={total || "ยังไม่ทราบ"} readOnly />
+                <Input aria-label="จำนวนหน้าต้นฉบับ" value={total || "ยังไม่ทราบ"} readOnly />
               </label>
             </div>
             {tool && <p className="t90ManageHints">{tool.description}</p>}
             {tool && (tool.id === "M16") && (
               <div className="t90ManageFields">
                 <label className="wide">ช่วงหน้าที่ต้องการ เช่น 1,3-5 หรือ 1-z
-                  <input aria-label="ช่วงหน้า PDF" value={pages} maxLength={256}
+                  <Input aria-label="ช่วงหน้า PDF" value={pages} maxLength={256}
                     onChange={(event) => { setPages(event.target.value); setJob(null); }}
                     disabled={busy} required />
                 </label>
                 {tool.id === "M16" && <label>ชนิดผลลัพธ์
-                  <select aria-label="ชนิดผลลัพธ์" value={format}
+                  <NativeSelect aria-label="ชนิดผลลัพธ์" value={format}
                     onChange={(event) => setFormat(event.target.value as "pdf" | "zip")}>
                     <option value="pdf">PDF เดียว</option>
                     <option value="zip" disabled={!allowMultiOutput}>PDF แยกหน้าใน ZIP (ต้องเปิด Multi-output)</option>
-                  </select>
+                  </NativeSelect>
                 </label>}
               </div>
             )}
@@ -290,7 +295,7 @@ export function StagedManageClient({
               <div className="t90ManageFields">
                 <label className="wide">
                   {tool.id === "M14" ? "หน้าที่จะลบ (เช่น 2,4)" : "ลำดับหน้าใหม่ทุกหน้า (เช่น 3,1,2)"}
-                  <input aria-label="รายการหมายเลขหน้า" value={pageList}
+                  <Input aria-label="รายการหมายเลขหน้า" value={pageList}
                     onChange={(event) => { setPageList(event.target.value); setJob(null); }}
                     disabled={busy} required />
                 </label>
@@ -299,19 +304,19 @@ export function StagedManageClient({
             {tool?.id === "M22" && (
               <div className="t90ManageFields">
                 <label className="wide">ข้อความ ASCII เท่านั้น
-                  <input aria-label="ข้อความที่จะเพิ่ม" maxLength={120} value={overlayText}
+                  <Input aria-label="ข้อความที่จะเพิ่ม" maxLength={120} value={overlayText}
                     onChange={(event) => setOverlayText(event.target.value)} disabled={busy} required />
                 </label>
                 <label>หน้าที่จะเพิ่มข้อความ
-                  <input type="number" min={1} max={Math.min(80, total || 80)} value={overlayPage}
+                  <Input type="number" min={1} max={Math.min(80, total || 80)} value={overlayPage}
                     onChange={(event) => setOverlayPage(Number(event.target.value))} disabled={busy} required />
                 </label>
                 <label>พิกัด X (points)
-                  <input aria-label="พิกัด X" type="number" min={0} max={4000} value={x}
+                  <Input aria-label="พิกัด X" type="number" min={0} max={4000} value={x}
                     onChange={(event) => setX(Number(event.target.value))} disabled={busy} required />
                 </label>
                 <label>พิกัด Y (points)
-                  <input aria-label="พิกัด Y" type="number" min={0} max={4000} value={y}
+                  <Input aria-label="พิกัด Y" type="number" min={0} max={4000} value={y}
                     onChange={(event) => setY(Number(event.target.value))} disabled={busy} required />
                 </label>
               </div>
@@ -319,31 +324,31 @@ export function StagedManageClient({
             {tool?.id === "M31" && (
               <div className="t90ManageFields">
                 <label className="wide">ข้อความหัวกระดาษ
-                  <input aria-label="ข้อความหัวกระดาษ" maxLength={256} value={header}
+                  <Input aria-label="ข้อความหัวกระดาษ" maxLength={256} value={header}
                     onChange={(event) => setHeader(event.target.value)} disabled={busy} />
                 </label>
                 <label className="wide">ข้อความท้ายกระดาษ
-                  <input aria-label="ข้อความท้ายกระดาษ" maxLength={256} value={footer}
+                  <Input aria-label="ข้อความท้ายกระดาษ" maxLength={256} value={footer}
                     onChange={(event) => setFooter(event.target.value)} disabled={busy} />
                 </label>
                 <label>ระยะขอบ (points)
-                  <input aria-label="ระยะขอบ" type="number" min={12} max={144} value={margin}
+                  <Input aria-label="ระยะขอบ" type="number" min={12} max={144} value={margin}
                     onChange={(event) => setMargin(Number(event.target.value))} disabled={busy} required />
                 </label>
                 <label>ตำแหน่งข้อความ
-                  <select aria-label="ตำแหน่งข้อความ" value={align}
+                  <NativeSelect aria-label="ตำแหน่งข้อความ" value={align}
                     onChange={(event) => setAlign(event.target.value as "left" | "center" | "right")}
                     disabled={busy}>
                     <option value="left">ซ้าย</option><option value="center">กลาง</option>
                     <option value="right">ขวา</option>
-                  </select>
+                  </NativeSelect>
                 </label>
               </div>
             )}
             {tool && (tool.id === "M22" || tool.id === "M31") && (
               <div className="t90ManageFields">
                 <label>ขนาดตัวอักษร 8–24
-                  <input aria-label="ขนาดตัวอักษร" type="number" min={8} max={24} value={fontSize}
+                  <Input aria-label="ขนาดตัวอักษร" type="number" min={8} max={24} value={fontSize}
                     onChange={(event) => setFontSize(Number(event.target.value))} disabled={busy} required />
                 </label>
               </div>
@@ -351,7 +356,7 @@ export function StagedManageClient({
             {tool?.id === "M33" && (
               <div className="t90ManageFields">
                 <label className="wide">กรอกฟิลด์ AcroForm: ชื่อฟิลด์=ค่า (บรรทัดละรายการ)
-                  <textarea aria-label="ฟิลด์ AcroForm" value={updates} maxLength={15000}
+                  <Textarea aria-label="ฟิลด์ AcroForm" value={updates} maxLength={15000}
                     onChange={(event) => setUpdates(event.target.value)} disabled={busy}
                     placeholder={"student_name=Example\nstudent_id=123"} required />
                 </label>
@@ -365,10 +370,10 @@ export function StagedManageClient({
             {pageError && <p role="alert" className="t90DocumentStageError">{pageError}</p>}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
             {!available.length && <p role="status">Backend ของเครื่องมือกลุ่มนี้ยังปิดอยู่</p>}
-            <button type="submit" className="t90DocumentStageSubmit"
+            <Button type="submit" className="t90DocumentStageSubmit"
               disabled={busy || !chosen || !total || !tool || !canWork || Boolean(pageError)}>
               {busy ? "กำลังสร้างงาน…" : "เริ่มดำเนินการ"}
-            </button>
+            </Button>
           </form>
         )}
         {job && <div className="t90DocumentStageResult" role="status" aria-live="polite">

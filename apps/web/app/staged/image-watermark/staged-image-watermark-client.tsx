@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -108,38 +112,38 @@ export function StagedImageWatermarkClient({ requestedFileId }: { requestedFileI
         <form onSubmit={(event) => { void submit(event); }}>
           <div className="m21ImageWatermarkFields">
             <label>PDF ต้นฉบับของฉัน
-              <select aria-label="PDF ต้นฉบับของฉัน" value={pdfId}
+              <NativeSelect aria-label="PDF ต้นฉบับของฉัน" value={pdfId}
                 onChange={(event) => { setPdfId(event.target.value); setJob(null); }}
                 disabled={busy || !pdfs.length} required>
                 <option value="">เลือก PDF</option>
                 {pdfs.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </label>
             <label>รูป PNG/JPEG ของฉัน
-              <select aria-label="รูป PNG/JPEG ของฉัน" value={imageId}
+              <NativeSelect aria-label="รูป PNG/JPEG ของฉัน" value={imageId}
                 onChange={(event) => { setImageId(event.target.value); setJob(null); }}
                 disabled={busy || !images.length} required>
                 <option value="">เลือกรูปภาพ</option>
                 {images.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </label>
             <label>ความกว้างเทียบหน้ากระดาษ (0.10–0.80)
-              <input aria-label="สัดส่วนภาพลายน้ำ" type="number" min=".1" max=".8" step=".05"
+              <Input aria-label="สัดส่วนภาพลายน้ำ" type="number" min=".1" max=".8" step=".05"
                 value={relativeWidth} onChange={(event) => setRelativeWidth(Number(event.target.value))}
                 disabled={busy} required />
             </label>
             <label>ความทึบ (0.05–0.70)
-              <input aria-label="ความทึบลายน้ำ" type="number" min=".05" max=".7" step=".05"
+              <Input aria-label="ความทึบลายน้ำ" type="number" min=".05" max=".7" step=".05"
                 value={opacity} onChange={(event) => setOpacity(Number(event.target.value))}
                 disabled={busy} required />
             </label>
           </div>
           {me && !canWork && <p role="alert">ต้องมีสิทธิ์ files:read, jobs:read และ pdf:watermark</p>}
           {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-          <button className="t90DocumentStageSubmit" type="submit"
+          <Button className="t90DocumentStageSubmit" type="submit"
             disabled={!chosenPdf || !chosenImage || !canWork || busy}>
             {busy ? "กำลังสร้างงาน…" : "เพิ่มลายน้ำรูปภาพ"}
-          </button>
+          </Button>
         </form>
       )}
       {job && <div className="t90DocumentStageResult" role="status">

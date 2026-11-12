@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { useEffect, useRef, useState } from "react";
 import {
   ApiKeyCreated,
@@ -169,7 +172,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
           <h2>{area === "access" ? "Service Keys และ Policies" : area === "integrations" ? "สถานะการส่ง Webhook" : "เหตุการณ์และการตรวจสอบ"}</h2>
           <p className="muted">{message}</p>
         </div>
-        <button className="secondary" onClick={loadAdmin} disabled={busy}>โหลดข้อมูล Admin</button>
+        <Button className="secondary" onClick={loadAdmin} disabled={busy}>โหลดข้อมูล Admin</Button>
       </div>
 
       {area === "access" && <>
@@ -177,15 +180,15 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
         <div className="panel">
           <div className="panelTitle"><h2>สร้าง Service Key</h2><span>{scopes.length} scopes</span></div>
           <div className="formGrid">
-            <label>Service name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="student-system" /></label>
-            <label>Webhook URL<input value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://system.example.org/pdfhub/webhook" /></label>
+            <label>Service name<Input value={name} onChange={(e) => setName(e.target.value)} placeholder="student-system" /></label>
+            <label>Webhook URL<Input value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://system.example.org/pdfhub/webhook" /></label>
           </div>
           <div className="scopeGrid">
             {scopeOptions.map((scope) => (
               <label key={scope} className="check"><input type="checkbox" checked={scopes.includes(scope)} onChange={() => toggleScope(scope)} />{scope}</label>
             ))}
           </div>
-          <button className="primary full" onClick={createServiceKey} disabled={!name.trim() || busy}>สร้าง API Key</button>
+          <Button className="primary full" onClick={createServiceKey} disabled={!name.trim() || busy}>สร้าง API Key</Button>
           {created && (
             <div className="secretBox">
               <strong>เก็บค่านี้ตอนนี้</strong>
@@ -204,8 +207,8 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
                 <div className="keyHead"><div><strong>{record.name}</strong><small>{record.active ? "active" : "revoked"} • {record.scopes.length} scopes</small></div><span className={record.active ? "pill ok" : "pill danger"}>{record.active ? "ACTIVE" : "REVOKED"}</span></div>
                 <div className="quotaLine"><span>{record.policy.rate_limit_per_minute}/min</span><span>{record.policy.daily_job_limit}/day</span><span>{record.policy.max_storage_mb} MB</span></div>
                 <div className="rowActions">
-                  <button className="ghost" onClick={() => setEditing({ ...record.policy })}>Policy</button>
-                  {record.active && <button className="dangerButton" onClick={() => revoke(record)} disabled={busy}>Revoke</button>}
+                  <Button className="ghost" onClick={() => setEditing({ ...record.policy })}>Policy</Button>
+                  {record.active && <Button className="dangerButton" onClick={() => revoke(record)} disabled={busy}>Revoke</Button>}
                 </div>
               </div>
             ))}
@@ -215,14 +218,14 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
 
       {editing && (
         <div className="panel">
-          <div className="panelTitle"><h2>Policy: {editing.service_name}</h2><button className="ghost" onClick={() => setEditing(null)}>ปิด</button></div>
+          <div className="panelTitle"><h2>Policy: {editing.service_name}</h2><Button className="ghost" onClick={() => setEditing(null)}>ปิด</Button></div>
           <div className="formGrid four">
-            <label>Requests/min<input type="number" min="0" value={editing.rate_limit_per_minute} onChange={(e) => setEditing({ ...editing, rate_limit_per_minute: Number(e.target.value) })} /></label>
-            <label>Jobs/day<input type="number" min="0" value={editing.daily_job_limit} onChange={(e) => setEditing({ ...editing, daily_job_limit: Number(e.target.value) })} /></label>
-            <label>Storage MB<input type="number" min="0" value={editing.max_storage_mb} onChange={(e) => setEditing({ ...editing, max_storage_mb: Number(e.target.value) })} /></label>
-            <label>Webhook<input value={editing.webhook_url || ""} onChange={(e) => setEditing({ ...editing, webhook_url: e.target.value || null })} /></label>
+            <label>Requests/min<Input type="number" min="0" value={editing.rate_limit_per_minute} onChange={(e) => setEditing({ ...editing, rate_limit_per_minute: Number(e.target.value) })} /></label>
+            <label>Jobs/day<Input type="number" min="0" value={editing.daily_job_limit} onChange={(e) => setEditing({ ...editing, daily_job_limit: Number(e.target.value) })} /></label>
+            <label>Storage MB<Input type="number" min="0" value={editing.max_storage_mb} onChange={(e) => setEditing({ ...editing, max_storage_mb: Number(e.target.value) })} /></label>
+            <label>Webhook<Input value={editing.webhook_url || ""} onChange={(e) => setEditing({ ...editing, webhook_url: e.target.value || null })} /></label>
           </div>
-          <button className="primary" onClick={savePolicy} disabled={busy}>บันทึก Policy</button>
+          <Button className="primary" onClick={savePolicy} disabled={busy}>บันทึก Policy</Button>
         </div>
       )}
 
@@ -239,7 +242,7 @@ export function AdminPanel({ apiKey, area }: { apiKey: string; area: "access" | 
               </div>
               <div className="quotaLine"><span>{delivery.attempt_count}/{delivery.max_attempts} attempts</span><span>HTTP {delivery.last_status_code ?? "—"}</span><span>{new Date(delivery.updated_at).toLocaleString("th-TH")}</span></div>
               {delivery.last_error && <small className="muted">มีข้อผิดพลาดจากการส่ง Webhook กรุณาตรวจสอบปลายทางก่อน Replay</small>}
-              {delivery.status === "dead" && <div className="rowActions"><button className="secondary" onClick={() => replayDelivery(delivery)} disabled={busy}>Replay</button></div>}
+              {delivery.status === "dead" && <div className="rowActions"><Button className="secondary" onClick={() => replayDelivery(delivery)} disabled={busy}>Replay</Button></div>}
             </div>
           ))}
         </div>

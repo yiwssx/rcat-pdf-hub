@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -122,11 +126,11 @@ export function StagedGeometryClient({ requestedFileId, requestedToolId }: { req
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="t90-geometry-file">PDF ที่อัปโหลดแล้ว (เฉพาะไฟล์ของบัญชีนี้)</label>
-              <select id="t90-geometry-file" value={fileId} required disabled={busy || !files.length}
+              <NativeSelect id="t90-geometry-file" value={fileId} required disabled={busy || !files.length}
                 onChange={(event) => { setFileId(event.target.value); setJob(null); }}>
                 {!files.length && <option value="">ไม่มี PDF ที่เข้าถึงได้</option>}
                 {files.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <fieldset className="t90DocumentStageFieldset">
               <legend>เลือกเครื่องมือ</legend>
@@ -145,7 +149,7 @@ export function StagedGeometryClient({ requestedFileId, requestedToolId }: { req
               ).map((key) => (
                 <div className="t90DocumentStageField" key={key}>
                   <label htmlFor={"geometry-" + key}>{LABELS[key]} · pt</label>
-                  <input id={"geometry-" + key} type="number" step="any" value={values[key]}
+                  <Input id={"geometry-" + key} type="number" step="any" value={values[key]}
                     min={operation === "resize-pdf" ? 10 : -14400} max={14400}
                     onChange={(event) => setValues((old) => ({ ...old, [key]: event.target.value }))}
                     required disabled={busy} />
@@ -155,7 +159,7 @@ export function StagedGeometryClient({ requestedFileId, requestedToolId }: { req
             {operation === "crop-pdf" && (
               <div className="t90DocumentStageField">
                 <label htmlFor="t90-geometry-pages">หน้าที่จะ Crop (เว้นว่าง = ทุกหน้า)</label>
-                <input id="t90-geometry-pages" type="text" value={pages}
+                <Input id="t90-geometry-pages" type="text" value={pages}
                   onChange={(event) => setPages(event.target.value)} disabled={busy}
                   placeholder="1,3,5" autoComplete="off" />
               </div>
@@ -163,10 +167,10 @@ export function StagedGeometryClient({ requestedFileId, requestedToolId }: { req
             {!hasScope && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ {scope}</p>}
             {!hasReads && identity && <p role="alert">ต้องมีสิทธิ์ files:read และ jobs:read</p>}
             {error && <p className="t90DocumentStageError" role="alert">{error}</p>}
-            <button type="submit" className="t90DocumentStageSubmit"
+            <Button type="submit" className="t90DocumentStageSubmit"
               disabled={busy || !chosen || !hasScope || !hasReads}>
               {busy ? "กำลังสร้างงาน…" : "สร้างงานทดลอง"}
-            </button>
+            </Button>
           </form>
         )}
         {job && (

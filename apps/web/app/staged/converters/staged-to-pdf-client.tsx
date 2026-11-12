@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   createJob, getMe, listFiles, uploadFile, SESSION_AUTH,
@@ -198,13 +202,13 @@ export function StagedToPdfClient({
           <>
             <div className="t90DocumentStageField">
               <label htmlFor="t90-to-pdf-format">เครื่องมือแปลงไฟล์</label>
-              <select id="t90-to-pdf-format" value={formatId}
+              <NativeSelect id="t90-to-pdf-format" value={formatId}
                 onChange={(event) => changeFormat(event.target.value)}
                 disabled={uploading || submitting}>
                 {availableFormats.map((item) => (
                   <option key={item.id} value={item.id}>{item.id} · {item.title}</option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
             <p className="t90ConverterNote" role="note">ขอบเขตที่รองรับ: {format.limit}</p>
             {!isUrl && <p className="t90ConverterMeta">นามสกุลไฟล์: {accepting}</p>}
@@ -213,17 +217,17 @@ export function StagedToPdfClient({
               <input id="t90-to-pdf-upload" type="file" accept={accepting}
                 disabled={!canUpload || uploading || submitting}
                 onChange={(event) => setUploadCandidate(event.target.files?.[0] ?? null)} />
-              <button type="button" className="t90DocumentStageSubmit"
+              <Button type="button" className="t90DocumentStageSubmit"
                 disabled={!uploadCandidate || !canUpload || uploading || submitting}
                 onClick={() => { void upload(); }}>
                 {uploading ? "กำลังอัปโหลด…" : "อัปโหลดไฟล์"}
-              </button>
+              </Button>
             </div>}
             <form onSubmit={(event) => { void submit(event); }}>
               {isUrl ? (
                 <div className="t90DocumentStageField">
                   <label htmlFor="t90-to-pdf-url">URL เว็บไซต์สาธารณะ (HTTPS)</label>
-                  <input id="t90-to-pdf-url" type="url" value={urlInput}
+                  <Input id="t90-to-pdf-url" type="url" value={urlInput}
                     placeholder="https://example.org/article"
                     minLength={10} maxLength={1800} required
                     disabled={submitting || uploading}
@@ -233,25 +237,25 @@ export function StagedToPdfClient({
               ) : (
                 <div className="t90DocumentStageField">
                   <label htmlFor="t90-to-pdf-source">ไฟล์ที่ผ่านการตรวจชนิดและเป็นของบัญชีนี้</label>
-                  <select id="t90-to-pdf-source" value={selected?.id ?? ""}
+                  <NativeSelect id="t90-to-pdf-source" value={selected?.id ?? ""}
                     onChange={(event) => { setSelectedId(event.target.value); setSubmitted(null); }}
                     disabled={uploading || submitting || !choices.length} required>
                     <option value="">เลือกไฟล์ที่ต้องการแปลง</option>
                     {choices.map((file) => <option key={file.id} value={file.id}>
                       {file.original_name}
                     </option>)}
-                  </select>
+                  </NativeSelect>
                 </div>
               )}
               {!isUrl && !canUpload && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ files:write สำหรับอัปโหลด</p>}
               {!allowed && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ {requiredScope}</p>}
               {!canDownload && identity && <p role="alert">ต้องมีสิทธิ์ files:read และ jobs:read เพื่อรับผลลัพธ์</p>}
               {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-              <button type="submit" className="t90DocumentStageSubmit"
+              <Button type="submit" className="t90DocumentStageSubmit"
                 disabled={uploading || submitting || !allowed || !canDownload || format.withheld
                   || (isUrl ? !looksLikePublicHttpsInput(urlInput.trim()) : !selected)}>
                 {submitting ? "กำลังสร้างงาน…" : "แปลงเป็น PDF"}
-              </button>
+              </Button>
             </form>
           </>
         )}

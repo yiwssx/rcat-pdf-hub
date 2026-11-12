@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, uploadFile, SESSION_AUTH,
@@ -141,11 +145,11 @@ export function StagedVisualSignatureClient({
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="m12-source">PDF ของฉัน</label>
-              <select id="m12-source" value={pdfId} required disabled={!pdfs.length || busy}
+              <NativeSelect id="m12-source" value={pdfId} required disabled={!pdfs.length || busy}
                 onChange={(event) => { setPdfId(event.target.value); setJob(null); }}>
                 {!pdfs.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                 {pdfs.map((item) => <option key={item.id} value={item.id}>{item.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <fieldset className="t90DocumentStageFieldset">
               <legend>รูปแบบลายเซ็น</legend>
@@ -182,7 +186,7 @@ export function StagedVisualSignatureClient({
                 ] as const).map(([key, label, min, max]) => (
                   <label key={key} htmlFor={"m12-" + key}>
                     {label}
-                    <input id={"m12-" + key} type="number" min={min} max={max}
+                    <Input id={"m12-" + key} type="number" min={min} max={max}
                       step={1} value={placement[key]} required disabled={busy}
                       onChange={(event) => updatePosition(key, event.target.value)} />
                   </label>
@@ -193,9 +197,9 @@ export function StagedVisualSignatureClient({
               ต้องมีสิทธิ์ files:read, files:write, jobs:read และ pdf:stamp
             </p>}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-            <button className="t90DocumentStageSubmit" type="submit" disabled={!ready}>
+            <Button className="t90DocumentStageSubmit" type="submit" disabled={!ready}>
               {busy ? "กำลังอัปโหลดและสร้างงาน…" : "วางลายเซ็นลง PDF"}
-            </button>
+            </Button>
           </form>
         )}
         {job && (
