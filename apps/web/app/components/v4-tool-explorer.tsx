@@ -158,20 +158,14 @@ export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: bool
             </section>
 
             <aside className="v4ToolDetail" aria-label="รายละเอียดเครื่องมือที่เลือก">
-              {active ? <>
-                <div className="v4DetailOverline">TOOL DETAIL <span>{active.id}</span></div>
-                <span className="v4DetailIcon" data-family={active.category}><ActiveIcon aria-hidden="true" size={35} strokeWidth={1.6}/></span>
-                <h2>{active.title}</h2><p>{FAMILY_LABELS[active.category]}</p>
-                <div className="v4ToolNotice">การใช้งานจริงขึ้นอยู่กับสิทธิ์และสถานะที่ระบบอนุญาต ไม่รับรองว่าเครื่องมือนี้เปิดใช้งานแล้ว</div>
-                <a className="v4PrimaryButton" href={active.href}>เปิดหน้าเครื่องมือ <ArrowRight aria-hidden="true" size={18}/></a>
-                <details className="v4ToolAdvanced">
-                  <summary>รายละเอียดเส้นทางและการเข้าถึง</summary>
-                  <p>รหัสเครื่องมือ: {active.id}</p>
-                  <p>เส้นทาง: <code>{active.href}</code></p>
-                  <p>ยืนยันสิทธิ์จริงเมื่อเข้าสู่หน้าการทำงาน</p>
-                </details>
-              </> : <p>เลือกเครื่องมือจากรายการเพื่อดูรายละเอียด</p>}
+              {active ? <ToolDetailContent tool={active} /> : <p>เลือกเครื่องมือจากรายการเพื่อดูรายละเอียด</p>}
             </aside>
+            <dialog ref={mobileDetailRef} className="v4ToolDialog" aria-label="รายละเอียดเครื่องมือที่เลือก">
+              <button className="v4ToolDialogClose" type="button" aria-label="ปิดรายละเอียด" onClick={() => mobileDetailRef.current?.close()}>
+                <X aria-hidden="true" size={19}/>
+              </button>
+              {active && <ToolDetailContent tool={active} />}
+            </dialog>
           </div>
         </>
       ) : (
