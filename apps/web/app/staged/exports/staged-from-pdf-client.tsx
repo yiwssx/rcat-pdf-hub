@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 
 import { useEffect, useState } from "react";
@@ -153,7 +152,7 @@ export function StagedFromPdfClient({
             <p className="t90ExportLimit" role="note">ขอบเขต: {selectedTool.limitation}</p>
             <div className="t90DocumentStageField">
               <label htmlFor="t90-export-upload">อัปโหลด PDF ต้นฉบับ</label>
-              <Input id="t90-export-upload" type="file" accept=".pdf,application/pdf"
+              <input id="t90-export-upload" type="file" accept=".pdf,application/pdf"
                 disabled={uploading || submitting || !canUpload}
                 onChange={(event) => setCandidate(event.target.files?.[0] ?? null)} />
               <Button type="button" className="t90DocumentStageSubmit"
