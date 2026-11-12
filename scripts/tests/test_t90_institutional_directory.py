@@ -105,6 +105,13 @@ class T90DirectoryTests(unittest.TestCase):
         self.assertIn("t90CatalogVisible ? (", home)
         self.assertIn("InstitutionalT90Directory", home)
         self.assertNotIn("NEXT_PUBLIC_PDFHUB_T90", page)
+        overlay = (ROOT / "compose.t90-code-first.yaml").read_text(encoding="utf-8")
+        web_block = overlay.split("  web:\n    environment:\n", 1)[1]
+        self.assertIn('PDFHUB_T90_CODE_ROLLOUT_ENABLED: "true"', web_block)
+        self.assertIn('PDFHUB_T90_PRIVATE_PILOT_ENABLED: "true"', web_block)
+        preflight = (ROOT / "scripts/release1-host-preflight.py").read_text(encoding="utf-8")
+        self.assertIn("T90_MARKER", preflight)
+
 
     def test_shared_workflows_open_requested_mode(self):
         geometry = (APP / "staged/geometry/staged-geometry-client.tsx").read_text(encoding="utf-8")
