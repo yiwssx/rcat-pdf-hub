@@ -166,7 +166,9 @@ test("V4 critical journeys: tool search, semantic icons, deep links, navigation 
     await expect(page).toHaveURL(/tool=M04/);
     await page.reload();
     await expect(page.getByRole("heading", { name: "Merge PDF" })).toBeVisible();
-    await expect(page.locator(".v4ToolDetail a[href='/tools/merge-pdf']")).toBeVisible();
+    await expect(page.locator(
+      width <= 760 ? ".v4ToolDialog a[href='/tools/merge-pdf']" : ".v4ToolDetail a[href='/tools/merge-pdf']",
+    )).toBeVisible();
     // Deep-link selection should survive refresh and follow browser history.
     await page.goBack();
     await expect(page).toHaveURL(/\/tools$/);
