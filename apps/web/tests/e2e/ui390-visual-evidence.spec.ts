@@ -108,6 +108,9 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
         await expect(recent).toBeVisible();
         await recent.click();
         await expect(page.locator(".v3DocumentMode")).toBeVisible();
+        if (variant === "after") await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+        // Compare the same document origin, not the prior dashboard scroll position.
+        await page.evaluate(() => window.scrollTo(0, 0));
         const workbenchOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (variant === "after") expect(workbenchOverflow, `${name}/workspace overflow`).toBeLessThanOrEqual(1);
         await page.screenshot({ path: resolve(captureRoot, `${name}-workspace.png`), fullPage: true, animations: "disabled" });
