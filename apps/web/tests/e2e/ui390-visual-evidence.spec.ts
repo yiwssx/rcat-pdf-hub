@@ -56,7 +56,7 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
     return;
   }
   await installEvidenceFixtures(page);
-  const captureRoot = resolve("test-results/ui390", variant);
+  const captureRoot = resolve("visual-evidence/ui390", variant);
   mkdirSync(captureRoot, { recursive: true });
   const results: Array<{ viewport: string; view: string; pathname: string; overflow: number }> = [];
   for (const [name, width, height] of [["desktop", 1366, 768], ["mobile", 390, 844]] as const) {
