@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useState, type FormEvent } from "react";
 import {
   createJob, getMe, getPageInfo, listFiles, SESSION_AUTH,
@@ -103,22 +106,22 @@ export function StagedVisualFlattenClient({ requestedFileId }: { requestedFileId
         <form onSubmit={(event) => { void submit(event); }}>
           <div className="t90DocumentStageField">
             <label htmlFor="m24-file">PDF ที่เป็นของบัญชีนี้</label>
-            <select id="m24-file" aria-label="PDF ที่เป็นของบัญชีนี้"
+            <NativeSelect id="m24-file" aria-label="PDF ที่เป็นของบัญชีนี้"
               value={fileId} onChange={(event) => { setFileId(event.target.value); setJob(null); }}
               disabled={submitting || !files.length} required>
               {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
               {files.map((file) =>
                 <option key={file.id} value={file.id}>{file.original_name}</option>)}
-            </select>
+            </NativeSelect>
           </div>
           {chosen && <p>จำนวนหน้า: {pages || "กำลังตรวจสอบ"}</p>}
           {me && !allowed && <p role="alert">ต้องมีสิทธิ์ files:read, jobs:read และ pdf:convert</p>}
           {pageError && <p role="alert" className="t90DocumentStageError">{pageError}</p>}
           {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-          <button type="submit" className="t90DocumentStageSubmit"
+          <Button type="submit" className="t90DocumentStageSubmit"
             disabled={!chosen || !allowed || pages < 1 || Boolean(pageError) || submitting}>
             {submitting ? "กำลังสร้างงาน…" : "สร้าง PDF แบบภาพ"}
-          </button>
+          </Button>
         </form>
       )}
       {job && <div className="t90DocumentStageResult" role="status" aria-live="polite">
