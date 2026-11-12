@@ -452,7 +452,7 @@ export function FilesScreen({
   return (
     <main className="v3Main vdFilesPage">
       <section className="v3FilesHead">
-        <div><span className="v3Kicker">DOCUMENT LIBRARY / YOUR FILES</span><h1>คลังไฟล์ของฉัน</h1><p>ค้นหา จัดการ และดาวน์โหลดเอกสารของคุณ <strong>{page.total.toLocaleString("th-TH")} ไฟล์</strong></p></div>
+        <div><span className="v3Kicker">DOCUMENT LIBRARY / YOUR FILES</span><h1>ไฟล์ทั้งหมด</h1><p>ค้นหา จัดการ และดาวน์โหลดเอกสารของคุณ <strong>{page.total.toLocaleString("th-TH")} ไฟล์</strong></p></div>
         <div className="v3FilesActions">
           {selected.length > 0 && <><span>{selected.length} รายการ</span><button type="button" className="v3DangerButton" disabled={busy} onClick={() => void mutate(async () => { await onDelete(selected); setSelected([]); })}>ลบที่เลือก</button></>}
           <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(event) => {
