@@ -169,7 +169,7 @@ export function StagedVisualSignatureClient({
             ) : (
               <div className="t90DocumentStageField">
                 <label htmlFor="m12-upload">ลายเซ็น PNG (ไม่เกิน 8 MB)</label>
-                <Input id="m12-upload" type="file" accept="image/png,.png"
+                <input id="m12-upload" type="file" accept="image/png,.png"
                   className="m12SignatureFile" disabled={busy}
                   onChange={(event) => { setCandidate(event.target.files?.[0] ?? null); setJob(null); }} />
               </div>
