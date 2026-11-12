@@ -220,7 +220,7 @@ test("opens a Web Console session without exposing API-key login", async ({ page
   await expect(page.getByLabel("Service API Key")).toHaveCount(0);
   await expect(page.getByLabel("เมนูบัญชี").getByText("Web Console")).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
-  await expect(page.locator(".v3HomeTitle")).toContainText("จัดการเอกสารของคุณ");
+  await expect(page.locator(".v3HomeTitle")).toContainText("งานเอกสาร ง่ายขึ้นในที่เดียว");
   await expect(page.locator(".welcomeHero")).toHaveCount(0);
   await expect(page.locator(".authCard")).toHaveCount(0);
 });
@@ -244,7 +244,7 @@ test("V3 switches from home into a focused tool workspace without long-page sect
   await page.getByRole("button", { name: "กลับไปเลือกเครื่องมือ" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator(".v3ToolPanel")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "จัดการเอกสารของคุณ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "งานเอกสาร ง่ายขึ้นในที่เดียว" })).toBeVisible();
 });
 
 test("tool workspace owns settings and submits the configured watermark payload", async ({ page }) => {
@@ -409,7 +409,7 @@ test("P7A.1 deep links keep tool intent across navigation, reload, and reject un
   await expect(page.locator("#workspace-target")).toHaveCount(0);
 
   await page.goBack();
-  await expect(page.getByRole("heading", { name: "จัดการเอกสารของคุณ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "งานเอกสาร ง่ายขึ้นในที่เดียว" })).toBeVisible();
   await page.goForward();
   await expect(page.getByRole("heading", { name: "ลดขนาด PDF" })).toBeVisible();
 
@@ -876,7 +876,7 @@ test("P7D.1 My Jobs uses server-filtered owned history with status and paginatio
   await expect(page.locator(".v3JobsHistoryRow")).toHaveCount(11);
   expect(queries.every((url) => url.searchParams.get("mine") === "true")).toBe(true);
   expect(queries.some((url) => url.searchParams.get("status") === "failed")).toBe(true);
-  await page.getByRole("link", { name: "ดูสถานะ →" }).first().click();
+  await page.getByRole("link", { name: "ดูรายละเอียด →" }).first().click();
   await expect(page).toHaveURL(/\/jobs\/job-my-/);
 });
 
