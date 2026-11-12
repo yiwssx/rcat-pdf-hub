@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toolSearchTerms, FEATURED_T90_TOOL_IDS } from "./t90-search-metadata";
 import {
   T90_DIRECTORY_COUNTS,
