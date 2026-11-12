@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { UploadedFile } from "../../lib/api";
 import type { ToolDefinition } from "./v3-ui";
 import { isEligibleToolFile, TOOL_INPUT_RULES, validateToolInputs } from "./tool-input-rules";
@@ -83,7 +85,7 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, on
           </div>
           <label className="v3Field">
             ค้นหาชื่อไฟล์
-            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ค้นหาไฟล์ที่รองรับ" />
+            <Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ค้นหาไฟล์ที่รองรับ" />
           </label>
           <div className="v3RecentList" aria-label="ไฟล์ที่รองรับ">
             {displayed.length === 0 && <p className="v3EmptyMini">ไม่พบไฟล์ที่รองรับเครื่องมือนี้</p>}
@@ -100,7 +102,7 @@ export function ToolFileIntake({ tool, files, selectedIds, busy, uploadError, on
       <section className={`v3RecentCard v3IntakeReview${!validation && !busy ? " isReady" : ""}`} aria-label="ตรวจรายการไฟล์ก่อนดำเนินการ">
         <div className="v3SectionHead v3IntakeReviewHead">
           <div><span className="v3Kicker">REVIEW INPUTS</span><h2>ไฟล์ที่เลือก {selected.length} รายการ</h2></div>
-          <button type="button" className="v3PrimaryAction v3IntakeNextAction" disabled={busy || Boolean(validation)} onClick={continueTask}>ตั้งค่าและดำเนินการ →</button>
+          <Button type="button" className="v3PrimaryAction v3IntakeNextAction" disabled={busy || Boolean(validation)} onClick={continueTask}>ตั้งค่าและดำเนินการ →</Button>
         </div>
         {selected.length === 0 && <p>ยังไม่ได้เลือกไฟล์</p>}
         <div className="v3RecentList">
