@@ -689,6 +689,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
           target={target}
           tools={tools}
           activeTool={activeTool}
+          t90CatalogVisible={t90CatalogVisible}
           previewUrl={previewUrl}
           previewPage={previewPage}
           busy={busy}
@@ -716,7 +717,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       )}
 
       {t90CatalogVisible && target && initialView === "workspace" && !routeTool && (
-        <InstitutionalT90Directory selectedFileId={target.id} />
+        <main className="v3Main" aria-label="สารบัญเครื่องมือ PDF ทั้ง 90 รายการ">
+          <InstitutionalT90Directory selectedFileId={target.id} />
+        </main>
       )}
 
       <JobDrawer open={jobsOpen} jobs={jobs} files={files} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)} onCancel={(jobId) => void controlJob(jobId, "cancel")} onRetry={(jobId) => void controlJob(jobId, "retry")} onClear={() => void clearJobHistory()}/>
