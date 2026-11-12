@@ -33,6 +33,7 @@ import {
   UploadedFile,
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
+import { InstitutionalT90Directory } from "./institutional-t90-directory";
 import { JobDetailScreen } from "./job-detail-screen";
 import { JobResultScreen } from "./job-result-screen";
 import { MyJobsScreen } from "./my-jobs-screen";
@@ -74,7 +75,7 @@ function isPdf(file: UploadedFile | null) {
   return Boolean(file && (file.content_type === "application/pdf" || file.original_name.toLowerCase().endsWith(".pdf")));
 }
 
-export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId, initialJobId, initialAdminArea = "overview" }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string; initialJobId?: string; initialAdminArea?: AdminArea }) {
+export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId, initialJobId, initialAdminArea = "overview", t90CatalogEnabled = false }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string; initialJobId?: string; initialAdminArea?: AdminArea; t90CatalogEnabled?: boolean }) {
   const [auth, setAuth] = useState("");
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [identity, setIdentity] = useState<AuthMe | null>(null);
@@ -101,6 +102,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   const [toolSettings, setToolSettings] = useState(createToolWorkspaceSettings);
 
   const institutionalPilot = authConfig?.institutional?.rcat_only === true;
+  const t90CatalogVisible = t90CatalogEnabled && institutionalPilot;
   const tools = useMemo(() => institutionalPilotTools(institutionalPilot), [institutionalPilot]);
   const pilotToolUnavailable = institutionalPilot && Boolean(initialTool) && !RCAT_RELEASE1_TOOL_IDS.has(initialTool ?? "");
   const routeTool = initialTool ? findPdfTool(initialTool) : undefined;
@@ -710,7 +712,11 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
           onRetention={updateRetention}
         />
       ) : (
-        <HomeScreen files={files} tools={tools} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
+        <HomeScreen files={files} tools={tools} t90CatalogVisible={t90CatalogVisible} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
+      )}
+
+      {t90CatalogVisible && target && initialView === "workspace" && !routeTool && (
+        <InstitutionalT90Directory selectedFileId={target.id} />
       )}
 
       <JobDrawer open={jobsOpen} jobs={jobs} files={files} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)} onCancel={(jobId) => void controlJob(jobId, "cancel")} onRetry={(jobId) => void controlJob(jobId, "retry")} onClear={() => void clearJobHistory()}/>
