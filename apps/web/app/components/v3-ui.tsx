@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
@@ -440,7 +442,7 @@ export function FilesScreen({
       </section>
 
       <section className="v3LibraryToolbar" aria-label="ตัวกรองคลังไฟล์">
-        <div className="v3Search"><span>⌕</span><input aria-label="ค้นหาชื่อไฟล์" value={query} onChange={(event) => resetAnd(() => setQuery(event.target.value))} placeholder="ค้นหาชื่อไฟล์…"/></div>
+        <div className="v3Search"><span>⌕</span><Input aria-label="ค้นหาชื่อไฟล์" value={query} onChange={(event) => resetAnd(() => setQuery(event.target.value))} placeholder="ค้นหาชื่อไฟล์…"/></div>
         <label>ประเภท
           <select aria-label="ประเภทไฟล์" value={kind} onChange={(event) => resetAnd(() => setKind(event.target.value as FileLibraryKind))}>
             <option value="all">ทั้งหมด</option>
@@ -489,9 +491,9 @@ export function FilesScreen({
       </section>
 
       <nav className="v3LibraryPagination" aria-label="หน้าคลังไฟล์">
-        <button type="button" disabled={loading || page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - page.limit))}>← ก่อนหน้า</button>
+        <Button variant="outline" size="sm" type="button" disabled={loading || page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - page.limit))}>← ก่อนหน้า</Button>
         <span>{page.total === 0 ? "0 รายการ" : `หน้า ${currentPage} จาก ${totalPages}`}</span>
-        <button type="button" disabled={loading || !page.has_more} onClick={() => setOffset(page.offset + page.limit)}>ถัดไป →</button>
+        <Button variant="outline" size="sm" type="button" disabled={loading || !page.has_more} onClick={() => setOffset(page.offset + page.limit)}>ถัดไป →</Button>
       </nav>
     </main>
   );
