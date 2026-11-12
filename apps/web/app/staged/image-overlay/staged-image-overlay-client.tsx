@@ -158,7 +158,7 @@ export function StagedImageOverlayClient({ requestedFileId }: { requestedFileId?
           <>
             <div className="t90DocumentStageField">
               <label htmlFor="m23-upload">อัปโหลด PDF หรือรูปภาพ</label>
-              <Input id="m23-upload" type="file" accept=".pdf,.png,.jpg,.jpeg"
+              <input id="m23-upload" type="file" accept=".pdf,.png,.jpg,.jpeg"
                 disabled={!canUpload || uploading || submitting}
                 onChange={(event) => setCandidate(event.target.files?.[0] ?? null)} />
               <Button className="t90DocumentStageSubmit" type="button"
