@@ -127,6 +127,7 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
 
 
 test("V4 critical journeys: tool search, semantic icons, deep links, navigation and responsive shell", async ({ page }) => {
+  test.setTimeout(120_000);
   test.skip(process.env.PDFHUB_VISUAL_VARIANT !== "after", "V4 interactions only apply to candidate");
   await installEvidenceFixtures(page);
   expect(T90_DIRECTORY_TOOLS).toHaveLength(90);
@@ -151,10 +152,33 @@ test("V4 critical journeys: tool search, semantic icons, deep links, navigation 
     await page.reload();
     await expect(page.getByRole("heading", { name: "Merge PDF" })).toBeVisible();
     await expect(page.locator(".v4ToolDetail a[href='/tools/merge-pdf']")).toBeVisible();
+    // Deep-link selection should survive refresh and follow browser history.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/tools$/);
+    await page.goForward();
+    await expect(page).toHaveURL(/tool=M04/);
     await search.fill("");
     await page.getByRole("button", { name: /แปลงจาก PDF/ }).first().click();
     await expect(page.locator(".v4ToolListItem").first()).toContainText("PDF");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `${name} V4 explorer overflow`).toBeLessThanOrEqual(1);
+
+    // Management surfaces retain their actual actions, not just a visual skin.
+    await page.goto("/files");
+    await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
+    await page.getByRole("button", { name: "ตาราง" }).click();
+    await expect(page.locator(".v4FilesGrid")).toBeVisible();
+    await page.getByRole("button", { name: "รายการ" }).click();
+    await expect(page.locator(".v4FilesGrid")).toHaveCount(0);
+
+    await page.goto("/jobs");
+    await page.getByRole("button", { name: "สำเร็จ", exact: true }).click();
+    await expect(page.getByLabel("กรองสถานะงาน")).toHaveValue("completed");
+
+    await page.goto("/admin?section=overview");
+    const adminNav = page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" });
+    await expect(adminNav).toBeVisible();
+    await adminNav.getByRole("link", { name: /พื้นที่จัดเก็บ/ }).click();
+    await expect(page.getByRole("heading", { name: "พื้นที่จัดเก็บและ Retention" })).toBeVisible();
   }
 });
