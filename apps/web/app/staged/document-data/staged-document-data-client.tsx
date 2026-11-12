@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -136,10 +140,10 @@ export function StagedDocumentDataClient({ requestedFileId, requestedToolId }: {
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="t90-document-file">PDF ที่อัปโหลดแล้ว (เฉพาะไฟล์ของบัญชีนี้)</label>
-              <select id="t90-document-file" value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setSubmitted(null); }} disabled={!files.length || submitting} required>
+              <NativeSelect id="t90-document-file" value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setSubmitted(null); }} disabled={!files.length || submitting} required>
                 {!files.length && <option value="">ไม่มี PDF ที่เข้าถึงได้</option>}
                 {files.map((file) => <option key={file.id} value={file.id}>{file.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <fieldset className="t90DocumentStageFieldset">
               <legend>เลือกการดำเนินการ</legend>
@@ -163,7 +167,7 @@ export function StagedDocumentDataClient({ requestedFileId, requestedToolId }: {
                         onChange={(event) => setEnabled((old) => ({ ...old, [field]: event.target.checked }))} />
                       {FIELD_NAMES[field]}
                     </label>
-                    <input aria-label={"ค่า " + FIELD_NAMES[field]} value={values[field]} maxLength={512}
+                    <Input aria-label={"ค่า " + FIELD_NAMES[field]} value={values[field]} maxLength={512}
                       onChange={(event) => setValues((old) => ({ ...old, [field]: event.target.value }))}
                       disabled={submitting || !enabled[field]} placeholder="เว้นว่างเพื่อลบฟิลด์" />
                   </div>
@@ -175,10 +179,10 @@ export function StagedDocumentDataClient({ requestedFileId, requestedToolId }: {
             {!hasJobScope && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ jobs:read</p>}
             {!hasFileScope && identity && <p role="alert">บัญชีนี้ไม่มีสิทธิ์ files:read</p>}
             {error && <p className="t90DocumentStageError" role="alert">{error} <a href="/">กลับหน้าแรก</a></p>}
-            <button type="submit" className="t90DocumentStageSubmit"
+            <Button type="submit" className="t90DocumentStageSubmit"
               disabled={submitting || !chosen || !hasScope || !hasJobScope || !hasFileScope}>
               {submitting ? "กำลังสร้างงาน…" : "สร้างงานทดลอง"}
-            </button>
+            </Button>
           </form>
         )}
 
