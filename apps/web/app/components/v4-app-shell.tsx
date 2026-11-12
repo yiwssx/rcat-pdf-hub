@@ -53,7 +53,7 @@ export function V4AppShell({
           {links.map(item => {
             const Icon = item.icon;
             return (
-              <a key={item.href} href={item.href} aria-current={activePath(pathname, item.href) ? "page" : undefined}
+              <a key={item.href} href={item.href} aria-label={item.label} aria-current={activePath(pathname, item.href) ? "page" : undefined}
                 className="v4NavLink">
                 <Icon aria-hidden="true" size={19} strokeWidth={1.9} />
                 <span>{item.label}</span>
