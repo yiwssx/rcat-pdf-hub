@@ -954,7 +954,27 @@ button.primary:disabled,button.secondary:disabled,button.ghost:disabled,button.d
 @media (max-width: 900px) {
   .v3App { padding:10px 10px 36px; }
   .v3Header { top:7px; grid-template-columns:auto 1fr; gap:12px; margin-bottom:16px; }
-  .v3PrimaryNav { display:none; }
+  /* Primary routes stay visible on touch devices instead of hiding in Account. */
+  .v3PrimaryNav {
+    display:flex;
+    grid-column:1 / -1;
+    grid-row:2;
+    gap:4px;
+    min-width:0;
+    overflow-x:auto;
+    padding-top:8px;
+    border-top:1px solid var(--v3-line);
+    scrollbar-width:thin;
+  }
+  .v3PrimaryNav a {
+    flex:1 0 auto;
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+    font-size:14px;
+  }
   .v3HeaderActions { justify-content:flex-end; }
   .v3Account { position:static; }
   .v3AccountMenu { top:68px; right:8px; }
