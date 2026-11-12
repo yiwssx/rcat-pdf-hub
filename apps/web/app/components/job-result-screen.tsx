@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { fetchDownload, FileLookupError, getFile, getJob, getJobArtifacts, Job, JobArtifactManifest, JobLookupError, UploadedFile } from "../../lib/api";
 import { TaskJourneyNav } from "./task-journey";
 import { PDF_TOOLS } from "./tool-catalog";
@@ -142,9 +143,9 @@ export function JobResultScreen({ jobId, auth }: Props) {
           ) : data.file ? (<>
             <div className="v3TaskSummary"><strong>{data.file.original_name}</strong><small>{Math.max(1, Math.ceil(data.file.size / 1024))} KB • {data.file.content_type}</small></div>
             <div className="v3JobDetailActions">
-              <button type="button" className="v3PrimaryAction" disabled={!ready || downloading} onClick={() => void download()}>
+              <Button type="button" className="v3PrimaryAction" disabled={!ready || downloading} onClick={() => void download()}>
                 {downloading ? "กำลังเตรียมดาวน์โหลด…" : "ดาวน์โหลดผลลัพธ์"}
-              </button>
+              </Button>
               <a className="v3TextLink" href={`/files/${encodeURIComponent(data.file.id)}`}>ดูไฟล์ในคลัง →</a>
               <a className="v3TextLink" href="/files">ไฟล์ทั้งหมด</a>
             </div>
@@ -162,11 +163,11 @@ export function JobResultScreen({ jobId, auth }: Props) {
                       <strong>{part.file_name}</strong>
                       <small>หน้า {part.ordinal} • {Math.max(1, Math.ceil(part.size / 1024))} KB{expiredPart ? " • หมดอายุ" : ""}</small>
                       <div className="v3JobDetailActions">
-                        <button type="button" className="v3SecondaryAction"
+                        <Button type="button" variant="outline" className="v3SecondaryAction"
                           disabled={expiredPart || downloadingPart !== null}
                           onClick={() => void downloadPart(part.file_id, part.file_name)}>
                           {downloadingPart === part.file_id ? "กำลังดาวน์โหลด…" : `${["split-to-zip", "extract-pages-zip"].includes(data.job.operation) ? "ดาวน์โหลด PDF ส่วนที่" : data.job.operation === "extract-images" ? "ดาวน์โหลดภาพที่" : "ดาวน์โหลดภาพหน้า"} ${part.ordinal}`}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   );
@@ -191,7 +192,7 @@ export function JobResultScreen({ jobId, auth }: Props) {
             </section>}
           </>) : null}
         </>}
-        <button type="button" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>ตรวจสอบใหม่</button>
+        <Button type="button" variant="outline" size="sm" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>ตรวจสอบใหม่</Button>
       </section>
     </main>
   );

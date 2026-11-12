@@ -588,6 +588,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   return (
     <div className="v3App">
       <AppHeader identity={identity} message={message} jobs={jobs} onOpenJobs={() => setJobsOpen(true)} onRefresh={() => void loadWorkspace()} onLogout={() => void logout()}/>
+      <p className="v3MobileStatus" role="status" aria-live="polite">{message}</p>
 
       {initialView === "file" && initialFileId ? (
         <FileDetailScreen fileId={initialFileId} auth={auth} />

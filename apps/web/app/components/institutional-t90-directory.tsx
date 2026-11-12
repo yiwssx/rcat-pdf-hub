@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toolSearchTerms, FEATURED_T90_TOOL_IDS } from "./t90-search-metadata";
 import {
   T90_DIRECTORY_COUNTS,
   T90_DIRECTORY_TOOLS,
@@ -37,10 +40,33 @@ export function InstitutionalT90Directory({ selectedFileId }: {
     const query = search.trim().toLocaleLowerCase();
     return T90_DIRECTORY_TOOLS.filter((tool) =>
       (filter === "all" || tool.category === filter)
-      && (!query || (tool.id + " " + tool.title + " " + FAMILY_TITLES[tool.category])
+      && (!query || (tool.id + " " + tool.title + " " + FAMILY_TITLES[tool.category] + " " + toolSearchTerms(tool.id))
         .toLocaleLowerCase().includes(query))
     );
   }, [filter, search]);
+
+  const featured = !search.trim() && filter === "all"
+    ? T90_DIRECTORY_TOOLS.filter((tool) => FEATURED_T90_TOOL_IDS.includes(tool.id))
+    : [];
+  const sections = (filter === "all" && !search.trim())
+    ? GROUPS.filter((group): group is typeof GROUPS[number] & { id: T90DirectoryFamily } => group.id !== "all")
+    : [{ id: filter, title: "ผลการค้นหา", count: visible.length }] as const;
+
+  function toolCard(tool: typeof T90_DIRECTORY_TOOLS[number]) {
+    return (
+      <a
+        key={tool.id}
+        className="v3ToolCard t90DirectoryTool"
+        data-tone={tool.category === "manage" ? "blue" : tool.category === "to_pdf" ? "orange" : "violet"}
+        href={destination(tool.href, selectedFileId)}
+        aria-label={tool.title + " รหัส " + tool.id}
+      >
+        <span className="t90DirectoryCode" aria-hidden="true">{tool.id}</span>
+        <span className="v3ToolCardText"><strong>{tool.title}</strong><small>{FAMILY_TITLES[tool.category]}</small></span>
+        <b aria-hidden="true">›</b>
+      </a>
+    );
+  }
 
   return (
     <section className="v3ToolsBlock t90Directory" id="t90-tools" aria-labelledby="t90-tools-heading">
@@ -55,18 +81,20 @@ export function InstitutionalT90Directory({ selectedFileId }: {
       <div className="t90DirectoryControls">
         <label className="t90DirectorySearch">
           <span>ค้นหาเครื่องมือ</span>
-          <input
+          <Input
             aria-label="ค้นหาเครื่องมือ T90"
             type="search"
             value={search}
             maxLength={100}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="ชื่อเครื่องมือ รูปแบบไฟล์ หรือรหัส M/T/F…"
+            placeholder="เช่น รวมไฟล์ ย่อ PDF Word เป็น PDF หรือ OCR…"
           />
         </label>
+        {search && <Button variant="outline" className="t90DirectoryClear" type="button" onClick={() => { setSearch(""); setFilter("all"); }}>ล้างคำค้นหา</Button>}
         <div className="t90DirectoryFilters" role="group" aria-label="ประเภทเครื่องมือ PDF">
           {GROUPS.map((group) => (
-            <button
+            <Button
+              variant={filter === group.id ? "default" : "outline"}
               key={group.id}
               type="button"
               aria-pressed={filter === group.id}
@@ -74,33 +102,32 @@ export function InstitutionalT90Directory({ selectedFileId }: {
               onClick={() => setFilter(group.id)}
             >
               {group.title} <span>{group.count}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
       <p className="t90DirectoryFound" role="status">แสดง {visible.length} จาก 90 เครื่องมือ</p>
-      {visible.length === 0 ? (
-        <p className="v3EmptyMini">ไม่พบเครื่องมือที่ตรงกับคำค้นหา</p>
-      ) : (
-        <div className="v3ToolGrid t90DirectoryGrid">
-          {visible.map((tool) => (
-            <a
-              key={tool.id}
-              className="v3ToolCard t90DirectoryTool"
-              data-tone={tool.category === "manage" ? "blue" : tool.category === "to_pdf" ? "orange" : "violet"}
-              href={destination(tool.href, selectedFileId)}
-              aria-label={tool.id + " " + tool.title}
-            >
-              <span className="t90DirectoryCode">{tool.id}</span>
-              <span className="v3ToolCardText">
-                <strong>{tool.title}</strong>
-                <small>{FAMILY_TITLES[tool.category]}</small>
-              </span>
-              <b aria-hidden="true">›</b>
-            </a>
-          ))}
-        </div>
+      {featured.length > 0 && (
+        <section className="t90DirectorySection" aria-labelledby="t90-featured-heading">
+          <h3 id="t90-featured-heading">งานที่ใช้บ่อย</h3>
+          <div className="v3ToolGrid t90DirectoryGrid">{featured.map(toolCard)}</div>
+        </section>
       )}
+      {visible.length === 0 ? (
+        <div className="v3EmptyMini" role="status">
+          ไม่พบเครื่องมือที่ตรงกับคำค้นหา ลองชื่อประเภทไฟล์หรือคำอื่น
+          <Button type="button" variant="outline" className="t90DirectoryClear" onClick={() => { setSearch(""); setFilter("all"); }}>แสดงเครื่องมือทั้งหมด</Button>
+        </div>
+      ) : sections.map((group) => {
+        const groupTools = group.id === "all" ? visible : visible.filter((tool) => tool.category === group.id);
+        if (!groupTools.length) return null;
+        return (
+          <section className="t90DirectorySection" key={group.id} aria-label={group.title}>
+            <div className="t90DirectorySectionHeading"><h3>{group.title}</h3><span>{groupTools.length} เครื่องมือ</span></div>
+            <div className="v3ToolGrid t90DirectoryGrid">{groupTools.map(toolCard)}</div>
+          </section>
+        );
+      })}
       <p className="t90DirectoryNote">
         เครื่องมือใช้ Workflow ที่เปิดใช้สำหรับบัญชี RCAT ตามสิทธิ์ที่ได้รับ
         การรองรับแต่ละรูปแบบมีขอบเขตจำกัด และการตรวจรับรายเครื่องมือยังแยกจากการ Deploy

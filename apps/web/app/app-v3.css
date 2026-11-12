@@ -1591,3 +1591,134 @@ summary {
     box-shadow: 0 8px 24px rgba(46, 32, 84, .26);
   }
 }
+
+/* UI modernization: shared semantic tokens and consistent desktop/mobile shell.
+ * Existing v3 classes are preserved until the corresponding React view migrates. */
+:root {
+  --ui-brand: #334f9c;
+  --ui-brand-hover: #273f7d;
+  --ui-focus: #597cdb;
+  --ui-text: #17233b;
+  --ui-subtle: #52617a;
+  --ui-divider: #dbe3ef;
+  --ui-card-radius: 16px;
+  --v3-primary: var(--ui-brand);
+  --v3-ink: var(--ui-text);
+  --v3-muted: var(--ui-subtle);
+  --v3-line: var(--ui-divider);
+  --v3-radius: var(--ui-card-radius);
+}
+body {
+  background: #f5f7fb;
+  color: var(--ui-text);
+}
+.v3Kicker { color:var(--ui-brand); letter-spacing:.055em; }
+.v3Header {
+  border-radius:16px;
+  border-color:var(--ui-divider);
+  box-shadow:0 6px 25px rgba(23,35,59,.06);
+}
+.v3PrimaryNav a[aria-current="page"] {
+  color:var(--ui-brand);
+  background:#eaf0fd;
+}
+.v3PrimaryNav a:focus-visible,
+.v3Account summary:focus-visible,
+.v3ToolCard:focus-visible,
+.v3RecentFile:focus-visible {
+  outline:3px solid var(--ui-focus);
+  outline-offset:2px;
+}
+.v3ToolCard { box-shadow:none; border-color:var(--ui-divider); border-radius:var(--ui-card-radius); }
+.v3ToolCard:hover { border-color:#9aaed4; box-shadow:0 5px 20px rgba(23,35,59,.07); }
+.v3HomeTitle h1 { letter-spacing:-.015em; line-height:1.35; }
+.v3Status {
+  color:var(--ui-subtle); white-space:normal;
+  min-width:0; max-width:240px; line-height:1.3;
+}
+@media (max-width:1120px) {
+  .v3Header { column-gap:8px; }
+  .v3Status { display:none; }
+  .v3MobileStatus {
+    max-width:1380px; margin:-9px auto 18px;
+    padding:10px 14px; border:1px solid var(--ui-divider);
+    border-radius:12px; background:#fff;
+    font-size:13px; color:var(--ui-subtle); overflow-wrap:anywhere;
+  }
+}
+@media (min-width:1121px) { .v3MobileStatus { display:none; } }
+@media (max-width:900px) {
+  .v3HeaderActions { grid-column:2; grid-row:1; }
+  .v3PrimaryNav { grid-column:1/-1; grid-row:2; }
+}
+@media (max-width:620px) {
+  .v3Header { position:sticky; top:0; border-radius:12px; }
+  .v3PrimaryNav { gap:3px; }
+  .v3PrimaryNav a { font-size:13px; padding:10px 7px; }
+  .v3MobileStatus { margin:-6px auto 14px; }
+}
+
+/* UI modernization: coherent file, workflow, job and admin surfaces. */
+.v3RecentCard,
+.v3ToolsBlock,
+.v3PreviewPane,
+.v3ActionPane,
+.v3JobDetailCard,
+.v3FileLibrary,
+.v3AdminSection {
+  border-radius:var(--ui-card-radius);
+  border-color:var(--ui-divider);
+}
+.v3Dropzone {
+  border-radius:var(--ui-card-radius);
+  border-color:#a9b9d1;
+  background:#fbfcff;
+}
+.v3Dropzone:focus-within { outline:3px solid var(--ui-focus); outline-offset:2px; }
+.v3Dropzone .v3UploadButton,
+.v3PrimaryAction {
+  border-radius:10px;
+}
+.v3ToolPanelHead,
+.v3ActionHead,
+.v3FilesHead,
+.v3SectionHead { text-wrap:pretty; }
+.v3RecentFile strong,
+.v3FileOpen strong,
+.v3JobsHistoryRow strong { overflow-wrap:anywhere; }
+.v3Field input,
+.v3Field select,
+.v3Search input {
+  min-height:44px;
+  font-size:16px;
+}
+.v3JobsHistoryRow,
+.v3LibraryRow {
+  border-bottom-color:var(--ui-divider);
+}
+.v3JobBadge { font-size:12px; }
+.v3LibraryToolbar,
+.v3AdminAreaNav { gap:10px; }
+.v3AdminAreaNav a[aria-current="page"] {
+  background:#eaf0fd;
+  border-color:#b5c7ed;
+  color:var(--ui-brand);
+}
+.v3InfoBox[role="alert"],
+.v3UploadError { overflow-wrap:anywhere; }
+@media (max-width:900px) {
+  .v3DocumentGrid { grid-template-columns:minmax(0,1fr); }
+  .v3PreviewStage { min-height:290px; }
+  .v3ActionPane { width:100%; max-width:100%; min-width:0; }
+  .v3AdminAreaNav { overflow-x:auto; }
+}
+@media (max-width:620px) {
+  .v3DocumentBar { min-width:0; }
+  .v3PreviewStage { min-height:220px; }
+  .v3JobDetailCard { padding:16px; }
+  .v3RecentCard,
+  .v3ToolsBlock,
+  .v3PreviewPane,
+  .v3ActionPane { min-width:0; }
+  .v3FilesActions { gap:8px; }
+}

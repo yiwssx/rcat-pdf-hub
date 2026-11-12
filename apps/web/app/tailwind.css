@@ -1,0 +1,20 @@
+/* Opt-in Tailwind v4 utilities for migrated UI.
+ * Preflight is intentionally not imported, preventing a global reset of the
+ * existing production document workspace while migration is incremental. */
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
+
+@theme inline {
+  --color-background: #f5f7fb;
+  --color-foreground: #17233b;
+  --color-primary: #334f9c;
+  --color-primary-foreground: #ffffff;
+  --color-muted: #edf1f8;
+  --color-muted-foreground: #52617a;
+  --color-border: #dbe3ef;
+  --color-input: #dbe3ef;
+  --color-ring: #597cdb;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --font-sans: "Noto Sans Thai", "Leelawadee UI", Tahoma, Arial, sans-serif;
+}

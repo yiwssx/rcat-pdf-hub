@@ -1,6 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
 import { BrandGlyph, ToolIcon, ToolIconName } from "./tool-icons";
@@ -43,6 +46,7 @@ export function AppHeader({
   onLogout: () => void;
 }) {
   const activeJobs = jobs.filter((job) => job.status === "queued" || job.status === "running").length;
+  const pathname = usePathname();
   return (
     <header className="v3Header">
       <a className="v3Brand" href="/" aria-label="RCAT PDF Hub">
@@ -51,13 +55,13 @@ export function AppHeader({
       </a>
 
       <nav className="v3PrimaryNav" aria-label="เมนูหลัก">
-        <a href="/">หน้าหลัก</a>
-        <a href="/files">ไฟล์ของฉัน</a>
-        <a href="/jobs">งานของฉัน</a>
+        <a href="/" aria-current={pathname === "/" ? "page" : undefined}>หน้าหลัก</a>
+        <a href="/files" aria-current={pathname.startsWith("/files") ? "page" : undefined}>ไฟล์ของฉัน</a>
+        <a href="/jobs" aria-current={pathname.startsWith("/jobs") ? "page" : undefined}>งานของฉัน</a>
       </nav>
 
       <div className="v3HeaderActions">
-        <span className="v3Status" title={message}><i/>{message}</span>
+        <span className="v3Status" role="status" title={message}><i aria-hidden="true"/>{message}</span>
         <button className="v3JobsButton" type="button" onClick={onOpenJobs}>
           <span>◷</span>
           <strong>งานล่าสุด</strong>
@@ -202,7 +206,7 @@ export function HomeScreen({
   return (
     <main className="v3Main" id="workspace">
       <section className="v3HomeTitle">
-        <div><span className="v3Kicker">DOCUMENT WORKSPACE</span><h1>จัดการเอกสารของคุณ</h1><p>เพิ่มไฟล์ เลือกเครื่องมือ แล้วทำงานต่อในพื้นที่เดียว</p></div>
+        <div><span className="v3Kicker">RCAT DOCUMENT WORKSPACE</span><h1>งานเอกสาร ง่ายขึ้นในที่เดียว</h1><p>อัปโหลดเอกสาร ค้นหาเครื่องมือ และติดตามผลลัพธ์ได้จากพื้นที่เดียวกัน</p></div>
         <a className="v3TextLink" href="/files">ดูไฟล์ทั้งหมด →</a>
       </section>
 
@@ -218,7 +222,7 @@ export function HomeScreen({
         </div>
 
         <div className="v3RecentCard">
-          <div className="v3SectionHead"><div><span className="v3Kicker">RECENT FILES</span><h2>ไฟล์ล่าสุด</h2></div><a href="/files">ทั้งหมด</a></div>
+          <div className="v3SectionHead"><div><span className="v3Kicker">ไฟล์ที่เพิ่งใช้งาน</span><h2>ไฟล์ล่าสุด</h2></div><a href="/files">ทั้งหมด</a></div>
           <div className="v3RecentList">
             {files.length === 0 && <div className="v3EmptyMini"><span>◫</span><p>ยังไม่มีไฟล์ใน Workspace</p></div>}
             {files.slice(0, 5).map((file) => (
@@ -236,7 +240,7 @@ export function HomeScreen({
         <InstitutionalT90Directory />
       ) : (
         <section className="v3ToolsBlock">
-          <div className="v3SectionHead"><div><span className="v3Kicker">TOOLS</span><h2>เลือกงานที่ต้องการ</h2><p>สีของเครื่องมือยังคงเป็นเอกลักษณ์แบบลูกกวาด แต่โครงหน้าไม่แย่งความสนใจจากงานหลัก</p></div></div>
+          <div className="v3SectionHead"><div><span className="v3Kicker">TOOLS</span><h2>เลือกงานที่ต้องการ</h2><p>เลือกเครื่องมือให้ตรงกับงานของคุณ แล้วดำเนินการต่อในพื้นที่เอกสาร</p></div></div>
           <div className="v3ToolGrid">
             {tools.map((tool) => (
               <button type="button" className="v3ToolCard" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
@@ -438,7 +442,7 @@ export function FilesScreen({
       </section>
 
       <section className="v3LibraryToolbar" aria-label="ตัวกรองคลังไฟล์">
-        <div className="v3Search"><span>⌕</span><input aria-label="ค้นหาชื่อไฟล์" value={query} onChange={(event) => resetAnd(() => setQuery(event.target.value))} placeholder="ค้นหาชื่อไฟล์…"/></div>
+        <div className="v3Search"><span>⌕</span><Input aria-label="ค้นหาชื่อไฟล์" value={query} onChange={(event) => resetAnd(() => setQuery(event.target.value))} placeholder="ค้นหาชื่อไฟล์…"/></div>
         <label>ประเภท
           <select aria-label="ประเภทไฟล์" value={kind} onChange={(event) => resetAnd(() => setKind(event.target.value as FileLibraryKind))}>
             <option value="all">ทั้งหมด</option>
@@ -487,9 +491,9 @@ export function FilesScreen({
       </section>
 
       <nav className="v3LibraryPagination" aria-label="หน้าคลังไฟล์">
-        <button type="button" disabled={loading || page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - page.limit))}>← ก่อนหน้า</button>
+        <Button variant="outline" size="sm" type="button" disabled={loading || page.offset === 0} onClick={() => setOffset(Math.max(0, page.offset - page.limit))}>← ก่อนหน้า</Button>
         <span>{page.total === 0 ? "0 รายการ" : `หน้า ${currentPage} จาก ${totalPages}`}</span>
-        <button type="button" disabled={loading || !page.has_more} onClick={() => setOffset(page.offset + page.limit)}>ถัดไป →</button>
+        <Button variant="outline" size="sm" type="button" disabled={loading || !page.has_more} onClick={() => setOffset(page.offset + page.limit)}>ถัดไป →</Button>
       </nav>
     </main>
   );

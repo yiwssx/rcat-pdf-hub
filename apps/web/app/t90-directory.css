@@ -50,3 +50,40 @@
   .t90DirectoryFilters button { flex: 1 1 auto; min-width: 116px; }
   .t90DirectoryTool { min-height: 76px; }
 }
+
+/* T90 discovery: make 90 routes navigable without a single long flat grid. */
+.t90Directory { scroll-margin-top: 112px; }
+.t90DirectorySection { margin-top: 24px; }
+.t90DirectorySectionHeading {
+  display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:8px; margin:0 0 12px;
+}
+.t90DirectorySectionHeading h3,
+.t90DirectorySection > h3 { margin:0 0 12px; font-size:19px; line-height:1.4; letter-spacing:-.01em; }
+.t90DirectorySectionHeading h3 { margin:0; }
+.t90DirectorySectionHeading span { color:var(--v3-muted); font-size:13px; }
+.t90DirectoryGrid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.t90DirectoryTool {
+  min-height:76px; border:1px solid var(--v3-line);
+  box-shadow:none; background:var(--v3-surface);
+  transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.t90DirectoryTool:hover { transform:translateY(-1px); border-color:#a9b5dc; box-shadow:0 8px 24px rgba(24,36,72,.07); }
+.t90DirectoryClear {
+  border:1px solid var(--v3-line); border-radius:10px;
+  background:#fff; color:var(--v3-ink);
+  min-height:44px; padding:8px 12px; cursor:pointer; font-size:14px;
+}
+.t90DirectoryFilters button:focus-visible,
+.t90DirectoryClear:focus-visible { outline:3px solid var(--v3-primary); outline-offset:2px; }
+@media (max-width:1020px) { .t90DirectoryGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:620px) {
+  .t90DirectoryGrid { grid-template-columns:1fr; }
+  .t90DirectoryControls { display:grid; }
+  .t90DirectorySearch { min-width:0; }
+  .t90DirectorySearch input { font-size:16px; }
+  .t90DirectoryFilters { flex-wrap:nowrap; overflow-x:auto; padding-bottom:5px; }
+  .t90DirectoryFilters button { flex:0 0 auto; min-width:unset; }
+  .t90DirectorySection { margin-top:20px; }
+  .t90DirectorySectionHeading h3 { font-size:18px; }
+}
