@@ -45,6 +45,17 @@ Use the smallest set of skills that fits the task. Do not activate every skill f
 - A merged P7 planning PR is **not** authorization to begin code implementation. Stop at the planning gate until the project owner explicitly instructs execution.
 - Preserve ADR-0001 ToolWorkspace ownership, ADR-0004 RBAC, Phase 6 production safeguards and the published `v0.6.0` tag.
 
+## Human-triggered, evidence-aware task execution
+
+- Before acting, inspect the current GitHub issue/PR, `main`/task branch, applicable CI, and the matching workstream record. Current GitHub evidence supersedes dated snapshots and conversation history; do not resume a completed item from an old checklist.
+- For T90, use [Engineering-First Inventory](docs/workstreams/t90-engineering-first-inventory.md) for the bounded source capability status and [Issue #172](https://github.com/yiwssx/rcat-pdf-hub/issues/172) for its concluded Development scope. Independent T90 QA [#262](https://github.com/yiwssx/rcat-pdf-hub/issues/262), R1 QA [#308](https://github.com/yiwssx/rcat-pdf-hub/issues/308), CI maintenance [#195](https://github.com/yiwssx/rcat-pdf-hub/issues/195), and DR [#323](https://github.com/yiwssx/rcat-pdf-hub/issues/323) retain their own acceptance gates. The dated [Engineering-First Plan](docs/workstreams/t90-engineering-first-plan.md) is history, not an instruction to restart its old NEXT steps.
+- Freeze the requested scope and Definition of Done. Prefer the smallest sufficient change inside the existing issue/PR/tracker; do not invent new issues, epics, workstreams, frameworks or acceptance campaigns to prolong a completed task.
+- Reuse verifiable prior evidence only for the **same claim, relevant commit/artifact, configuration, and trust boundary**. If code or environment changes invalidate a claim, verify the affected delta. Keep existing required CI, security checks and reviews; never treat a historical PASS as proof for new code or live host health.
+- A source-level `CODE COMPLETE` is not independent `VERIFIED`, a release, or host acceptance. Do not reopen accepted Development solely because separate QA/operations remain pending; do not silently promote incomplete QA to PASS.
+- When a vendored skill calls for missing generic setup documents or repeated owner confirmation, first use the existing GitHub issue, documented acceptance criteria, ADRs and approved test seams. Request a decision only for a genuine ambiguity or protected operation; do not bypass safety-critical checks or explicit repo policy.
+- Finish with `DONE`, `BLOCKED`, or a precise pending external check, citing the commit, PR and applicable evidence. Retry only with a concrete corrective hypothesis; stop rather than poll indefinitely or repeat unchanged checks.
+- Production deployment, feature-flag activation, credential/permission changes, destructive data operations and live host acceptance remain separately authorized. A passing PR or an engineering checkpoint never grants those permissions.
+
 ## Project execution rules
 
 - Preserve existing product behavior unless the task explicitly changes it.
