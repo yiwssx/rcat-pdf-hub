@@ -160,8 +160,8 @@ export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: bool
             <aside className="v4ToolDetail" aria-label="รายละเอียดเครื่องมือที่เลือก">
               {active ? <ToolDetailContent tool={active} /> : <p>เลือกเครื่องมือจากรายการเพื่อดูรายละเอียด</p>}
             </aside>
-            <dialog ref={mobileDetailRef} className="v4ToolDialog" aria-label="รายละเอียดเครื่องมือที่เลือก">
-              <button className="v4ToolDialogClose" type="button" aria-label="ปิดรายละเอียด" onClick={() => mobileDetailRef.current?.close()}>
+            <dialog ref={mobileDetailRef} className="v4ToolDialog" aria-label="รายละเอียดเครื่องมือที่เลือก" onClose={clearToolSelection}>
+              <button className="v4ToolDialogClose" type="button" aria-label="ปิดรายละเอียด" onClick={clearToolSelection}>
                 <X aria-hidden="true" size={19}/>
               </button>
               {active && <ToolDetailContent tool={active} />}
