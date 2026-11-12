@@ -5,6 +5,26 @@ import { Job, listJobs } from "../../lib/api";
 
 type StatusFilter = Job["status"] | "all";
 const pageSize = 20;
+const operationTitles: Readonly<Record<string, string>> = {
+  "merge": "รวมเอกสาร PDF",
+  "split": "แยกหน้า PDF",
+  "split-to-zip": "แยก PDF เป็นไฟล์ ZIP",
+  "rotate": "หมุนหน้า PDF",
+  "organize": "จัดเรียงหน้า PDF",
+  "compress": "ลดขนาด PDF",
+  "ocr": "อ่านข้อความจาก PDF (OCR)",
+  "office-to-pdf": "แปลง Office เป็น PDF",
+  "images-to-pdf": "แปลงรูปภาพเป็น PDF",
+  "pdf-to-images": "แปลง PDF เป็นรูปภาพ",
+  "page-numbers": "เพิ่มหมายเลขหน้า",
+  "watermark": "เพิ่มลายน้ำ",
+  "header-and-footer": "เพิ่มส่วนหัวและส่วนท้าย",
+  "pdfa": "แปลงเป็น PDF/A",
+};
+function operationTitle(operation: string): string {
+  return operationTitles[operation] ?? operation.replaceAll("-", " ");
+}
+
 const statusText: Record<Job["status"], string> = {
   queued: "รอประมวลผล",
   running: "กำลังประมวลผล",
@@ -82,11 +102,11 @@ export function MyJobsScreen({ auth }: { auth: string }) {
         <div className="v3JobsHistoryList">
           {jobs.map((job) => (
             <article className="v3JobsHistoryRow" key={job.id}>
-              <div><strong>{job.operation}</strong><small>Job {job.id}</small><small>ไฟล์ต้นฉบับ {job.input_file_ids.length} รายการ</small></div>
+              <div><strong>{operationTitle(job.operation)}</strong><small>ไฟล์ต้นฉบับ {job.input_file_ids.length} รายการ</small><small title={job.id}>รหัสอ้างอิง {job.id.slice(0, 8)}</small></div>
               <span className={`v3JobBadge ${job.status}`}>{statusText[job.status]}</span>
-              <a className="v3TextLink" href={`/jobs/${encodeURIComponent(job.id)}`}>ดูสถานะ →</a>
+              <a className="v3TextLink" href={`/jobs/${encodeURIComponent(job.id)}`}>ดูรายละเอียด →</a>
               {job.status === "completed" && job.output_file_id &&
-                <a className="v3TextLink" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ผลลัพธ์</a>}
+                <a className="v3TextLink" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูผลลัพธ์ / ดาวน์โหลด</a>}
             </article>
           ))}
         </div>
