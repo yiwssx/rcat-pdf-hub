@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Job, listJobs } from "../../lib/api";
 
 type StatusFilter = Job["status"] | "all";
@@ -84,7 +85,7 @@ export function MyJobsScreen({ auth }: { auth: string }) {
       <section className="v3JobDetailCard v3JobsHistory">
         <div className="v3SectionHead">
           <div><span className="v3Kicker">HISTORY</span><h2>ประวัติงาน</h2></div>
-          <button className="v3MiniButton" type="button" onClick={() => setRefreshKey((value) => value + 1)}>รีเฟรช</button>
+          <Button variant="outline" size="sm" className="v3MiniButton" type="button" onClick={() => setRefreshKey((value) => value + 1)}>รีเฟรช</Button>
         </div>
         <label className="v3Field">สถานะงาน
           <select aria-label="กรองสถานะงาน" value={status} onChange={(event) => { setStatus(event.target.value as StatusFilter); setOffset(0); }}>
@@ -111,9 +112,9 @@ export function MyJobsScreen({ auth }: { auth: string }) {
           ))}
         </div>
         <nav className="v3LibraryPagination" aria-label="หน้าประวัติงาน">
-          <button type="button" disabled={loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>← ก่อนหน้า</button>
+          <Button variant="outline" size="sm" type="button" disabled={loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>← ก่อนหน้า</Button>
           <span>หน้า {Math.floor(offset / pageSize) + 1}</span>
-          <button type="button" disabled={loading || !hasMore} onClick={() => setOffset(offset + pageSize)}>ถัดไป →</button>
+          <Button variant="outline" size="sm" type="button" disabled={loading || !hasMore} onClick={() => setOffset(offset + pageSize)}>ถัดไป →</Button>
         </nav>
       </section>
     </main>
