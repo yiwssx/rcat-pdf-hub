@@ -525,7 +525,15 @@ assert 'aria-label="Service API Key"' not in web_app
 assert 'placeholder="Service API Key' not in web_app
 assert "apiKeyDraft" not in web_app
 assert "connectApiKey" not in web_app
-assert "getMe(SESSION_AUTH)" in web_app
+# The V4 root provider owns the same session check across client-side routes.
+# Preserve the existing fail-closed check: a 401 alone may show the login form.
+auth_provider = read("apps/web/app/components/pdf-hub-auth-provider.tsx")
+web_layout = read("apps/web/app/layout.tsx")
+assert "getMe(SESSION_AUTH)" in auth_provider
+assert "usePdfHubAuth()" in web_app
+assert "<PdfHubAuthProvider>" in web_layout
+assert 'error.status === 401' in auth_provider
+assert 'phase: "unauthenticated"' in auth_provider
 assert 'request("/web-auth/session"' in web_api
 assert "identity?.is_admin" in web_app
 assert not (ROOT / "apps/web/app/components/pdf-hub-console.tsx").exists(), "Superseded console implementation must stay removed"

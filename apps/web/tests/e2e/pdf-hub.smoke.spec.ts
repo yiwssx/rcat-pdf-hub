@@ -214,6 +214,66 @@ test.beforeEach(async ({ page }) => {
   await installApiMocks(page);
 });
 
+test("V4 never flashes login while identity is pending, and menu routes retain the session", async ({ page }) => {
+  let releaseIdentity: (() => void) | undefined;
+  const pendingIdentity = new Promise<void>(resolve => { releaseIdentity = resolve; });
+  let identityChecks = 0;
+  await page.route("**/api/v1/auth/me", async route => {
+    identityChecks += 1;
+    await pendingIdentity;
+    await route.fulfill({ json: operatorIdentityFixture() });
+  });
+
+  await page.goto("/");
+  await expect(page.getByText("กำลังตรวจสอบการเข้าสู่ระบบ")).toBeVisible();
+  await expect(page.locator(".v4AuthCard")).toHaveCount(0);
+  releaseIdentity?.();
+  await expect(page.getByRole("heading", { name: "งานเอกสาร ง่ายขึ้นในที่เดียว" })).toBeVisible();
+
+  // Client navigation must keep the document alive and avoid a second auth bootstrap.
+  await page.evaluate(() => { (window as Window & { __pdfHubNavigationProbe?: string }).__pdfHubNavigationProbe = "retained"; });
+  const nav = page.getByRole("navigation", { name: "เมนูหลัก" });
+  await nav.getByRole("link", { name: "ไฟล์ของฉัน" }).click();
+  await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
+  await expect(page.locator(".v4AuthCard")).toHaveCount(0);
+  await nav.getByRole("link", { name: "งานประมวลผล" }).click();
+  await expect(page.getByRole("heading", { name: "งานของฉัน" })).toBeVisible();
+  await nav.getByRole("link", { name: "เครื่องมือ" }).click();
+  await expect(page.getByRole("heading", { name: "ค้นหาเครื่องมือ PDF" })).toBeVisible();
+  expect(await page.evaluate(() => (window as Window & { __pdfHubNavigationProbe?: string }).__pdfHubNavigationProbe)).toBe("retained");
+  expect(identityChecks).toBe(1);
+});
+
+test("V4 institutional login explains Google access and keeps readable action text", async ({ page }) => {
+  await page.route("**/api/v1/auth/config", route => route.fulfill({ json: {
+    ...authConfigFixture,
+    oidc: { enabled: true, issuer: "https://accounts.google.com", login_url: "/api/v1/auth/oidc/login" },
+    web_console: { auto_login: false },
+    institutional: { rcat_only: true, email_domain: "rcat.ac.th" },
+  } }));
+  await page.route("**/api/v1/auth/me", route => route.fulfill({ status: 401, json: { detail: "Authentication required" } }));
+  await page.route("**/web-auth/session", route => route.fulfill({ status: 403 }));
+  await page.goto("/tools");
+
+  await expect(page.getByRole("heading", { name: "ยินดีต้อนรับ" })).toBeVisible();
+  await expect(page.getByText("@rcat.ac.th")).toBeVisible();
+  const button = page.getByRole("button", { name: "เข้าสู่ระบบด้วย Google" });
+  await expect(button).toBeVisible();
+  const fontSize = await button.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(16);
+  const request = page.waitForRequest(req => req.url().includes("/api/v1/auth/oidc/login"));
+  await button.click();
+  expect(new URL((await request).url()).searchParams.get("return_to")).toBe("/tools");
+});
+
+test("V4 authentication errors show retry instead of a misleading sign-in prompt", async ({ page }) => {
+  await page.route("**/api/v1/auth/config", route => route.fulfill({ status: 503, json: { detail: "Unavailable" } }));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "ไม่สามารถเชื่อมต่อระบบบัญชีได้" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ลองเชื่อมต่ออีกครั้ง" })).toBeVisible();
+  await expect(page.locator(".v4AuthCard").getByRole("button", { name: "เข้าสู่ระบบด้วย Google" })).toHaveCount(0);
+});
+
 test("opens a Web Console session without exposing API-key login", async ({ page }) => {
   await page.goto("/");
 

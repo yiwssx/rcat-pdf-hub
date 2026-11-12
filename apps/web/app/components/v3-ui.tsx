@@ -151,6 +151,7 @@ export function AdminIdentityPanel({ identity }: { identity: AuthMe }) {
 
 export function LoginScreen({
   enterprise,
+  institutionalOnly = false,
   oidcUrl,
   returnTo = "/",
   ldapEnabled,
@@ -164,6 +165,7 @@ export function LoginScreen({
   onSession,
 }: {
   enterprise: boolean;
+  institutionalOnly?: boolean;
   oidcUrl: string | null | undefined;
   returnTo?: string;
   ldapEnabled: boolean;
@@ -177,18 +179,33 @@ export function LoginScreen({
   onSession: () => void;
 }) {
   return (
-    <main className="v3LoginPage">
-      <section className="v3LoginCard">
-        <span className="v3BrandMark large"><BrandGlyph/></span>
-        <div><span className="v3Kicker">RCAT PDF HUB</span><h1>เข้าสู่ Document Workspace</h1><p>{enterprise ? "ใช้บัญชีองค์กรของคุณเพื่อเข้าใช้งาน" : "ระบบนี้ใช้ session ภายใน ไม่ต้องกรอก API Key"}</p></div>
-        {oidcUrl && <button className="v3PrimaryAction" onClick={() => { window.location.href = `${oidcUrl}?return_to=${encodeURIComponent(returnTo)}`; }}>เข้าสู่ระบบด้วย SSO</button>}
-        {ldapEnabled && <div className="v3LoginFields">
+    <main className="v3LoginPage v4AuthPage">
+      <section className="v3LoginCard v4AuthCard" aria-labelledby="v4-login-heading">
+        <div className="v4AuthBrand">
+          <span className="v3BrandMark large"><BrandGlyph/></span>
+          <div><strong>RCAT PDF HUB</strong><small>ระบบจัดการเอกสารออนไลน์</small></div>
+        </div>
+        <div className="v4AuthIntro">
+          <span className="v3Kicker">SECURE DOCUMENT WORKSPACE</span>
+          <h1 id="v4-login-heading">ยินดีต้อนรับ</h1>
+          <p>{enterprise
+            ? "เข้าสู่ระบบด้วยบัญชีที่ได้รับอนุญาต เพื่อจัดการและแปลงไฟล์เอกสารของคุณ"
+            : "เข้าสู่พื้นที่ทำงานเพื่อจัดการ PDF และเอกสารของคุณ"}</p>
+        </div>
+        {institutionalOnly && <div className="v4AuthInstitution" role="note">
+          สำหรับบัญชี Google ของวิทยาลัย <strong>@rcat.ac.th</strong> เท่านั้น
+        </div>}
+        {oidcUrl && <button className="v3PrimaryAction v4AuthAction" type="button"
+          onClick={() => { window.location.href = `${oidcUrl}?return_to=${encodeURIComponent(returnTo)}`; }}>
+          {institutionalOnly ? "เข้าสู่ระบบด้วย Google" : "เข้าสู่ระบบด้วยบัญชีองค์กร (SSO)"}
+        </button>}
+        {ldapEnabled && <div className="v3LoginFields v4AuthFields">
           <label className="v3Field">ชื่อผู้ใช้<input value={ldapUser} onChange={(e) => setLdapUser(e.target.value)} autoComplete="username"/></label>
           <label className="v3Field">รหัสผ่าน<input type="password" value={ldapPassword} onChange={(e) => setLdapPassword(e.target.value)} autoComplete="current-password"/></label>
-          <button className="v3PrimaryAction" onClick={onLdap} disabled={busy || !ldapUser || !ldapPassword}>LDAP Login</button>
+          <button className="v3PrimaryAction v4AuthAction" type="button" onClick={onLdap} disabled={busy || !ldapUser || !ldapPassword}>เข้าสู่ระบบด้วย LDAP</button>
         </div>}
-        {!enterprise && <button className="v3PrimaryAction" onClick={onSession} disabled={busy}>{busy ? "กำลังเชื่อมต่อ…" : "เข้าใช้งาน"}</button>}
-        <small className="v3LoginMessage">{message}</small>
+        {!enterprise && <button className="v3PrimaryAction v4AuthAction" type="button" onClick={onSession} disabled={busy}>{busy ? "กำลังเชื่อมต่อ…" : "เข้าใช้งาน"}</button>}
+        {message && <p className="v3LoginMessage v4AuthMessage" role="status">{message}</p>}
       </section>
     </main>
   );
