@@ -8,31 +8,26 @@ import {
   bulkDeleteFiles,
   cancelJob,
   clearTerminalJobs,
-  AuthConfig,
-  AuthMe,
   createJob,
   createSignedDownload,
   deleteFile,
   fetchDownload,
   fetchPreview,
   getAdminStatus,
-  getAuthConfig,
   getIntegrationStatus,
-  getMe,
   getFile,
   IntegrationStatus,
   Job,
-  ldapLogin,
   listFiles,
   listJobs,
   retryJob,
-  logoutSession,
   SESSION_AUTH,
   setFileRetention,
   uploadFile,
   UploadedFile,
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
+import { usePdfHubAuth } from "./pdf-hub-auth-provider";
 import { V4ToolExplorer } from "./v4-tool-explorer";
 import { V4Dashboard } from "./v4-dashboard";
 import { V4AppShell } from "./v4-app-shell";
@@ -76,9 +71,8 @@ function isPdf(file: UploadedFile | null) {
 }
 
 export function PdfHubApp({ initialView = "workspace", initialTool, initialFileId, initialJobId, initialAdminArea = "overview", t90CatalogEnabled = false }: { initialView?: PdfHubView; initialTool?: string; initialFileId?: string; initialJobId?: string; initialAdminArea?: AdminArea; t90CatalogEnabled?: boolean }) {
-  const [auth, setAuth] = useState("");
-  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
-  const [identity, setIdentity] = useState<AuthMe | null>(null);
+  const { phase, config: authConfig, identity, error: authError, retry, signInSession, signInLdap, signOut } = usePdfHubAuth();
+  const auth = phase === "authenticated" ? SESSION_AUTH : "";
   const [integrations, setIntegrations] = useState<IntegrationStatus | null>(null);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -172,42 +166,20 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   async function connectSession() {
     setBusy(true);
     try {
-      const me = await getMe(SESSION_AUTH);
-      setIdentity(me);
-      setAuth(SESSION_AUTH);
-      await loadWorkspace(SESSION_AUTH);
-    } catch (error) {
-      setAuth("");
-      setIdentity(null);
-      setMessage(error instanceof Error ? error.message : "ไม่สามารถสร้าง Web Console session ได้");
+      await signInSession();
+    } catch {
+      setMessage("ไม่สามารถเริ่มต้น Session ได้ กรุณาลองเข้าสู่ระบบใหม่");
     } finally {
       setBusy(false);
     }
   }
 
+  // The root auth provider survives Next.js route transitions. Only page data
+  // reloads here; never turn a still-checking session into a login screen.
   useEffect(() => {
-    let live = true;
-    void (async () => {
-      try {
-        const config = await getAuthConfig();
-        if (!live) return;
-        setAuthConfig(config);
-        try {
-          const me = await getMe(SESSION_AUTH);
-          if (!live) return;
-          setIdentity(me);
-          setAuth(SESSION_AUTH);
-          await loadWorkspace(SESSION_AUTH);
-        } catch {
-          setMessage("กรุณาเข้าสู่ระบบ");
-        }
-      } catch {
-        if (live) setMessage("อ่านการตั้งค่า authentication ไม่สำเร็จ");
-      }
-    })();
-    return () => { live = false; };
+    if (auth) void loadWorkspace(auth);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auth, initialView, initialFileId]);
 
   useEffect(() => {
     if (initialView !== "admin" || !auth || !identity?.is_admin) return;
@@ -266,11 +238,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     if (!ldapUser || !ldapPassword) return;
     setBusy(true);
     try {
-      const me = await ldapLogin(ldapUser, ldapPassword);
-      setIdentity(me);
-      setAuth(SESSION_AUTH);
+      await signInLdap(ldapUser, ldapPassword);
       setLdapPassword("");
-      await loadWorkspace(SESSION_AUTH);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "LDAP login ไม่สำเร็จ");
     } finally {
@@ -280,10 +249,8 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
 
   async function logout() {
     try {
-      if (auth === SESSION_AUTH) await logoutSession();
+      if (auth === SESSION_AUTH) await signOut();
     } finally {
-      setAuth("");
-      setIdentity(null);
       setFiles([]);
       setJobs([]);
       setTargetId("");
@@ -551,16 +518,33 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     }
   }
 
-  if (!auth || !identity) {
+  if (phase === "checking") {
+    return <main className="v4AuthPage v4AuthPending" role="status" aria-live="polite">
+      <div className="v4AuthPendingContent"><span className="v4AuthSpinner" aria-hidden="true"/><strong>กำลังตรวจสอบการเข้าสู่ระบบ</strong><p>กำลังเชื่อมต่อพื้นที่ทำงาน RCAT PDF HUB</p></div>
+    </main>;
+  }
+
+  if (phase === "error") {
+    return <main className="v4AuthPage" role="alert">
+      <section className="v3LoginCard v4AuthCard">
+        <h1>ไม่สามารถเชื่อมต่อระบบบัญชีได้</h1>
+        <p>{authError}</p>
+        <button className="v3PrimaryAction" type="button" onClick={() => void retry()}>ลองเชื่อมต่ออีกครั้ง</button>
+      </section>
+    </main>;
+  }
+
+  if (phase === "unauthenticated" || !identity) {
     return <LoginScreen
       enterprise={enterpriseAuthEnabled}
+      institutionalOnly={authConfig?.institutional?.rcat_only === true}
       oidcUrl={authConfig?.oidc.login_url}
-      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? `/admin?section=${initialAdminArea}` : initialView === "files" ? "/files" : initialView === "file" && initialFileId ? `/files/${encodeURIComponent(initialFileId)}` : initialView === "jobs" ? "/jobs" : "/"}
+      returnTo={routeTool ? `/tools/${routeTool.id}${initialFileId ? `?file=${encodeURIComponent(initialFileId)}` : ""}` : (initialView === "job" || initialView === "result") && initialJobId ? `/jobs/${encodeURIComponent(initialJobId)}${initialView === "result" ? "/result" : ""}` : initialView === "admin" ? `/admin?section=${initialAdminArea}` : initialView === "files" ? "/files" : initialView === "file" && initialFileId ? `/files/${encodeURIComponent(initialFileId)}` : initialView === "jobs" ? "/jobs" : initialView === "tools" ? "/tools" : "/"}
       ldapEnabled={Boolean(authConfig?.ldap.enabled)}
       ldapUser={ldapUser}
       ldapPassword={ldapPassword}
       busy={busy}
-      message={message}
+      message={message === "พร้อมใช้งาน" ? "" : message}
       setLdapUser={setLdapUser}
       setLdapPassword={setLdapPassword}
       onLdap={() => void loginLdap()}
