@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
+import { LayoutGrid, List } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
 import { BrandGlyph, ToolIcon, ToolIconName } from "./tool-icons";
@@ -313,7 +314,7 @@ export function DocumentWorkspace({
 }) {
   const isPdf = fileKind(target) === "PDF";
   return (
-    <main className="v3Main v3DocumentMode vdWorkspace" id="workspace">
+    <main className="v3Main v3DocumentMode v4Workbench" id="workspace">
       {taskJourney && <TaskJourneyNav stage={taskJourney.stage} kind={taskJourney.kind} />}
       <section className="v3DocumentBar" id="workspace-target">
         <button className="v3BackLink" type="button" onClick={onBack}>← กลับ</button>
@@ -341,7 +342,7 @@ export function DocumentWorkspace({
         <aside className="v3ActionPane">
           {activeTool ? toolPanel : <>
             <div className="v3ActionHead"><span className="v3Kicker">CHOOSE A TASK</span><h2>ทำอะไรกับไฟล์นี้?</h2><p>เลือกเครื่องมือ แล้วตั้งค่าโดยไม่ออกจาก Workspace</p></div>
-            {t90CatalogVisible && <a className="v3TextLink" href="#t90-tools">ดูเครื่องมือทั้งหมด 90 รายการ ↓</a>}
+            {t90CatalogVisible && <a className="v3TextLink" href="/tools">เปิดหน้าสำรวจเครื่องมือ 90 รายการ →</a>}
             <div className="v3CompactTools">
               {tools.map((tool) => (
                 <button type="button" className="v3CompactTool" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
@@ -386,6 +387,7 @@ export function FilesScreen({
   const [offset, setOffset] = useState(0);
   const [reloadToken, setReloadToken] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [page, setPage] = useState<FileLibraryPage>({
@@ -450,10 +452,14 @@ export function FilesScreen({
   }
 
   return (
-    <main className="v3Main vdFilesPage">
+    <main className="v3Main v4Main vdFilesPage v4FilesPage">
       <section className="v3FilesHead">
         <div><span className="v3Kicker">DOCUMENT LIBRARY / YOUR FILES</span><h1>ไฟล์ทั้งหมด</h1><p>ค้นหา จัดการ และดาวน์โหลดเอกสารของคุณ <strong>{page.total.toLocaleString("th-TH")} ไฟล์</strong></p></div>
         <div className="v3FilesActions">
+          <div className="v4ViewSwitcher" role="group" aria-label="รูปแบบการแสดงไฟล์">
+            <button type="button" aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}><List aria-hidden="true" size={17}/> รายการ</button>
+            <button type="button" aria-pressed={viewMode === "grid"} onClick={() => setViewMode("grid")}><LayoutGrid aria-hidden="true" size={17}/> ตาราง</button>
+          </div>
           {selected.length > 0 && <><span>{selected.length} รายการ</span><button type="button" className="v3DangerButton" disabled={busy} onClick={() => void mutate(async () => { await onDelete(selected); setSelected([]); })}>ลบที่เลือก</button></>}
           <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(event) => {
             const input = event.currentTarget;
@@ -499,7 +505,7 @@ export function FilesScreen({
         {loadError && <small>{loadError}</small>}
       </div>
 
-      <section className="v3FileLibrary" aria-busy={loading}>
+      <section className={`v3FileLibrary ${viewMode === "grid" ? "v4FilesGrid" : ""}`} aria-busy={loading}>
         {page.items.map((file) => <div key={file.id} className="v3LibraryRow">
           <label className="v3FileCheck" onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selected.includes(file.id)} onChange={(event) => setSelected((old) => event.target.checked ? [...old, file.id] : old.filter((id) => id !== file.id))}/></label>
           <button type="button" className="v3FileOpen" onClick={() => onSelectFile(file)}>

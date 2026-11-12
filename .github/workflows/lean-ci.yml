@@ -131,7 +131,7 @@ jobs:
       # Uses the existing required workflow and deterministic mocked API data.
       # No Production access, credentials or new workflow/runner.
       - name: Capture UI390 before/after browser evidence
-        if: github.event_name == 'pull_request' && github.head_ref == 'feat/ui390-visual-redesign-app-shell'
+        if: github.event_name == 'pull_request' && github.head_ref == 'feat/ui390-v4-application-shell'
         working-directory: apps/web
         timeout-minutes: 15
         env:
@@ -187,10 +187,10 @@ jobs:
           done
 
       - name: Upload UI390 before/after screenshot evidence
-        if: always() && github.event_name == 'pull_request' && github.head_ref == 'feat/ui390-visual-redesign-app-shell'
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'feat/ui390-v4-application-shell'
         uses: actions/upload-artifact@v4
         with:
-          name: ui390-visual-before-after-${{ github.event.pull_request.head.sha }}
+          name: ui390-v4-before-after-${{ github.event.pull_request.head.sha }}
           path: apps/web/visual-evidence/ui390/
           if-no-files-found: warn
           retention-days: 30

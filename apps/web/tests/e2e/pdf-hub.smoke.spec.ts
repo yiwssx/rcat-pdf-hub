@@ -220,16 +220,17 @@ test("opens a Web Console session without exposing API-key login", async ({ page
   await expect(page.getByLabel("Service API Key")).toHaveCount(0);
   await expect(page.getByLabel("เมนูบัญชี").getByText("Web Console")).toBeVisible();
   await expect(page.locator("#workspace")).toBeVisible();
-  await expect(page.locator(".v3HomeTitle")).toContainText("งานเอกสาร ง่ายขึ้นในที่เดียว");
+  await expect(page.locator(".v4PageIntro")).toContainText("งานเอกสาร ง่ายขึ้นในที่เดียว");
   await expect(page.locator(".welcomeHero")).toHaveCount(0);
   await expect(page.locator(".authCard")).toHaveCount(0);
 });
 
-test("V3 switches from home into a focused tool workspace without long-page sections", async ({ page }) => {
+test("V4 navigates from tool explorer into a focused tool workspace without long-page sections", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByText("example.pdf", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /ลายน้ำ/ }).first().click();
+  await page.goto("/tools");
+  await page.getByRole("link", { name: /ลายน้ำ/ }).first().click();
   await expect(page).toHaveURL(/\/tools\/watermark$/);
   await expect(page.locator("#workspace-target")).toHaveCount(0);
   await page.getByRole("radio", { name: "example.pdf" }).check();
@@ -1704,13 +1705,13 @@ test("R1 institutional pilot shows only nine approved tools and blocks excluded 
   await page.route("**/api/v1/auth/config", (route) => route.fulfill({
     json: { ...authConfigFixture, institutional: { rcat_only: true, email_domain: "rcat.ac.th" } },
   }));
-  await page.goto("/");
-  await expect(page.locator(".v3ToolGrid .v3ToolCard")).toHaveCount(9);
-  await expect(page.getByRole("button", { name: /Office → PDF/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /ลิงก์ดาวน์โหลด/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /คลังเอกสาร/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /PDF\/A-2/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /ประทับ PDF/ })).toHaveCount(0);
+  await page.goto("/tools");
+  await expect(page.locator(".v4PilotGrid .v4PilotCard")).toHaveCount(9);
+  await expect(page.getByRole("link", { name: /Office → PDF/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /ลิงก์ดาวน์โหลด/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /คลังเอกสาร/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /PDF\/A-2/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /ประทับ PDF/ })).toHaveCount(0);
 
   await page.goto("/tools/signed-link?file=file-pdf-1");
   await expect(page.getByRole("heading", { name: "เครื่องมือนี้ยังไม่เปิดให้ใช้งาน" })).toBeVisible();
@@ -1722,7 +1723,7 @@ test("R1 institutional pilot shows only nine approved tools and blocks excluded 
 });
 
 test("noninstitutional legacy catalog remains unchanged", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".v3ToolGrid .v3ToolCard")).toHaveCount(13);
-  await expect(page.getByRole("button", { name: /ลิงก์ดาวน์โหลด/ })).toBeVisible();
+  await page.goto("/tools");
+  await expect(page.locator(".v4PilotGrid .v4PilotCard")).toHaveCount(13);
+  await expect(page.getByRole("link", { name: /ลิงก์ดาวน์โหลด/ })).toBeVisible();
 });

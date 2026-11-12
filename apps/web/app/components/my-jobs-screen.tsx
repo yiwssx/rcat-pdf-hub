@@ -77,15 +77,18 @@ export function MyJobsScreen({ auth }: { auth: string }) {
   }, [auth, status, offset, refreshKey]);
 
   return (
-    <main className="v3Main vdJobsPage" aria-label="งานของฉัน">
+    <main className="v3Main v4Main vdJobsPage v4JobsPage" aria-label="งานของฉัน">
       <section className="v3HomeTitle">
         <div><span className="v3Kicker">WORKFLOW MONITOR / MY JOBS</span><h1>งานของฉัน</h1><p>ตรวจสถานะงานที่กำลังประมวลผล และย้อนกลับมาดูผลลัพธ์ได้จากที่เดียว</p></div>
-        <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
+        <a className="v3TextLink" href="/tools">← เครื่องมือทั้งหมด</a>
       </section>
       <section className="v3JobDetailCard v3JobsHistory vdJobsHistory">
         <div className="v3SectionHead">
           <div><span className="v3Kicker">HISTORY</span><h2>ประวัติงาน</h2></div>
           <Button variant="outline" size="sm" className="v3MiniButton" type="button" onClick={() => setRefreshKey((value) => value + 1)}>รีเฟรช</Button>
+        </div>
+        <div className="v4JobTabs" role="group" aria-label="หมวดสถานะงาน">
+          {([["all", "ทั้งหมด"], ["queued", "รอประมวลผล"], ["running", "กำลังทำ"], ["completed", "สำเร็จ"], ["failed", "ไม่สำเร็จ"]] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={status === value} onClick={() => { setStatus(value); setOffset(0); }}>{label}</button>)}
         </div>
         <label className="v3Field">สถานะงาน
           <select aria-label="กรองสถานะงาน" value={status} onChange={(event) => { setStatus(event.target.value as StatusFilter); setOffset(0); }}>

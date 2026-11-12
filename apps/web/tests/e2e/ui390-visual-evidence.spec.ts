@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { T90_DIRECTORY_TOOLS } from "../../app/components/t90-directory-catalog";
+import { hasDedicatedT90Icon } from "../../app/components/v4-tool-icons";
 import { authConfigFixture, emptyLibraryPage, integrationStatusFixture, operatorIdentityFixture } from "./api-fixtures";
 
 /**
@@ -29,6 +31,7 @@ async function installEvidenceFixtures(page: Page) {
   await page.route("**/api/v1/files?**", route => route.fulfill({ json: [exampleFile] }));
   await page.route("**/api/v1/files/library**", route => route.fulfill({ json: { ...emptyLibraryPage(route.request().url()), items: [exampleFile], total: 1 } }));
   await page.route("**/api/v1/jobs?**", route => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/files/visual-example-pdf", route => route.fulfill({ json: exampleFile }));
   await page.route("**/api/v1/files/visual-example-pdf/preview**", route => route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") }));
   await page.route("**/api/v1/admin/status", route => route.fulfill({ json: {
     database_ok: true, redis_ok: true, workers: 2, queue_depth: 1,
@@ -59,10 +62,11 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
   const captureRoot = resolve("visual-evidence/ui390", variant);
   mkdirSync(captureRoot, { recursive: true });
   const results: Array<{ viewport: string; view: string; pathname: string; overflow: number }> = [];
-  for (const [name, width, height] of [["desktop", 1366, 768], ["mobile", 390, 844]] as const) {
+  for (const [name, width, height] of [["desktop", 1366, 768], ["tablet", 768, 1024], ["mobile", 390, 844]] as const) {
     await page.setViewportSize({ width, height });
     for (const [view, target, selector] of [
       ["dashboard-directory", "/", "#workspace"],
+      ["tools-explorer", variant === "before" ? "/" : "/tools", variant === "before" ? "#t90-tools" : ".v4Explorer"],
       ["files", "/files", ".v3FileLibrary"],
       ["jobs", "/jobs", ".v3JobsHistory"],
       ["admin", "/admin?section=overview", ".v3AdminMain"],
@@ -70,6 +74,13 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
       await page.goto(target, { waitUntil: "domcontentloaded" });
       await expect(page.locator(selector)).toBeVisible({ timeout: 15000 });
       // Snapshot only settled UI state, not a transient fetch/loading frame.
+      if (view === "tools-explorer" && variant === "before") {
+        await page.locator("#t90-tools").scrollIntoViewIfNeeded();
+      }
+      if (view === "tools-explorer" && variant === "after") {
+        await expect(page.getByRole("navigation", { name: "ประเภทเครื่องมือ PDF" })).toBeVisible();
+        await expect(page.locator(".v4ToolListItem")).toHaveCount(12);
+      }
       if (view === "files") {
         const fileRow = page.locator(".v3LibraryRow").first();
         await expect(fileRow.getByText("RCAT-document.pdf", { exact: true })).toBeVisible({ timeout: 15000 });
@@ -93,11 +104,28 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
       if (variant === "after") expect(overflow, `${name}/${view} horizontal overflow`).toBeLessThanOrEqual(1);
       await page.screenshot({ path: resolve(captureRoot, `${name}-${view}.png`), fullPage: true, animations: "disabled" });
       results.push({ viewport: name, view, pathname: target, overflow });
+      if (view === "files") {
+        await page.goto("/files/visual-example-pdf");
+        await expect(page.getByRole("heading", { name: "รายละเอียดไฟล์" })).toBeVisible();
+        if (variant === "after") {
+          await page.getByRole("button", { name: "ดูตัวอย่าง PDF" }).click();
+          const preview = page.getByRole("img", { name: "ตัวอย่างหน้าแรกของ RCAT-document.pdf" });
+          await expect(preview).toBeVisible();
+          await expect.poll(() => preview.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        }
+        const fileDetailOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        if (variant === "after") expect(fileDetailOverflow, `${name}/file-detail overflow`).toBeLessThanOrEqual(1);
+        await page.screenshot({ path: resolve(captureRoot, `${name}-file-detail.png`), fullPage: true, animations: "disabled" });
+        results.push({ viewport: name, view: "file-detail", pathname: "/files/visual-example-pdf", overflow: fileDetailOverflow });
+      }
       if (view === "dashboard-directory") {
         const recent = page.locator(".v3RecentFile").first();
         await expect(recent).toBeVisible();
         await recent.click();
         await expect(page.locator(".v3DocumentMode")).toBeVisible();
+        if (variant === "after") await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+        // Compare the same document origin, not the prior dashboard scroll position.
+        await page.evaluate(() => window.scrollTo(0, 0));
         const workbenchOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (variant === "after") expect(workbenchOverflow, `${name}/workspace overflow`).toBeLessThanOrEqual(1);
         await page.screenshot({ path: resolve(captureRoot, `${name}-workspace.png`), fullPage: true, animations: "disabled" });
@@ -110,4 +138,73 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
     browser: "playwright-chromium", data: "deterministic API fixtures (not Production UAT)",
     screenshots: results,
   }, null, 2));
+});
+
+
+test("V4 critical journeys: tool search, semantic icons, deep links, navigation and responsive shell", async ({ page }) => {
+  test.setTimeout(120_000);
+  test.skip(process.env.PDFHUB_VISUAL_VARIANT !== "after", "V4 interactions only apply to candidate");
+  await installEvidenceFixtures(page);
+  expect(T90_DIRECTORY_TOOLS).toHaveLength(90);
+  expect(T90_DIRECTORY_TOOLS.every(item => hasDedicatedT90Icon(item.id))).toBe(true);
+  for (const [name, width, height] of [["desktop", 1366, 768], ["tablet", 768, 1024], ["mobile", 390, 844]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "งานเอกสาร ง่ายขึ้นในที่เดียว" })).toBeVisible();
+    const nav = width <= 760
+      ? page.getByRole("navigation", { name: "เมนูหลักบนมือถือ" })
+      : page.getByRole("navigation", { name: "เมนูหลัก" });
+    await expect(nav).toBeVisible();
+    await nav.getByRole("link", { name: /เครื่องมือ/ }).click();
+    await expect(page).toHaveURL(/\/tools$/);
+    await expect(page.getByRole("heading", { name: "ค้นหาเครื่องมือ PDF" })).toBeVisible();
+    const search = page.getByRole("searchbox", { name: "ค้นหาเครื่องมือ T90" });
+    await search.fill("Merge PDF");
+    const first = page.locator(".v4ToolListItem").first();
+    await expect(first).toContainText("Merge PDF");
+    await first.click();
+    await expect(page).toHaveURL(/tool=M04/);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Merge PDF" })).toBeVisible();
+    await expect(page.locator(
+      width <= 760 ? ".v4ToolDialog a[href='/tools/merge-pdf']" : ".v4ToolDetail a[href='/tools/merge-pdf']",
+    )).toBeVisible();
+    // Deep-link selection should survive refresh and follow browser history.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/tools$/);
+    await page.goForward();
+    await expect(page).toHaveURL(/tool=M04/);
+    if (width <= 760) {
+      const detail = page.getByRole("dialog", { name: "รายละเอียดเครื่องมือที่เลือก" });
+      await expect(detail).toBeVisible();
+      await detail.getByRole("button", { name: "ปิดรายละเอียด" }).click();
+      await expect(detail).not.toBeVisible();
+      await expect(page).toHaveURL(/\/tools$/);
+      await page.reload();
+      await expect(page.getByRole("dialog", { name: "รายละเอียดเครื่องมือที่เลือก" })).not.toBeVisible();
+    }
+    await search.fill("");
+    await page.getByRole("button", { name: /แปลงจาก PDF/ }).first().click();
+    await expect(page.locator(".v4ToolListItem").first()).toContainText("PDF");
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `${name} V4 explorer overflow`).toBeLessThanOrEqual(1);
+
+    // Management surfaces retain their actual actions, not just a visual skin.
+    await page.goto("/files");
+    await expect(page.getByRole("heading", { name: "ไฟล์ทั้งหมด" })).toBeVisible();
+    await page.getByRole("button", { name: "ตาราง" }).click();
+    await expect(page.locator(".v4FilesGrid")).toBeVisible();
+    await page.getByRole("button", { name: "รายการ" }).click();
+    await expect(page.locator(".v4FilesGrid")).toHaveCount(0);
+
+    await page.goto("/jobs");
+    await page.getByRole("button", { name: "สำเร็จ", exact: true }).click();
+    await expect(page.getByLabel("กรองสถานะงาน")).toHaveValue("completed");
+
+    await page.goto("/admin?section=overview");
+    const adminNav = page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" });
+    await expect(adminNav).toBeVisible();
+    await adminNav.getByRole("link", { name: /พื้นที่จัดเก็บ/ }).click();
+    await expect(page.getByRole("heading", { name: "พื้นที่จัดเก็บและ Retention" })).toBeVisible();
+  }
 });
