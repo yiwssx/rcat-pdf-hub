@@ -259,6 +259,8 @@ body {
 .vdAdminPage .v3AdminAreaNav a[aria-current="page"] {background:var(--vd-deep);color:#fff;border-color:var(--vd-deep)}
 .vdAdminPage .v3AdminAreaNav a:hover {color:var(--vd-teal)}
 .vdAdminPage .v3AdminAreaNav a[aria-current="page"]:hover {color:#fff}
+.vdAdminPage .v3AdminAreaNav a[aria-current="page"] strong {color:#fff}
+.vdAdminPage .v3AdminAreaNav a[aria-current="page"] small {color:#d1e7e5}
 .v3JobDetailCard {box-shadow:var(--vd-shadow)}
 .v3MobileStatus {color:var(--vd-muted);}
 
