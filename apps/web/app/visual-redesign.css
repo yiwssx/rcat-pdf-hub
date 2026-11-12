@@ -1,0 +1,322 @@
+/* RCAT PDF HUB / Visual Redesign 2026
+ * Presentation only. Existing markup contracts, gates and API behavior stay intact.
+ * A distinct editorial/document-operations identity: dark ink, mineral teal,
+ * clear white surfaces, intentional density and crisp functional hierarchy.
+ */
+:root {
+  --vd-ink:#102331;
+  --vd-deep:#0b202d;
+  --vd-deep-2:#153846;
+  --vd-teal:#137c78;
+  --vd-teal-bright:#59e0c6;
+  --vd-paper:#f4f7f7;
+  --vd-white:#fff;
+  --vd-stroke:#dce5e7;
+  --vd-muted:#52646d;
+  --vd-shadow:0 18px 48px rgba(21,48,61,.065);
+  --ui-brand:#106f73;
+  --ui-focus:#0a848c;
+  --ui-text:#102331;
+  --ui-subtle:#52646d;
+  --ui-divider:#dce5e7;
+  --v3-bg:#f4f7f7;
+  --v3-primary:#106f73;
+}
+html { background:var(--vd-paper); scroll-behavior:smooth; }
+body {
+  background:linear-gradient(180deg,#eaf4f2 0,#f4f7f7 340px,#f4f7f7 100%);
+  color:var(--vd-ink);
+}
+.v3App { padding:0 24px 72px; }
+.v3Main { width:min(1360px,100%); }
+.v3Kicker { color:var(--vd-teal); font-size:11px; font-weight:850; letter-spacing:.11em; }
+.v3SectionHead h2 { letter-spacing:-.025em; font-size:clamp(22px,2.2vw,30px); color:var(--vd-ink); }
+.v3SectionHead p { color:var(--vd-muted); line-height:1.65; }
+.v3TextLink { color:#0a716e; font-weight:800; }
+.v3TextLink:focus-visible { outline:3px solid var(--vd-teal); outline-offset:4px; border-radius:4px; }
+
+/* Dual-level operations masthead replaces the candy-style floating nav. */
+.v3Header.vdHeader {
+  width:min(1410px,100%);
+  position:sticky;
+  top:0;
+  z-index:80;
+  margin:0 auto 34px;
+  padding:0 28px 12px;
+  display:grid;
+  grid-template-columns:minmax(200px,1fr) auto auto;
+  grid-template-rows:40px 66px;
+  column-gap:30px;
+  row-gap:0;
+  border:1px solid #d6e4e2;
+  border-top:0;
+  border-radius:0 0 20px 20px;
+  box-shadow:0 14px 35px rgba(9,42,48,.08);
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(18px);
+}
+.vdHeaderIdentity {
+  grid-row:1;grid-column:1/-1;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 2px;
+  border-bottom:1px solid var(--vd-stroke);
+  font-size:10px; letter-spacing:.075em;
+}
+.vdInstitution { display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#244955;font-weight:750; }
+.vdInstitution strong {font-weight:950;color:#092a33}
+.vdInstitutionDot {width:9px;height:9px;background:#1aa79a;border-radius:2px;transform:rotate(45deg);}
+.vdHeaderEdition {font-size:10px;color:#7a9094;font-weight:800}
+.v3Header.vdHeader .v3Brand {
+  grid-column:1;grid-row:2;align-self:center;
+  width:max-content;max-width:100%;gap:12px;
+}
+.v3Header.vdHeader .v3BrandMark {width:40px;height:40px;flex-shrink:0;border-radius:12px;box-shadow:none;border:1px solid var(--vd-stroke)}
+.v3Header.vdHeader .v3Brand strong {font-size:20px;letter-spacing:-.05em;color:var(--vd-deep);font-weight:950}
+.v3Header.vdHeader .v3Brand small {font-size:11px;color:var(--vd-muted);letter-spacing:.015em}
+.v3Header.vdHeader .v3PrimaryNav {
+  grid-column:2;grid-row:2;
+  display:flex;min-width:0;align-items:center;gap:4px;
+}
+.v3Header.vdHeader .v3PrimaryNav a {
+  min-height:43px; display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  color:#50636a; padding:10px 15px; border-radius:9px;
+  font-size:14px; font-weight:750;white-space:nowrap;
+}
+.v3Header.vdHeader .v3PrimaryNav a[aria-current="page"] {
+  color:#fff;background:var(--vd-deep);box-shadow:0 3px 9px rgba(13,44,58,.17);
+}
+.vdNavIcon {font-size:17px;line-height:1}
+.v3Header.vdHeader .v3HeaderActions {
+  grid-column:3;grid-row:2;justify-self:end;align-self:center;
+}
+.v3Header.vdHeader .v3Status {max-width:190px;background:#edf7f5;border:1px solid #d9eae5;color:#295e5b;border-radius:10px}
+.v3Header.vdHeader .v3JobsButton {
+  background:#eef7f5;border:1px solid #d7e9e4;color:#1f514c;border-radius:10px;
+}
+.v3Header.vdHeader .v3JobsButton em {background:var(--vd-teal);box-shadow:none}
+.v3Header.vdHeader .v3Account summary {min-height:44px;min-width:155px;border:1px solid transparent;border-radius:10px;}
+.v3Header.vdHeader .v3Account summary:hover {border-color:var(--vd-stroke);background:#f5f8f8}
+.v3Header.vdHeader .v3Avatar {background:var(--vd-deep);color:#fff;}
+.v3Header.vdHeader .v3AccountMenu {border-color:var(--vd-stroke);box-shadow:var(--vd-shadow);}
+
+/* Editorial landing dashboard — intentionally different HTML hierarchy. */
+.v3HomeTitle.vdHero {
+  display:grid;grid-template-columns:minmax(0,1.65fr) minmax(235px,.65fr);
+  gap:32px;align-items:stretch;
+  margin:0 0 18px;
+  padding:clamp(28px,4vw,58px);
+  min-height:300px;
+  background:
+    radial-gradient(circle at 95% 4%,rgba(70,210,186,.14),transparent 35%),
+    linear-gradient(130deg,#0b202d,#163e49);
+  border:1px solid #244c55;border-radius:22px;
+  box-shadow:0 20px 52px rgba(4,34,47,.16);
+  color:#fff;overflow:hidden;
+}
+.vdHeroCopy {position:relative;z-index:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.v3HomeTitle.vdHero .v3Kicker {color:var(--vd-teal-bright);font-size:12px;letter-spacing:.15em}
+.v3HomeTitle.vdHero h1 {
+  margin:20px 0 12px;max-width:680px;
+  color:#fff;font-weight:900;letter-spacing:-.055em;line-height:1.25;
+  font-size:clamp(31px,4vw,52px);
+}
+.v3HomeTitle.vdHero p {max-width:650px;font-size:16px;line-height:1.8;color:#d0e4e5;margin:0;}
+.vdHeroActions {display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.vdHeroActions a {min-height:46px;display:inline-flex;gap:20px;justify-content:space-between;align-items:center;padding:12px 18px;border-radius:9px;font-size:14px;font-weight:850;text-decoration:none}
+.vdHeroPrimary {background:#61e0c2;color:#072d30}
+.vdHeroSecondary {border:1px solid rgba(200,241,237,.34);color:#e9f7f5}
+.vdHeroActions a:focus-visible {outline:3px solid #fff;outline-offset:3px}
+.vdHeroPanel {
+  min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  padding:25px 26px;
+  border:1px solid rgba(179,238,225,.32);
+  background:rgba(247,255,254,.07);
+  border-radius:15px;backdrop-filter:blur(5px);
+}
+.vdHeroPanelLabel {font-size:11px;letter-spacing:.14em;font-weight:850;color:#ade0dc}
+.vdHeroPanel strong {font-size:clamp(46px,5vw,76px);font-weight:950;line-height:1.1;letter-spacing:-.07em;color:#fff;margin:14px 0 3px;font-variant-numeric:tabular-nums}
+.vdHeroPanel > span:nth-of-type(2) {font-size:13px;color:#cfe2e4;line-height:1.5}
+.vdHeroPanelLine {height:1px;width:100%;background:rgba(200,243,237,.23);margin:22px 0 16px}
+.vdHeroPanelFooter {font-size:12px;color:#dcefeb;display:flex;gap:9px;align-items:center}
+.vdLiveDot {width:8px;height:8px;background:#66ebc0;border-radius:50%;box-shadow:0 0 0 4px rgba(102,235,192,.11)}
+.vdProcess {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
+  margin:0 0 28px;border:1px solid var(--vd-stroke);
+  border-radius:15px;background:#fff;box-shadow:var(--vd-shadow);overflow:hidden;
+}
+.vdProcess > div {
+  display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:2px;
+  padding:20px 26px;align-content:center;
+}
+.vdProcess > div + div {border-left:1px solid var(--vd-stroke)}
+.vdProcess > div > span {grid-row:1/3;display:grid;place-items:center;align-self:center;background:#e7f5f1;color:#0c6b63;width:39px;height:39px;border-radius:10px;font-weight:900;font-size:13px}
+.vdProcess strong {font-size:15px;color:#16343c}
+.vdProcess small {font-size:12px;color:var(--vd-muted)}
+.v3StartGrid.vdStartGrid {grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:stretch;gap:18px;margin-bottom:32px}
+.v3Dropzone.vdDropzone {
+  min-height:268px;display:grid;place-items:center;
+  border:2px dashed #74bdb6;border-radius:17px;background:
+  linear-gradient(145deg,#effaf6,#fff);
+  box-shadow:none;transition:border-color .18s ease, background .18s ease;
+}
+.v3Dropzone.vdDropzone:hover,.v3Dropzone.vdDropzone.isDragging {background:#e8faf3;border-color:#127e73;}
+.vdDropzone .v3DropIcon {width:54px;height:54px;background:#dff4ed;color:#0e7d70;border-radius:13px;font-size:30px}
+.vdDropzone strong {color:var(--vd-deep);font-size:21px}
+.vdDropzone p {max-width:380px;color:var(--vd-muted);font-size:14px;line-height:1.65}
+.vdDropzone .v3UploadButton {background:var(--vd-deep);color:#fff;border:0;border-radius:9px;box-shadow:none;font-size:14px;font-weight:800;min-height:44px}
+.v3RecentCard.vdRecentCard {
+  min-width:0;background:#fff;border:1px solid var(--vd-stroke);
+  border-radius:17px;padding:24px;box-shadow:var(--vd-shadow);
+}
+.vdRecentCard .v3RecentFile {border-bottom-color:#e6eeee}
+.vdRecentCard .v3RecentFile:hover {background:#f2f9f7}
+.vdRecentCard .v3FileBadge {border-radius:8px;}
+.v3ToolsBlock.vdToolsBlock,
+.v3ToolsBlock.vdDirectory {
+  background:#fff;border:1px solid var(--vd-stroke);
+  border-radius:20px;padding:clamp(22px,3vw,38px);box-shadow:var(--vd-shadow);
+}
+.vdToolsBlock .v3ToolGrid,
+.vdDirectory .v3ToolGrid {gap:12px}
+.vdToolsBlock .v3ToolCard,
+.vdDirectory .v3ToolCard {
+  min-height:105px;background:#fbfdfd;border:1px solid #e0eae9;
+  border-radius:12px;box-shadow:none;transform:none;
+}
+.vdToolsBlock .v3ToolCard:hover,
+.vdDirectory .v3ToolCard:hover {
+  border-color:#77c7bb;background:#f0faf6;transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(18,78,75,.08);
+}
+.vdToolsBlock .v3ToolCardText strong,.vdDirectory .v3ToolCardText strong {font-size:15px;color:#173844;line-height:1.45}
+.vdToolsBlock .v3ToolCardText small,.vdDirectory .v3ToolCardText small {font-size:12px;color:var(--vd-muted);line-height:1.45}
+.vdDirectory .v3SectionHead {align-items:center;gap:24px}
+.vdDirectory .v3SectionHead h2 {max-width:650px;font-size:clamp(25px,2.7vw,37px);font-weight:900;letter-spacing:-.05em}
+.vdDirectoryCount {background:var(--vd-deep);color:#fff;min-width:164px;min-height:112px;display:flex;align-items:center;justify-content:center;flex-direction:column;border-radius:13px}
+.vdDirectoryCount strong {font-size:51px;line-height:1;letter-spacing:-.05em;font-weight:950}
+.vdDirectoryCount span {font-size:10px;letter-spacing:.12em;margin-top:7px;color:#bde0d8;font-weight:800}
+.vdDirectoryControls {
+  border:1px solid var(--vd-stroke);background:#f3f8f7;border-radius:13px;padding:18px;margin:20px 0 15px;
+}
+.vdDirectory .t90DirectoryFilters button {border-color:#cddfdc;background:#fff;color:#21454b}
+.vdDirectory .t90DirectoryFilters button[aria-pressed="true"] {background:var(--vd-deep);border-color:var(--vd-deep);color:#fff}
+.vdDirectory .t90DirectorySection {padding-top:10px;border-top:1px solid #e6eeee}
+.vdDirectory .t90DirectorySectionHeading h3 {font-size:21px;font-weight:900;color:var(--vd-deep)}
+.vdDirectory .t90DirectoryCode {border-radius:9px;background:#e5f2ef;color:#166f66}
+.vdDirectory .t90DirectoryTool {min-height:90px}
+.vdDirectory .t90DirectoryNote {font-size:12px;border-top:1px solid var(--vd-stroke);}
+
+/* Workbench / file manager / job monitor / admin become distinct pages. */
+.v3DocumentMode.vdWorkspace .v3DocumentBar {
+  background:var(--vd-deep);border:1px solid #214551;border-radius:15px;
+  padding:18px 24px;color:#fff;box-shadow:var(--vd-shadow);
+}
+.vdWorkspace .v3DocumentBar .v3TextLink {color:#7ee9ce}
+.vdWorkspace .v3PreviewPane,
+.vdWorkspace .v3ActionPane {
+  background:#fff;border:1px solid var(--vd-stroke);
+  border-radius:16px;box-shadow:var(--vd-shadow);
+}
+.vdWorkspace .v3PreviewStage {background:#e7eef0;border-radius:12px;border:1px solid #d1e0e3}
+.vdWorkspace .v3ActionHead h2 {color:var(--vd-deep);font-size:25px}
+.vdWorkspace .v3CompactTool {border-color:var(--vd-stroke);background:#f9fbfa;border-radius:10px}
+.vdWorkspace .v3CompactTool:hover {background:#e9f8f2;border-color:#99c8be}
+.vdFilesPage .v3FilesHead,
+.vdJobsPage .v3HomeTitle,
+.vdAdminPage .v3HomeTitle {
+  padding:32px 35px;margin-bottom:21px;
+  background:var(--vd-deep);color:#fff;border-radius:17px;
+  border:1px solid #244854;box-shadow:var(--vd-shadow);
+}
+.vdFilesPage .v3FilesHead h1,
+.vdJobsPage .v3HomeTitle h1,
+.vdAdminPage .v3HomeTitle h1 {font-size:clamp(27px,3vw,39px);line-height:1.3;color:#fff;letter-spacing:-.045em}
+.vdFilesPage .v3FilesHead p,
+.vdJobsPage .v3HomeTitle p,
+.vdAdminPage .v3HomeTitle p {color:#c9e0e1;font-size:14px}
+.vdFilesPage .v3FilesHead .v3Kicker,
+.vdJobsPage .v3HomeTitle .v3Kicker,
+.vdAdminPage .v3HomeTitle .v3Kicker {color:#6fe4c9}
+.vdJobsPage .v3HomeTitle .v3TextLink,
+.vdAdminPage .v3HomeTitle .v3TextLink {color:#7ee9ce}
+.vdFilesPage .v3FilesActions {align-self:center}
+.vdFilesPage .v3LibraryToolbar,
+.vdFilesPage .v3FileLibrary,
+.vdJobsPage .v3JobsHistory,
+.vdAdminPage .v3AdminSection,
+.vdAdminPage .v3EffectiveAccess {
+  background:#fff;border:1px solid var(--vd-stroke);
+  border-radius:16px;box-shadow:var(--vd-shadow);
+}
+.vdFilesPage .v3LibraryToolbar {padding:19px}
+.vdFilesPage .v3LibraryRow {border-bottom:1px solid #e8eeee}
+.vdFilesPage .v3LibraryRow:hover {background:#f2f9f7}
+.vdJobsPage .v3JobsHistoryRow {background:#fbfdfd;border-color:#e0e9e9;border-radius:11px}
+.vdJobsPage .v3JobsHistoryRow:hover {background:#f1f9f6}
+.vdAdminPage .v3AdminMetric {background:#f0f8f6;border:1px solid #d8e9e4;border-radius:12px}
+.vdAdminPage .v3AdminMetric strong {color:#115a5a}
+.vdAdminPage .v3AdminAreaNav {background:#fff;border:1px solid var(--vd-stroke);padding:8px;border-radius:12px}
+.vdAdminPage .v3AdminAreaNav a[aria-current="page"] {background:var(--vd-deep);color:#fff;border-color:var(--vd-deep)}
+.vdAdminPage .v3AdminAreaNav a:hover {color:var(--vd-teal)}
+.vdAdminPage .v3AdminAreaNav a[aria-current="page"]:hover {color:#fff}
+.v3JobDetailCard {box-shadow:var(--vd-shadow)}
+.v3MobileStatus {color:var(--vd-muted);}
+
+@media (max-width:1120px) {
+  .v3Header.vdHeader {grid-template-columns:minmax(155px,1fr) auto;column-gap:10px;padding:0 16px 10px;grid-template-rows:33px 54px auto}
+  .v3Header.vdHeader .v3Brand {grid-row:2;grid-column:1}
+  .v3Header.vdHeader .v3HeaderActions {grid-row:2;grid-column:2}
+  .v3Header.vdHeader .v3PrimaryNav {
+    grid-row:3;grid-column:1/-1;justify-content:space-between;
+    border-top:1px solid var(--vd-stroke);padding-top:8px;
+    overflow-x:auto;width:100%;gap:4px;
+  }
+  .v3Header.vdHeader .v3PrimaryNav a {flex:1 0 auto;min-height:44px}
+  .v3Header.vdHeader .v3Status {display:none}
+  .vdHeroPanel {padding:20px}
+  .vdProcess > div {padding:16px}
+}
+@media (max-width:760px) {
+  .v3App {padding:0 12px 48px}
+  .v3Header.vdHeader {margin-bottom:18px;border-radius:0 0 13px 13px}
+  .vdHeaderEdition {display:none}
+  .v3Header.vdHeader .v3Brand small {font-size:9px}
+  .v3Header.vdHeader .v3Brand strong {font-size:17px}
+  .v3Header.vdHeader .v3BrandMark {width:36px;height:36px}
+  .v3Header.vdHeader .v3Account summary {min-width:0;width:47px;padding:4px}
+  .v3Header.vdHeader .v3AccountName {display:none}
+  .v3Header.vdHeader .v3Account summary > b {display:none}
+  .v3Header.vdHeader .v3JobsButton {padding:8px}
+  .v3Header.vdHeader .v3JobsButton strong {display:none}
+  .v3Header.vdHeader .v3PrimaryNav a {font-size:12px;padding:9px 7px}
+  .vdNavIcon {font-size:15px}
+  .v3HomeTitle.vdHero {grid-template-columns:minmax(0,1fr);min-height:auto;padding:27px 22px;gap:22px}
+  .v3HomeTitle.vdHero h1 {margin:14px 0 10px;font-size:clamp(30px,7vw,40px)}
+  .v3HomeTitle.vdHero p {font-size:14px}
+  .vdHeroActions {margin-top:20px}
+  .vdHeroPanel {display:grid;grid-template-columns:1fr auto;column-gap:14px;row-gap:3px;padding:15px}
+  .vdHeroPanel strong {grid-row:1/4;grid-column:2;font-size:46px;margin:0}
+  .vdHeroPanelLine {display:none}
+  .vdHeroPanelFooter {grid-column:1/-1;margin-top:8px}
+  .vdProcess {grid-template-columns:1fr;gap:0}
+  .vdProcess > div {padding:13px 17px;grid-template-columns:36px 1fr}
+  .vdProcess > div + div {border-top:1px solid var(--vd-stroke);border-left:0}
+  .vdProcess > div > span {width:34px;height:34px}
+  .v3StartGrid.vdStartGrid {grid-template-columns:1fr;gap:13px}
+  .v3Dropzone.vdDropzone {min-height:226px}
+  .v3RecentCard.vdRecentCard {padding:19px}
+  .v3ToolsBlock.vdToolsBlock,.v3ToolsBlock.vdDirectory {padding:20px 16px}
+  .vdDirectory .v3SectionHead {align-items:start;flex-direction:column;gap:14px}
+  .vdDirectoryCount {min-width:0;min-height:72px;width:100%;flex-direction:row;gap:15px}
+  .vdDirectoryCount strong {font-size:38px}
+  .vdDirectoryCount span {margin:0}
+  .vdDirectoryControls {padding:13px;margin-top:16px}
+  .vdFilesPage .v3FilesHead,.vdJobsPage .v3HomeTitle,.vdAdminPage .v3HomeTitle {padding:22px 19px;border-radius:13px}
+  .vdFilesPage .v3FilesHead {flex-wrap:wrap;gap:18px}
+  .vdFilesPage .v3FilesActions {align-self:auto}
+  .vdWorkspace .v3DocumentBar {padding:14px 13px}
+  .vdWorkspace .v3DocumentGrid {grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce) {
+  .vdDropzone,.vdToolsBlock .v3ToolCard,.vdDirectory .v3ToolCard {transition:none}
+}
