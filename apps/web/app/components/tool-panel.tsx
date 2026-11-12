@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { getPageInfo, IntegrationStatus, UploadedFile } from "../../lib/api";
 import { ToolIcon, ToolIconName } from "./tool-icons";
@@ -165,7 +167,7 @@ export function ToolPanel(props: Props) {
   return (
     <section className="v3ToolPanel" data-tone={info.tone}>
       <header className="v3ToolPanelHead">
-        <button className="v3BackButton" type="button" onClick={props.onClose} aria-label="กลับไปเลือกเครื่องมือ">←</button>
+        <Button variant="ghost" className="v3BackButton" type="button" onClick={props.onClose} aria-label="กลับไปเลือกเครื่องมือ">←</Button>
         <span className="v3ToolPanelIcon"><ToolIcon name={info.icon}/></span>
         <div><h2>{info.title}</h2><p>{info.subtitle}</p></div>
       </header>
@@ -184,7 +186,7 @@ export function ToolPanel(props: Props) {
         {tool === "ocr" && <>
           <Summary target={target} note="ภาษาไทย + อังกฤษ • ปรับหน้าเอียงและตรวจทิศทางอัตโนมัติ"/>
           <div className="v3InfoBox">ระบบจะสร้าง PDF ที่ค้นหาข้อความได้ โดยเก็บไฟล์ต้นฉบับไว้เหมือนเดิม</div>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("ocr")} disabled={busy || !targetIsPdf}>เริ่ม OCR</Button>
         </>}
 
         {tool === "header-and-footer" && <>
@@ -200,7 +202,7 @@ export function ToolPanel(props: Props) {
             });
           }}>
             <label className="v3Field">ข้อความส่วนหัว (ไม่บังคับ)
-              <input type="text" value={headerText} maxLength={256} placeholder="เช่น วิทยาลัยเกษตรและเทคโนโลยีร้อยเอ็ด" onChange={(event) => setHeaderText(event.target.value)}/>
+              <Input type="text" value={headerText} maxLength={256} placeholder="เช่น วิทยาลัยเกษตรและเทคโนโลยีร้อยเอ็ด" onChange={(event) => setHeaderText(event.target.value)}/>
             </label>
             <label className="v3Field">ตำแหน่งส่วนหัว
               <select value={headerAlign} onChange={(event) => setHeaderAlign(event.target.value as "left" | "center" | "right")}>
@@ -210,7 +212,7 @@ export function ToolPanel(props: Props) {
               </select>
             </label>
             <label className="v3Field">ข้อความส่วนท้าย (ไม่บังคับ)
-              <input type="text" value={footerText} maxLength={256} placeholder="เช่น หน้า {page}/{total}" onChange={(event) => setFooterText(event.target.value)}/>
+              <Input type="text" value={footerText} maxLength={256} placeholder="เช่น หน้า {page}/{total}" onChange={(event) => setFooterText(event.target.value)}/>
             </label>
             <label className="v3Field">ตำแหน่งส่วนท้าย
               <select value={footerAlign} onChange={(event) => setFooterAlign(event.target.value as "left" | "center" | "right")}>
@@ -229,7 +231,7 @@ export function ToolPanel(props: Props) {
                 {[12, 20, 30, 40, 60, 90, 120, 144].map((size) => <option key={size} value={size}>{size} pt</option>)}
               </select>
             </label>
-            <button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || (!headerText.trim() && !footerText.trim())}>เพิ่มส่วนหัวและส่วนท้าย PDF</button>
+            <Button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || (!headerText.trim() && !footerText.trim())}>เพิ่มส่วนหัวและส่วนท้าย PDF</Button>
           </form>
           <div className="v3FieldNote">ข้อความจะถูกวางทับบนพื้นที่ขอบกระดาษ ไม่เลื่อนเนื้อหาเดิม ควรตรวจเอกสารผลลัพธ์ก่อนใช้งานจริง</div>
         </>}
@@ -237,13 +239,13 @@ export function ToolPanel(props: Props) {
         {tool === "grayscale-pdf" && <>
           <Summary target={target} note="แปลงเอกสารเป็นระดับสีเทา • ไฟล์ PDF ต้นฉบับยังอยู่"/>
           <div className="v3InfoBox">ระบบแปลงภาพและสีของเนื้อหาเป็นระดับเทา ไม่ใช่การลดขนาดไฟล์หรือการแปลงเป็นขาวดำสองสี และอาจปรับโครงสร้าง PDF ใหม่ จึงไม่รองรับเอกสารที่ลงลายเซ็นดิจิทัล มีฟอร์ม หรือมีคำอธิบายประกอบ</div>
-          <button type="button" className="v3PrimaryAction" onClick={() => props.onRun("grayscale-pdf")} disabled={busy || !targetIsPdf}>แปลง PDF เป็นระดับสีเทา</button>
+          <Button type="button" className="v3PrimaryAction" onClick={() => props.onRun("grayscale-pdf")} disabled={busy || !targetIsPdf}>แปลง PDF เป็นระดับสีเทา</Button>
         </>}
 
         {tool === "extract-images" && <>
           <Summary target={target} note="ดึงภาพที่ฝังอยู่ในเอกสาร ไม่ใช่การแปลงหน้ากระดาษเป็นภาพ"/>
           <div className="v3InfoBox">รองรับภาพ PNG/JPEG ที่แยกออกจากวัตถุภาพใน PDF โดยตรง ไม่รองรับ PDF ที่เข้ารหัสหรือ PDF ที่ไม่มีภาพฝังอยู่ หากต้องการรูปของทุกหน้า ให้ใช้เครื่องมือ PDF → รูปภาพ</div>
-          <button type="button" className="v3PrimaryAction" onClick={() => props.onRun("extract-images")} disabled={busy || !targetIsPdf}>ดึงภาพฝังใน PDF เป็น ZIP</button>
+          <Button type="button" className="v3PrimaryAction" onClick={() => props.onRun("extract-images")} disabled={busy || !targetIsPdf}>ดึงภาพฝังใน PDF เป็น ZIP</Button>
         </>}
 
         {tool === "protect-pdf" && <>
@@ -265,20 +267,20 @@ export function ToolPanel(props: Props) {
             props.onProtect(user, owner);
           }}>
             <label className="v3Field">รหัสผ่านสำหรับเปิด PDF
-              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectUserPassword} onChange={(event) => setProtectUserPassword(event.target.value)}/>
+              <Input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectUserPassword} onChange={(event) => setProtectUserPassword(event.target.value)}/>
             </label>
             <label className="v3Field">ยืนยันรหัสผ่านสำหรับเปิด PDF
-              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectUserConfirm} onChange={(event) => setProtectUserConfirm(event.target.value)}/>
+              <Input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectUserConfirm} onChange={(event) => setProtectUserConfirm(event.target.value)}/>
             </label>
             <label className="v3Field">รหัสผ่านเจ้าของ PDF (ต้องต่างจากรหัสผ่านเปิด)
-              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectOwnerPassword} onChange={(event) => setProtectOwnerPassword(event.target.value)}/>
+              <Input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectOwnerPassword} onChange={(event) => setProtectOwnerPassword(event.target.value)}/>
             </label>
             <label className="v3Field">ยืนยันรหัสผ่านเจ้าของ PDF
-              <input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectOwnerConfirm} onChange={(event) => setProtectOwnerConfirm(event.target.value)}/>
+              <Input type="password" required autoComplete="new-password" spellCheck={false} maxLength={256} value={protectOwnerConfirm} onChange={(event) => setProtectOwnerConfirm(event.target.value)}/>
             </label>
             {protectUserPassword && protectOwnerPassword && protectUserPassword === protectOwnerPassword && <p role="alert" className="v3FieldNote">รหัสผ่านสำหรับเปิดและเจ้าของเอกสารต้องไม่ซ้ำกัน</p>}
             {(protectUserConfirm && protectUserPassword !== protectUserConfirm || protectOwnerConfirm && protectOwnerPassword !== protectOwnerConfirm) && <p role="alert" className="v3FieldNote">กรุณายืนยันรหัสผ่านทั้งสองให้ตรงกัน</p>}
-            <button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || !protectUserPassword || !protectOwnerPassword || protectUserPassword === protectOwnerPassword || protectUserPassword !== protectUserConfirm || protectOwnerPassword !== protectOwnerConfirm}>เข้ารหัส PDF ด้วย AES-256</button>
+            <Button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || !protectUserPassword || !protectOwnerPassword || protectUserPassword === protectOwnerPassword || protectUserPassword !== protectUserConfirm || protectOwnerPassword !== protectOwnerConfirm}>เข้ารหัส PDF ด้วย AES-256</Button>
           </form>
           <div className="v3FieldNote">ไม่สามารถกู้รหัสผ่านจากระบบได้ หากลืมรหัสผ่านต้องใช้ไฟล์ต้นฉบับเพื่อสร้างใหม่</div>
         </>}
@@ -294,9 +296,9 @@ export function ToolPanel(props: Props) {
             props.onUnlock(supplied);
           }}>
             <label className="v3Field">รหัสผ่านของ PDF
-              <input type="password" value={unlockPassword} autoComplete="off" spellCheck={false} maxLength={256} onChange={(event) => setUnlockPassword(event.target.value)} placeholder="ใส่รหัสผ่านที่ได้รับอนุญาต"/>
+              <Input type="password" value={unlockPassword} autoComplete="off" spellCheck={false} maxLength={256} onChange={(event) => setUnlockPassword(event.target.value)} placeholder="ใส่รหัสผ่านที่ได้รับอนุญาต"/>
             </label>
-            <button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || unlockPassword.length < 1 || unlockPassword.length > 256}>ปลดล็อก PDF</button>
+            <Button type="submit" className="v3PrimaryAction" disabled={busy || !targetIsPdf || unlockPassword.length < 1 || unlockPassword.length > 256}>ปลดล็อก PDF</Button>
           </form>
         </>}
 
@@ -308,9 +310,9 @@ export function ToolPanel(props: Props) {
             onDragStart={(event) => event.dataTransfer.setData("text/plain", file.id)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => { event.preventDefault(); moveMerge(event.dataTransfer.getData("text/plain"), file.id); }}
-          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b><button type="button" aria-label={`เอา ${file.original_name} ออกจากชุดรวม`} disabled={mergeFiles.length <= 2} onClick={() => props.onSettingChange("mergeOrder", props.settings.mergeOrder.filter((id) => id !== file.id))}>×</button></div>)}</div>
-          {availableMergeFiles.length > 0 && <div className="v3MergeAvailable"><small>ไฟล์อื่นใน Workspace</small><div>{availableMergeFiles.map((file) => <button type="button" key={file.id} onClick={() => props.onSettingChange("mergeOrder", [...props.settings.mergeOrder, file.id])}>＋ {file.original_name}</button>)}</div></div>}
-          <button className="v3PrimaryAction" onClick={() => props.onRun("merge")} disabled={busy || mergeFiles.length < 2}>รวม PDF {mergeFiles.length} ไฟล์</button>
+          ><span>{index + 1}</span><strong>{file.original_name}</strong><b>⠿</b><Button type="button" aria-label={`เอา ${file.original_name} ออกจากชุดรวม`} disabled={mergeFiles.length <= 2} onClick={() => props.onSettingChange("mergeOrder", props.settings.mergeOrder.filter((id) => id !== file.id))}>×</Button></div>)}</div>
+          {availableMergeFiles.length > 0 && <div className="v3MergeAvailable"><small>ไฟล์อื่นใน Workspace</small><div>{availableMergeFiles.map((file) => <Button type="button" key={file.id} onClick={() => props.onSettingChange("mergeOrder", [...props.settings.mergeOrder, file.id])}>＋ {file.original_name}</Button>)}</div></div>}
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("merge")} disabled={busy || mergeFiles.length < 2}>รวม PDF {mergeFiles.length} ไฟล์</Button>
         </>}
 
         {tool === "split-rotate" && <>
@@ -329,31 +331,31 @@ export function ToolPanel(props: Props) {
                 <Image src={`/api/v1/files/${target.id}/preview?page=${item.page}&width=180`} alt={`หน้า ${item.page}`} width={180} height={240} unoptimized/>
               </div>
               <div><strong>{index + 1}</strong><small>เดิม {item.page}</small></div>
-              <button type="button" onClick={() => rotatePage(item.page)} aria-label={`หมุนหน้า ${item.page}`}>↻</button>
-              <button type="button" aria-pressed={selectedPageIds.includes(item.page)} aria-label={`เลือกหน้า ${item.page} สำหรับแยก`} onClick={() => setSelectedPageIds((old) => old.includes(item.page) ? old.filter((n) => n !== item.page) : [...old, item.page])}>{selectedPageIds.includes(item.page) ? "☑" : "☐"}</button>
-              <button type="button" className="danger" onClick={() => { setPageItems((old) => old.filter((page) => page.page !== item.page)); setSelectedPageIds((old) => old.filter((n) => n !== item.page)); }} aria-label={`ลบหน้า ${item.page}`} disabled={pageItems.length <= 1}>×</button>
+              <Button type="button" onClick={() => rotatePage(item.page)} aria-label={`หมุนหน้า ${item.page}`}>↻</Button>
+              <Button type="button" aria-pressed={selectedPageIds.includes(item.page)} aria-label={`เลือกหน้า ${item.page} สำหรับแยก`} onClick={() => setSelectedPageIds((old) => old.includes(item.page) ? old.filter((n) => n !== item.page) : [...old, item.page])}>{selectedPageIds.includes(item.page) ? "☑" : "☐"}</Button>
+              <Button type="button" variant="destructive" className="danger" onClick={() => { setPageItems((old) => old.filter((page) => page.page !== item.page)); setSelectedPageIds((old) => old.filter((n) => n !== item.page)); }} aria-label={`ลบหน้า ${item.page}`} disabled={pageItems.length <= 1}>×</Button>
             </div>)}
           </div>}
           <div className="v3FieldNote">ลบหน้าแล้วบันทึกเพื่อสร้าง PDF ฉบับใหม่ หรือเลือก ☑ เพื่อสร้าง PDF เฉพาะหน้าที่ต้องการ</div>
-          <button type="button" className="v3SecondaryAction" onClick={resetPages} disabled={busy || pagesLoading || !totalPages || totalPages > 1000}>คืนค่าหน้าทั้งหมด</button>
-          <button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || !!pagesError || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</button>
-          <button className="v3SecondaryAction" onClick={() => props.onOrganize(selectedPages)} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1}>สร้าง PDF เฉพาะหน้าที่เลือก {selectedPages.length} หน้า (ไฟล์เดียว)</button>
+          <Button type="button" variant="outline" className="v3SecondaryAction" onClick={resetPages} disabled={busy || pagesLoading || !totalPages || totalPages > 1000}>คืนค่าหน้าทั้งหมด</Button>
+          <Button className="v3PrimaryAction" onClick={() => props.onOrganize(pageItems)} disabled={busy || pagesLoading || !!pagesError || pageItems.length < 1}>บันทึกการจัดหน้า {pageItems.length} หน้า</Button>
+          <Button variant="outline" className="v3SecondaryAction" onClick={() => props.onOrganize(selectedPages)} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1}>สร้าง PDF เฉพาะหน้าที่เลือก {selectedPages.length} หน้า (ไฟล์เดียว)</Button>
           {process.env.NEXT_PUBLIC_PDFHUB_M16_EXTRACT_ENABLED === "true" && <>
-            <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(selectedPages.map((page) => String(page.page)).join(","), "pdf")} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1 || selectedPages.length > 80}>M16 ดึงหน้าที่เลือกเป็น PDF ({selectedPages.length} หน้า)</button>
-            <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(selectedPages.map((page) => String(page.page)).join(","), "zip")} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1 || selectedPages.length > 80}>M16 ดึงหน้าที่เลือกเป็น PDF แยกไฟล์ (.zip)</button>
+            <Button type="button" variant="outline" className="v3SecondaryAction" onClick={() => props.onExtract(selectedPages.map((page) => String(page.page)).join(","), "pdf")} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1 || selectedPages.length > 80}>M16 ดึงหน้าที่เลือกเป็น PDF ({selectedPages.length} หน้า)</Button>
+            <Button type="button" variant="outline" className="v3SecondaryAction" onClick={() => props.onExtract(selectedPages.map((page) => String(page.page)).join(","), "zip")} disabled={busy || pagesLoading || !!pagesError || selectedPages.length < 1 || selectedPages.length > 80}>M16 ดึงหน้าที่เลือกเป็น PDF แยกไฟล์ (.zip)</Button>
           </>}
 
           <details className="v3AdvancedDetails"><summary>เลือกหน้าด้วยช่วงตัวเลข</summary>
             <label className="v3Field">หน้าที่ต้องการ<input value={props.settings.splitPages} onChange={(e) => props.onSettingChange("splitPages", e.target.value)} placeholder="1-3,5 หรือ 1-z"/></label>
             {splitError && <div className="v3FieldNote" role="alert">{splitError}</div>}
-            <button className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf || !!splitError}>สร้าง PDF จากช่วงหน้าที่ระบุ (ไฟล์เดียว)</button>
+            <Button variant="outline" className="v3SecondaryAction" onClick={() => props.onRun("split")} disabled={busy || !targetIsPdf || !!splitError}>สร้าง PDF จากช่วงหน้าที่ระบุ (ไฟล์เดียว)</Button>
             {process.env.NEXT_PUBLIC_PDFHUB_M16_EXTRACT_ENABLED === "true" && <div className="v3FieldRow">
-              <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(props.settings.splitPages, "pdf")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>M16 ดึงช่วงหน้าเป็น PDF</button>
-              <button type="button" className="v3SecondaryAction" onClick={() => props.onExtract(props.settings.splitPages, "zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>M16 ดึงช่วงหน้าเป็น ZIP</button>
+              <Button type="button" variant="outline" className="v3SecondaryAction" onClick={() => props.onExtract(props.settings.splitPages, "pdf")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>M16 ดึงช่วงหน้าเป็น PDF</Button>
+              <Button type="button" variant="outline" className="v3SecondaryAction" onClick={() => props.onExtract(props.settings.splitPages, "zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>M16 ดึงช่วงหน้าเป็น ZIP</Button>
             </div>}
             {process.env.NEXT_PUBLIC_PDFHUB_M07_ZIP_ENABLED === "true" && <>
               <p className="v3FieldNote">ทดลองแยกเป็น PDF ทีละหน้า (สูงสุด 80 ไฟล์) และดาวน์โหลด ZIP หรือไฟล์ย่อยผ่านหน้าผลลัพธ์</p>
-              <button type="button" className="v3SecondaryAction" onClick={() => props.onRun("split-to-zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>แยกเป็น PDF หลายไฟล์ (.zip)</button>
+              <Button type="button" variant="outline" className="v3SecondaryAction" onClick={() => props.onRun("split-to-zip")} disabled={busy || !targetIsPdf || !!splitError || pagesLoading || (totalPages !== null && totalPages > 200)}>แยกเป็น PDF หลายไฟล์ (.zip)</Button>
             </>}
 
           </details>
@@ -361,17 +363,17 @@ export function ToolPanel(props: Props) {
 
         {tool === "compress" && <>
           <Summary target={target} note="เหมาะสำหรับส่งอีเมล อัปโหลด และจัดเก็บ"/>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("compress")} disabled={busy || !targetIsPdf}>บีบอัด PDF</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("compress")} disabled={busy || !targetIsPdf}>บีบอัด PDF</Button>
         </>}
 
         {tool === "pdf-to-images" && <>
           <div className="v3FieldRow three">
             <label className="v3Field">รูปแบบ<select value={props.settings.rasterFormat} onChange={(e) => props.onSettingChange("rasterFormat", e.target.value)}><option value="png">PNG</option><option value="jpeg">JPEG</option></select></label>
-            <label className="v3Field">DPI<input type="number" min="72" max="600" value={props.settings.rasterDpi} onChange={(e) => props.onSettingChange("rasterDpi", Number(e.target.value))}/></label>
-            <label className="v3Field">หน้าแรก<input type="number" min="1" value={props.settings.rasterFirstPage} onChange={(e) => props.onSettingChange("rasterFirstPage", Math.max(1, Number(e.target.value)))}/></label>
+            <label className="v3Field">DPI<Input type="number" min="72" max="600" value={props.settings.rasterDpi} onChange={(e) => props.onSettingChange("rasterDpi", Number(e.target.value))}/></label>
+            <label className="v3Field">หน้าแรก<Input type="number" min="1" value={props.settings.rasterFirstPage} onChange={(e) => props.onSettingChange("rasterFirstPage", Math.max(1, Number(e.target.value)))}/></label>
           </div>
-          <label className="v3Field">หน้าสุดท้าย <small>เว้นว่างเพื่อแปลงต่อเนื่อง</small><input type="number" min={props.settings.rasterFirstPage} value={props.settings.rasterLastPage} onChange={(e) => props.onSettingChange("rasterLastPage", e.target.value)}/></label>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("pdf-to-images")} disabled={busy || !targetIsPdf}>แปลงเป็น ZIP รูปภาพ</button>
+          <label className="v3Field">หน้าสุดท้าย <small>เว้นว่างเพื่อแปลงต่อเนื่อง</small><Input type="number" min={props.settings.rasterFirstPage} value={props.settings.rasterLastPage} onChange={(e) => props.onSettingChange("rasterLastPage", e.target.value)}/></label>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("pdf-to-images")} disabled={busy || !targetIsPdf}>แปลงเป็น ZIP รูปภาพ</Button>
         </>}
 
         {tool === "images-to-pdf" && <>
@@ -379,60 +381,60 @@ export function ToolPanel(props: Props) {
           <div className="v3FieldRow three">
             <label className="v3Field">ขนาดหน้า<select value={props.settings.imagePageSize} onChange={(e) => props.onSettingChange("imagePageSize", e.target.value)}><option value="auto">Auto</option><option value="a4">A4</option><option value="letter">Letter</option></select></label>
             <label className="v3Field">การจัดวาง<select value={props.settings.imageFit} onChange={(e) => props.onSettingChange("imageFit", e.target.value)}><option value="contain">พอดีหน้า</option><option value="cover">เต็มหน้า</option></select></label>
-            <label className="v3Field">DPI<input type="number" min="72" max="600" value={props.settings.imageDpi} onChange={(e) => props.onSettingChange("imageDpi", Number(e.target.value))}/></label>
+            <label className="v3Field">DPI<Input type="number" min="72" max="600" value={props.settings.imageDpi} onChange={(e) => props.onSettingChange("imageDpi", Number(e.target.value))}/></label>
           </div>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("images-to-pdf")} disabled={busy || imageFiles.length < 1}>สร้าง PDF จากภาพ</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("images-to-pdf")} disabled={busy || imageFiles.length < 1}>สร้าง PDF จากภาพ</Button>
         </>}
 
         {tool === "watermark" && <>
           <label className="v3Field">ข้อความ<input value={props.settings.watermarkText} onChange={(e) => props.onSettingChange("watermarkText", e.target.value)}/></label>
           <div className="v3FieldRow three">
-            <label className="v3Field">ขนาด<input type="number" value={props.settings.watermarkFontSize} onChange={(e) => props.onSettingChange("watermarkFontSize", Number(e.target.value))}/></label>
-            <label className="v3Field">ความโปร่งใส<input type="number" min="0.02" max="1" step="0.01" value={props.settings.watermarkOpacity} onChange={(e) => props.onSettingChange("watermarkOpacity", Number(e.target.value))}/></label>
-            <label className="v3Field">มุม<input type="number" value={props.settings.watermarkRotation} onChange={(e) => props.onSettingChange("watermarkRotation", Number(e.target.value))}/></label>
+            <label className="v3Field">ขนาด<Input type="number" value={props.settings.watermarkFontSize} onChange={(e) => props.onSettingChange("watermarkFontSize", Number(e.target.value))}/></label>
+            <label className="v3Field">ความโปร่งใส<Input type="number" min="0.02" max="1" step="0.01" value={props.settings.watermarkOpacity} onChange={(e) => props.onSettingChange("watermarkOpacity", Number(e.target.value))}/></label>
+            <label className="v3Field">มุม<Input type="number" value={props.settings.watermarkRotation} onChange={(e) => props.onSettingChange("watermarkRotation", Number(e.target.value))}/></label>
           </div>
           <label className="v3Field">ตำแหน่ง<select value={props.settings.watermarkPosition} onChange={(e) => props.onSettingChange("watermarkPosition", e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("watermark")} disabled={busy || !targetIsPdf}>ใส่ลายน้ำ</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("watermark")} disabled={busy || !targetIsPdf}>ใส่ลายน้ำ</Button>
         </>}
 
         {tool === "page-numbers" && <>
           <label className="v3Field">รูปแบบ<input value={props.settings.pageFormat} onChange={(e) => props.onSettingChange("pageFormat", e.target.value)}/></label>
           <div className="v3FieldRow">
-            <label className="v3Field">เริ่มเลข<input type="number" min="0" value={props.settings.pageStart} onChange={(e) => props.onSettingChange("pageStart", Number(e.target.value))}/></label>
+            <label className="v3Field">เริ่มเลข<Input type="number" min="0" value={props.settings.pageStart} onChange={(e) => props.onSettingChange("pageStart", Number(e.target.value))}/></label>
             <label className="v3Field">ตำแหน่ง<select value={props.settings.pagePosition} onChange={(e) => props.onSettingChange("pagePosition", e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
           </div>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("page-numbers")} disabled={busy || !targetIsPdf}>ใส่เลขหน้า</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("page-numbers")} disabled={busy || !targetIsPdf}>ใส่เลขหน้า</Button>
         </>}
 
         {tool === "pdfa" && <>
           <Summary target={target} note="แปลงเป็น PDF/A-2 สำหรับงานจัดเก็บระยะยาว"/>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("pdfa")} disabled={busy || !targetIsPdf}>แปลงเป็น PDF/A-2</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("pdfa")} disabled={busy || !targetIsPdf}>แปลงเป็น PDF/A-2</Button>
         </>}
 
         {tool === "office-to-pdf" && <>
           <Summary target={target} note="รองรับเอกสาร Office ที่ระบบประมวลผลได้"/>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("office-to-pdf")} disabled={busy}>แปลงเป็น PDF</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("office-to-pdf")} disabled={busy}>แปลงเป็น PDF</Button>
         </>}
 
         {tool === "pdf-stamp" && <>
           <label className="v3Field">ไฟล์ตราประทับ<select value={props.settings.stampId} onChange={(e) => props.onSettingChange("stampId", e.target.value)}><option value="">— เลือก PDF —</option>{pdfFiles.filter((file) => file.id !== target.id).map((file) => <option value={file.id} key={file.id}>{file.original_name}</option>)}</select></label>
           <div className="v3FieldRow">
             <label className="v3Field">ตำแหน่ง<select value={props.settings.stampPosition} onChange={(e) => props.onSettingChange("stampPosition", e.target.value)}>{positionOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-            <label className="v3Field">ขนาด<input type="number" min="0.03" max="0.8" step="0.01" value={props.settings.stampScale} onChange={(e) => props.onSettingChange("stampScale", Number(e.target.value))}/></label>
+            <label className="v3Field">ขนาด<Input type="number" min="0.03" max="0.8" step="0.01" value={props.settings.stampScale} onChange={(e) => props.onSettingChange("stampScale", Number(e.target.value))}/></label>
           </div>
-          <button className="v3PrimaryAction" onClick={() => props.onRun("stamp")} disabled={busy || !targetIsPdf || !props.settings.stampId}>ประทับ PDF</button>
+          <Button className="v3PrimaryAction" onClick={() => props.onRun("stamp")} disabled={busy || !targetIsPdf || !props.settings.stampId}>ประทับ PDF</Button>
         </>}
 
         {tool === "signed-link" && <>
           <Summary target={target} note="ลิงก์จะหมดอายุอัตโนมัติ"/>
-          <label className="v3Field">อายุลิงก์ (วินาที)<input type="number" min="30" max="3600" value={props.settings.signedTtl} onChange={(e) => props.onSettingChange("signedTtl", Math.max(30, Number(e.target.value)))}/></label>
-          <button className="v3PrimaryAction" onClick={props.onSignedLink} disabled={busy}>สร้างลิงก์ดาวน์โหลด</button>
-          {signedUrl && <div className="v3Secret"><strong>ลิงก์พร้อมใช้งาน</strong><code>{signedUrl}</code><div><a href={signedUrl} target="_blank" rel="noreferrer">เปิด</a><button onClick={props.onCopySignedLink}>คัดลอก</button></div></div>}
+          <label className="v3Field">อายุลิงก์ (วินาที)<Input type="number" min="30" max="3600" value={props.settings.signedTtl} onChange={(e) => props.onSettingChange("signedTtl", Math.max(30, Number(e.target.value)))}/></label>
+          <Button className="v3PrimaryAction" onClick={props.onSignedLink} disabled={busy}>สร้างลิงก์ดาวน์โหลด</Button>
+          {signedUrl && <div className="v3Secret"><strong>ลิงก์พร้อมใช้งาน</strong><code>{signedUrl}</code><div><a href={signedUrl} target="_blank" rel="noreferrer">เปิด</a><Button onClick={props.onCopySignedLink}>คัดลอก</Button></div></div>}
         </>}
 
         {tool === "archive" && <>
           <Summary target={target} note={integrations?.paperless_enabled ? "Paperless พร้อมใช้งาน" : "Paperless ยังไม่ได้เปิดใช้"}/>
-          <button className="v3PrimaryAction" onClick={props.onArchive} disabled={busy || !targetIsPdf || !integrations?.paperless_enabled}>ส่งเข้าคลังเอกสาร</button>
+          <Button className="v3PrimaryAction" onClick={props.onArchive} disabled={busy || !targetIsPdf || !integrations?.paperless_enabled}>ส่งเข้าคลังเอกสาร</Button>
         </>}
       </div>
     </section>

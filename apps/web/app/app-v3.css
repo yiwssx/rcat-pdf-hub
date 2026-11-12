@@ -1,14 +1,22 @@
 :root {
+  /* Single source of truth for shared UI tokens. */
+  --ui-brand: #334f9c;
+  --ui-brand-hover: #273f7d;
+  --ui-focus: #597cdb;
+  --ui-text: #17233b;
+  --ui-subtle: #52617a;
+  --ui-divider: #dbe3ef;
+  --ui-card-radius: 16px;
   --v3-bg: #f6f7fc;
   --v3-surface: #ffffff;
   --v3-surface-soft: #fafbff;
-  --v3-ink: #18203b;
-  --v3-muted: #7a849f;
-  --v3-line: #e8eaf3;
-  --v3-primary: #5b5ce2;
+  --v3-ink: var(--ui-text);
+  --v3-muted: var(--ui-subtle);
+  --v3-line: var(--ui-divider);
+  --v3-primary: var(--ui-brand);
   --v3-shadow: 0 18px 45px rgba(55, 65, 110, .09);
   --v3-shadow-soft: 0 8px 22px rgba(55, 65, 110, .07);
-  --v3-radius: 24px;
+  --v3-radius: var(--ui-card-radius);
 }
 
 html { background: var(--v3-bg); }
@@ -1594,20 +1602,6 @@ summary {
 
 /* UI modernization: shared semantic tokens and consistent desktop/mobile shell.
  * Existing v3 classes are preserved until the corresponding React view migrates. */
-:root {
-  --ui-brand: #334f9c;
-  --ui-brand-hover: #273f7d;
-  --ui-focus: #597cdb;
-  --ui-text: #17233b;
-  --ui-subtle: #52617a;
-  --ui-divider: #dbe3ef;
-  --ui-card-radius: 16px;
-  --v3-primary: var(--ui-brand);
-  --v3-ink: var(--ui-text);
-  --v3-muted: var(--ui-subtle);
-  --v3-line: var(--ui-divider);
-  --v3-radius: var(--ui-card-radius);
-}
 body {
   background: #f5f7fb;
   color: var(--ui-text);
