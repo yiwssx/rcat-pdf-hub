@@ -1,0 +1,427 @@
+/* RCAT PDF HUB V4 / Application UI
+ * A new application frame and page-specific composition, not V3 theme overrides.
+ * app-v3.css remains only for unmigrated deep-linked tool forms.
+ */
+:root {
+  --v4-canvas: #f6f8fc;
+  --v4-surface: #ffffff;
+  --v4-text: #192139;
+  --v4-muted: #65718a;
+  --v4-border: #e3e8f0;
+  --v4-sidebar: #121b31;
+  --v4-sidebar-2: #202d4b;
+  --v4-accent: #5546e8;
+  --v4-accent-pale: #eeeaff;
+  --v4-teal: #139b91;
+  --v4-radius: 16px;
+  --v4-shadow: 0 8px 28px rgba(26,40,74,.035);
+  --ui-brand: var(--v4-accent);
+  --ui-focus: #6559fa;
+  --ui-text: var(--v4-text);
+  --ui-subtle: var(--v4-muted);
+  --ui-divider: var(--v4-border);
+}
+html {background:var(--v4-canvas);scroll-behavior:auto;}
+body {background:var(--v4-canvas);color:var(--v4-text);}
+.v3App.v4Application {
+  display:grid;grid-template-columns:256px minmax(0,1fr);
+  grid-template-rows:72px minmax(0,1fr);
+  max-width:none;min-height:100dvh;width:100%;
+  padding:0;background:var(--v4-canvas);
+  gap:0;overflow:visible;
+}
+.v4Application > .v3Main,.v4Application > .v4Main {
+  grid-column:2;grid-row:2;
+  width:min(1340px,100%);max-width:none;
+  margin:0 auto;padding:32px clamp(22px,3vw,46px) 76px;
+  min-width:0;
+}
+.v4Application > .v3MobileStatus {display:none}
+.v4Application a:focus-visible,
+.v4Application button:focus-visible,
+.v4Application summary:focus-visible,
+.v4Application input:focus-visible,
+.v4Application select:focus-visible {
+  outline:3px solid #8276f8;outline-offset:3px;
+}
+.v4Sidebar {
+  grid-column:1;grid-row:1 / -1;align-self:start;
+  position:sticky;top:0;height:100dvh;
+  display:flex;flex-direction:column;gap:0;
+  padding:26px 16px 19px;
+  background:var(--v4-sidebar);color:#d5dded;
+  border-right:1px solid #2d3951;z-index:90;
+  min-width:0;
+}
+.v4Sidebar .v3Brand.v4Brand {
+  display:flex;align-items:center;gap:12px;
+  padding:3px 9px 34px;text-decoration:none;
+  color:#fff;max-width:100%;
+}
+.v4Sidebar .v3BrandMark {
+  display:grid;place-items:center;width:45px;height:45px;flex:0 0 45px;
+  border-radius:12px;background:#fff;border:1px solid #515d71;box-shadow:none;
+}
+.v4Sidebar .v3Brand strong {display:block;font-size:17px;font-weight:900;letter-spacing:-.04em;color:#fff;white-space:nowrap}
+.v4Sidebar .v3Brand strong em {font-style:normal;color:#afa8ff}
+.v4Sidebar .v3Brand small {font-size:10px;letter-spacing:.035em;color:#9daac4}
+.v4SidebarSectionLabel {padding:0 16px 13px;color:#8191ac;font-size:10px;font-weight:850;letter-spacing:.15em}
+.v4SidebarNav {display:grid;gap:5px;min-width:0}
+.v4SidebarNav a.v4NavLink {
+  display:flex;align-items:center;gap:13px;
+  min-height:47px;width:100%;
+  padding:11px 13px;border-radius:11px;
+  color:#b6c4dc;text-decoration:none;
+  font-size:14px;font-weight:750;border:1px solid transparent;
+  transition:background .14s ease,color .14s ease;
+}
+.v4SidebarNav a.v4NavLink:hover {background:#23304b;color:#fff}
+.v4SidebarNav a.v4NavLink[aria-current="page"] {
+  background:#3f3bb1;color:#fff;border-color:#655be3;
+  box-shadow:inset 3px 0 #c1b8ff;
+}
+.v4SidebarNav .v4NavCount {margin-left:auto;background:#4c586e;color:#fff;font-size:11px;padding:1px 7px;border-radius:20px}
+.v4SidebarBottom {margin-top:auto;display:grid;gap:15px}
+.v4SidebarHint {
+  padding:15px;border-radius:13px;
+  display:flex;align-items:flex-start;gap:12px;
+  color:#b8adff;background:#20294a;border:1px solid #333d64;
+}
+.v4SidebarHint div {display:grid;gap:6px;min-width:0}
+.v4SidebarHint strong {font-size:12px;color:#f1edff;line-height:1.3}
+.v4SidebarHint small {font-size:11px;color:#a3b2cc;line-height:1.55}
+.v4SidebarOrg {display:flex;gap:10px;align-items:center;padding:9px 5px;color:#9eafc9;font-size:10px;letter-spacing:.045em;font-weight:800}
+.v4SidebarOrg small {display:block;letter-spacing:0;font-weight:450;font-size:10px;margin-top:4px}
+.v4OrgMark {display:grid;place-items:center;background:#34466b;color:#fff;border-radius:9px;width:34px;height:34px;flex:0 0 34px;font-weight:900}
+.v4Topbar {
+  grid-column:2;grid-row:1;z-index:60;
+  position:sticky;top:0;display:flex;
+  align-items:center;justify-content:space-between;gap:20px;
+  height:72px;padding:0 clamp(22px,3vw,46px);
+  background:rgba(255,255,255,.96);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--v4-border);
+}
+.v4TopbarTitle {display:flex;flex-direction:column;gap:2px;min-width:0}
+.v4TopbarEyebrow {font-size:10px;letter-spacing:.12em;font-weight:800;color:#8993a9}
+.v4TopbarTitle strong {font-size:17px;color:var(--v4-text);font-weight:850;letter-spacing:-.025em}
+.v4TopbarActions {display:flex;align-items:center;gap:12px}
+.v4SyncStatus {display:flex;align-items:center;gap:8px;max-width:210px;min-width:0;padding:8px 10px;border-radius:9px;background:#f2fbf8;color:#3b7164;font-size:11px;line-height:1.4;overflow:hidden;text-overflow:ellipsis}
+.v4StatusDot {width:8px;height:8px;border-radius:50%;background:#18a98d;flex:0 0 8px}
+.v4TopbarActions .v3JobsButton.v4TopButton {display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 13px;border-radius:10px;background:#fff;color:#3a4664;border:1px solid var(--v4-border);box-shadow:none}
+.v4TopButton span {font-size:12px;font-weight:800}
+.v4TopbarActions .v3JobsButton em {margin-left:2px;background:var(--v4-accent)}
+.v4Account {position:relative}
+.v4Account summary {min-height:42px;display:flex;align-items:center;gap:10px;padding:4px 8px;border:1px solid var(--v4-border);background:#fff;border-radius:10px}
+.v4Account .v3Avatar {width:33px;height:33px;display:grid;place-items:center;flex:0 0 33px;border-radius:9px;background:#e9e6ff;color:#4337a9;font-size:14px;font-weight:850}
+.v4Account .v3AccountName strong {font-size:12px}
+.v4Account .v3AccountName small {font-size:10px}
+.v4Account .v3AccountMenu {z-index:150;right:0;left:auto;min-width:255px;border:1px solid var(--v4-border);border-radius:13px;box-shadow:0 15px 50px rgba(15,25,55,.17)}
+.v4Account .v3AccountMenu a,.v4Account .v3AccountMenu button {display:flex;align-items:center;gap:10px}
+.v4MobileNav {display:none}
+.v4Main {font-size:15px}
+.v4Eyebrow {display:inline-flex;align-items:center;gap:8px;color:var(--v4-accent);font-size:11px;letter-spacing:.095em;font-weight:900}
+.v4PageIntro {display:flex;align-items:center;justify-content:space-between;gap:22px;margin:0 0 25px}
+.v4PageIntro h1 {font-size:clamp(27px,3.4vw,40px);font-weight:900;letter-spacing:-.055em;color:var(--v4-text);line-height:1.27;margin:10px 0 8px}
+.v4PageIntro p {font-size:14px;line-height:1.7;color:var(--v4-muted);margin:0}
+.v4SectionOverline {font-size:10px;color:#8076c7;font-weight:900;letter-spacing:.13em}
+.v4SectionTitle {display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+.v4SectionTitle h2,.v4PanelHeading h2 {font-size:20px;font-weight:900;color:var(--v4-text);letter-spacing:-.04em;margin:6px 0 3px}
+.v4SectionTitle a,.v4TextAction {display:inline-flex;align-items:center;gap:7px;color:var(--v4-accent);text-decoration:none;font-size:12px;font-weight:850}
+.v4PrimaryButton,.v4SecondaryButton {
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  min-height:43px;padding:9px 15px;border-radius:10px;
+  background:var(--v4-accent);color:#fff;text-decoration:none;
+  border:1px solid var(--v4-accent);font-size:13px;font-weight:850;
+}
+.v4SecondaryButton {background:#fff;color:#4d43c6;border-color:#dedaf9}
+.v4PrimaryButton:hover {background:#3d31c6;color:#fff}
+.v4SecondaryButton:hover {background:#f2efff;color:#3025a0}
+.v4OverviewStats {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:21px}
+.v4StatCard {
+  display:flex;flex-direction:column;min-height:133px;padding:21px 22px;
+  text-decoration:none;color:var(--v4-text);
+  border:1px solid var(--v4-border);border-radius:var(--v4-radius);background:#fff;box-shadow:var(--v4-shadow);
+}
+.v4StatCard > span {display:flex;align-items:center;gap:9px;font-size:12px;color:#64708b;font-weight:800}
+.v4StatCard > span svg {color:#796df0}
+.v4StatCard strong {font-size:33px;font-weight:900;line-height:1.3;letter-spacing:-.06em;margin-top:11px;font-variant-numeric:tabular-nums}
+.v4StatCard small {display:flex;align-items:center;gap:5px;color:var(--v4-accent);font-size:11px;font-weight:750;margin-top:auto}
+.v4DashboardCore {display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.85fr);gap:16px;margin-bottom:27px;align-items:stretch}
+.v4UploadPanel,.v4QuickPanel,.v4RecentSection {
+  border:1px solid var(--v4-border);border-radius:var(--v4-radius);background:#fff;
+  box-shadow:var(--v4-shadow);
+}
+.v4UploadPanel,.v4QuickPanel {padding:24px;min-width:0}
+.v4PanelHeading p {font-size:12px;color:var(--v4-muted);line-height:1.7;margin:3px 0 17px}
+.v4Dropzone.v3Dropzone {
+  display:grid;place-items:center;min-height:218px;
+  border:1.5px dashed #9994e5;border-radius:13px;
+  background:linear-gradient(135deg,#f8f7ff,#f3f8ff);
+  box-shadow:none;padding:16px;
+}
+.v4Dropzone label {width:100%;display:flex;align-items:center;flex-direction:column;text-align:center}
+.v4Dropzone .v4UploadIcon {display:grid;place-items:center;width:56px;height:56px;border:1px solid #ded9ff;border-radius:15px;background:#eae7ff;color:#6557de;margin-bottom:12px}
+.v4Dropzone strong {font-size:16px;color:#262849}
+.v4Dropzone p {font-size:12px;margin:8px 0 14px;color:#68728e;line-height:1.5}
+.v4Dropzone .v3UploadButton {display:inline-flex;align-items:center;gap:7px;min-height:40px;color:#fff;border-radius:9px;background:var(--v4-accent);font-size:12px;box-shadow:none}
+.v4Dropzone:hover,.v4Dropzone.isDragging {background:#edeaff;border-color:var(--v4-accent)}
+.v4FlowHint {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;color:#8b94a7;font-size:11px;margin-top:17px}
+.v4FlowHint span {display:inline-flex;gap:5px;white-space:nowrap;color:#7a84a1}
+.v4FlowHint strong {font-weight:750;color:#434f6b}
+.v4QuickTools {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.v4QuickTool {
+  display:flex;align-items:center;gap:9px;min-width:0;min-height:78px;
+  padding:12px;text-align:left;border:1px solid var(--v4-border);
+  border-radius:11px;background:#fbfcff;cursor:pointer;color:#303c5a;
+}
+.v4QuickTool:hover {background:#f0eeff;border-color:#ccc7fb}
+.v4QuickIcon {display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:11px;background:#f0edff;color:#665be8}
+.v4QuickIcon svg {width:20px;height:20px}
+.v4QuickToolCopy {display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.v4QuickToolCopy strong {font-size:12px;font-weight:850;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4QuickToolCopy small {font-size:10px;color:var(--v4-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4QuickTool > svg {color:#a2a8ba;flex:0 0 16px}
+.v4QuickPanel .v4TextAction {margin-top:16px}
+.v4RecentSection {padding:22px 24px}
+.v4RecentList {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.v4RecentFile.v3RecentFile {
+  display:flex;align-items:center;gap:12px;min-width:0;text-align:left;
+  border:1px solid var(--v4-border);border-radius:12px;background:#fbfcff;
+  padding:14px;min-height:70px;box-shadow:none;
+}
+.v4RecentFile:hover {background:#f4f1ff;border-color:#d8d2fc}
+.v4FileIcon {display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:10px;background:#eae8ff;color:#6357d7}
+.v4RecentFileName {display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.v4RecentFileName strong {font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4RecentFileName small {color:var(--v4-muted);font-size:11px}
+.v4RecentFile > svg {color:#8c91ad;flex-shrink:0}
+.v4EmptyState {grid-column:1/-1;min-height:125px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;color:#9aa4b7;text-align:center}
+.v4EmptyState strong {font-size:13px;color:#43516b}
+.v4EmptyState p {font-size:11px;margin:0}
+.v4EmptyState button {color:var(--v4-accent);text-decoration:underline;border:0;background:transparent;cursor:pointer}
+/* Full-page 90-tool explorer: fixed category rail + finite results + detail preview. */
+.v4ExplorerCounter {display:grid;place-items:center;min-width:112px;border:1px solid #ddd9fe;border-radius:13px;background:#f1efff;padding:10px 18px}
+.v4ExplorerCounter strong {font-size:30px;font-weight:900;color:var(--v4-accent);line-height:1.25}
+.v4ExplorerCounter span {font-size:10px;color:#7771ab;font-weight:750}
+.v4ExplorerSearch {display:flex;align-items:center;gap:12px;min-height:61px;padding:9px 16px;border:1px solid var(--v4-border);border-radius:13px;background:#fff;margin-bottom:19px;box-shadow:var(--v4-shadow)}
+.v4ExplorerSearch > svg {color:#8b88b3;flex:0 0 auto}
+.v4ExplorerSearch input {flex:1;min-width:0;border:0;box-shadow:none;background:transparent;font-size:15px}
+.v4ExplorerSearch > span {display:flex;align-items:center;gap:7px;border-left:1px solid var(--v4-border);padding-left:14px;font-size:11px;color:#7a829e;white-space:nowrap}
+.v4ExplorerLayout {display:grid;grid-template-columns:194px minmax(0,1fr) 260px;gap:15px;align-items:start}
+.v4CategoryRail,.v4ToolResults,.v4ToolDetail {
+  border:1px solid var(--v4-border);border-radius:14px;background:#fff;min-width:0;box-shadow:var(--v4-shadow);
+}
+.v4CategoryRail {padding:18px;position:sticky;top:93px}
+.v4CategoryNav {display:grid;gap:5px;margin:13px 0 21px}
+.v4CategoryNav button {display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px;padding:9px 10px;border:0;border-radius:9px;background:transparent;text-align:left;color:#5d6682;cursor:pointer;font-size:12px;font-weight:750}
+.v4CategoryNav button[aria-pressed="true"] {background:#efedff;color:#5143cb}
+.v4CategoryNav em {font-style:normal;color:#8a91a4;font-size:10px}
+.v4CategoryRail > p {padding-top:15px;border-top:1px solid var(--v4-border);font-size:10px;color:#8a93a6;line-height:1.65}
+.v4ToolResults {padding:18px;min-height:405px}
+.v4ResultsHead {display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.v4ResultsHead h2 {font-size:19px;letter-spacing:-.035em;margin:5px 0;color:var(--v4-text)}
+.v4ResultsHead > span {font-size:12px;font-weight:800;color:#8993a9}
+.v4FeaturedStrip {display:flex;align-items:center;gap:7px;flex-wrap:wrap;border:1px solid #e9e6ff;background:#f8f7ff;border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:#5549c9}
+.v4FeaturedStrip button {padding:5px 7px;border:1px solid #e0dcff;border-radius:7px;color:#5c50cc;background:#fff;cursor:pointer;font-size:10px}
+.v4ToolList {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.v4ToolListItem {display:flex;gap:10px;align-items:center;min-width:0;min-height:72px;text-align:left;background:#fff;border:1px solid var(--v4-border);border-radius:10px;padding:10px;cursor:pointer}
+.v4ToolListItem:hover {border-color:#c0b9ff;background:#faf9ff}
+.v4ToolListItem[aria-pressed="true"] {border-color:#948af5;background:#f1efff;box-shadow:inset 0 0 0 1px #c2bcff}
+.v4ToolSymbol {display:grid;place-items:center;border-radius:10px;background:#efecff;color:#5b4ed4;width:41px;height:41px;flex:0 0 41px}
+.v4ToolSymbol[data-family="to_pdf"] {background:#e8f7ff;color:#1684b3}
+.v4ToolSymbol[data-family="from_pdf"] {background:#eef9f2;color:#26865b}
+.v4ToolListCopy {display:grid;gap:6px;flex:1;min-width:0}
+.v4ToolListCopy strong {font-size:12px;color:#27314b;font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4ToolListCopy small {font-size:10px;color:#858fa6}
+.v4ToolListItem > svg {color:#9ea4bd;flex-shrink:0}
+.v4ToolPagination {display:flex;align-items:center;justify-content:center;gap:17px;padding-top:18px;font-size:12px;color:#727a93}
+.v4ToolPagination button {display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--v4-border);background:#fff;border-radius:9px;color:#5247c8;cursor:pointer}
+.v4ToolPagination button:disabled {opacity:.36;cursor:not-allowed}
+.v4ToolDetail {padding:20px;position:sticky;top:93px}
+.v4DetailOverline {display:flex;justify-content:space-between;font-size:10px;letter-spacing:.1em;font-weight:900;color:#7a83a0}
+.v4DetailOverline span {color:#5146c9}
+.v4DetailIcon {display:grid;place-items:center;background:#efedff;color:#5547da;border-radius:16px;width:72px;height:72px;margin:24px 0 18px}
+.v4DetailIcon[data-family="to_pdf"] {background:#e5f6ff;color:#1684b3}
+.v4DetailIcon[data-family="from_pdf"] {background:#eaf8ef;color:#25815d}
+.v4ToolDetail h2 {font-size:22px;font-weight:900;color:#1e2842;letter-spacing:-.05em;margin:0 0 8px;line-height:1.3}
+.v4ToolDetail > p {font-size:12px;color:var(--v4-muted);margin:0 0 17px}
+.v4ToolNotice {font-size:11px;line-height:1.65;color:#7d849b;padding:12px;border-left:3px solid #b7b0ed;background:#f7f7fc;margin:0 0 19px}
+.v4ToolDetail .v4PrimaryButton {width:100%}
+.v4ToolAdvanced {border-top:1px solid var(--v4-border);margin-top:20px;padding-top:14px}
+.v4ToolAdvanced summary {cursor:pointer;font-size:11px;font-weight:800;color:#646e88}
+.v4ToolAdvanced p {font-size:10px;color:#7e869c;overflow-wrap:anywhere}
+.v4PilotTools {padding:23px;background:#fff;border:1px solid var(--v4-border);border-radius:16px}
+.v4PilotTools > p {color:#707e95;font-size:12px;margin-top:0}
+.v4PilotGrid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.v4PilotCard {display:flex;flex-direction:column;gap:12px;padding:16px;min-height:150px;text-decoration:none;color:#222d48;border:1px solid var(--v4-border);border-radius:12px}
+.v4PilotCard:hover {background:#f5f2ff;border-color:#ccc5fa}
+.v4PilotCard strong {font-size:14px}
+.v4PilotCard small {font-size:11px;color:var(--v4-muted)}
+.v4PilotCard > svg {margin-left:auto}
+/* Workbench: separate file context, preview and settings into a functional grid. */
+.v4Application .v4Workbench {
+  display:grid;grid-template-columns:195px minmax(0,1.2fr) minmax(270px,.8fr);
+  gap:15px;align-content:start;align-items:start;
+}
+.v4Workbench > .v3TaskJourney,.v4Workbench > .v3StepNav {grid-column:1/-1}
+.v4Workbench .v3DocumentBar {
+  grid-column:1;grid-row:auto;
+  display:flex;flex-direction:column;align-items:flex-start;gap:13px;
+  min-height:265px;padding:19px;background:#fff;border:1px solid var(--v4-border);
+  border-radius:14px;color:#24304e;box-shadow:var(--v4-shadow);
+  position:sticky;top:92px;min-width:0;
+}
+.v4Workbench .v3DocumentBar > div {min-width:0;max-width:100%;overflow-wrap:anywhere}
+.v4Workbench .v3DocumentBar .v3TextLink {color:var(--v4-accent)}
+.v4Workbench .v3DocumentGrid {display:contents}
+.v4Workbench .v3PreviewPane {grid-column:2;min-width:0;min-height:520px;border:1px solid var(--v4-border);border-radius:14px;background:#fff;box-shadow:var(--v4-shadow)}
+.v4Workbench .v3PreviewStage {background:#f3f5fa;min-height:410px;border:1px solid var(--v4-border)}
+.v4Workbench .v3ActionPane {grid-column:3;min-width:0;border:1px solid var(--v4-border);border-radius:14px;background:#fff;box-shadow:var(--v4-shadow);max-width:none;width:auto;position:sticky;top:92px}
+.v4Workbench .v3CompactTool {border-radius:10px;border-color:var(--v4-border);background:#fbfcff}
+.v4Workbench .v3CompactTool:hover {background:#f1efff;border-color:#d7d1fb}
+/* Purpose-built files, jobs and admin app surfaces. */
+.v4Application .v4FilesPage .v3FilesHead,
+.v4Application .v4JobsPage .v3HomeTitle,
+.v4Application .v4AdminPage .v3HomeTitle {
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:transparent;border:0;border-radius:0;color:var(--v4-text);
+  box-shadow:none;padding:0;margin-bottom:24px;
+}
+.v4Application .v4FilesPage .v3FilesHead h1,
+.v4Application .v4JobsPage .v3HomeTitle h1,
+.v4Application .v4AdminPage .v3HomeTitle h1 {color:var(--v4-text);font-size:clamp(28px,3vw,38px);letter-spacing:-.05em}
+.v4Application .v4FilesPage .v3FilesHead p,
+.v4Application .v4JobsPage .v3HomeTitle p,
+.v4Application .v4AdminPage .v3HomeTitle p {color:var(--v4-muted)}
+.v4Application .v4FilesPage .v3FilesHead .v3Kicker,
+.v4Application .v4JobsPage .v3HomeTitle .v3Kicker,
+.v4Application .v4AdminPage .v3HomeTitle .v3Kicker {color:var(--v4-accent)}
+.v4Application .v4JobsPage .v3HomeTitle .v3TextLink,
+.v4Application .v4AdminPage .v3HomeTitle .v3TextLink {color:var(--v4-accent)}
+.v4FilesPage .v3LibraryToolbar,
+.v4FilesPage .v3FileLibrary,
+.v4JobsPage .v3JobsHistory,
+.v4AdminPage .v3AdminAreaNav,
+.v4AdminPage .v3EffectiveAccess,.v4AdminPage .v3AdminSection {
+  background:#fff;border:1px solid var(--v4-border);border-radius:14px;box-shadow:var(--v4-shadow);
+}
+.v4FilesPage .v3LibraryToolbar {padding:16px}
+.v4FilesPage .v3FileLibrary {overflow:visible}
+.v4FilesPage .v3LibraryRow {border-bottom:1px solid #edf0f6}
+.v4FilesPage .v3LibraryRow:hover {background:#f9f8ff}
+.v4FilesPage .v3InlineUpload {background:var(--v4-accent);border-radius:10px;font-size:12px}
+.v4FilesPage .v4ViewSwitcher {display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid var(--v4-border);border-radius:10px;padding:4px}
+.v4ViewSwitcher button {display:inline-flex;align-items:center;gap:5px;min-height:37px;padding:8px 11px;border:0;background:transparent;border-radius:7px;font-size:12px;color:#7a819d;cursor:pointer}
+.v4ViewSwitcher button[aria-pressed="true"] {background:#efedff;color:var(--v4-accent);font-weight:900}
+.v4FilesPage .v3FileLibrary.v4FilesGrid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;padding:14px}
+.v4FilesGrid .v3LibraryRow {
+  display:grid;grid-template-columns:32px minmax(0,1fr);
+  gap:10px;min-height:155px;align-items:start;border:1px solid var(--v4-border);
+  border-radius:12px;padding:15px;content-visibility:visible;
+}
+.v4FilesGrid .v3FileOpen {grid-column:1/-1}
+.v4FilesGrid .v3FileRowActions {grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}
+.v4FilesGrid .v3LibraryRow > span:not(.v3FileBadge) {display:none}
+.v4JobsPage .v4JobTabs {display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:15px}
+.v4JobTabs button {padding:9px 15px;min-height:41px;border:1px solid var(--v4-border);border-radius:9px;background:#fff;color:#657088;font-size:12px;cursor:pointer;font-weight:800}
+.v4JobTabs button[aria-pressed="true"] {background:var(--v4-accent);border-color:var(--v4-accent);color:#fff}
+.v4JobsPage .v3JobsHistoryRow {background:#fff;border-color:#e9edf5}
+.v4AdminPage .v3AdminAreaNav {padding:9px}
+.v4AdminPage .v3AdminAreaNav a[aria-current="page"] {background:#eeeaff;color:#5344c7;border-color:#dcd6ff}
+.v4AdminPage .v3AdminAreaNav a[aria-current="page"] strong {color:#4438bc}
+.v4AdminPage .v3AdminAreaNav a[aria-current="page"] small {color:#7269b3}
+.v4AdminPage .v3AdminOverview {gap:13px}
+.v4AdminPage .v3AdminMetric {background:#fafaff;border:1px solid #e7e5fb;border-radius:12px}
+.v4AdminPage .v3AdminMetric strong {color:#5144c5}
+@media (max-width:1210px) {
+  .v4ExplorerLayout {grid-template-columns:174px minmax(0,1fr)}
+  .v4ToolDetail {grid-column:2;position:static}
+  .v4ToolDetail .v4ToolNotice {max-width:560px}
+  .v4Application .v4Workbench {grid-template-columns:165px minmax(0,1fr)}
+  .v4Workbench .v3ActionPane {grid-column:2;position:static}
+}
+@media (max-width:1050px) {
+  .v3App.v4Application {grid-template-columns:76px minmax(0,1fr)}
+  .v4Sidebar {padding:19px 9px}
+  .v4Sidebar .v3Brand.v4Brand {justify-content:center;padding:9px 0 27px}
+  .v4Sidebar .v3Brand.v4Brand > span:last-child,
+  .v4SidebarSectionLabel,.v4SidebarNav a.v4NavLink > span:not(.v4NavCount),
+  .v4SidebarHint,.v4SidebarOrg {display:none}
+  .v4SidebarNav a.v4NavLink {justify-content:center;padding:10px}
+  .v4SidebarNav .v4NavCount {margin:0;position:absolute;transform:translate(15px,-12px)}
+  .v4DashboardCore {grid-template-columns:1fr}
+  .v4OverviewStats {gap:9px}
+  .v4ToolList {grid-template-columns:1fr}
+}
+@media (max-width:760px) {
+  .v3App.v4Application {display:flex;flex-direction:column;min-height:100dvh;padding:0 0 74px;gap:0}
+  .v4Sidebar {display:none}
+  .v4Topbar {width:100%;height:62px;padding:0 16px;position:sticky;top:0;z-index:60}
+  .v4TopbarTitle strong {font-size:15px}
+  .v4TopbarEyebrow {font-size:9px}
+  .v4SyncStatus {display:none}
+  .v4TopButton span,.v4Account .v3AccountName {display:none}
+  .v4Account summary {padding:4px;min-width:0}
+  .v4Account summary > svg {display:none}
+  .v4TopbarActions {gap:7px}
+  .v4TopbarActions .v3JobsButton.v4TopButton {width:43px;justify-content:center;padding:8px}
+  .v4MobileNav {
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;
+    position:fixed;bottom:0;left:0;right:0;z-index:85;
+    min-height:67px;padding:7px 9px max(8px,env(safe-area-inset-bottom));
+    background:rgba(255,255,255,.97);border-top:1px solid var(--v4-border);
+    box-shadow:0 -9px 22px rgba(16,25,50,.06);
+  }
+  .v4MobileNav a {display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-height:50px;color:#6e7790;text-decoration:none;font-size:10px;font-weight:700;border-radius:9px}
+  .v4MobileNav a[aria-current="page"] {color:var(--v4-accent);background:#efecff}
+  .v4Application > .v3Main,.v4Application > .v4Main {width:100%;padding:22px 15px 40px;margin:0}
+  .v4PageIntro {align-items:flex-start;flex-direction:column;gap:15px}
+  .v4PageIntro h1 {font-size:28px}
+  .v4OverviewStats {grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .v4StatCard {padding:12px;min-height:105px}
+  .v4StatCard > span {font-size:9px;line-height:1.3}
+  .v4StatCard > span svg {width:15px;height:15px;flex:0 0 15px}
+  .v4StatCard strong {font-size:26px}
+  .v4StatCard small {font-size:9px}
+  .v4DashboardCore {grid-template-columns:1fr}
+  .v4UploadPanel,.v4QuickPanel {padding:18px}
+  .v4QuickTools {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v4QuickTool {padding:8px;gap:7px}
+  .v4QuickIcon {width:32px;height:32px;flex-basis:32px}
+  .v4QuickTool > svg {display:none}
+  .v4RecentList {grid-template-columns:1fr}
+  .v4RecentSection {padding:18px}
+  .v4ExplorerCounter {display:none}
+  .v4ExplorerSearch > span {display:none}
+  .v4ExplorerLayout {display:flex;flex-direction:column;gap:12px}
+  .v4CategoryRail {position:static;width:100%;padding:12px}
+  .v4CategoryRail > p {display:none}
+  .v4CategoryRail .v4SectionOverline {display:none}
+  .v4CategoryNav {display:flex;gap:6px;overflow-x:auto;margin:0;scrollbar-width:thin;padding-bottom:2px}
+  .v4CategoryNav button {flex:0 0 auto;white-space:nowrap;padding:8px}
+  .v4ToolResults {width:100%;padding:14px;min-height:0}
+  .v4ToolList {grid-template-columns:1fr}
+  .v4ToolDetail {width:100%;position:static}
+  .v4PilotGrid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v4Application .v4Workbench {display:flex;flex-direction:column;gap:12px}
+  .v4Workbench .v3DocumentGrid {display:contents}
+  .v4Workbench .v3DocumentBar {position:static;width:100%;min-height:0}
+  .v4Workbench .v3PreviewPane {width:100%;min-height:0}
+  .v4Workbench .v3PreviewStage {min-height:260px}
+  .v4Workbench .v3ActionPane {width:100%;position:static}
+  .v4FilesPage .v3FileLibrary.v4FilesGrid {grid-template-columns:1fr}
+  .v4Application .v4FilesPage .v3FilesHead {flex-wrap:wrap}
+  .v4FilesPage .v4ViewSwitcher {width:max-content}
+  .v4FilesPage .v3LibraryToolbar {grid-template-columns:1fr}
+  .v4AdminPage .v3AdminAreaNav {overflow-x:auto}
+}
+@media (max-width:400px) {
+  .v4StatCard > span {flex-direction:column;align-items:flex-start;gap:4px}
+  .v4OverviewStats {gap:6px}
+  .v4StatCard {padding:10px 8px}
+  .v4FlowHint {font-size:10px}
+  .v4QuickToolCopy small {display:none}
+}
+@media (prefers-reduced-motion:reduce) {
+  .v4SidebarNav a.v4NavLink {transition:none}
+}
