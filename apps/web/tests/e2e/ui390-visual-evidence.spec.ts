@@ -179,6 +179,9 @@ test("V4 critical journeys: tool search, semantic icons, deep links, navigation 
       await expect(detail).toBeVisible();
       await detail.getByRole("button", { name: "ปิดรายละเอียด" }).click();
       await expect(detail).not.toBeVisible();
+      await expect(page).toHaveURL(/\/tools$/);
+      await page.reload();
+      await expect(page.getByRole("dialog", { name: "รายละเอียดเครื่องมือที่เลือก" })).not.toBeVisible();
     }
     await search.fill("");
     await page.getByRole("button", { name: /แปลงจาก PDF/ }).first().click();
