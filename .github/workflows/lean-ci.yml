@@ -63,6 +63,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_dr_runner_policy.py'
           python3 -m unittest discover -s scripts/tests -p 'test_verify_release_dr_evidence.py'
           python3 -m unittest discover -s scripts/tests -p 'test_one_command_release.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_t90_institutional_directory.py'
           python3 -m unittest discover -s scripts/tests -p 'test_migrate_site_caddy.py'
           make validate-compose
 
