@@ -111,6 +111,7 @@ class HostPreflightTests(unittest.TestCase):
             "environment": {
                 **{key: "true" for key in mod.T90_CORE_REQUIRED},
                 **{key: "true" for key in mod.T90_WEB_REQUIRED},
+                mod.T90_MARKER: "true",
                 "PDFHUB_FROM_PDF_TOOLS_ENABLED": "true",
             }
         }
@@ -118,6 +119,12 @@ class HostPreflightTests(unittest.TestCase):
     def test_explicit_t90_code_first_with_institutional_login_passes(self):
         self.configure_t90_code_first()
         self.assertEqual(mod.inspect_compose(self.config), [])
+
+    def test_t90_production_web_requires_server_rendered_directory_flag(self):
+        self.configure_t90_code_first()
+        del self.config["services"]["web"]["environment"][mod.T90_MARKER]
+        self.assertIn("insecure_web_rollout_setting:" + mod.T90_MARKER,
+                      mod.inspect_compose(self.config))
 
     def test_t90_rollout_requires_ui_and_worker_flag_consistency(self):
         self.configure_t90_code_first()

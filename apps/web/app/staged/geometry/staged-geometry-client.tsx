@@ -25,11 +25,11 @@ function validPdf(file: UploadedFile, owner: string): boolean {
     && (!file.expires_at || (Number.isFinite(Date.parse(file.expires_at)) && Date.parse(file.expires_at) > Date.now()));
 }
 
-export function StagedGeometryClient({ requestedFileId }: { requestedFileId?: string }) {
+export function StagedGeometryClient({ requestedFileId, requestedToolId }: { requestedFileId?: string; requestedToolId?: string }) {
   const [identity, setIdentity] = useState<AuthMe | null>(null);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [fileId, setFileId] = useState("");
-  const [operation, setOperation] = useState<GeometryOperation>("crop-pdf");
+  const [operation, setOperation] = useState<GeometryOperation>(requestedToolId === "M28" ? "resize-pdf" : "crop-pdf");
   const [values, setValues] = useState<Record<NumberField, string>>({
     left: "20", bottom: "20", right: "460", top: "700", width: "595", height: "842",
   });

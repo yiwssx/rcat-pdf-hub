@@ -252,8 +252,8 @@ def inspect_compose(data: object) -> list[str]:
             except ValueError:
                 failures.append("missing_environment:web")
             else:
-                for key in (*T90_CORE_REQUIRED, "PDFHUB_FROM_PDF_TOOLS_ENABLED",
-                            *T90_WEB_REQUIRED):
+                for key in (*T90_CORE_REQUIRED, T90_MARKER,
+                            "PDFHUB_FROM_PDF_TOOLS_ENABLED", *T90_WEB_REQUIRED):
                     if web_env.get(key, "").lower() != "true":
                         failures.append("insecure_web_rollout_setting:" + key)
                 for key in T90_LIMITED_FLAGS:

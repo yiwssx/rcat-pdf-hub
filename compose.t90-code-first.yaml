@@ -52,6 +52,8 @@ services:
     environment: *t90-code-flags
   web:
     environment:
+      # Server-rendered home directory gate; not a NEXT_PUBLIC build constant.
+      PDFHUB_T90_CODE_ROLLOUT_ENABLED: "true"
       PDFHUB_TO_PDF_TOOLS_ENABLED: "true"
       PDFHUB_FROM_PDF_TOOLS_ENABLED: "true"
       PDFHUB_MULTI_OUTPUT_ARTIFACTS_ENABLED: "true"

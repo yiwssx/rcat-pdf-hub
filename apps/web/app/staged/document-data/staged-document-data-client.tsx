@@ -30,11 +30,11 @@ function validPdf(file: UploadedFile, owner: string): boolean {
     && (!file.expires_at || (Number.isFinite(Date.parse(file.expires_at)) && Date.parse(file.expires_at) > Date.now()));
 }
 
-export function StagedDocumentDataClient({ requestedFileId }: { requestedFileId?: string }) {
+export function StagedDocumentDataClient({ requestedFileId, requestedToolId }: { requestedFileId?: string; requestedToolId?: string }) {
   const [identity, setIdentity] = useState<AuthMe | null>(null);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [operation, setOperation] = useState<Operation>("extract-text");
+  const [operation, setOperation] = useState<Operation>(requestedToolId === "M13" ? "edit-metadata" : requestedToolId === "M27" ? "remove-metadata" : "extract-text");
   const [enabled, setEnabled] = useState<Record<MetadataField, boolean>>({
     title: false, author: false, subject: false, keywords: false,
   });

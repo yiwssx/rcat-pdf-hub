@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AuthMe, FileLibraryKind, FileLibraryOrder, FileLibraryPage, FileLibrarySort, Job, queryFileLibrary, UploadedFile } from "../../lib/api";
 import { BrandGlyph, ToolIcon, ToolIconName } from "./tool-icons";
 import { TaskJourneyNav, type TaskJourneyStage, type ToolFlowKind } from "./task-journey";
+import { InstitutionalT90Directory } from "./institutional-t90-directory";
 
 export type ToolDefinition = {
   id: string;
@@ -184,6 +185,7 @@ export function LoginScreen({
 export function HomeScreen({
   files,
   tools,
+  t90CatalogVisible,
   busy,
   onFiles,
   onSelectFile,
@@ -191,6 +193,7 @@ export function HomeScreen({
 }: {
   files: UploadedFile[];
   tools: ToolDefinition[];
+  t90CatalogVisible?: boolean;
   busy: boolean;
   onFiles: (files: FileList | null) => void;
   onSelectFile: (id: string) => void;
@@ -229,18 +232,22 @@ export function HomeScreen({
         </div>
       </section>
 
-      <section className="v3ToolsBlock">
-        <div className="v3SectionHead"><div><span className="v3Kicker">TOOLS</span><h2>เลือกงานที่ต้องการ</h2><p>สีของเครื่องมือยังคงเป็นเอกลักษณ์แบบลูกกวาด แต่โครงหน้าไม่แย่งความสนใจจากงานหลัก</p></div></div>
-        <div className="v3ToolGrid">
-          {tools.map((tool) => (
-            <button type="button" className="v3ToolCard" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
-              <span className="v3ToolCardIcon"><ToolIcon name={tool.icon}/></span>
-              <span className="v3ToolCardText">{tool.badge && <em>{tool.badge}</em>}<strong>{tool.title}</strong><small>{tool.description}</small></span>
-              <b>›</b>
-            </button>
-          ))}
-        </div>
-      </section>
+      {t90CatalogVisible ? (
+        <InstitutionalT90Directory />
+      ) : (
+        <section className="v3ToolsBlock">
+          <div className="v3SectionHead"><div><span className="v3Kicker">TOOLS</span><h2>เลือกงานที่ต้องการ</h2><p>สีของเครื่องมือยังคงเป็นเอกลักษณ์แบบลูกกวาด แต่โครงหน้าไม่แย่งความสนใจจากงานหลัก</p></div></div>
+          <div className="v3ToolGrid">
+            {tools.map((tool) => (
+              <button type="button" className="v3ToolCard" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
+                <span className="v3ToolCardIcon"><ToolIcon name={tool.icon}/></span>
+                <span className="v3ToolCardText">{tool.badge && <em>{tool.badge}</em>}<strong>{tool.title}</strong><small>{tool.description}</small></span>
+                <b>›</b>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }
@@ -249,6 +256,7 @@ export function DocumentWorkspace({
   target,
   tools,
   activeTool,
+  t90CatalogVisible,
   previewUrl,
   previewPage,
   busy,
@@ -262,6 +270,7 @@ export function DocumentWorkspace({
   target: UploadedFile;
   tools: ToolDefinition[];
   activeTool: string;
+  t90CatalogVisible?: boolean;
   previewUrl: string | null;
   previewPage: number;
   busy: boolean;
@@ -302,6 +311,7 @@ export function DocumentWorkspace({
         <aside className="v3ActionPane">
           {activeTool ? toolPanel : <>
             <div className="v3ActionHead"><span className="v3Kicker">CHOOSE A TASK</span><h2>ทำอะไรกับไฟล์นี้?</h2><p>เลือกเครื่องมือ แล้วตั้งค่าโดยไม่ออกจาก Workspace</p></div>
+            {t90CatalogVisible && <a className="v3TextLink" href="#t90-tools">ดูเครื่องมือทั้งหมด 90 รายการ ↓</a>}
             <div className="v3CompactTools">
               {tools.map((tool) => (
                 <button type="button" className="v3CompactTool" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
