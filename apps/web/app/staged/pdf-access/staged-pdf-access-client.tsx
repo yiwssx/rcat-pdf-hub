@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -129,11 +133,11 @@ export function StagedPdfAccessClient({
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="access-source">PDF ของฉัน</label>
-              <select id="access-source" value={selectedId} disabled={!files.length || busy}
+              <NativeSelect id="access-source" value={selectedId} disabled={!files.length || busy}
                 onChange={(event) => { setSelectedId(event.target.value); clearSecrets(); setJob(null); }} required>
                 {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                 {files.map((f) => <option key={f.id} value={f.id}>{f.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <fieldset className="t90DocumentStageFieldset">
               <legend>เลือกเครื่องมือ</legend>
@@ -151,7 +155,7 @@ export function StagedPdfAccessClient({
             {operation === "unlock-pdf" ? (
               <div className="t90DocumentStageField">
                 <label htmlFor="unlock-secret">รหัสผ่าน PDF ที่ต้องการปลดล็อก</label>
-                <input id="unlock-secret" type="password" autoComplete="off"
+                <Input id="unlock-secret" type="password" autoComplete="off"
                   maxLength={256} value={password}
                   onChange={(event) => setPassword(event.target.value)} required disabled={busy} />
               </div>
@@ -166,7 +170,7 @@ export function StagedPdfAccessClient({
                 ] as const).map(([id, title, value, setter]) => (
                   <div key={id} className="t90DocumentStageField">
                     <label htmlFor={"m09-" + id}>{title}</label>
-                    <input id={"m09-" + id} type="password" autoComplete="new-password"
+                    <Input id={"m09-" + id} type="password" autoComplete="new-password"
                       maxLength={256} value={value}
                       onChange={(event) => setter(event.target.value)} required disabled={busy}/>
                   </div>
@@ -180,9 +184,9 @@ export function StagedPdfAccessClient({
               <p role="alert" className="t90DocumentStageError">บัญชีนี้ไม่มีสิทธิ์เรียกใช้ {operation}</p>
             )}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-            <button className="t90DocumentStageSubmit" type="submit" disabled={!canSubmit}>
+            <Button className="t90DocumentStageSubmit" type="submit" disabled={!canSubmit}>
               {busy ? "กำลังส่งงาน…" : operation === "unlock-pdf" ? "ปลดล็อก PDF" : "เข้ารหัส PDF"}
-            </button>
+            </Button>
           </form>
         )}
         {job && (
