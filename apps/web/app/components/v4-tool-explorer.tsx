@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, FileText, LayoutGrid, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, LayoutGrid, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { T90_DIRECTORY_TOOLS, T90_DIRECTORY_COUNTS, type T90DirectoryFamily } from "./t90-directory-catalog";
 import { FEATURED_T90_TOOL_IDS, toolSearchTerms } from "./t90-search-metadata";
 import { getT90Icon } from "./v4-tool-icons";
