@@ -31,6 +31,7 @@ async function installEvidenceFixtures(page: Page) {
   await page.route("**/api/v1/files?**", route => route.fulfill({ json: [exampleFile] }));
   await page.route("**/api/v1/files/library**", route => route.fulfill({ json: { ...emptyLibraryPage(route.request().url()), items: [exampleFile], total: 1 } }));
   await page.route("**/api/v1/jobs?**", route => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/files/visual-example-pdf", route => route.fulfill({ json: exampleFile }));
   await page.route("**/api/v1/files/visual-example-pdf/preview**", route => route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") }));
   await page.route("**/api/v1/admin/status", route => route.fulfill({ json: {
     database_ok: true, redis_ok: true, workers: 2, queue_depth: 1,
@@ -103,6 +104,20 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
       if (variant === "after") expect(overflow, `${name}/${view} horizontal overflow`).toBeLessThanOrEqual(1);
       await page.screenshot({ path: resolve(captureRoot, `${name}-${view}.png`), fullPage: true, animations: "disabled" });
       results.push({ viewport: name, view, pathname: target, overflow });
+      if (view === "files") {
+        await page.goto("/files/visual-example-pdf");
+        await expect(page.getByRole("heading", { name: "รายละเอียดไฟล์" })).toBeVisible();
+        if (variant === "after") {
+          await page.getByRole("button", { name: "ดูตัวอย่าง PDF" }).click();
+          const preview = page.getByRole("img", { name: "ตัวอย่างหน้าแรกของ RCAT-document.pdf" });
+          await expect(preview).toBeVisible();
+          await expect.poll(() => preview.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        }
+        const fileDetailOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        if (variant === "after") expect(fileDetailOverflow, `${name}/file-detail overflow`).toBeLessThanOrEqual(1);
+        await page.screenshot({ path: resolve(captureRoot, `${name}-file-detail.png`), fullPage: true, animations: "disabled" });
+        results.push({ viewport: name, view: "file-detail", pathname: "/files/visual-example-pdf", overflow: fileDetailOverflow });
+      }
       if (view === "dashboard-directory") {
         const recent = page.locator(".v3RecentFile").first();
         await expect(recent).toBeVisible();
