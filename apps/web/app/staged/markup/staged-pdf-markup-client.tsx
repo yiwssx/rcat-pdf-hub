@@ -1,5 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
+
 import { useEffect, useState, type FormEvent } from "react";
 import {
   createJob, getMe, getPageInfo, listFiles, SESSION_AUTH,
@@ -134,24 +139,24 @@ export function StagedPdfMarkupClient({
         <form onSubmit={(event) => { void submit(event); }}>
           <div className="markupFields">
             <label>เครื่องมือ
-              <select aria-label="เครื่องมือ PDF Markup" value={tool}
+              <NativeSelect aria-label="เครื่องมือ PDF Markup" value={tool}
                 onChange={(event) => { setTool(event.target.value as Tool); setJob(null); }}
                 disabled={busy}>
                 {Object.entries(MODES).map(([id, info]) =>
                   <option key={id} value={id}>{id} · {info.title}</option>)}
-              </select>
+              </NativeSelect>
             </label>
             <label>PDF ต้นฉบับของฉัน
-              <select aria-label="PDF ต้นฉบับของฉัน" value={fileId}
+              <NativeSelect aria-label="PDF ต้นฉบับของฉัน" value={fileId}
                 onChange={(event) => { setFileId(event.target.value); setPage(1); setJob(null); }}
                 disabled={!files.length || busy}>
                 {!files.length && <option value="">ไม่มี PDF</option>}
                 {files.map((item) =>
                   <option key={item.id} value={item.id}>{item.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </label>
             <label>หน้าที่ต้องการ (จาก {total || "…"} หน้า)
-              <input aria-label="หน้า PDF" type="number" min={1} max={total || 80} value={page}
+              <Input aria-label="หน้า PDF" type="number" min={1} max={total || 80} value={page}
                 onChange={(event) => setPage(Number(event.target.value))} disabled={busy} required />
             </label>
             {([
@@ -161,22 +166,22 @@ export function StagedPdfMarkupClient({
               ["height", "ความสูง", height, setHeight, 8, 1500],
             ] as const).map(([key, label, value, setter, min, max]) =>
               <label key={key}>{label} (PDF points)
-                <input aria-label={label} type="number" min={min} max={max} value={value}
+                <Input aria-label={label} type="number" min={min} max={max} value={value}
                   onChange={(event) => setter(Number(event.target.value))}
                   disabled={busy} required />
               </label>)}
             {tool === "M25" && <label className="full">ข้อความ Annotation (ASCII)
-              <textarea aria-label="ข้อความ Annotation" value={text} maxLength={120}
+              <Textarea aria-label="ข้อความ Annotation" value={text} maxLength={120}
                 onChange={(event) => setText(event.target.value)} disabled={busy} required />
             </label>}
           </div>
           <p>{MODES[tool].about}</p>
           {identity && !canWork && <p role="alert">ต้องมีสิทธิ์ files:read, jobs:read และ pdf:stamp</p>}
           {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-          <button type="submit" className="t90DocumentStageSubmit"
+          <Button type="submit" className="t90DocumentStageSubmit"
             disabled={busy || !chosen || !canWork || !total}>
             {busy ? "กำลังสร้างงาน…" : MODES[tool].title}
-          </button>
+          </Button>
         </form>
       )}
       {job && <div className="t90DocumentStageResult" role="status">
