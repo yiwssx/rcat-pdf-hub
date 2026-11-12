@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cancelJob, fetchDownload, FileLookupError, getFile, getJob, Job, JobLookupError, retryJob, UploadedFile } from "../../lib/api";
 import { TaskJourneyNav } from "./task-journey";
 
@@ -174,17 +175,17 @@ export function JobDetailScreen({ jobId, auth }: Props) {
           </div>}
           {job.status === "cancelled" && <div className="v3InfoBox">งานถูกยกเลิกแล้ว</div>}
           <div className="v3JobDetailActions">
-            {(job.status === "queued" || job.status === "running") && <button type="button" className="v3SecondaryAction" disabled={busy} onClick={() => void act("cancel")}>ยกเลิกงาน</button>}
-            {(job.status === "failed" || job.status === "cancelled") && !["unlock-pdf", "protect-pdf"].includes(job.operation) && <button type="button" className="v3PrimaryAction" disabled={busy} onClick={() => void act("retry")}>ลองประมวลผลใหม่</button>}
+            {(job.status === "queued" || job.status === "running") && <Button type="button" variant="outline" className="v3SecondaryAction" disabled={busy} onClick={() => void act("cancel")}>ยกเลิกงาน</Button>}
+            {(job.status === "failed" || job.status === "cancelled") && !["unlock-pdf", "protect-pdf"].includes(job.operation) && <Button type="button" className="v3PrimaryAction" disabled={busy} onClick={() => void act("retry")}>ลองประมวลผลใหม่</Button>}
             {(job.status === "failed" || job.status === "cancelled") && job.operation === "unlock-pdf" && process.env.NEXT_PUBLIC_PDFHUB_M08_UNLOCK_ENABLED === "true" && job.input_file_ids[0] && <a className="v3PrimaryAction" href={`/tools/unlock-pdf?file=${encodeURIComponent(job.input_file_ids[0])}`}>กรอกรหัสผ่านและเริ่มใหม่</a>}
             {(job.status === "failed" || job.status === "cancelled") && job.operation === "protect-pdf" && process.env.NEXT_PUBLIC_PDFHUB_M09_PROTECT_ENABLED === "true" && job.input_file_ids[0] && <a className="v3PrimaryAction" href={`/tools/protect-pdf?file=${encodeURIComponent(job.input_file_ids[0])}`}>กรอกรหัสผ่านทั้งสองใหม่</a>}
-            {downloadable && <button type="button" className="v3PrimaryAction" disabled={downloading} onClick={() => void downloadOutput()}>
+            {downloadable && <Button type="button" className="v3PrimaryAction" disabled={downloading} onClick={() => void downloadOutput()}>
               {downloading ? "กำลังเตรียมดาวน์โหลด…" : outputFile?.content_type === "application/pdf" ? "ดาวน์โหลด PDF" : "ดาวน์โหลดผลลัพธ์"}
-            </button>}
+            </Button>}
             {job.status === "completed" && job.output_file_id && <a className="v3SecondaryAction" href={`/jobs/${encodeURIComponent(job.id)}/result`}>ดูผลลัพธ์และดาวน์โหลด →</a>}
           </div>
         </>}
-        <button type="button" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>รีเฟรชสถานะ</button>
+        <Button type="button" variant="outline" size="sm" className="v3MiniButton" onClick={() => setReload((count) => count + 1)}>รีเฟรชสถานะ</Button>
       </section>
     </main>
   );
