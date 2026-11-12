@@ -48,16 +48,23 @@ export function AppHeader({
   const activeJobs = jobs.filter((job) => job.status === "queued" || job.status === "running").length;
   const pathname = usePathname();
   return (
-    <header className="v3Header">
+    <header className="v3Header vdHeader">
+      <div className="vdHeaderIdentity">
+        <a className="vdInstitution" href="/" aria-label="RCAT PDF HUB · Document Operations">
+          <span className="vdInstitutionDot" aria-hidden="true"/>
+          <span>RCAT <strong>DOCUMENT OPERATIONS</strong></span>
+        </a>
+        <span className="vdHeaderEdition">WORKSPACE / 2026</span>
+      </div>
       <a className="v3Brand" href="/" aria-label="RCAT PDF Hub">
         <span className="v3BrandMark"><BrandGlyph/></span>
-        <span><strong>RCAT PDF Hub</strong><small>Document Workspace</small></span>
+        <span><strong>PDF HUB</strong><small>ศูนย์จัดการเอกสารดิจิทัล</small></span>
       </a>
 
-      <nav className="v3PrimaryNav" aria-label="เมนูหลัก">
-        <a href="/" aria-current={pathname === "/" ? "page" : undefined}>หน้าหลัก</a>
-        <a href="/files" aria-current={pathname.startsWith("/files") ? "page" : undefined}>ไฟล์ของฉัน</a>
-        <a href="/jobs" aria-current={pathname.startsWith("/jobs") ? "page" : undefined}>งานของฉัน</a>
+      <nav className="v3PrimaryNav vdPrimaryNav" aria-label="เมนูหลัก">
+        <a href="/" aria-current={pathname === "/" ? "page" : undefined}><span className="vdNavIcon" aria-hidden="true">▦</span> ภาพรวม</a>
+        <a href="/files" aria-current={pathname.startsWith("/files") ? "page" : undefined}><span className="vdNavIcon" aria-hidden="true">▤</span> ไฟล์ของฉัน</a>
+        <a href="/jobs" aria-current={pathname.startsWith("/jobs") ? "page" : undefined}><span className="vdNavIcon" aria-hidden="true">◷</span> งานของฉัน</a>
       </nav>
 
       <div className="v3HeaderActions">
@@ -205,23 +212,42 @@ export function HomeScreen({
 }) {
   return (
     <main className="v3Main" id="workspace">
-      <section className="v3HomeTitle">
-        <div><span className="v3Kicker">RCAT DOCUMENT WORKSPACE</span><h1>งานเอกสาร ง่ายขึ้นในที่เดียว</h1><p>อัปโหลดเอกสาร ค้นหาเครื่องมือ และติดตามผลลัพธ์ได้จากพื้นที่เดียวกัน</p></div>
-        <a className="v3TextLink" href="/files">ดูไฟล์ทั้งหมด →</a>
+      <section className="v3HomeTitle vdHero" aria-label="ภาพรวมพื้นที่ทำงาน">
+        <div className="vdHeroCopy">
+          <span className="v3Kicker">DOCUMENT OPERATIONS / RCAT</span>
+          <h1>งานเอกสาร ง่ายขึ้นในที่เดียว</h1>
+          <p>พื้นที่ทำงานดิจิทัลสำหรับจัดการ แปลง และเตรียมไฟล์ PDF — ตั้งแต่เริ่มต้นจนได้ผลลัพธ์</p>
+          <div className="vdHeroActions">
+            <a className="vdHeroPrimary" href="#workspace-start">เริ่มจัดการไฟล์ <span aria-hidden="true">↗</span></a>
+            <a className="vdHeroSecondary" href={t90CatalogVisible ? "#t90-tools" : "#tools-start"}>สำรวจเครื่องมือ <span aria-hidden="true">↘</span></a>
+          </div>
+        </div>
+        <div className="vdHeroPanel" aria-label="สรุปพื้นที่ทำงาน">
+          <span className="vdHeroPanelLabel">YOUR WORKSPACE</span>
+          <strong>{files.length.toLocaleString("th-TH")}</strong>
+          <span>ไฟล์ล่าสุดที่โหลดในพื้นที่ทำงาน</span>
+          <div className="vdHeroPanelLine"/>
+          <span className="vdHeroPanelFooter"><span className="vdLiveDot" aria-hidden="true"/> พร้อมเริ่มงานเอกสาร</span>
+        </div>
+      </section>
+      <section className="vdProcess" aria-label="ขั้นตอนการใช้งาน">
+        <div><span>01</span><strong>เพิ่มไฟล์</strong><small>อัปโหลดเอกสารต้นฉบับ</small></div>
+        <div><span>02</span><strong>เลือกเครื่องมือ</strong><small>ค้นหางานที่ต้องการ</small></div>
+        <div><span>03</span><strong>รับผลลัพธ์</strong><small>ติดตามและดาวน์โหลด</small></div>
       </section>
 
-      <section className="v3StartGrid">
-        <div className="v3Dropzone" onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add("isDragging"); }} onDragLeave={(event) => event.currentTarget.classList.remove("isDragging")} onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove("isDragging"); onFiles(event.dataTransfer.files); }}>
+      <section className="v3StartGrid vdStartGrid" id="workspace-start" aria-label="เริ่มใช้งานและไฟล์ล่าสุด">
+        <div className="v3Dropzone vdDropzone" onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add("isDragging"); }} onDragLeave={(event) => event.currentTarget.classList.remove("isDragging")} onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove("isDragging"); onFiles(event.dataTransfer.files); }}>
           <input id="files" type="file" multiple disabled={busy} onChange={(e) => onFiles(e.target.files)}/>
           <label htmlFor="files">
-            <span className="v3DropIcon">＋</span>
-            <strong>วางไฟล์ หรือเลือกจากเครื่อง</strong>
-            <p>PDF • Word • Excel • PowerPoint • รูปภาพ</p>
+            <span className="v3DropIcon" aria-hidden="true">↑</span>
+            <strong>นำเอกสารของคุณเข้ามา</strong>
+            <p>ลากวางหรือเลือกไฟล์ PDF, Word, Excel, PowerPoint และรูปภาพ</p>
             <span className="v3UploadButton">เลือกไฟล์</span>
           </label>
         </div>
 
-        <div className="v3RecentCard">
+        <div className="v3RecentCard vdRecentCard">
           <div className="v3SectionHead"><div><span className="v3Kicker">ไฟล์ที่เพิ่งใช้งาน</span><h2>ไฟล์ล่าสุด</h2></div><a href="/files">ทั้งหมด</a></div>
           <div className="v3RecentList">
             {files.length === 0 && <div className="v3EmptyMini"><span>◫</span><p>ยังไม่มีไฟล์ใน Workspace</p></div>}
@@ -239,8 +265,8 @@ export function HomeScreen({
       {t90CatalogVisible ? (
         <InstitutionalT90Directory />
       ) : (
-        <section className="v3ToolsBlock">
-          <div className="v3SectionHead"><div><span className="v3Kicker">TOOLS</span><h2>เลือกงานที่ต้องการ</h2><p>เลือกเครื่องมือให้ตรงกับงานของคุณ แล้วดำเนินการต่อในพื้นที่เอกสาร</p></div></div>
+        <section className="v3ToolsBlock vdToolsBlock" id="tools-start">
+          <div className="v3SectionHead"><div><span className="v3Kicker">TOOL COLLECTION</span><h2>เลือกงานที่ต้องการ</h2><p>เครื่องมือจัดการเอกสาร จัดกลุ่มตามงานที่ต้องทำเพื่อให้คุณเริ่มต้นได้ทันที</p></div></div>
           <div className="v3ToolGrid">
             {tools.map((tool) => (
               <button type="button" className="v3ToolCard" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
@@ -287,7 +313,7 @@ export function DocumentWorkspace({
 }) {
   const isPdf = fileKind(target) === "PDF";
   return (
-    <main className="v3Main v3DocumentMode" id="workspace">
+    <main className="v3Main v3DocumentMode vdWorkspace" id="workspace">
       {taskJourney && <TaskJourneyNav stage={taskJourney.stage} kind={taskJourney.kind} />}
       <section className="v3DocumentBar" id="workspace-target">
         <button className="v3BackLink" type="button" onClick={onBack}>← กลับ</button>
@@ -424,9 +450,9 @@ export function FilesScreen({
   }
 
   return (
-    <main className="v3Main">
+    <main className="v3Main vdFilesPage">
       <section className="v3FilesHead">
-        <div><span className="v3Kicker">FILES</span><h1>ไฟล์ทั้งหมด</h1><p>{page.total} ไฟล์ใน Workspace</p></div>
+        <div><span className="v3Kicker">DOCUMENT LIBRARY / YOUR FILES</span><h1>ไฟล์ทั้งหมด</h1><p>ค้นหา จัดการ และดาวน์โหลดเอกสารของคุณ <strong>{page.total.toLocaleString("th-TH")} ไฟล์</strong></p></div>
         <div className="v3FilesActions">
           {selected.length > 0 && <><span>{selected.length} รายการ</span><button type="button" className="v3DangerButton" disabled={busy} onClick={() => void mutate(async () => { await onDelete(selected); setSelected([]); })}>ลบที่เลือก</button></>}
           <label className="v3InlineUpload"><input id="files" type="file" multiple disabled={busy} onChange={(event) => {

@@ -77,12 +77,12 @@ export function MyJobsScreen({ auth }: { auth: string }) {
   }, [auth, status, offset, refreshKey]);
 
   return (
-    <main className="v3Main" aria-label="งานของฉัน">
+    <main className="v3Main vdJobsPage" aria-label="งานของฉัน">
       <section className="v3HomeTitle">
-        <div><span className="v3Kicker">MY JOBS</span><h1>งานของฉัน</h1><p>ติดตามงานที่กำลังทำและกลับมาดูงานเดิมได้ตลอดเวลาที่ประวัติยังอยู่</p></div>
+        <div><span className="v3Kicker">WORKFLOW MONITOR / MY JOBS</span><h1>งานของฉัน</h1><p>ตรวจสถานะงานที่กำลังประมวลผล และย้อนกลับมาดูผลลัพธ์ได้จากที่เดียว</p></div>
         <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
       </section>
-      <section className="v3JobDetailCard v3JobsHistory">
+      <section className="v3JobDetailCard v3JobsHistory vdJobsHistory">
         <div className="v3SectionHead">
           <div><span className="v3Kicker">HISTORY</span><h2>ประวัติงาน</h2></div>
           <Button variant="outline" size="sm" className="v3MiniButton" type="button" onClick={() => setRefreshKey((value) => value + 1)}>รีเฟรช</Button>

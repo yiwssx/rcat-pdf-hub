@@ -127,6 +127,74 @@ jobs:
             npx playwright test tests/e2e/pdf-hub.smoke.spec.ts
           fi
 
+      # UI390: capture matched *real Chromium renders* from base and PR builds.
+      # Uses the existing required workflow and deterministic mocked API data.
+      # No Production access, credentials or new workflow/runner.
+      - name: Capture UI390 before/after browser evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'feat/ui390-visual-redesign-app-shell'
+        working-directory: apps/web
+        timeout-minutes: 15
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          baseline_root="$RUNNER_TEMP/ui390-baseline"
+          git worktree add --detach "$baseline_root" "$BASE_SHA"
+          (
+            cd "$baseline_root/apps/web"
+            npm ci --no-audit --no-fund
+            npm run build
+          )
+          for variant in before after; do
+            if [[ "$variant" == "before" ]]; then
+              app_root="$baseline_root/apps/web"
+              source_sha="$BASE_SHA"
+              port=3181
+            else
+              app_root="$PWD"
+              source_sha="$HEAD_SHA"
+              port=3182
+            fi
+            mkdir -p "$app_root/.next/standalone/.next"
+            cp -R "$app_root/public" "$app_root/.next/standalone/public"
+            cp -R "$app_root/.next/static" "$app_root/.next/standalone/.next/static"
+            (
+              cd "$app_root"
+              PORT="$port" HOSTNAME="127.0.0.1" \
+              PDFHUB_T90_CODE_ROLLOUT_ENABLED=true PDFHUB_T90_PRIVATE_PILOT_ENABLED=true \
+                node .next/standalone/server.js
+            ) >"$RUNNER_TEMP/ui390-$variant-server.log" 2>&1 &
+            server_pid=$!
+            trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+            ready=0
+            for i in $(seq 1 50); do
+              if curl -fsS "http://127.0.0.1:$port/" >/dev/null; then ready=1; break; fi
+              sleep 1
+            done
+            if [[ "$ready" != "1" ]]; then
+              echo "::error::UI390 $variant Next server not ready"
+              exit 1
+            fi
+            PDFHUB_E2E_BASE_URL="http://127.0.0.1:$port" \
+            PDFHUB_VISUAL_VARIANT="$variant" \
+            PDFHUB_VISUAL_SOURCE_SHA="$source_sha" \
+              npx playwright test tests/e2e/ui390-visual-evidence.spec.ts
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+            trap - EXIT
+          done
+
+      - name: Upload UI390 before/after screenshot evidence
+        if: always() && github.event_name == 'pull_request' && github.head_ref == 'feat/ui390-visual-redesign-app-shell'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui390-visual-before-after-${{ github.event.pull_request.head.sha }}
+          path: apps/web/visual-evidence/ui390/
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Validate Thai Gotenberg image only if its source changes
         if: steps.scope.outputs.gotenberg == 'true'
         run: |

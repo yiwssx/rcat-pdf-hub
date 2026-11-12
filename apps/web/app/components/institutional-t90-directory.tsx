@@ -69,16 +69,16 @@ export function InstitutionalT90Directory({ selectedFileId }: {
   }
 
   return (
-    <section className="v3ToolsBlock t90Directory" id="t90-tools" aria-labelledby="t90-tools-heading">
+    <section className="v3ToolsBlock t90Directory vdDirectory" id="t90-tools" aria-labelledby="t90-tools-heading">
       <div className="v3SectionHead">
         <div>
-          <span className="v3Kicker">RCAT PDF HUB · T90</span>
-          <h2 id="t90-tools-heading">เครื่องมือ PDF ทั้ง 90 รายการ</h2>
+          <span className="v3Kicker">TOOL EXPLORER / T90</span>
+          <h2 id="t90-tools-heading">ค้นพบเครื่องมือที่ใช่สำหรับงานของคุณ</h2>
           <p>จัดการ PDF 33 · แปลงเป็น PDF 40 · แปลงจาก PDF 17 — เลือกเครื่องมือเพื่อเปิดขั้นตอนทำงาน</p>
         </div>
-        <span className="t90DirectoryTotal" aria-label="จำนวนเครื่องมือในสารบัญ">90 เครื่องมือ</span>
+        <div className="vdDirectoryCount" aria-label="จำนวนเครื่องมือในสารบัญ"><strong>90</strong><span>TOOLS IN CATALOG</span></div>
       </div>
-      <div className="t90DirectoryControls">
+      <div className="t90DirectoryControls vdDirectoryControls">
         <label className="t90DirectorySearch">
           <span>ค้นหาเครื่องมือ</span>
           <Input
@@ -108,7 +108,7 @@ export function InstitutionalT90Directory({ selectedFileId }: {
       </div>
       <p className="t90DirectoryFound" role="status">แสดง {visible.length} จาก 90 เครื่องมือ</p>
       {featured.length > 0 && (
-        <section className="t90DirectorySection" aria-labelledby="t90-featured-heading">
+        <section className="t90DirectorySection vdFeaturedSection" aria-labelledby="t90-featured-heading">
           <h3 id="t90-featured-heading">งานที่ใช้บ่อย</h3>
           <div className="v3ToolGrid t90DirectoryGrid">{featured.map(toolCard)}</div>
         </section>
