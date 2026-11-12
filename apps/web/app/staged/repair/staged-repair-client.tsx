@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -84,20 +87,20 @@ export function StagedRepairClient({ requestedFileId }: { requestedFileId?: stri
         <form onSubmit={(event) => { void submit(event); }}>
           <div className="t90DocumentStageField">
             <label htmlFor="m32-file">PDF ของบัญชีนี้</label>
-            <select id="m32-file" aria-label="PDF ของบัญชีนี้"
+            <NativeSelect id="m32-file" aria-label="PDF ของบัญชีนี้"
               value={fileId} onChange={(event) => { setFileId(event.target.value); setJob(null); }}
               disabled={busy || !files.length} required>
               {!files.length && <option value="">ไม่มี PDF</option>}
               {files.map((item) =>
                 <option value={item.id} key={item.id}>{item.original_name}</option>)}
-            </select>
+            </NativeSelect>
           </div>
           {me && !canWork && <p role="alert">ต้องมีสิทธิ์ files:read, jobs:read และ pdf:convert</p>}
           {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-          <button className="t90DocumentStageSubmit" type="submit"
+          <Button className="t90DocumentStageSubmit" type="submit"
             disabled={!chosen || !canWork || busy}>
             {busy ? "กำลังสร้างงาน…" : "ซ่อมโครงสร้าง PDF"}
-          </button>
+          </Button>
         </form>
       )}
       {job && <div className="t90DocumentStageResult" role="status">
