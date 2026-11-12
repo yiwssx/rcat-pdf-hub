@@ -1657,3 +1657,68 @@ body {
   .v3PrimaryNav a { font-size:13px; padding:10px 7px; }
   .v3MobileStatus { margin:-6px auto 14px; }
 }
+
+/* UI modernization: coherent file, workflow, job and admin surfaces. */
+.v3RecentCard,
+.v3ToolsBlock,
+.v3PreviewPane,
+.v3ActionPane,
+.v3JobDetailCard,
+.v3FileLibrary,
+.v3AdminSection {
+  border-radius:var(--ui-card-radius);
+  border-color:var(--ui-divider);
+}
+.v3Dropzone {
+  border-radius:var(--ui-card-radius);
+  border-color:#a9b9d1;
+  background:#fbfcff;
+}
+.v3Dropzone:focus-within { outline:3px solid var(--ui-focus); outline-offset:2px; }
+.v3Dropzone .v3UploadButton,
+.v3PrimaryAction {
+  border-radius:10px;
+}
+.v3ToolPanelHead,
+.v3ActionHead,
+.v3FilesHead,
+.v3SectionHead { text-wrap:pretty; }
+.v3RecentFile strong,
+.v3FileOpen strong,
+.v3JobsHistoryRow strong { overflow-wrap:anywhere; }
+.v3Field input,
+.v3Field select,
+.v3Search input {
+  min-height:44px;
+  font-size:16px;
+}
+.v3JobsHistoryRow,
+.v3LibraryRow {
+  border-bottom-color:var(--ui-divider);
+}
+.v3JobBadge { font-size:12px; }
+.v3LibraryToolbar,
+.v3AdminAreaNav { gap:10px; }
+.v3AdminAreaNav a[aria-current="page"] {
+  background:#eaf0fd;
+  border-color:#b5c7ed;
+  color:var(--ui-brand);
+}
+.v3InfoBox[role="alert"],
+.v3UploadError { overflow-wrap:anywhere; }
+@media (max-width:900px) {
+  .v3DocumentGrid { grid-template-columns:minmax(0,1fr); }
+  .v3PreviewStage { min-height:290px; }
+  .v3ActionPane { width:100%; max-width:100%; min-width:0; }
+  .v3AdminAreaNav { overflow-x:auto; }
+}
+@media (max-width:620px) {
+  .v3DocumentBar { min-width:0; }
+  .v3PreviewStage { min-height:220px; }
+  .v3JobDetailCard { padding:16px; }
+  .v3RecentCard,
+  .v3ToolsBlock,
+  .v3PreviewPane,
+  .v3ActionPane { min-width:0; }
+  .v3FilesActions { gap:8px; }
+}
