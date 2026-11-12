@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createJob, getMe, listFiles, SESSION_AUTH,
@@ -99,56 +102,56 @@ export function StagedTranslationClient({ requestedFileId }: { requestedFileId?:
           <form onSubmit={(event) => { void submit(event); }}>
             <div className="t90DocumentStageField">
               <label htmlFor="m05-source">PDF ของฉัน</label>
-              <select id="m05-source" value={fileId} required disabled={!files.length || busy}
+              <NativeSelect id="m05-source" value={fileId} required disabled={!files.length || busy}
                 onChange={(event) => { setFileId(event.target.value); setJob(null); }}>
                 {!files.length && <option value="">ไม่มี PDF ที่ใช้งานได้</option>}
                 {files.map((f) => <option key={f.id} value={f.id}>{f.original_name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <div className="t90DocumentStageField">
               <label htmlFor="m05-from">ภาษาต้นฉบับ</label>
-              <select id="m05-from" value={sourceLang} disabled={busy} onChange={(event) => {
+              <NativeSelect id="m05-from" value={sourceLang} disabled={busy} onChange={(event) => {
                 const next = event.target.value as Lang;
                 setSourceLang(next); setTargetLang(next === "en" ? "th" : "en"); setJob(null);
               }}>
                 <option value="en">English</option>
                 <option value="th">ไทย</option>
-              </select>
+              </NativeSelect>
             </div>
             <div className="t90DocumentStageField">
               <label htmlFor="m05-to">ภาษาเป้าหมาย</label>
-              <select id="m05-to" value={targetLang} disabled={busy} onChange={(event) => {
+              <NativeSelect id="m05-to" value={targetLang} disabled={busy} onChange={(event) => {
                 setTargetLang(event.target.value as Lang); setJob(null);
               }}>
                 <option value="th">ไทย</option>
                 <option value="en">English</option>
-              </select>
+              </NativeSelect>
             </div>
             <div className="t90DocumentStageField">
               <label htmlFor="m05-format">รูปแบบผลลัพธ์</label>
-              <select id="m05-format" value={format} disabled={busy}
+              <NativeSelect id="m05-format" value={format} disabled={busy}
                 onChange={(event) => { setFormat(event.target.value as "pdf" | "text"); setJob(null); }}>
                 <option value="pdf">PDF ฉบับแปล (จัดหน้าใหม่)</option>
                 <option value="text">TXT ข้อความแปล</option>
-              </select>
+              </NativeSelect>
             </div>
             {format === "pdf" && (
               <div className="t90DocumentStageField">
                 <label htmlFor="m05-layout">รูปแบบหน้า PDF</label>
-                <select id="m05-layout" value={layout} disabled={busy}
+                <NativeSelect id="m05-layout" value={layout} disabled={busy}
                   onChange={(event) => { setLayout(event.target.value as "translated" | "bilingual"); setJob(null); }}>
                   <option value="translated">คำแปลอย่างเดียว (จัดหน้าใหม่)</option>
                   <option value="bilingual">สองภาษา: ข้อความต้นฉบับและคำแปลสำหรับตรวจทาน</option>
-                </select>
+                </NativeSelect>
               </div>
             )}
             {!allowed && identity && <p role="alert" className="t90DocumentStageError">
               ต้องมีสิทธิ์ files:read, jobs:read และ pdf:extract-text
             </p>}
             {error && <p role="alert" className="t90DocumentStageError">{error}</p>}
-            <button type="submit" className="t90DocumentStageSubmit" disabled={!ready}>
+            <Button type="submit" className="t90DocumentStageSubmit" disabled={!ready}>
               {busy ? "กำลังสร้างงาน…" : "แปลข้อความ PDF ภายในระบบ"}
-            </button>
+            </Button>
           </form>
         )}
         {job && (
