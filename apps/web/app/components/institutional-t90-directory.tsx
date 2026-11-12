@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { toolSearchTerms, FEATURED_T90_TOOL_IDS } from "./t90-search-metadata";
 import {
   T90_DIRECTORY_COUNTS,
@@ -79,7 +81,7 @@ export function InstitutionalT90Directory({ selectedFileId }: {
       <div className="t90DirectoryControls">
         <label className="t90DirectorySearch">
           <span>ค้นหาเครื่องมือ</span>
-          <input
+          <Input
             aria-label="ค้นหาเครื่องมือ T90"
             type="search"
             value={search}
@@ -88,10 +90,11 @@ export function InstitutionalT90Directory({ selectedFileId }: {
             placeholder="เช่น รวมไฟล์ ย่อ PDF Word เป็น PDF หรือ OCR…"
           />
         </label>
-        {search && <button className="t90DirectoryClear" type="button" onClick={() => { setSearch(""); setFilter("all"); }}>ล้างคำค้นหา</button>}
+        {search && <Button variant="outline" className="t90DirectoryClear" type="button" onClick={() => { setSearch(""); setFilter("all"); }}>ล้างคำค้นหา</Button>}
         <div className="t90DirectoryFilters" role="group" aria-label="ประเภทเครื่องมือ PDF">
           {GROUPS.map((group) => (
-            <button
+            <Button
+              variant={filter === group.id ? "default" : "outline"}
               key={group.id}
               type="button"
               aria-pressed={filter === group.id}
@@ -99,7 +102,7 @@ export function InstitutionalT90Directory({ selectedFileId }: {
               onClick={() => setFilter(group.id)}
             >
               {group.title} <span>{group.count}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -113,7 +116,7 @@ export function InstitutionalT90Directory({ selectedFileId }: {
       {visible.length === 0 ? (
         <div className="v3EmptyMini" role="status">
           ไม่พบเครื่องมือที่ตรงกับคำค้นหา ลองชื่อประเภทไฟล์หรือคำอื่น
-          <button type="button" className="t90DirectoryClear" onClick={() => { setSearch(""); setFilter("all"); }}>แสดงเครื่องมือทั้งหมด</button>
+          <Button type="button" variant="outline" className="t90DirectoryClear" onClick={() => { setSearch(""); setFilter("all"); }}>แสดงเครื่องมือทั้งหมด</Button>
         </div>
       ) : sections.map((group) => {
         const groupTools = group.id === "all" ? visible : visible.filter((tool) => tool.category === group.id);
