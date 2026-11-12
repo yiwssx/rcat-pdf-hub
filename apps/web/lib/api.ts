@@ -236,8 +236,15 @@ function headers(auth: string): Record<string, string> {
   return auth === SESSION_AUTH ? {} : { "X-API-Key": auth };
 }
 
+export class ApiHttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = "ApiHttpError";
+  }
+}
+
 async function expectJson<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new ApiHttpError(res.status, await res.text());
   return res.json() as Promise<T>;
 }
 
