@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function StagedGeometryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ file?: string | string[] }>;
+  searchParams: Promise<{ file?: string | string[]; tool?: string | string[] }>;
 }) {
   if (
     process.env.PDFHUB_STAGED_GEOMETRY_WEB_ENABLED !== "true" ||
@@ -16,6 +16,6 @@ export default async function StagedGeometryPage({
   ) {
     notFound();
   }
-  const { file } = await searchParams;
-  return <StagedGeometryClient requestedFileId={typeof file === "string" ? file : undefined} />;
+  const { file, tool } = await searchParams;
+  return <StagedGeometryClient requestedFileId={typeof file === "string" ? file : undefined} requestedToolId={typeof tool === "string" ? tool : undefined} />;
 }
