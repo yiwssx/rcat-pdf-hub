@@ -33,7 +33,9 @@ import {
   UploadedFile,
 } from "../../lib/api";
 import { createToolWorkspaceSettings } from "./tool-workspace-state";
-import { InstitutionalT90Directory } from "./institutional-t90-directory";
+import { V4ToolExplorer } from "./v4-tool-explorer";
+import { V4Dashboard } from "./v4-dashboard";
+import { V4AppShell } from "./v4-app-shell";
 import { JobDetailScreen } from "./job-detail-screen";
 import { JobResultScreen } from "./job-result-screen";
 import { MyJobsScreen } from "./my-jobs-screen";
@@ -48,16 +50,14 @@ import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
 import { resolveTaskJourneyStage } from "./task-journey";
 import {
   AdminIdentityPanel,
-  AppHeader,
   DocumentWorkspace,
   FilesScreen,
-  HomeScreen,
   JobDrawer,
   LoginScreen,
   ToolDefinition,
 } from "./v3-ui";
 
-export type PdfHubView = "workspace" | "files" | "admin" | "job" | "result" | "jobs" | "file";
+export type PdfHubView = "workspace" | "tools" | "files" | "admin" | "job" | "result" | "jobs" | "file";
 
 const AdminPanel = dynamic(
   () => import("./admin-panel").then((module) => module.AdminPanel),
@@ -586,11 +586,13 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
   ) : null;
 
   return (
-    <div className="v3App">
-      <AppHeader identity={identity} message={message} jobs={jobs} onOpenJobs={() => setJobsOpen(true)} onRefresh={() => void loadWorkspace()} onLogout={() => void logout()}/>
+    <div className="v3App v4Application">
+      <V4AppShell identity={identity} message={message} jobs={jobs} onOpenJobs={() => setJobsOpen(true)} onRefresh={() => void loadWorkspace()} onLogout={() => void logout()}/>
       <p className="v3MobileStatus" role="status" aria-live="polite">{message}</p>
 
-      {initialView === "file" && initialFileId ? (
+      {initialView === "tools" ? (
+        <V4ToolExplorer catalogEnabled={t90CatalogVisible} tools={tools}/>
+      ) : initialView === "file" && initialFileId ? (
         <FileDetailScreen fileId={initialFileId} auth={auth} />
       ) : initialView === "jobs" ? (
         <MyJobsScreen auth={auth} />
@@ -599,7 +601,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
       ) : initialView === "job" && initialJobId ? (
         <JobDetailScreen jobId={initialJobId} auth={auth} />
       ) : initialView === "admin" ? (
-        <main className="v3Main v3AdminMain vdAdminPage">
+        <main className="v3Main v3AdminMain v4Main v4AdminPage">
           <section className="v3HomeTitle">
             <div><span className="v3Kicker">CONTROL CENTER / RCAT PDF HUB</span><h1>ศูนย์ควบคุมระบบ</h1><p>ติดตามภาพรวมบริการ งานประมวลผล และการจัดการระบบตามสิทธิ์ที่ได้รับ</p></div>
             <a className="v3TextLink" href="/">← กลับ Workspace</a>
@@ -714,13 +716,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
           onRetention={updateRetention}
         />
       ) : (
-        <HomeScreen files={files} tools={tools} t90CatalogVisible={t90CatalogVisible} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
-      )}
-
-      {t90CatalogVisible && target && initialView === "workspace" && !routeTool && (
-        <main className="v3Main" aria-label="สารบัญเครื่องมือ PDF ทั้ง 90 รายการ">
-          <InstitutionalT90Directory selectedFileId={target.id} />
-        </main>
+        <V4Dashboard files={files} jobs={jobs} tools={tools} busy={busy} onFiles={(list) => void onFiles(list)} onSelectFile={selectFile} onTool={chooseTool}/>
       )}
 
       <JobDrawer open={jobsOpen} jobs={jobs} files={files} onClose={() => setJobsOpen(false)} onDownload={(fileId) => void download(fileId)} onCancel={(jobId) => void controlJob(jobId, "cancel")} onRetry={(jobId) => void controlJob(jobId, "retry")} onClear={() => void clearJobHistory()}/>
