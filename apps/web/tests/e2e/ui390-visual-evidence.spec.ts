@@ -71,7 +71,14 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
       await expect(page.locator(selector)).toBeVisible({ timeout: 15000 });
       // Snapshot only settled UI state, not a transient fetch/loading frame.
       if (view === "files") {
-        await expect(page.getByText("RCAT-document.pdf", { exact: true })).toBeVisible({ timeout: 15000 });
+        const fileRow = page.locator(".v3LibraryRow").first();
+        await expect(fileRow.getByText("RCAT-document.pdf", { exact: true })).toBeVisible({ timeout: 15000 });
+        // Full-page screenshots do not always paint offscreen content-visibility:auto rows.
+        // Confirm the row works when scrolled into view, then force painting for evidence only.
+        await fileRow.scrollIntoViewIfNeeded();
+        await expect(fileRow).toBeVisible();
+        await page.addStyleTag({ content: ".v3LibraryRow { content-visibility: visible !important; }" });
+        await page.evaluate(() => window.scrollTo(0, 0));
       }
       if (view === "jobs") {
         await expect(page.getByText("ไม่พบงานในสถานะนี้")).toBeVisible({ timeout: 15000 });
