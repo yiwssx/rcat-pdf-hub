@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const ADMIN_AREAS = [
   { id: "overview", label: "ภาพรวม", description: "สุขภาพและสถานะบริการ" },
   { id: "jobs", label: "งานประมวลผล", description: "คิวและสถานะงาน" },
@@ -17,11 +19,11 @@ export function AdminAreaNav({ active }: { active: AdminArea }) {
   return (
     <nav className="v3AdminAreaNav" aria-label="เมนูผู้ดูแลระบบ">
       {ADMIN_AREAS.map((area) => (
-        <a key={area.id} href={`/admin?section=${area.id}`}
+        <Link key={area.id} href={`/admin?section=${area.id}`}
           aria-current={active === area.id ? "page" : undefined}>
           <strong>{area.label}</strong>
           <small>{area.description}</small>
-        </a>
+        </Link>
       ))}
     </nav>
   );
