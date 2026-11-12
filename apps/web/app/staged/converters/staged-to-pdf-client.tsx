@@ -214,7 +214,7 @@ export function StagedToPdfClient({
             {!isUrl && <p className="t90ConverterMeta">นามสกุลไฟล์: {accepting}</p>}
             {!isUrl && <div className="t90DocumentStageField">
               <label htmlFor="t90-to-pdf-upload">อัปโหลดไฟล์ต้นฉบับ</label>
-              <Input id="t90-to-pdf-upload" type="file" accept={accepting}
+              <input id="t90-to-pdf-upload" type="file" accept={accepting}
                 disabled={!canUpload || uploading || submitting}
                 onChange={(event) => setUploadCandidate(event.target.files?.[0] ?? null)} />
               <Button type="button" className="t90DocumentStageSubmit"
