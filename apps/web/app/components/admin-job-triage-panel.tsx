@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AdminJobTriagePage, Job, listAdminJobTriage } from "../../lib/api";
 
 const pageSize = 25;
@@ -54,7 +56,7 @@ export function AdminJobTriagePanel({ auth }: { auth: string }) {
     <section className="v3AdminSection v3AdminJobTriage" aria-label="รายการงานสำหรับวิเคราะห์ปัญหา">
       <div className="v3SectionHead">
         <div><span className="v3Kicker">READ ONLY · AUDITED</span><h2>ตรวจสอบสถานะงาน</h2></div>
-        <button type="button" className="v3MiniButton" disabled={loading} onClick={() => setReload((n) => n + 1)}>รีเฟรชรายการ</button>
+        <Button type="button" variant="outline" size="sm" className="v3MiniButton" disabled={loading} onClick={() => setReload((n) => n + 1)}>รีเฟรชรายการ</Button>
       </div>
       <p>แสดงเฉพาะสถานะ ความคืบหน้า ประเภทงาน และเวลาประมวลผล ไม่แสดงชื่อผู้ใช้ เนื้อหาไฟล์ หรือข้อความข้อผิดพลาดดิบ</p>
       <div className="v3AdminTriageFilters">
@@ -70,14 +72,15 @@ export function AdminJobTriagePanel({ auth }: { auth: string }) {
         </label>
         <form onSubmit={(event) => { event.preventDefault(); applyOperation(); }}>
           <label>ประเภทงาน
-            <input aria-label="กรองประเภทงาน" value={operationDraft} maxLength={40}
+            <Input aria-label="กรองประเภทงาน" value={operationDraft} maxLength={40}
+              aria-invalid={invalidOperation} aria-describedby={invalidOperation ? "admin-operation-filter-error" : undefined}
               onChange={(event) => setOperationDraft(event.target.value.toLowerCase())}
               placeholder="เช่น compress, ocr" />
           </label>
-          <button type="submit" disabled={invalidOperation || loading}>ใช้ตัวกรอง</button>
+          <Button type="submit" variant="outline" disabled={invalidOperation || loading}>ใช้ตัวกรอง</Button>
         </form>
       </div>
-      {invalidOperation && <p role="status">ประเภทงานต้องเป็นตัวอักษรอังกฤษพิมพ์เล็ก ตัวเลข หรือขีดกลาง ไม่เกิน 40 ตัวอักษร</p>}
+      {invalidOperation && <p id="admin-operation-filter-error" role="status">ประเภทงานต้องเป็นตัวอักษรอังกฤษพิมพ์เล็ก ตัวเลข หรือขีดกลาง ไม่เกิน 40 ตัวอักษร</p>}
       {loading && <p role="status">กำลังโหลดรายการงานที่อนุญาต…</p>}
       {error && <div className="v3InfoBox" role="alert">{error}</div>}
       {!loading && !error && page?.items.length === 0 && <p>ไม่พบงานตามตัวกรองนี้</p>}
@@ -90,9 +93,9 @@ export function AdminJobTriagePanel({ auth }: { auth: string }) {
         </article>)}
       </div>}
       <nav className="v3LibraryPagination" aria-label="หน้ารายการงานระดับผู้ดูแล">
-        <button type="button" disabled={loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>← ก่อนหน้า</button>
+        <Button type="button" variant="outline" size="sm" disabled={loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>← ก่อนหน้า</Button>
         <span>หน้า {Math.floor(offset / pageSize) + 1}</span>
-        <button type="button" disabled={loading || !page?.has_more} onClick={() => setOffset(offset + pageSize)}>ถัดไป →</button>
+        <Button type="button" variant="outline" size="sm" disabled={loading || !page?.has_more} onClick={() => setOffset(offset + pageSize)}>ถัดไป →</Button>
       </nav>
       <p className="v3AdminTriageNote">การอ่านรายการนี้ถูกบันทึก Audit และไม่มีคำสั่ง Retry, Cancel หรือ Repair ในหน้านี้</p>
     </section>
