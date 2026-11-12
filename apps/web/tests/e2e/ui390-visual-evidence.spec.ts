@@ -9,7 +9,7 @@ import { authConfigFixture, emptyLibraryPage, integrationStatusFixture, operator
  * Run the SAME test against separately built baseline and candidate commits.
  */
 async function installEvidenceFixtures(page: Page) {
-  await page.route("**/api/v1/auth/config", route => route.fulfill({ json: authConfigFixture }));
+  await page.route("**/api/v1/auth/config", route => route.fulfill({ json: { ...authConfigFixture, institutional: { rcat_only: true } } }));
   await page.route("**/api/v1/auth/me", route => route.fulfill({ json: operatorIdentityFixture({
     name: "ui390-evidence", display_name: "RCAT Visual Review",
     subject: "ui390-evidence", is_admin: true, roles: ["admin"], scopes: ["*"],
