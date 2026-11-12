@@ -8,6 +8,17 @@ import { authConfigFixture, emptyLibraryPage, integrationStatusFixture, operator
  * APIs are deterministic mocks, not a claim of authenticated Production UAT.
  * Run the SAME test against separately built baseline and candidate commits.
  */
+const exampleFile = {
+  id: "visual-example-pdf",
+  original_name: "RCAT-document.pdf",
+  content_type: "application/pdf",
+  size: 189440,
+  sha256: "a".repeat(64),
+  source_system: "ui390-evidence",
+  created_at: "2026-11-12T00:00:00Z",
+  expires_at: null,
+};
+
 async function installEvidenceFixtures(page: Page) {
   await page.route("**/api/v1/auth/config", route => route.fulfill({ json: { ...authConfigFixture, institutional: { rcat_only: true } } }));
   await page.route("**/api/v1/auth/me", route => route.fulfill({ json: operatorIdentityFixture({
@@ -15,9 +26,10 @@ async function installEvidenceFixtures(page: Page) {
     subject: "ui390-evidence", is_admin: true, roles: ["admin"], scopes: ["*"],
   }) }));
   await page.route("**/api/v1/integrations/status", route => route.fulfill({ json: integrationStatusFixture }));
-  await page.route("**/api/v1/files?**", route => route.fulfill({ json: [] }));
-  await page.route("**/api/v1/files/library**", route => route.fulfill({ json: emptyLibraryPage(route.request().url()) }));
+  await page.route("**/api/v1/files?**", route => route.fulfill({ json: [exampleFile] }));
+  await page.route("**/api/v1/files/library**", route => route.fulfill({ json: { ...emptyLibraryPage(route.request().url()), items: [exampleFile], total: 1 } }));
   await page.route("**/api/v1/jobs?**", route => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/files/visual-example-pdf/preview**", route => route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") }));
   await page.route("**/api/v1/admin/status", route => route.fulfill({ json: {
     database_ok: true, redis_ok: true, workers: 2, queue_depth: 1,
     storage_backend: "local", storage_write_ok: true, gotenberg_ok: true,
@@ -63,6 +75,16 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
       if (variant === "after") expect(overflow, `${name}/${view} horizontal overflow`).toBeLessThanOrEqual(1);
       await page.screenshot({ path: resolve(captureRoot, `${name}-${view}.png`), fullPage: true, animations: "disabled" });
       results.push({ viewport: name, view, pathname: target, overflow });
+      if (view === "dashboard-directory") {
+        const recent = page.locator(".v3RecentFile").first();
+        await expect(recent).toBeVisible();
+        await recent.click();
+        await expect(page.locator(".v3DocumentMode")).toBeVisible();
+        const workbenchOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        if (variant === "after") expect(workbenchOverflow, `${name}/workspace overflow`).toBeLessThanOrEqual(1);
+        await page.screenshot({ path: resolve(captureRoot, `${name}-workspace.png`), fullPage: true, animations: "disabled" });
+        results.push({ viewport: name, view: "workspace", pathname: "/", overflow: workbenchOverflow });
+      }
     }
   }
   writeFileSync(resolve(captureRoot, "manifest.json"), JSON.stringify({
