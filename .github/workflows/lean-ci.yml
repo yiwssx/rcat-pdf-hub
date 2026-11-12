@@ -191,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ui390-visual-before-after-${{ github.event.pull_request.head.sha }}
-          path: apps/web/test-results/ui390/
+          path: apps/web/visual-evidence/ui390/
           if-no-files-found: warn
           retention-days: 30
 
