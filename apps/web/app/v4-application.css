@@ -433,3 +433,21 @@ body {background:var(--v4-canvas);color:var(--v4-text);}
     bottom:calc(79px + env(safe-area-inset-bottom));z-index:95;
   }
 }
+
+/* File details: authorized on-demand preview, not an eager network request. */
+.v4FileDetail .v3HomeTitle {background:transparent;border:0;box-shadow:none;padding:0;margin-bottom:22px}
+.v4FileDetail .v3HomeTitle h1 {color:var(--v4-text);font-size:clamp(27px,3vw,38px)}
+.v4FileDetail .v3HomeTitle p {color:var(--v4-muted)}
+.v4FileDetail .v3JobDetailCard {background:#fff;border:1px solid var(--v4-border);border-radius:15px;box-shadow:var(--v4-shadow)}
+.v4DocumentPreview {margin:22px 0;padding:20px;border:1px solid var(--v4-border);border-radius:14px;background:#fafbff}
+.v4DocumentPreviewHead {display:flex;align-items:center;gap:12px;margin-bottom:17px}
+.v4FilePreviewSymbol {display:grid;place-items:center;width:47px;height:47px;flex:0 0 47px;background:#eceaff;color:var(--v4-accent);border-radius:11px}
+.v4DocumentPreviewHead h3 {font-size:16px;font-weight:900;margin:0;color:var(--v4-text)}
+.v4DocumentPreviewHead p,.v4PreviewUnavailable {color:var(--v4-muted);font-size:12px;margin:4px 0 0;line-height:1.6}
+.v4DocumentPreview .v4SecondaryButton {cursor:pointer}
+.v4DocumentPreviewCanvas {display:flex;justify-content:center;align-items:flex-start;padding:20px;margin-top:17px;border:1px solid var(--v4-border);border-radius:12px;background:#eef2f8;max-height:620px;overflow:auto}
+.v4DocumentPreviewCanvas img {display:block;width:auto;height:auto;max-width:100%;object-fit:contain;box-shadow:0 6px 26px rgba(25,37,70,.14)}
+@media(max-width:760px) {
+  .v4DocumentPreview {padding:15px}
+  .v4DocumentPreviewCanvas {padding:10px;max-height:430px}
+}
