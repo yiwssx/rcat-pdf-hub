@@ -219,7 +219,7 @@ export function HomeScreen({
           <p>พื้นที่ทำงานดิจิทัลสำหรับจัดการ แปลง และเตรียมไฟล์ PDF — ตั้งแต่เริ่มต้นจนได้ผลลัพธ์</p>
           <div className="vdHeroActions">
             <a className="vdHeroPrimary" href="#workspace-start">เริ่มจัดการไฟล์ <span aria-hidden="true">↗</span></a>
-            <a className="vdHeroSecondary" href="#t90-tools">สำรวจเครื่องมือ <span aria-hidden="true">↘</span></a>
+            <a className="vdHeroSecondary" href={t90CatalogVisible ? "#t90-tools" : "#tools-start"}>สำรวจเครื่องมือ <span aria-hidden="true">↘</span></a>
           </div>
         </div>
         <div className="vdHeroPanel" aria-label="สรุปพื้นที่ทำงาน">
@@ -265,7 +265,7 @@ export function HomeScreen({
       {t90CatalogVisible ? (
         <InstitutionalT90Directory />
       ) : (
-        <section className="v3ToolsBlock vdToolsBlock">
+        <section className="v3ToolsBlock vdToolsBlock" id="tools-start">
           <div className="v3SectionHead"><div><span className="v3Kicker">TOOL COLLECTION</span><h2>เลือกงานที่ต้องการ</h2><p>เครื่องมือจัดการเอกสาร จัดกลุ่มตามงานที่ต้องทำเพื่อให้คุณเริ่มต้นได้ทันที</p></div></div>
           <div className="v3ToolGrid">
             {tools.map((tool) => (
