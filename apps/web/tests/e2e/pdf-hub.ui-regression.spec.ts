@@ -233,6 +233,11 @@ test("keeps browser performance within the measured Phase 6 baseline", async ({ 
   const baseline = JSON.parse(
     readFileSync(resolve(process.cwd(), "../../quality/browser-performance-v4-baseline.json"), "utf8"),
   ) as BrowserPerformanceBaseline;
+  // Keep the historical V3 resource ceilings as a second safety gate.
+  // The V4 semantic-icon/sidebar DOM has its own measured node budget.
+  const legacyBaseline = JSON.parse(
+    readFileSync(resolve(process.cwd(), "../../quality/browser-performance-baseline.json"), "utf8"),
+  ) as BrowserPerformanceBaseline;
   const measured: Record<string, BrowserPerformanceMetrics> = {};
 
   for (const path of ["/", "/files"]) {
@@ -256,6 +261,11 @@ test("keeps browser performance within the measured Phase 6 baseline", async ({ 
   if (!baseline.ready) return;
   for (const [path, metrics] of Object.entries(measured)) {
     const maximum = baseline.routes[path]?.maximum;
+    const legacyMaximum = legacyBaseline.routes[path]?.maximum;
+    expect(legacyMaximum, `Missing historical V3 network budget for ${path}`).toBeTruthy();
+    for (const key of ["resources", "scriptResources", "encodedBytes"] as const) {
+      expect(metrics[key], `V4 must not regress V3 network budget: ${path} ${key}`).toBeLessThanOrEqual(legacyMaximum![key]);
+    }
     expect(maximum, `Missing performance baseline for ${path}`).toBeTruthy();
     for (const key of ["domNodes", "resources", "scriptResources", "encodedBytes", "domContentLoadedMs"] as const) {
       expect(
