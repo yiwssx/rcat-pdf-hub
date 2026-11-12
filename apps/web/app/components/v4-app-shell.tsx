@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import {
-  Activity, BookOpenText, ChevronDown, Clock3, Files, FolderOpen,
-  Home, LayoutGrid, LogOut, PanelLeft, RefreshCw, Settings2,
+  Activity, ChevronDown, Clock3, Files, FolderOpen,
+  Home, LayoutGrid, LogOut, RefreshCw,
   ShieldCheck, Sparkles, Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
