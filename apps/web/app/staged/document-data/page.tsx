@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function StagedDocumentDataPage({
   searchParams,
 }: {
-  searchParams: Promise<{ file?: string | string[] }>;
+  searchParams: Promise<{ file?: string | string[]; tool?: string | string[] }>;
 }) {
   // Two explicit opt-in flags. Neither the normal /tools catalog nor
   // the public 13-operation route registry changes in this engineering phase.
@@ -18,6 +18,6 @@ export default async function StagedDocumentDataPage({
   ) {
     notFound();
   }
-  const { file } = await searchParams;
-  return <StagedDocumentDataClient requestedFileId={typeof file === "string" ? file : undefined} />;
+  const { file, tool } = await searchParams;
+  return <StagedDocumentDataClient requestedFileId={typeof file === "string" ? file : undefined} requestedToolId={typeof tool === "string" ? tool : undefined} />;
 }
