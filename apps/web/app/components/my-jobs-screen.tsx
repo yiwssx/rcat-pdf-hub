@@ -79,7 +79,7 @@ export function MyJobsScreen({ auth }: { auth: string }) {
   return (
     <main className="v3Main vdJobsPage" aria-label="งานของฉัน">
       <section className="v3HomeTitle">
-        <div><span className="v3Kicker">WORKFLOW MONITOR / MY JOBS</span><h1>ติดตามงานเอกสาร</h1><p>ตรวจสถานะงานที่กำลังประมวลผล และย้อนกลับมาดูผลลัพธ์ได้จากที่เดียว</p></div>
+        <div><span className="v3Kicker">WORKFLOW MONITOR / MY JOBS</span><h1>งานของฉัน</h1><p>ตรวจสถานะงานที่กำลังประมวลผล และย้อนกลับมาดูผลลัพธ์ได้จากที่เดียว</p></div>
         <a className="v3TextLink" href="/">← เครื่องมือทั้งหมด</a>
       </section>
       <section className="v3JobDetailCard v3JobsHistory vdJobsHistory">
