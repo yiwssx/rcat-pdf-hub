@@ -231,7 +231,7 @@ type BrowserPerformanceBaseline = {
 
 test("keeps browser performance within the measured Phase 6 baseline", async ({ page }) => {
   const baseline = JSON.parse(
-    readFileSync(resolve(process.cwd(), "../../quality/browser-performance-baseline.json"), "utf8"),
+    readFileSync(resolve(process.cwd(), "../../quality/browser-performance-v4-baseline.json"), "utf8"),
   ) as BrowserPerformanceBaseline;
   const measured: Record<string, BrowserPerformanceMetrics> = {};
 
