@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, FileText, LayoutGrid, Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, FileText, LayoutGrid, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { T90_DIRECTORY_TOOLS, T90_DIRECTORY_COUNTS, type T90DirectoryFamily } from "./t90-directory-catalog";
 import { FEATURED_T90_TOOL_IDS, toolSearchTerms } from "./t90-search-metadata";
 import { getT90Icon } from "./v4-tool-icons";
@@ -20,12 +20,28 @@ const FAMILY_LABELS: Record<T90DirectoryFamily, string> = {
   manage: "จัดการ PDF", to_pdf: "แปลงเป็น PDF", from_pdf: "แปลงจาก PDF",
 };
 const PAGE_SIZE = 12;
+type ExplorerTool = (typeof T90_DIRECTORY_TOOLS)[number];
+function ToolDetailContent({ tool }: { tool: ExplorerTool }) {
+  const Icon = getT90Icon(tool.id);
+  return <>
+    <div className="v4DetailOverline">TOOL DETAIL <span>{tool.id}</span></div>
+    <span className="v4DetailIcon" data-family={tool.category}><Icon aria-hidden="true" size={35} strokeWidth={1.6}/></span>
+    <h2>{tool.title}</h2><p>{FAMILY_LABELS[tool.category]}</p>
+    <div className="v4ToolNotice">การใช้งานจริงขึ้นอยู่กับสิทธิ์และสถานะที่ระบบอนุญาต ไม่รับรองว่าเครื่องมือนี้เปิดใช้งานแล้ว</div>
+    <a className="v4PrimaryButton" href={tool.href}>เปิดหน้าเครื่องมือ <ArrowRight aria-hidden="true" size={18}/></a>
+    <details className="v4ToolAdvanced"><summary>รายละเอียดเส้นทางและการเข้าถึง</summary>
+      <p>รหัสเครื่องมือ: {tool.id}</p><p>เส้นทาง: <code>{tool.href}</code></p>
+      <p>ยืนยันสิทธิ์จริงเมื่อเข้าสู่หน้าการทำงาน</p>
+    </details>
+  </>;
+}
 
 export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: boolean; tools: ToolDefinition[] }) {
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<Group>("all");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const mobileDetailRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -52,7 +68,6 @@ export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: bool
   const visible = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const selected = selectedId ? T90_DIRECTORY_TOOLS.find(item => item.id === selectedId) : null;
   const active = selected && catalogEnabled ? selected : visible[0] ?? null;
-  const ActiveIcon = active ? getT90Icon(active.id) : FileText;
 
   function chooseTool(id: string) {
     setSelectedId(id);
