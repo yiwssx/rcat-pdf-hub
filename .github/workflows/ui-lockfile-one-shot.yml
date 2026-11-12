@@ -1,0 +1,32 @@
+# TEMPORARY / branch-scoped dependency lock regeneration for the UI migration.
+# Remove this workflow from the PR before merge; it does not deploy anything.
+name: UI lockfile one-shot
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+jobs:
+  regenerate-lock:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/ui-modernization-unified-experience' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - name: Generate real npm lock with registry resolution
+        working-directory: apps/web
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Push only the generated lock to this feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/package-lock.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "chore(ui): generate exact npm dependency lock"
+          git push origin HEAD:refs/heads/feat/ui-modernization-unified-experience
