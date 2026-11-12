@@ -46,7 +46,11 @@ export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: bool
   useEffect(() => {
     const sync = () => {
       const id = new URLSearchParams(window.location.search).get("tool");
-      setSelectedId(id && /^[MTF]\d{2}$/.test(id) ? id : null);
+      const valid = id && /^[MTF]\d{2}$/.test(id) ? id : null;
+      setSelectedId(valid);
+      const dialog = mobileDetailRef.current;
+      if (valid && window.matchMedia("(max-width: 760px)").matches && !dialog?.open) dialog?.showModal();
+      else if ((!valid || !window.matchMedia("(max-width: 760px)").matches) && dialog?.open) dialog.close();
     };
     sync();
     window.addEventListener("popstate", sync);
@@ -74,9 +78,21 @@ export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: bool
     const url = new URL(window.location.href);
     url.searchParams.set("tool", id);
     window.history.pushState({ tool: id }, "", url.pathname + url.search + url.hash);
+    if (window.matchMedia("(max-width: 760px)").matches && !mobileDetailRef.current?.open) {
+      mobileDetailRef.current?.showModal();
+    }
   }
-  function changeGroup(next: Group) { setGroup(next); setPage(1); setSelectedId(null); }
-  function changeQuery(next: string) { setQuery(next); setPage(1); setSelectedId(null); }
+  function clearToolSelection() {
+    setSelectedId(null);
+    mobileDetailRef.current?.close();
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("tool")) {
+      url.searchParams.delete("tool");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+  }
+  function changeGroup(next: Group) { setGroup(next); setPage(1); clearToolSelection(); }
+  function changeQuery(next: string) { setQuery(next); setPage(1); clearToolSelection(); }
 
   return (
     <main className="v4Main v4Explorer" id="workspace">
