@@ -256,6 +256,7 @@ export function DocumentWorkspace({
   target,
   tools,
   activeTool,
+  t90CatalogVisible,
   previewUrl,
   previewPage,
   busy,
@@ -269,6 +270,7 @@ export function DocumentWorkspace({
   target: UploadedFile;
   tools: ToolDefinition[];
   activeTool: string;
+  t90CatalogVisible?: boolean;
   previewUrl: string | null;
   previewPage: number;
   busy: boolean;
@@ -309,6 +311,7 @@ export function DocumentWorkspace({
         <aside className="v3ActionPane">
           {activeTool ? toolPanel : <>
             <div className="v3ActionHead"><span className="v3Kicker">CHOOSE A TASK</span><h2>ทำอะไรกับไฟล์นี้?</h2><p>เลือกเครื่องมือ แล้วตั้งค่าโดยไม่ออกจาก Workspace</p></div>
+            {t90CatalogVisible && <a className="v3TextLink" href="#t90-tools">ดูเครื่องมือทั้งหมด 90 รายการ ↓</a>}
             <div className="v3CompactTools">
               {tools.map((tool) => (
                 <button type="button" className="v3CompactTool" data-tone={tool.tone} key={tool.id} onClick={() => onTool(tool)}>
