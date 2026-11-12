@@ -345,6 +345,9 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
     setPreviewUrl(null);
     setPreviewPage(1);
     clearSignedToolResult();
+    // File selection changes the in-page workflow without changing URL.
+    // Start at its file context rather than keeping the dashboard scroll offset.
+    window.scrollTo(0, 0);
   }
 
   function selectLibraryFile(file: UploadedFile) {
