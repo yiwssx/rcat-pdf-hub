@@ -46,7 +46,7 @@ export function V4AppShell({
   return (
     <>
       <aside className="v4Sidebar" aria-label="แถบเครื่องมือหลัก">
-        <Link prefetch={false} prefetch={false} className="v3Brand v4Brand" href="/" aria-label="RCAT PDF Hub">
+        <Link prefetch={false} className="v3Brand v4Brand" href="/" aria-label="RCAT PDF Hub">
           <span className="v3BrandMark"><BrandGlyph /></span>
           <span><strong>RCAT <em>PDF HUB</em></strong><small>Digital document studio</small></span>
         </Link>
@@ -55,7 +55,7 @@ export function V4AppShell({
           {links.map(item => {
             const Icon = item.icon;
             return (
-              <Link prefetch={false} prefetch={false} key={item.href} href={item.href} aria-label={item.label} aria-current={activePath(pathname, item.href) ? "page" : undefined}
+              <Link prefetch={false} key={item.href} href={item.href} aria-label={item.label} aria-current={activePath(pathname, item.href) ? "page" : undefined}
                 className="v4NavLink">
                 <Icon aria-hidden="true" size={19} strokeWidth={1.9} />
                 <span>{item.label}</span>
@@ -96,9 +96,9 @@ export function V4AppShell({
             </summary>
             <div className="v3AccountMenu">
               <div className="v3AccountMeta"><strong>{identity.display_name || identity.name}</strong><small>{identity.auth_source} · {identity.groups.join(", ") || "session"}</small></div>
-              <Link prefetch={false} prefetch={false} href="/files"><Files aria-hidden="true" size={16}/> ไฟล์ของฉัน</Link>
-              <Link prefetch={false} prefetch={false} href="/jobs"><Activity aria-hidden="true" size={16}/> ประวัติงาน</Link>
-              {identity.is_admin && <Link prefetch={false} prefetch={false} href="/admin"><ShieldCheck aria-hidden="true" size={16}/> ศูนย์ควบคุม</Link>}
+              <Link prefetch={false} href="/files"><Files aria-hidden="true" size={16}/> ไฟล์ของฉัน</Link>
+              <Link prefetch={false} href="/jobs"><Activity aria-hidden="true" size={16}/> ประวัติงาน</Link>
+              {identity.is_admin && <Link prefetch={false} href="/admin"><ShieldCheck aria-hidden="true" size={16}/> ศูนย์ควบคุม</Link>}
               <button type="button" onClick={onRefresh}><RefreshCw aria-hidden="true" size={16}/> รีเฟรชข้อมูล</button>
               <button type="button" className="danger" onClick={onLogout}><LogOut aria-hidden="true" size={16}/> ออกจากระบบ</button>
             </div>
@@ -109,7 +109,7 @@ export function V4AppShell({
       <nav className="v4MobileNav" aria-label="เมนูหลักบนมือถือ">
         {links.filter(item => !item.adminOnly).map(item => {
           const Icon = item.icon;
-          return <Link prefetch={false} prefetch={false} key={item.href} href={item.href} aria-current={activePath(pathname, item.href) ? "page" : undefined}>
+          return <Link prefetch={false} key={item.href} href={item.href} aria-current={activePath(pathname, item.href) ? "page" : undefined}>
             <Icon aria-hidden="true" size={21}/><span>{item.label}</span>
           </Link>;
         })}
