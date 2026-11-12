@@ -172,6 +172,12 @@ test("V4 critical journeys: tool search, semantic icons, deep links, navigation 
     await expect(page).toHaveURL(/\/tools$/);
     await page.goForward();
     await expect(page).toHaveURL(/tool=M04/);
+    if (width <= 760) {
+      const detail = page.getByRole("dialog", { name: "รายละเอียดเครื่องมือที่เลือก" });
+      await expect(detail).toBeVisible();
+      await detail.getByRole("button", { name: "ปิดรายละเอียด" }).click();
+      await expect(detail).not.toBeVisible();
+    }
     await search.fill("");
     await page.getByRole("button", { name: /แปลงจาก PDF/ }).first().click();
     await expect(page.locator(".v4ToolListItem").first()).toContainText("PDF");
