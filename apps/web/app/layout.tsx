@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./tailwind.css";
 import "./app-v3.css";
 import "./t90-directory.css";
 
