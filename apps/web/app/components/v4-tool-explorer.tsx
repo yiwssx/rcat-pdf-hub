@@ -30,7 +30,7 @@ function ToolDetailContent({ tool }: { tool: ExplorerTool }) {
     <span className="v4DetailIcon" data-family={tool.category}><Icon aria-hidden="true" size={35} strokeWidth={1.6}/></span>
     <h2>{tool.title}</h2><p>{FAMILY_LABELS[tool.category]}</p>
     <div className="v4ToolNotice">การใช้งานจริงขึ้นอยู่กับสิทธิ์และสถานะที่ระบบอนุญาต ไม่รับรองว่าเครื่องมือนี้เปิดใช้งานแล้ว</div>
-    <Link prefetch={false} prefetch={false} className="v4PrimaryButton" href={tool.href}>เปิดหน้าเครื่องมือ <ArrowRight aria-hidden="true" size={18}/></Link>
+    <Link prefetch={false} className="v4PrimaryButton" href={tool.href}>เปิดหน้าเครื่องมือ <ArrowRight aria-hidden="true" size={18}/></Link>
     <details className="v4ToolAdvanced"><summary>รายละเอียดเส้นทางและการเข้าถึง</summary>
       <p>รหัสเครื่องมือ: {tool.id}</p><p>เส้นทาง: <code>{tool.href}</code></p>
       <p>ยืนยันสิทธิ์จริงเมื่อเข้าสู่หน้าการทำงาน</p>
@@ -174,7 +174,7 @@ export function V4ToolExplorer({ catalogEnabled, tools }: { catalogEnabled: bool
         <section className="v4PilotTools" aria-label="เครื่องมือที่เปิดในพื้นที่ทำงานนี้">
           <p>สารบัญ T90 ยังไม่ได้เปิดในพื้นที่ทำงานนี้ แสดงเฉพาะรายการที่ระบบอนุญาตให้เลือกโดยไม่ข้าม Feature Flag</p>
           <div className="v4PilotGrid">
-            {tools.map(tool => <Link prefetch={false} prefetch={false} key={tool.id} href={`/tools/${encodeURIComponent(tool.id)}`} className="v4PilotCard">
+            {tools.map(tool => <Link prefetch={false} key={tool.id} href={`/tools/${encodeURIComponent(tool.id)}`} className="v4PilotCard">
               <span className="v4ToolSymbol"><ToolIcon name={tool.icon}/></span>
               <strong>{tool.title}</strong><small>{tool.description}</small><ArrowUpRight aria-hidden="true" size={17}/>
             </Link>)}
