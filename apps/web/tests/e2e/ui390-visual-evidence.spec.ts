@@ -69,6 +69,17 @@ test("VD2: capture comparable before/after real Chromium screenshots for the maj
     ] as const) {
       await page.goto(target, { waitUntil: "domcontentloaded" });
       await expect(page.locator(selector)).toBeVisible({ timeout: 15000 });
+      // Snapshot only settled UI state, not a transient fetch/loading frame.
+      if (view === "files") {
+        await expect(page.getByText("RCAT-document.pdf", { exact: true })).toBeVisible({ timeout: 15000 });
+      }
+      if (view === "jobs") {
+        await expect(page.getByText("ไม่พบงานในสถานะนี้")).toBeVisible({ timeout: 15000 });
+      }
+      if (view === "admin") {
+        await expect(page.getByRole("navigation", { name: "เมนูผู้ดูแลระบบ" })).toBeVisible();
+        await expect(page.locator(".v3EffectiveAccess")).toBeVisible();
+      }
       await page.evaluate(() => document.fonts.ready);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       // The baseline may have visual defects. Capture them; new candidate must not.
