@@ -1,0 +1,44 @@
+{
+  "ready": true,
+  "source": {
+    "workflow": "Existing Lean CI",
+    "run": 43204023070,
+    "measured_at": "2026-11-12",
+    "baseline_commit": "8b6aade26d8314a4f1f8d28e2cf08973d89dec69",
+    "policy": "V4 UI includes semantic SVG icons/sidebar and therefore replaces V3 DOM-count envelope; retain 15% ceilings on real Chromium DOM/resources/bytes and 4x DCL variance. V4 candidate uses fewer network resources/bytes than historic V3 baseline."
+  },
+  "routes": {
+    "/": {
+      "measured": {
+        "domNodes": 326,
+        "resources": 16,
+        "scriptResources": 8,
+        "encodedBytes": 220601,
+        "domContentLoadedMs": 34
+      },
+      "maximum": {
+        "domNodes": 375,
+        "resources": 19,
+        "scriptResources": 10,
+        "encodedBytes": 253692,
+        "domContentLoadedMs": 136
+      }
+    },
+    "/files": {
+      "measured": {
+        "domNodes": 199,
+        "resources": 16,
+        "scriptResources": 8,
+        "encodedBytes": 220660,
+        "domContentLoadedMs": 37
+      },
+      "maximum": {
+        "domNodes": 229,
+        "resources": 19,
+        "scriptResources": 10,
+        "encodedBytes": 253759,
+        "domContentLoadedMs": 148
+      }
+    }
+  }
+}
