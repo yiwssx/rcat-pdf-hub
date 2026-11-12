@@ -51,9 +51,9 @@ export function AppHeader({
       </a>
 
       <nav className="v3PrimaryNav" aria-label="เมนูหลัก">
-        <a href="/">Workspace</a>
-        <a href="/files">Files</a>
-        <a href="/jobs">My Jobs</a>
+        <a href="/">หน้าหลัก</a>
+        <a href="/files">ไฟล์ของฉัน</a>
+        <a href="/jobs">งานของฉัน</a>
       </nav>
 
       <div className="v3HeaderActions">
