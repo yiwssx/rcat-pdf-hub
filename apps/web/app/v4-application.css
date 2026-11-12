@@ -263,7 +263,7 @@ body {background:var(--v4-canvas);color:var(--v4-text);}
   display:grid;grid-template-columns:195px minmax(0,1.2fr) minmax(270px,.8fr);
   gap:15px;align-content:start;align-items:start;
 }
-.v4Workbench > .v3TaskJourney,.v4Workbench > .v3StepNav {grid-column:1/-1}
+.v4Workbench > .v3TaskJourney,.v4Workbench > .v3StepNav,.v4Workbench > .v3Journey {grid-column:1/-1}
 .v4Workbench .v3DocumentBar {
   grid-column:1;grid-row:auto;
   display:flex;flex-direction:column;align-items:flex-start;gap:13px;
@@ -424,4 +424,12 @@ body {background:var(--v4-canvas);color:var(--v4-text);}
 }
 @media (prefers-reduced-motion:reduce) {
   .v4SidebarNav a.v4NavLink {transition:none}
+}
+
+/* Mobile task CTA must not be occluded by the application bottom navigation. */
+@media(max-width:800px) {
+  .v4Application .v3IntakeReview.isReady {padding-bottom:150px}
+  .v4Application .v3IntakeReview.isReady .v3IntakeNextAction {
+    bottom:calc(79px + env(safe-area-inset-bottom));z-index:95;
+  }
 }
