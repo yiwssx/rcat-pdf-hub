@@ -2,6 +2,7 @@ import "./globals.css";
 import "./tailwind.css";
 import "./app-v3.css";
 import "./t90-directory.css";
+import "./visual-redesign.css";
 
 export const metadata = {
   title: "RCAT PDF Hub",
@@ -10,7 +11,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#f5f7ff",
+  themeColor: "#0b202d",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
