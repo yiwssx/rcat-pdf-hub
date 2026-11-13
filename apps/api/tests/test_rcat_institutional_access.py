@@ -318,3 +318,51 @@ def test_google_email_reassignment_does_not_reassign_documents(monkeypatch):
         {**base, "sub": "original-account", "email": "renamed@rcat.ac.th"}, "oidc"
     )
     assert changed["name"] == old["name"]
+
+@pytest.mark.parametrize(("issuer", "institutional", "expected_prompt", "expected_hd"), [
+    ("https://accounts.google.com", True, "select_account", "rcat.ac.th"),
+    ("https://accounts.google.com", False, "select_account", None),
+    ("https://idp.example.invalid", False, None, None),
+])
+def test_oidc_google_account_selection_preserves_policy_and_return_target(
+    monkeypatch, issuer, institutional, expected_prompt, expected_hd,
+):
+    """OIDC entrypoint chooses Google accounts without weakening the callback gate."""
+    import json
+    from urllib.parse import parse_qs, urlsplit
+
+    from app import identity as identity_module
+    from app.routers.auth import oidc_login
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "oidc_enabled", True)
+    monkeypatch.setattr(settings, "oidc_issuer", issuer)
+    monkeypatch.setattr(settings, "rcat_institutional_only", institutional)
+    monkeypatch.setattr(settings, "oidc_client_id", "rcat-oidc-test")
+    monkeypatch.setattr(settings, "oidc_redirect_uri", "https://pdf.rcat.ac.th/api/v1/auth/oidc/callback")
+    monkeypatch.setattr(
+        identity_module,
+        "oidc_discovery",
+        lambda: {"authorization_endpoint": "https://provider.invalid/authorize"},
+    )
+
+    class FakeRedis:
+        saved = None
+
+        def setex(self, key, ttl, value):
+            self.saved = (key, ttl, value)
+
+    redis = FakeRedis()
+    monkeypatch.setattr(identity_module.Redis, "from_url", lambda *_args: redis)
+
+    redirect = oidc_login(return_to="/tools")
+    assert redirect.status_code == 302
+    parameters = parse_qs(urlsplit(redirect.headers["location"]).query)
+    assert parameters.get("prompt", [None]) == [expected_prompt]
+    assert parameters.get("hd", [None]) == [expected_hd]
+    assert parameters["client_id"] == ["rcat-oidc-test"]
+    assert parameters["code_challenge_method"] == ["S256"]
+    assert parameters["state"] and parameters["nonce"]
+    assert redis.saved is not None
+    assert redis.saved[0].endswith(parameters["state"][0])
+    assert json.loads(redis.saved[2])["return_to"] == "/tools"
