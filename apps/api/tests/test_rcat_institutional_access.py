@@ -339,7 +339,6 @@ def test_oidc_google_account_selection_preserves_policy_and_return_target(
     monkeypatch.setattr(settings, "oidc_issuer", issuer)
     monkeypatch.setattr(settings, "rcat_institutional_only", institutional)
     monkeypatch.setattr(settings, "oidc_client_id", "rcat-oidc-test")
-    monkeypatch.setattr(settings, "oidc_redirect_uri", "https://pdf.rcat.ac.th/api/v1/auth/oidc/callback")
     monkeypatch.setattr(
         identity_module,
         "oidc_discovery",
