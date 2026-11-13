@@ -326,18 +326,25 @@ def build_oidc_authorization_url(return_to: str = "/") -> str:
     challenge = _b64url(hashlib.sha256(verifier.encode("ascii")).digest())
     payload = json.dumps({"nonce": nonce, "verifier": verifier, "return_to": return_to})
     Redis.from_url(settings.redis_url).setex(OIDC_STATE_PREFIX + state, settings.oidc_state_ttl_seconds, payload)
-    query = urlencode(
-        {
-            "response_type": "code",
-            "client_id": settings.oidc_client_id,
-            "redirect_uri": settings.oidc_redirect_uri,
-            "scope": settings.oidc_scope,
-            "state": state,
-            "nonce": nonce,
-            "code_challenge": challenge,
-            "code_challenge_method": "S256",
-        }
-    )
+    query_params = {
+        "response_type": "code",
+        "client_id": settings.oidc_client_id,
+        "redirect_uri": settings.oidc_redirect_uri,
+        "scope": settings.oidc_scope,
+        "state": state,
+        "nonce": nonce,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+    }
+    if settings.oidc_issuer.rstrip("/") in {
+        "https://accounts.google.com", "accounts.google.com",
+    }:
+        # Always offer a new account choice; never force a remembered Gmail account.
+        query_params["prompt"] = "select_account"
+        if settings.rcat_institutional_only:
+            # Google UX hint only. Signed email/hd claims remain enforced below.
+            query_params["hd"] = "rcat.ac.th"
+    query = urlencode(query_params)
     return str(discovery["authorization_endpoint"]) + "?" + query
 
 
