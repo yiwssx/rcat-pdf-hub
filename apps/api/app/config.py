@@ -267,6 +267,10 @@ class Settings(BaseSettings):
             raise ValueError("RCAT bootstrap super admin must be a lowercase @rcat.ac.th address")
         if self.rcat_role_registry_enabled and not self.rcat_institutional_only:
             raise ValueError("RCAT role registry requires institutional Google OIDC mode")
+        if self.rcat_role_registry_enabled and self.oidc_issuer.rstrip("/") not in {
+            "https://accounts.google.com", "accounts.google.com"
+        }:
+            raise ValueError("RCAT role registry requires Google Workspace OIDC issuer")
         # not allow a password-less workspace or unverifiable LDAP login.
         if self.rcat_institutional_only:
             if not self.oidc_enabled or self.ldap_enabled:
