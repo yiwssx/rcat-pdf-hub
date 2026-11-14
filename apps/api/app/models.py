@@ -11,6 +11,40 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+
+
+class InstitutionalRoleAssignment(Base):
+    """Explicit institutional role bound to immutable OIDC owner after first login."""
+
+    __tablename__ = "institutional_role_assignments"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('viewer', 'operator', 'admin', 'super_admin')",
+            name="ck_institutional_role",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email: Mapped[str] = mapped_column(String(254), unique=True, nullable=False)
+    owner_name: Mapped[str | None] = mapped_column(String(120), unique=True, nullable=True)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    granted_by: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class InstitutionalBootstrapClaim(Base):
+    """Durable one-time marker: never reassign bootstrap privilege by email alone."""
+
+    __tablename__ = "institutional_bootstrap_claims"
+
+    key: Mapped[str] = mapped_column(String(48), primary_key=True)
+    owner_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class ApiKey(Base):
     __tablename__ = "api_keys"
 
