@@ -181,7 +181,7 @@ def _require_human_triage_admin(principal: Principal) -> None:
     # Both bootstrap and wildcard service/API-key principals must be denied.
     if (
         not principal.is_identity_admin
-        or "admin" not in principal.roles
+        or not ({"admin", "super_admin"} & principal.roles)
         or principal.auth_source not in {"oidc", "ldap", "local-admin"}
     ):
         raise HTTPException(status_code=403, detail="Human Admin identity required")
