@@ -148,6 +148,10 @@ class Settings(BaseSettings):
     # RCAT users receive the operator role; this explicit allowlist grants
     # administrator access without enabling local-admin or API-key bypasses.
     rcat_admin_emails: str = ""
+    # Opt-in database-backed assignments; disabled until authorized host deployment.
+    rcat_role_registry_enabled: bool = False
+    # One exact, owner-authorized Workspace mailbox, bound once to immutable OIDC sub.
+    rcat_bootstrap_super_admin_email: str = ""
     human_scopes: str = DEFAULT_HUMAN_SCOPES
     viewer_groups: str = "pdfhub-viewers"
     operator_groups: str = "pdfhub-users"
@@ -254,7 +258,7 @@ class Settings(BaseSettings):
                 r"[a-z0-9][a-z0-9._%+\-]*@rcat\.ac\.th", email
             ):
                 raise ValueError("RCAT_ADMIN_EMAILS entries must be @rcat.ac.th addresses")
-        # Identity restriction is a security boundary, not a UI filter. Do
+        if self.rcat_bootstrap_super_admin_email and (not self.rcat_bootstrap_super_admin_email.isascii() or not re.fullmatch(\n            r"[a-z0-9][a-z0-9._%+\\-]*@rcat\\.ac\\.th", self.rcat_bootstrap_super_admin_email\n        )):\n            raise ValueError("RCAT bootstrap super admin must be a lowercase @rcat.ac.th address")\n        if self.rcat_role_registry_enabled and not self.rcat_institutional_only:\n            raise ValueError("RCAT role registry requires institutional Google OIDC mode")\n        # Identity restriction is a security boundary, not a UI filter. Do
         # not allow a password-less workspace or unverifiable LDAP login.
         if self.rcat_institutional_only:
             if not self.oidc_enabled or self.ldap_enabled:
