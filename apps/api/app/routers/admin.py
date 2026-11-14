@@ -1,5 +1,6 @@
 import shutil
 import json
+from datetime import datetime
 from typing import Literal
 
 import httpx
@@ -441,6 +442,31 @@ class InstitutionalRoleUpdate(BaseModel):
     role: Literal["viewer", "operator", "admin", "super_admin"]
 
 
+class InstitutionalUserOut(BaseModel):
+    email: str
+    role: Literal["viewer", "operator", "admin", "super_admin"]
+    active: bool
+    linked: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+def _lock_and_check_super_admin(db: Session, principal: Principal) -> None:
+    require_super_admin(principal)
+    # Serialize concurrent promotions/demotions to retain at least one owner.
+    # No extra dependency or lock is needed on disposable SQLite test databases.
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(2026111401)"))
+    current = db.scalar(select(InstitutionalRoleAssignment).where(
+        InstitutionalRoleAssignment.owner_name == principal.name,
+        InstitutionalRoleAssignment.role == ROLE_SUPER_ADMIN,
+        InstitutionalRoleAssignment.active.is_(True),
+    ))
+    if current is None:
+        raise HTTPException(status_code=403, detail="Super Admin role was revoked")
+
+
+
 def _role_out(row: InstitutionalRoleAssignment) -> dict:
     return {
         "email": row.email,
@@ -459,7 +485,7 @@ def _role_email(email: str) -> str:
         raise HTTPException(status_code=422, detail="Exact @rcat.ac.th email required") from exc
 
 
-@router.get("/users")
+@router.get("/users", response_model=list[InstitutionalUserOut])
 def list_institutional_roles(
     principal: Principal = Depends(get_principal),
     db: Session = Depends(get_db),
@@ -472,14 +498,14 @@ def list_institutional_roles(
     return [_role_out(row) for row in rows]
 
 
-@router.put("/users/{email}")
+@router.put("/users/{email}", response_model=InstitutionalUserOut)
 def grant_institutional_role(
     email: str,
     update: InstitutionalRoleUpdate,
     principal: Principal = Depends(get_principal),
     db: Session = Depends(get_db),
 ):
-    require_super_admin(principal)
+    _lock_and_check_super_admin(db, principal)
     email = _role_email(email)
     record = db.scalar(select(InstitutionalRoleAssignment).where(
         InstitutionalRoleAssignment.email == email
@@ -489,6 +515,13 @@ def grant_institutional_role(
     if update.role == ROLE_SUPER_ADMIN and (record is None or record.owner_name is None):
         # Never elevate an unverified email-only invitation to Super Admin.
         raise HTTPException(status_code=409, detail="Super Admin promotion requires a linked OIDC identity")
+    if record is not None and record.active and record.role == ROLE_SUPER_ADMIN and update.role != ROLE_SUPER_ADMIN:
+        others = db.scalar(select(func.count()).select_from(InstitutionalRoleAssignment).where(
+            InstitutionalRoleAssignment.role == ROLE_SUPER_ADMIN,
+            InstitutionalRoleAssignment.active.is_(True),
+        ))
+        if (others or 0) <= 1:
+            raise HTTPException(status_code=409, detail="Cannot demote the last Super Admin")
     if record is None:
         record = InstitutionalRoleAssignment(
             email=email, owner_name=None, role=update.role,
@@ -508,13 +541,13 @@ def grant_institutional_role(
     return _role_out(record)
 
 
-@router.delete("/users/{email}")
+@router.delete("/users/{email}", response_model=InstitutionalUserOut)
 def disable_institutional_role(
     email: str,
     principal: Principal = Depends(get_principal),
     db: Session = Depends(get_db),
 ):
-    require_super_admin(principal)
+    _lock_and_check_super_admin(db, principal)
     email = _role_email(email)
     record = db.scalar(select(InstitutionalRoleAssignment).where(
         InstitutionalRoleAssignment.email == email
