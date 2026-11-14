@@ -372,6 +372,7 @@ body {background:var(--v4-canvas);color:var(--v4-text);}
     background:rgba(255,255,255,.97);border-top:1px solid var(--v4-border);
     box-shadow:0 -9px 22px rgba(16,25,50,.06);
   }
+  .v4MobileNav.v4MobileNavAdmin {grid-template-columns:repeat(5,minmax(0,1fr))}
   .v4MobileNav a {display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-height:50px;color:#6e7790;text-decoration:none;font-size:10px;font-weight:700;border-radius:9px}
   .v4MobileNav a[aria-current="page"] {color:var(--v4-accent);background:#efecff}
   .v4Application > .v3Main,.v4Application > .v4Main {width:100%;padding:22px 15px 40px;margin:0}
