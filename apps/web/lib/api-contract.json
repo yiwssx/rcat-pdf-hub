@@ -146,6 +146,24 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/users",
+      "response": "list[InstitutionalUserOut]",
+      "client_marker": "\"/api/v1/admin/users\""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/users/{email}",
+      "response": "InstitutionalUserOut",
+      "client_marker": "`/api/v1/admin/users/${encodeURIComponent(email)}`"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{email}",
+      "response": "InstitutionalUserOut",
+      "client_marker": "`/api/v1/admin/users/${encodeURIComponent(email)}`"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/api-keys",
       "response": "list[ApiKeyOut]",
       "client_marker": "\"/api/v1/admin/api-keys\""
