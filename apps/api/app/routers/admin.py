@@ -1,5 +1,6 @@
 import shutil
 import json
+from datetime import datetime
 from typing import Literal
 
 import httpx
@@ -181,7 +182,7 @@ def _require_human_triage_admin(principal: Principal) -> None:
     # Both bootstrap and wildcard service/API-key principals must be denied.
     if (
         not principal.is_identity_admin
-        or "admin" not in principal.roles
+        or not ({"admin", "super_admin"} & principal.roles)
         or principal.auth_source not in {"oidc", "ldap", "local-admin"}
     ):
         raise HTTPException(status_code=403, detail="Human Admin identity required")
@@ -425,3 +426,147 @@ def audit_log(
     _: Principal = Depends(require_scope("admin:keys")),
 ):
     return read_audit_events(limit)
+
+
+# These endpoints deliberately require the database-resolved institutional
+# Super Admin role, not generic admin:keys, wildcard scopes, or local admin.
+from pydantic import BaseModel
+from app.identity import _verified_rcat_email
+from app.models import InstitutionalRoleAssignment
+from app.rbac import ROLE_SUPER_ADMIN
+from app.role_registry import require_super_admin
+from app.security import get_principal
+
+
+class InstitutionalRoleUpdate(BaseModel):
+    role: Literal["viewer", "operator", "admin", "super_admin"]
+
+
+class InstitutionalUserOut(BaseModel):
+    email: str
+    role: Literal["viewer", "operator", "admin", "super_admin"]
+    active: bool
+    linked: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+def _lock_and_check_super_admin(db: Session, principal: Principal) -> None:
+    require_super_admin(principal)
+    # Serialize concurrent promotions/demotions to retain at least one owner.
+    # No extra dependency or lock is needed on disposable SQLite test databases.
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(2026111401)"))
+    current = db.scalar(select(InstitutionalRoleAssignment).where(
+        InstitutionalRoleAssignment.owner_name == principal.name,
+        InstitutionalRoleAssignment.role == ROLE_SUPER_ADMIN,
+        InstitutionalRoleAssignment.active.is_(True),
+    ))
+    if current is None:
+        raise HTTPException(status_code=403, detail="Super Admin role was revoked")
+
+
+
+def _role_out(row: InstitutionalRoleAssignment) -> dict:
+    return {
+        "email": row.email,
+        "role": row.role,
+        "active": row.active,
+        "linked": row.owner_name is not None,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
+
+
+def _role_email(email: str) -> str:
+    try:
+        return _verified_rcat_email(email, True)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Exact @rcat.ac.th email required") from exc
+
+
+@router.get("/users", response_model=list[InstitutionalUserOut])
+def list_institutional_roles(
+    principal: Principal = Depends(get_principal),
+    db: Session = Depends(get_db),
+):
+    require_super_admin(principal)
+    rows = db.scalars(
+        select(InstitutionalRoleAssignment)
+        .order_by(InstitutionalRoleAssignment.email.asc()).limit(1000)
+    ).all()
+    return [_role_out(row) for row in rows]
+
+
+@router.put("/users/{email}", response_model=InstitutionalUserOut)
+def grant_institutional_role(
+    email: str,
+    update: InstitutionalRoleUpdate,
+    principal: Principal = Depends(get_principal),
+    db: Session = Depends(get_db),
+):
+    _lock_and_check_super_admin(db, principal)
+    email = _role_email(email)
+    record = db.scalar(select(InstitutionalRoleAssignment).where(
+        InstitutionalRoleAssignment.email == email
+    ))
+    if record is not None and record.owner_name == principal.name:
+        raise HTTPException(status_code=403, detail="Cannot change own Super Admin role")
+    if update.role == ROLE_SUPER_ADMIN and (record is None or record.owner_name is None):
+        # Never elevate an unverified email-only invitation to Super Admin.
+        raise HTTPException(status_code=409, detail="Super Admin promotion requires a linked OIDC identity")
+    if record is not None and record.active and record.role == ROLE_SUPER_ADMIN and update.role != ROLE_SUPER_ADMIN:
+        others = db.scalar(select(func.count()).select_from(InstitutionalRoleAssignment).where(
+            InstitutionalRoleAssignment.role == ROLE_SUPER_ADMIN,
+            InstitutionalRoleAssignment.active.is_(True),
+        ))
+        if (others or 0) <= 1:
+            raise HTTPException(status_code=409, detail="Cannot demote the last Super Admin")
+    if record is None:
+        record = InstitutionalRoleAssignment(
+            email=email, owner_name=None, role=update.role,
+            active=True, granted_by=principal.name,
+        )
+        db.add(record)
+    else:
+        record.role = update.role
+        record.active = True
+        record.granted_by = principal.name
+    _require_action_audit("rbac.role_assigned", principal, "institutional_role", None, {
+        "target_email": email, "role": update.role,
+        "linked": record.owner_name is not None,
+    })
+    db.commit()
+    db.refresh(record)
+    return _role_out(record)
+
+
+@router.delete("/users/{email}", response_model=InstitutionalUserOut)
+def disable_institutional_role(
+    email: str,
+    principal: Principal = Depends(get_principal),
+    db: Session = Depends(get_db),
+):
+    _lock_and_check_super_admin(db, principal)
+    email = _role_email(email)
+    record = db.scalar(select(InstitutionalRoleAssignment).where(
+        InstitutionalRoleAssignment.email == email
+    ))
+    if record is None:
+        raise HTTPException(status_code=404, detail="Institutional account not found")
+    if record.owner_name == principal.name:
+        raise HTTPException(status_code=403, detail="Cannot disable own Super Admin account")
+    if record.role == ROLE_SUPER_ADMIN and record.active:
+        count = db.scalar(select(func.count()).select_from(InstitutionalRoleAssignment).where(
+            InstitutionalRoleAssignment.role == ROLE_SUPER_ADMIN,
+            InstitutionalRoleAssignment.active.is_(True),
+        ))
+        if (count or 0) <= 1:
+            raise HTTPException(status_code=409, detail="Cannot disable the last Super Admin")
+    record.active = False
+    _require_action_audit("rbac.account_disabled", principal, "institutional_role", None, {
+        "target_email": email, "previous_role": record.role,
+    })
+    db.commit()
+    db.refresh(record)
+    return _role_out(record)

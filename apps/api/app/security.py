@@ -95,7 +95,7 @@ def _service_principal(supplied: str, db: Session) -> Principal:
     )
 
 
-def _identity_principal(identity: dict) -> Principal:
+def _identity_principal(identity: dict, db: Session | None = None) -> Principal:
     try:
         _require_rcat_identity(identity)
     except ValueError as exc:
@@ -103,6 +103,11 @@ def _identity_principal(identity: dict) -> Principal:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only verified @rcat.ac.th accounts are permitted",
         ) from exc
+    if settings.rcat_institutional_only and settings.rcat_role_registry_enabled:
+        if db is None:
+            raise HTTPException(status_code=503, detail="Institutional role database is unavailable")
+        from app.role_registry import resolve_institutional_identity
+        identity = resolve_institutional_identity(db, identity)
     scopes = set(identity.get("scopes") or [])
     name = str(identity["name"])
     ensure_rate_limit(name, settings.default_rate_limit_per_minute)
@@ -121,14 +126,14 @@ def _identity_principal(identity: dict) -> Principal:
     )
 
 
-def _bearer_identity(token: str) -> Principal:
+def _bearer_identity(token: str, db: Session) -> Principal:
     try:
-        return _identity_principal(decode_session_token(token))
+        return _identity_principal(decode_session_token(token), db)
     except jwt.PyJWTError:
         pass
     if settings.oidc_enabled:
         try:
-            return _identity_principal(identity_from_claims(validate_oidc_token(token), "oidc-bearer"))
+            return _identity_principal(identity_from_claims(validate_oidc_token(token), "oidc-bearer"), db)
         except (jwt.PyJWTError, RuntimeError, ValueError, httpx.HTTPError) as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token") from exc
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bearer token")
@@ -147,11 +152,11 @@ def get_principal(
         supplied = authorization[7:].strip()
         if supplied.startswith("pdfh_") or hmac.compare_digest(supplied, settings.admin_api_key):
             return _service_principal(supplied, db)
-        return _bearer_identity(supplied)
+        return _bearer_identity(supplied, db)
 
     if pdfhub_session:
         try:
-            return _identity_principal(decode_session_token(pdfhub_session))
+            return _identity_principal(decode_session_token(pdfhub_session), db)
         except jwt.PyJWTError as exc:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired or invalid") from exc
 

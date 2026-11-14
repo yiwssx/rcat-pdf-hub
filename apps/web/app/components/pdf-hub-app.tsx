@@ -39,6 +39,7 @@ import { AdminAreaNav, type AdminArea } from "./admin-area-nav";
 import { AdminOverviewScreen } from "./admin-overview-screen";
 import { AdminJobTriagePanel } from "./admin-job-triage-panel";
 import { AdminStorageHealthPanel } from "./admin-storage-health-panel";
+import { SuperAdminUsers } from "./super-admin-users";
 import { findPdfTool, institutionalPilotTools, RCAT_RELEASE1_TOOL_IDS } from "./tool-catalog";
 import { ToolFileIntake } from "./tool-file-intake";
 import { validateToolInputs, TOOL_INPUT_RULES } from "./tool-input-rules";
@@ -594,7 +595,7 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
             <a className="v3TextLink" href="/">← กลับ Workspace</a>
           </section>
           {identity.is_admin ? <>
-            <AdminAreaNav active={initialAdminArea} />
+            <AdminAreaNav active={initialAdminArea} isSuperAdmin={identity.roles.includes("super_admin")} />
             {initialAdminArea === "overview" && <>
               <AdminIdentityPanel identity={identity}/>
               <AdminOverviewScreen
@@ -617,6 +618,11 @@ export function PdfHubApp({ initialView = "workspace", initialTool, initialFileI
               <AdminJobTriagePanel auth={auth} />
               <a className="v3TextLink" href="/jobs">งานของฉัน →</a>
             </section>}
+            {initialAdminArea === "users" && (
+              identity.roles.includes("super_admin")
+                ? <SuperAdminUsers auth={auth} />
+                : <section className="v3AccessDenied" role="alert">เฉพาะ Super Admin เท่านั้นที่จัดการผู้ใช้ได้</section>
+            )}
             {initialAdminArea === "access" && <>
               <AdminIdentityPanel identity={identity}/>
               <AdminPanel apiKey={auth} area="access"/>

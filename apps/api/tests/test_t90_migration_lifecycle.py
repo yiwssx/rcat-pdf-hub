@@ -18,6 +18,7 @@ import pytest
 API_ROOT = Path(__file__).resolve().parents[1]
 PRIOR_REVISION = "0004_phase6_file_library_indexes"
 T90_REVISION = "0006_t90_write_journal"
+CURRENT_REVISION = "0007_institutional_roles"
 
 
 def _invoke(db_path: Path, source: str) -> None:
@@ -130,7 +131,11 @@ def test_migration_backfill_constraints_and_safe_downgrade(tmp_path: Path, start
     _invoke(database, "from app.migrate import run_migrations; run_migrations()")
     with sqlite3.connect(database) as db:
         db.execute("PRAGMA foreign_keys=ON")
-        assert _version(db) == T90_REVISION
+        assert _version(db) == CURRENT_REVISION
+        # New additive RBAC tables coexist with the historical T90 journal and links.
+        assert {"institutional_role_assignments", "institutional_bootstrap_claims"} <= {
+            row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
         links = _backfill_rows(db)
         assert set(links) == {
             (ids["root_job"], ids["bundle"], "bundle", None),
@@ -197,7 +202,7 @@ def test_migration_backfill_constraints_and_safe_downgrade(tmp_path: Path, start
     # Rollback and re-upgrade should reconstruct only safe historical links.
     _invoke(database, "from app.migrate import run_migrations; run_migrations()")
     with sqlite3.connect(database) as db:
-        assert _version(db) == T90_REVISION
+        assert _version(db) == CURRENT_REVISION
         assert set(_backfill_rows(db)) == {
             (ids["root_job"], ids["bundle"], "bundle", None),
             (ids["pdf_job"], ids["pdf"], "result", None),
@@ -209,7 +214,7 @@ def test_new_schema_root_uniqueness_holds_on_sqlite_without_nullable_ordinal_exc
     database = tmp_path / "fresh-t90.db"
     _invoke(database, "from app.migrate import run_migrations; run_migrations()")
     with sqlite3.connect(database) as db:
-        assert _version(db) == T90_REVISION
+        assert _version(db) == CURRENT_REVISION
         entries = db.execute("PRAGMA index_list(job_output_artifacts)").fetchall()
         assert any(row[1] == "uq_job_output_artifacts_one_primary" and row[2] == 1 for row in entries)
         # The constraint applies only to result/bundle roots, not numbered parts.

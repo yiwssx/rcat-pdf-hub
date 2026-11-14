@@ -20,7 +20,7 @@ from sqlalchemy.engine import make_url
 
 API_ROOT = Path(__file__).resolve().parents[1]
 PREVIOUS = "0004_phase6_file_library_indexes"
-LATEST = "0006_t90_write_journal"
+LATEST = "0007_institutional_roles"
 ENV_NAME = "PDFHUB_T90_POSTGRES_TEST_URL"
 CI_USER = "pdfhub_t90_ci"
 

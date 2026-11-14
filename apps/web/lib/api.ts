@@ -145,6 +145,16 @@ export type AuthConfig = {
   institutional?: { rcat_only: boolean; email_domain: string | null };
 };
 
+export type InstitutionalUserRole = "viewer" | "operator" | "admin" | "super_admin";
+export type InstitutionalUser = {
+  email: string;
+  role: InstitutionalUserRole;
+  active: boolean;
+  linked: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AuthMe = {
   name: string;
   display_name: string | null;
@@ -554,4 +564,24 @@ export async function getAdminStorageHealth(auth: string): Promise<AdminStorageH
 
 export async function getAdminStatus(auth: string): Promise<AdminStatus> {
   return expectJson<AdminStatus>(await request("/api/v1/admin/status", { headers: headers(auth), cache: "no-store" }));
+}
+
+
+export async function listInstitutionalUsers(auth: string): Promise<InstitutionalUser[]> {
+  return expectJson<InstitutionalUser[]>(await request("/api/v1/admin/users", {
+    headers: headers(auth), cache: "no-store",
+  }));
+}
+
+export async function setInstitutionalUserRole(email: string, role: InstitutionalUserRole, auth: string): Promise<InstitutionalUser> {
+  return expectJson<InstitutionalUser>(await request(`/api/v1/admin/users/${encodeURIComponent(email)}`, {
+    method: "PUT", headers: { ...headers(auth), "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  }));
+}
+
+export async function disableInstitutionalUser(email: string, auth: string): Promise<InstitutionalUser> {
+  return expectJson<InstitutionalUser>(await request(`/api/v1/admin/users/${encodeURIComponent(email)}`, {
+    method: "DELETE", headers: headers(auth),
+  }));
 }
