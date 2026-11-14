@@ -4,6 +4,7 @@ export const ADMIN_AREAS = [
   { id: "overview", label: "ภาพรวม", description: "สุขภาพและสถานะบริการ" },
   { id: "jobs", label: "งานประมวลผล", description: "คิวและสถานะงาน" },
   { id: "access", label: "สิทธิ์เข้าถึง", description: "บัญชี บทบาท และ Service Keys" },
+  { id: "users", label: "ผู้ใช้และสิทธิ์", description: "จัดการบทบาท Google Workspace" },
   { id: "storage", label: "พื้นที่จัดเก็บ", description: "ความจุและการเก็บรักษา" },
   { id: "diagnostics", label: "วิเคราะห์ปัญหา", description: "สถานะเครื่องมือและ Audit" },
   { id: "integrations", label: "การเชื่อมต่อ", description: "Paperless, Webhook และระบบภายนอก" },
@@ -15,10 +16,10 @@ export function isAdminArea(value: string | undefined): value is AdminArea {
   return ADMIN_AREAS.some((area) => area.id === value);
 }
 
-export function AdminAreaNav({ active }: { active: AdminArea }) {
+export function AdminAreaNav({ active, isSuperAdmin = false }: { active: AdminArea; isSuperAdmin?: boolean }) {
   return (
     <nav className="v3AdminAreaNav" aria-label="เมนูผู้ดูแลระบบ">
-      {ADMIN_AREAS.map((area) => (
+      {ADMIN_AREAS.filter(area => area.id !== "users" || isSuperAdmin).map((area) => (
         <Link prefetch={false} key={area.id} href={`/admin?section=${area.id}`}
           aria-current={active === area.id ? "page" : undefined}>
           <strong>{area.label}</strong>
