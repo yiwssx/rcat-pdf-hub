@@ -258,7 +258,15 @@ class Settings(BaseSettings):
                 r"[a-z0-9][a-z0-9._%+\-]*@rcat\.ac\.th", email
             ):
                 raise ValueError("RCAT_ADMIN_EMAILS entries must be @rcat.ac.th addresses")
-        if self.rcat_bootstrap_super_admin_email and (not self.rcat_bootstrap_super_admin_email.isascii() or not re.fullmatch(\n            r"[a-z0-9][a-z0-9._%+\\-]*@rcat\\.ac\\.th", self.rcat_bootstrap_super_admin_email\n        )):\n            raise ValueError("RCAT bootstrap super admin must be a lowercase @rcat.ac.th address")\n        if self.rcat_role_registry_enabled and not self.rcat_institutional_only:\n            raise ValueError("RCAT role registry requires institutional Google OIDC mode")\n        # Identity restriction is a security boundary, not a UI filter. Do
+        if self.rcat_bootstrap_super_admin_email and (
+            not self.rcat_bootstrap_super_admin_email.isascii()
+            or not re.fullmatch(
+                r"[a-z0-9][a-z0-9._%+\-]*@rcat\.ac\.th", self.rcat_bootstrap_super_admin_email
+            )
+        ):
+            raise ValueError("RCAT bootstrap super admin must be a lowercase @rcat.ac.th address")
+        if self.rcat_role_registry_enabled and not self.rcat_institutional_only:
+            raise ValueError("RCAT role registry requires institutional Google OIDC mode")
         # not allow a password-less workspace or unverifiable LDAP login.
         if self.rcat_institutional_only:
             if not self.oidc_enabled or self.ldap_enabled:
