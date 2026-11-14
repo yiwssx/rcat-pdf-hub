@@ -3,7 +3,8 @@ from collections.abc import Iterable
 ROLE_VIEWER = "viewer"
 ROLE_OPERATOR = "operator"
 ROLE_ADMIN = "admin"
-HUMAN_ROLES = (ROLE_VIEWER, ROLE_OPERATOR, ROLE_ADMIN)
+ROLE_SUPER_ADMIN = "super_admin"
+HUMAN_ROLES = (ROLE_VIEWER, ROLE_OPERATOR, ROLE_ADMIN, ROLE_SUPER_ADMIN)
 ROLE_PRECEDENCE = (ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER)
 
 VIEWER_SCOPES = frozenset({"files:read", "jobs:read"})
@@ -19,7 +20,7 @@ def normalize_roles(values: Iterable[str]) -> tuple[str, ...]:
 
 def scopes_for_roles(roles: Iterable[str], operator_scopes: Iterable[str]) -> set[str]:
     normalized = set(normalize_roles(roles))
-    if ROLE_ADMIN in normalized:
+    if ROLE_ADMIN in normalized or ROLE_SUPER_ADMIN in normalized:
         return {"*"}
 
     scopes: set[str] = set()
@@ -31,7 +32,7 @@ def scopes_for_roles(roles: Iterable[str], operator_scopes: Iterable[str]) -> se
 
 
 def is_admin_role(roles: Iterable[str]) -> bool:
-    return ROLE_ADMIN in set(normalize_roles(roles))
+    return bool({ROLE_ADMIN, ROLE_SUPER_ADMIN} & set(normalize_roles(roles)))
 
 
 def role_for_groups(groups: Iterable[str], role_groups: dict[str, set[str]]) -> str:
