@@ -106,7 +106,7 @@ export function V4AppShell({
         </div>
       </header>
 
-      <nav className="v4MobileNav" aria-label="เมนูหลักบนมือถือ">
+      <nav className={identity.is_admin ? "v4MobileNav v4MobileNavAdmin" : "v4MobileNav"} aria-label="เมนูหลักบนมือถือ">
         {links.map(item => {
           const Icon = item.icon;
           return <Link prefetch={false} key={item.href} href={item.href} aria-current={activePath(pathname, item.href) ? "page" : undefined}>
