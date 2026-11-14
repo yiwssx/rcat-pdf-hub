@@ -91,7 +91,7 @@ export function V4AppShell({
           <details className="v3Account v4Account">
             <summary aria-label="เมนูบัญชี">
               <span className="v3Avatar">{(identity.display_name || identity.name || "U").slice(0, 1).toUpperCase()}</span>
-              <span className="v3AccountName"><strong>{identity.display_name || identity.name}</strong><small>{identity.is_admin ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน"}</small></span>
+              <span className="v3AccountName"><strong>{identity.display_name || identity.name}</strong><small>{identity.roles.includes("super_admin") ? "Super Admin" : identity.is_admin ? "ผู้ดูแลระบบ" : "ผู้ใช้งาน"}</small></span>
               <ChevronDown aria-hidden="true" size={14}/>
             </summary>
             <div className="v3AccountMenu">
@@ -107,7 +107,7 @@ export function V4AppShell({
       </header>
 
       <nav className="v4MobileNav" aria-label="เมนูหลักบนมือถือ">
-        {links.filter(item => !item.adminOnly).map(item => {
+        {links.map(item => {
           const Icon = item.icon;
           return <Link prefetch={false} key={item.href} href={item.href} aria-current={activePath(pathname, item.href) ? "page" : undefined}>
             <Icon aria-hidden="true" size={21}/><span>{item.label}</span>
