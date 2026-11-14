@@ -103,7 +103,12 @@ def _identity_principal(identity: dict, db: Session | None = None) -> Principal:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only verified @rcat.ac.th accounts are permitted",
         ) from exc
-    if settings.rcat_institutional_only and settings.rcat_role_registry_enabled:\n        if db is None:\n            raise HTTPException(status_code=503, detail="Institutional role database is unavailable")\n        from app.role_registry import resolve_institutional_identity\n        identity = resolve_institutional_identity(db, identity)\n    scopes = set(identity.get("scopes") or [])
+    if settings.rcat_institutional_only and settings.rcat_role_registry_enabled:
+        if db is None:
+            raise HTTPException(status_code=503, detail="Institutional role database is unavailable")
+        from app.role_registry import resolve_institutional_identity
+        identity = resolve_institutional_identity(db, identity)
+    scopes = set(identity.get("scopes") or [])
     name = str(identity["name"])
     ensure_rate_limit(name, settings.default_rate_limit_per_minute)
     return Principal(
