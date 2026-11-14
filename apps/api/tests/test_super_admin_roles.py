@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.db import Base
 from app.identity import create_session_token, decode_session_token, identity_from_claims
 from app.models import InstitutionalBootstrapClaim, InstitutionalRoleAssignment
-from app.role_registry import resolve_institutional_identity, require_super_admin
+from app.role_registry import require_super_admin
 from app.routers.admin import (
     InstitutionalRoleUpdate,
     disable_institutional_role,
