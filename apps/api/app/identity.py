@@ -1,7 +1,6 @@
 import base64
 import hashlib
 import json
-import re
 import secrets
 import time
 from functools import lru_cache
