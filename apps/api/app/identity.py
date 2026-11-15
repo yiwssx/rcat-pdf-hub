@@ -1,7 +1,6 @@
 import base64
 import hashlib
 import json
-import re
 import secrets
 import time
 from functools import lru_cache
@@ -47,11 +46,20 @@ def _verified_rcat_email(email: object, verified: object) -> str:
     """
     if verified is not True or not isinstance(email, str):
         raise ValueError("A verified institutional email is required")
-    if (len(email) > 254 or not email.isascii()
-            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._%+\-]*@rcat\.ac\.th",
-                                email, flags=re.IGNORECASE)):
+    # Check the fixed institutional domain and ASCII local-part in O(n).
+    # This preserves the existing exact mailbox grammar without regex backtracking.
+    if len(email) > 254 or not email.isascii():
         raise ValueError("Only verified @rcat.ac.th identities may sign in")
-    return email.lower()
+    normalized = email.lower()
+    domain = "@rcat.ac.th"
+    if not normalized.endswith(domain):
+        raise ValueError("Only verified @rcat.ac.th identities may sign in")
+    local = email[:-len(domain)]
+    if (not local or not local[0].isalnum()
+            or any(not (character.isalnum() or character in "._%+-")
+                   for character in local[1:])):
+        raise ValueError("Only verified @rcat.ac.th identities may sign in")
+    return normalized
 
 
 def _require_google_workspace(hosted_domain: object) -> None:

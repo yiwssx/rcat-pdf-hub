@@ -86,10 +86,25 @@ def test_institutional_mode_disables_local_admin_and_web_console(monkeypatch):
     ("user@rcat.ac.th", None),
     ("user@rcat.ac.th", "true"),
     ("", True),
+    ("@rcat.ac.th", True),
+    ("user@@rcat.ac.th", True),
+    ("a" * 244 + "@rcat.ac.th", True),
+    ("a" + ".%" * 120 + "!@rcat.ac.th", True),
+    ("a" * 200 + "@RCAT.AC.TH.evil", True),
 ])
 def test_rcat_email_must_be_exact_and_idp_verified(email, verified):
     with pytest.raises(ValueError):
         _verified_rcat_email(email, verified)
+
+
+@pytest.mark.parametrize("email", [
+    "a@rcat.ac.th",
+    "A@RCAT.AC.TH",
+    "a.b+c-d_e%f@rcat.ac.th",
+    "a" * 243 + "@rcat.ac.th",
+])
+def test_rcat_email_accepts_original_ascii_mailbox_grammar(email):
+    assert _verified_rcat_email(email, True) == email.lower()
 
 
 def test_institutional_verified_oidc_login_and_cookie_round_trip(monkeypatch):

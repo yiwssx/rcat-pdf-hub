@@ -96,7 +96,6 @@ def inspect_phase_zero() -> list[str]:
     queue = parse("apps/api/app/queue.py")
     jobs = parse("apps/api/app/routers/jobs.py")
     pdf = parse("apps/api/app/routers/pdf.py")
-    types = parse("apps/api/app/filetypes.py")
     zip_validator = parse("apps/api/app/services/zip_preflight.py")
     worker = parse("apps/api/app/worker_tasks.py")
     config = parse("apps/api/app/config.py")

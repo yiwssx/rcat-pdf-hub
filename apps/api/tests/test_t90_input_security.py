@@ -9,7 +9,6 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from app import filetypes
 from app.services import zip_preflight
 from app.filetypes import validate_uploaded_file
 from app.routers.pdf import PDF_INPUT_OPERATIONS, _create_job, _is_pdf
