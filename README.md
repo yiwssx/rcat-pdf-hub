@@ -552,6 +552,12 @@ make release-readiness
 - Phase 5 — production maturity (`0.5.0`) — A/B/C implementation baseline complete
 - **Phase 6 — production hardening & scale (`0.6.0`) — implementation baseline prepared for release**
 
+## HDA-06: manual signed source-input candidate (not a deployable image)
+
+The existing [manual source-input workflow](.github/workflows/manual-signed-source-inputs.yml) is restricted to `yiwssx` on reviewed `main`. It archives only Git-tracked source, records SHA-256 of the three application build recipes and their pinned dependency/font manifests, signs **both exact files** with GitHub artifact attestation, and stores a temporary candidate artifact for independent `gh attestation verify`. There is no GHCR push, Docker build, RCAT Host access, production deployment or automatic trigger.
+
+This is **not** a signed release of the three built OCI images (`api`, `web`, `gotenberg`). The Gotenberg build additionally requires the institution-owned, appropriately licensed **57-file 13Fonts bundle**, represented only by [its SHA-256 fingerprint](ops/gotenberg/13fonts-manifest.json); font binaries are deliberately excluded from Git and public Actions. See [font handling](ops/gotenberg/README.md). Do not claim the runner-built Gotenberg image is the same as the image installed with local fonts, and do not publish the font files. API/Web OCI build digests, source-bound image attestations, actual Host image identity and separate Production approvals remain independent gates. The signer does not replace the established release readiness, backup/restore or institutional access controls.
+
 ## License
 
 MIT applies to source code in this repository. See `LICENSE`; dependencies remain under their respective upstream licenses.

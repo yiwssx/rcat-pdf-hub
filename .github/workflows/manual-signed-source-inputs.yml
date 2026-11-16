@@ -1,0 +1,60 @@
+name: Manual signed PDF Hub source inputs (not OCI images)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-input-candidate:
+    name: Sign reviewed PDF Hub Git source and build-input receipt
+    if: github.ref == 'refs/heads/main' && github.actor == 'yiwssx'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify tracked source and excluded institutional fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          python3 scripts/pdfhub-hda06-source-receipt.py --check
+      - name: Archive only committed source and record three build contexts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          name="rcat-pdfhub-source-${GITHUB_SHA}.tar.gz"
+          git archive --format=tar --prefix="rcat-pdfhub-source-${GITHUB_SHA}/" "$GITHUB_SHA" | gzip -n -9 > "release/$name"
+          (cd release && sha256sum "$name" > "$name.sha256")
+          python3 scripts/pdfhub-hda06-source-receipt.py --write
+          (cd release && sha256sum -c "pdfhub-source-inputs-${GITHUB_SHA}.json.sha256")
+      - name: Attest exact source archive bytes
+        uses: actions/attest@v4
+        with:
+          subject-path: release/rcat-pdfhub-source-${{ github.sha }}.tar.gz
+      - name: Attest exact source build-input receipt bytes
+        uses: actions/attest@v4
+        with:
+          subject-path: release/pdfhub-source-inputs-${{ github.sha }}.json
+      - name: Keep independently verifiable source candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfhub-source-inputs-${{ github.sha }}
+          path: |
+            release/rcat-pdfhub-source-${{ github.sha }}.tar.gz
+            release/rcat-pdfhub-source-${{ github.sha }}.tar.gz.sha256
+            release/pdfhub-source-inputs-${{ github.sha }}.json
+            release/pdfhub-source-inputs-${{ github.sha }}.json.sha256
+          if-no-files-found: error
+          retention-days: 14

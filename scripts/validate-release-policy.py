@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,8 +56,36 @@ assert workflow_files == [
     ".github/workflows/dependency-review.yml",
     ".github/workflows/isolated-dr.yml",
     ".github/workflows/lean-ci.yml",
+    ".github/workflows/manual-signed-source-inputs.yml",
     ".github/workflows/t90-2-native-sandbox.yml",
 ], f"Only explicitly reviewed workflows are allowed: {workflow_files}"
+
+# Explicitly reviewed source-only release. No OCI push, Docker build, Host
+# execution or licensed institutional font distribution is authorized.
+pdf_signer = read(".github/workflows/manual-signed-source-inputs.yml")
+for marker in (
+    "workflow_dispatch:", "github.ref == 'refs/heads/main'",
+    "github.actor == 'yiwssx'", "persist-credentials: false",
+    "id-token: write", "attestations: write", "artifact-metadata: write",
+    "scripts/pdfhub-hda06-source-receipt.py --check",
+    "scripts/pdfhub-hda06-source-receipt.py --write",
+    "actions/attest@v4", "actions/upload-artifact@v4",
+    "retention-days: 14",
+):
+    assert marker in pdf_signer, f"PDF Hub source signer lost guard: {marker}"
+for forbidden in ("packages: write", "contents: write", "docker build",
+                  "docker push", "docker login", "secrets.", "pull_request_target:"):
+    assert forbidden not in pdf_signer, f"Unapproved signer capability: {forbidden}"
+assert not re.search(r"(?m)^  (?:push|pull_request|pull_request_target|schedule):", pdf_signer), (
+    "Signed PDF Hub source candidate must be manual-only"
+)
+check_receipt = subprocess.run(
+    [sys.executable, "scripts/pdfhub-hda06-source-receipt.py", "--check"],
+    cwd=ROOT, capture_output=True, text=True, timeout=30, check=False,
+)
+assert check_receipt.returncode == 0, (
+    "Signed PDF Hub source receipt source-guard failed: " + check_receipt.stderr
+)
 
 # Deliberate opt-in: isolated DR is never an ordinary PR, push, release
 # bypass or publicly hosted job. It may not run before a private rootless
