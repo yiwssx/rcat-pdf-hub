@@ -64,6 +64,9 @@ esac
 shopt -s nullglob
 font_files=("$FONT_ROOT"/*.ttf)
 [[ "${#font_files[@]}" -eq 57 ]] || die "Staging input directory must have exactly 57 TTF files"
+for font_file in "${font_files[@]}"; do
+  [[ -f "$font_file" && ! -L "$font_file" ]] || die "Staging fonts cannot be symlinks or nonregular files"
+done
 # Verify the new staging private font input, not the already accepted live Host.
 font_result="$( (cd "$FONT_ROOT" && sha256sum -- ./*.ttf) \
   | PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT/scripts/verify-office-font-bundle.py" )" \
