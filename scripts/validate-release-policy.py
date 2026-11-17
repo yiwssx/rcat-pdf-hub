@@ -87,6 +87,32 @@ assert check_receipt.returncode == 0, (
     "Signed PDF Hub source receipt source-guard failed: " + check_receipt.stderr
 )
 
+# HDA-06 staging image candidates are private to a separate explicitly
+# provisioned BuildKit endpoint; never push/load or change Production Compose.
+stage_builder = read("scripts/pdfhub-stage-signed-candidate.sh")
+for marker in (
+    "APP_SHA=645de50a9205f5b54455ea78d8fef26e97640e9c",
+    "PDFHUB_STAGE_DOCKER_CONTEXT", "PDFHUB_STAGE_BUILDER",
+    "PDFHUB_STAGE_APPROVAL", "APPROVED_PRIVATE_STAGE_BUILD_ONLY",
+    "docker context inspect default", "buildx inspect",
+    "docker-container", "type=oci,dest=", "--provenance=mode=max",
+    "git archive", "verify-office-font-bundle.py",
+    "openssl dgst -sha256 -sign", "pdfhub-stage-oci.py verify",
+):
+    assert marker in stage_builder, f"PDF Hub staging provenance guard missing: {marker}"
+for prohibited in ("docker compose ", "docker push ", "docker image load",
+                   "--push", "--load", "up -d", "docker tag ",
+                   "packages: write", "sudo "):
+    assert prohibited not in stage_builder, f"Stage release script has forbidden Production capability: {prohibited}"
+stage_verify = read("scripts/pdfhub-stage-oci.py")
+for marker in (
+    "SLSA_TYPE", "image_manifest_digest", "operator_public_key_sha256",
+    "registry_published", "production_deployed",
+    "openssl", "SHA-256 mismatch", "source revision label mismatch",
+):
+    assert marker in stage_verify, f"Private staging verifier missing: {marker}"
+assert "test_pdfhub_stage_oci.py" in read(".github/workflows/lean-ci.yml")
+
 # Deliberate opt-in: isolated DR is never an ordinary PR, push, release
 # bypass or publicly hosted job. It may not run before a private rootless
 # runner has been provisioned, and must not publish raw backup/log data.
