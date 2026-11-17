@@ -65,6 +65,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_one_command_release.py'
           python3 -m unittest discover -s scripts/tests -p 'test_t90_institutional_directory.py'
           python3 -m unittest discover -s scripts/tests -p 'test_migrate_site_caddy.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_pdfhub_stage_oci.py'
           make validate-compose
 
       # Only when the opt-in M05 public-fixture model proof changes. Reuses
