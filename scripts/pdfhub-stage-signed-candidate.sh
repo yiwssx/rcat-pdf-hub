@@ -7,15 +7,19 @@ APP_SHA=645de50a9205f5b54455ea78d8fef26e97640e9c
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 die() { printf 'PDFHUB_STAGE_BLOCKED=%s\n' "$*" >&2; exit 1; }
-usage() { die "Usage: $0 --preflight | --build | --verify CANDIDATE_DIR"; }
+usage() { die "Usage: $0 --preflight | --build | --resume-api CANDIDATE_DIR | --verify CANDIDATE_DIR"; }
 mode="${1:---preflight}"
-[[ "$mode" == "--preflight" || "$mode" == "--build" || "$mode" == "--verify" ]] || usage
+[[ "$mode" == "--preflight" || "$mode" == "--build" || "$mode" == "--verify" || "$mode" == "--resume-api" ]] || usage
 if [[ "$mode" == "--verify" ]]; then
   [[ $# -eq 2 ]] || usage
   [[ -n "${PDFHUB_STAGE_VERIFY_KEY:-}" ]] || die "Set PDFHUB_STAGE_VERIFY_KEY to trusted public key"
   exec python3 scripts/pdfhub-stage-oci.py verify "$2" "$PDFHUB_STAGE_VERIFY_KEY"
 fi
-[[ $# -eq 1 ]] || usage
+if [[ "$mode" == "--resume-api" ]]; then
+  [[ $# -eq 2 ]] || usage
+else
+  [[ $# -eq 1 ]] || usage
+fi
 for cmd in docker git python3 openssl tar sha256sum; do
   command -v "$cmd" >/dev/null 2>&1 || die "Missing tool: $cmd"
 done
@@ -84,13 +88,44 @@ if [[ "$mode" == "--preflight" ]]; then
 fi
 [[ "${PDFHUB_STAGE_APPROVAL:-}" == "APPROVED_PRIVATE_STAGE_BUILD_ONLY" ]] \
   || die "Explicit staging-build acknowledgement absent"
-candidate="$(mktemp -d "$OUT_ROOT/pdfhub-stage-${APP_SHA:0:12}-XXXXXX")"
+if [[ "$mode" == "--resume-api" ]]; then
+  # Resume the operator's own interrupted API-only candidate, never an
+  # arbitrary imported archive or an already signed release.
+  [[ -d "$2" && ! -L "$2" ]] || die "Resume directory must be regular"
+  candidate="$(readlink -f "$2")"
+  [[ "$(dirname "$candidate")" == "$(readlink -f "$OUT_ROOT")" &&
+     "$(basename "$candidate")" == pdfhub-stage-${APP_SHA:0:12}-* &&
+     "$(stat -c '%u:%a' "$candidate")" == "$(id -u):700" ]] \
+    || die "Require private interrupted candidate under approved output root"
+  shopt -s dotglob
+  for entry in "$candidate"/*; do
+    case "$(basename "$entry")" in
+      api.oci.tar|api.metadata.json)
+        [[ -f "$entry" && ! -L "$entry" && "$(stat -c '%u' "$entry")" == "$(id -u)" ]] \
+          || die "Unsafe resume file" ;;
+      *) die "Resume supports only interrupted API-only candidate" ;;
+    esac
+  done
+  shopt -u dotglob
+  [[ -s "$candidate/api.oci.tar" ]] || die "Existing API OCI archive missing"
+  # Verify it before altering even its failed metadata file.
+  api_record="$(python3 scripts/pdfhub-stage-oci.py inspect "$candidate/api.oci.tar" "$APP_SHA")" \
+    || die "Existing API OCI verification failed"
+  printf '%s\n' "$api_record" > "$candidate/api.metadata.json"
+  chmod 600 "$candidate/api.metadata.json"
+  echo "PDFHUB_STAGE_API_REUSED=VERIFIED"
+else
+  candidate="$(mktemp -d "$OUT_ROOT/pdfhub-stage-${APP_SHA:0:12}-XXXXXX")"
+fi
 source_tree="$(mktemp -d "$OUT_ROOT/.pdfhub-stage-context-XXXXXX")"
 trap 'if [[ -n "${source_tree:-}" && -d "$source_tree" ]]; then rm -rf -- "$source_tree"; fi' EXIT
 git archive "$APP_SHA" | tar -xf - -C "$source_tree"
 mkdir -p "$source_tree/ops/gotenberg/fonts/13fonts"
 cp -p -- "${font_files[@]}" "$source_tree/ops/gotenberg/fonts/13fonts/"
 for component in api web gotenberg; do
+  if [[ "$mode" == "--resume-api" && "$component" == "api" ]]; then
+    continue
+  fi
   case "$component" in
     api) context_path="$source_tree/apps/api" ;;
     web) context_path="$source_tree/apps/web" ;;
