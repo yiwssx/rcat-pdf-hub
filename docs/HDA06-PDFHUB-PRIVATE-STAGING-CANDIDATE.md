@@ -6,7 +6,7 @@
 
 - [GitHub source + build-input signer Run #43819808546](https://github.com/yiwssx/rcat-pdf-hub/actions/runs/43819808546), source `645de50a9205f5b54455ea78d8fef26e97640e9c`, operator-reported independent verification PASS. Do not redispatch.
 - [One-time Production Host Image-ID and 57/57 running-font audit](https://github.com/yiwssx/rcat-deployment-control/issues/15#issuecomment-6908958254) accepted. **Do not repeat**.
-- Source differences introduced after `645de50a...` are candidate-only script/policy/docs. The build script uses `git archive` of the **exact previously signed source commit**, never a mutable HEAD or a dirty live checkout.
+- The reviewed initial candidate deliberately uses frozen signed source `645de50a...`; later main also contains web dependency changes. This is historical staging-only source, not a claim to include those later updates or certify current Production. The build script uses `git archive` of the **exact previously signed source commit**, never a mutable HEAD or a dirty live checkout.
 
 ## Strict staging trust boundary
 
@@ -18,7 +18,7 @@ Preconditions on an authorized staging operator machine (not the live PDF HUB ap
 - A fresh Git clone including signed source commit `645de50a...`; no credentials or private fonts committed. Source code for the build is taken from that earlier commit even though this script lives on a later reviewed main.
 - A private local directory containing **the approved 57 institution-licensed TTF files**, separate from any public repository or artifact store. It must pass the existing filename/content SHA-256 fingerprint validator. The source files are copied only to a temporary restricted private staging build context and then removed. The resulting Gotenberg OCI tar **contains the licensed fonts**, so remains strictly local/private.
 - A **pre-existing/owner-approved operator signing private key** (PEM; permission 0600 or 0400) and its independently trusted public key. The public-key SHA-256 fingerprint should be accepted through the institution's normal out-of-band process. This is an OpenSSL operator signature, **not a Sigstore GitHub OIDC identity**. The private key is never copied or uploaded.
-- A user-owned output directory with permission `0700` outside the Git checkout, adequate free storage, disk and memory. Three builds may be resource-intensive: do not use a Docker Engine shared with Production.
+- A user-owned output directory with permission `0700` outside the Git checkout, adequate free storage, disk and memory. Three builds may be resource-intensive: do not use a Docker Engine shared with Production. BuildKit must support explicit SLSA v1 output; the verifier does not accept the default v0.2 predicate.
 
 ### Configure and inspect (no build)
 
@@ -48,7 +48,7 @@ PDFHUB_STAGE_APPROVAL=APPROVED_PRIVATE_STAGE_BUILD_ONLY \
   bash scripts/pdfhub-stage-signed-candidate.sh --build
 ```
 
-This runs **three builds** in the dedicated staging BuildKit context, using `--provenance=mode=max`, `--platform linux/amd64`, and `--output type=oci,dest=...`. No `--push`, `--load`, Compose or Production operation. It checks each private OCI tar's runtime image manifest/config revision labels, all referenced layer digests, image-linked BuildKit in-toto SLSA v1 provenance and subject digest. Then it signs the complete digest receipt with the approved local private key; verification immediately re-reads all three OCI archives. Temporary extracted source/font inputs are removed; the Gotenberg OCI output **must remain private**.
+This runs **three builds** in the dedicated staging BuildKit context, using `--provenance=mode=max,version=v1`, `--platform linux/amd64`, and `--output type=oci,dest=...`. No `--push`, `--load`, Compose or Production operation. It checks each private OCI tar's runtime image manifest/config revision labels, all referenced layer digests, image-linked BuildKit in-toto SLSA v1 provenance and subject digest. Then it signs the complete digest receipt with the approved local private key; verification immediately re-reads all three OCI archives. Temporary extracted source/font inputs are removed; the Gotenberg OCI output **must remain private**.
 
 **Do not run `--build` twice solely for another PASS.** If one component fails, record the exact failure; don't change release scope or call it successful.
 
