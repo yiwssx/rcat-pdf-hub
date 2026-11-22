@@ -29,7 +29,8 @@ def descriptor(blob: bytes) -> dict:
 
 
 def fixture(path: Path, *, with_attest: bool = True, bad_subject: bool = False,
-            wrong_label: bool = False, broken_layer: bool = False) -> None:
+            wrong_label: bool = False, broken_layer: bool = False,
+            predicate_type: str = stage.SLSA_TYPE) -> None:
     blobs = {}
 
     def put(blob: bytes, media_type: str) -> dict:
@@ -50,7 +51,7 @@ def fixture(path: Path, *, with_attest: bool = True, bad_subject: bool = False,
     if with_attest:
         slsa = put(as_json({
             "_type": "https://in-toto.io/Statement/v1",
-            "predicateType": stage.SLSA_TYPE,
+            "predicateType": predicate_type,
             "subject": [{"name": "_", "digest": {
                 "sha256": "0" * 64 if bad_subject else manifest["digest"].removeprefix("sha256:")
             }}],
@@ -94,6 +95,15 @@ class StagingOciTests(unittest.TestCase):
             path = Path(folder) / "web.oci.tar"
             fixture(path, with_attest=False)
             with self.assertRaisesRegex(stage.EvidenceError, "attestation"):
+                stage.inspect_archive(path)
+
+    def test_builder_requests_the_verifier_required_slsa_v1(self):
+        script = (ROOT / "scripts/pdfhub-stage-signed-candidate.sh").read_text()
+        self.assertIn("--provenance=mode=max,version=v1", script)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "api.oci.tar"
+            fixture(path, predicate_type="https://slsa.dev/provenance/v0.2")
+            with self.assertRaisesRegex(stage.EvidenceError, "SLSA v1"):
                 stage.inspect_archive(path)
 
     def test_wrong_slsa_subject_fails_closed(self):
