@@ -91,6 +91,19 @@ def inspect_archive(archive: Path, source_sha: str = SOURCE_SHA) -> dict:
         require(index.get("schemaVersion") == 2, "Unexpected OCI index version")
         descriptors = index.get("manifests", [])
         require(isinstance(descriptors, list), "Unexpected OCI index manifests")
+        # BuildKit's OCI exporter may wrap the image/attestation pair in a
+        # content-addressed image index. Accept only one such wrapper, not
+        # arbitrary index trees, additional images, or unbound attestations.
+        index_type = "application/vnd.oci.image.index.v1+json"
+        manifest_type = "application/vnd.oci.image.manifest.v1+json"
+        require(all(isinstance(d, dict) for d in descriptors), "Invalid OCI index descriptor")
+        if len(descriptors) == 1 and descriptors[0].get("mediaType") == index_type:
+            nested = object_json(tf, descriptors[0])
+            require(nested.get("schemaVersion") == 2, "Unexpected nested OCI index version")
+            descriptors = nested.get("manifests", [])
+            require(isinstance(descriptors, list), "Unexpected nested OCI index manifests")
+        require(all(isinstance(d, dict) and d.get("mediaType") == manifest_type
+                    for d in descriptors), "Unexpected OCI leaf descriptor")
         normal = [
             d for d in descriptors
             if d.get("platform", {}).get("os") == "linux"
@@ -116,6 +129,7 @@ def inspect_archive(archive: Path, source_sha: str = SOURCE_SHA) -> dict:
             and d.get("annotations", {}).get("vnd.docker.reference.digest") == image_descriptor["digest"]
         ]
         require(len(attesters) == 1, "Missing or ambiguous image-linked BuildKit attestation manifest")
+        require(len(descriptors) == 2, "Unexpected additional OCI manifests")
         attester = object_json(tf, attesters[0])
         if attester.get("subject"):
             require(
