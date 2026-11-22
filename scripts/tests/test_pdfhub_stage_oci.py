@@ -30,7 +30,8 @@ def descriptor(blob: bytes) -> dict:
 
 def fixture(path: Path, *, with_attest: bool = True, bad_subject: bool = False,
             wrong_label: bool = False, broken_layer: bool = False,
-            predicate_type: str = stage.SLSA_TYPE) -> None:
+            predicate_type: str = stage.SLSA_TYPE, nested: bool = False,
+            corrupt_index: bool = False, extra_image: bool = False) -> None:
     blobs = {}
 
     def put(blob: bytes, media_type: str) -> dict:
@@ -67,6 +68,14 @@ def fixture(path: Path, *, with_attest: bool = True, bad_subject: bool = False,
             "vnd.docker.reference.digest": manifest["digest"],
         }
         descriptors.append(attest)
+    if extra_image:
+        descriptors.append(manifest)
+    if nested:
+        wrapper = put(as_json({"schemaVersion": 2, "manifests": descriptors}),
+                      "application/vnd.oci.image.index.v1+json")
+        descriptors = [wrapper]
+        if corrupt_index:
+            blobs[wrapper["digest"].removeprefix("sha256:")] = b"x" * wrapper["size"]
     with tarfile.open(path, "w") as tf:
         objects = {"index.json": as_json({"schemaVersion": 2, "manifests": descriptors}),
                    "oci-layout": b'{"imageLayoutVersion":"1.0.0"}'}
@@ -89,6 +98,35 @@ class StagingOciTests(unittest.TestCase):
             self.assertTrue(record["buildkit_slsa_v1_blob_digest"].startswith("sha256:"))
             self.assertFalse(record["registry_published"])
             self.assertFalse(record["production_deployed"])
+
+    def test_buildkit_nested_index_binds_image_and_attestation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "api.oci.tar"
+            fixture(path, nested=True)
+            record = stage.inspect_archive(path)
+            self.assertEqual(record["image_source_sha"], stage.SOURCE_SHA)
+            self.assertEqual(record["image_platform"], "linux/amd64")
+
+    def test_nested_index_digest_tamper_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "api.oci.tar"
+            fixture(path, nested=True, corrupt_index=True)
+            with self.assertRaisesRegex(stage.EvidenceError, "SHA-256 mismatch"):
+                stage.inspect_archive(path)
+
+    def test_nested_index_extra_image_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "api.oci.tar"
+            fixture(path, nested=True, extra_image=True)
+            with self.assertRaisesRegex(stage.EvidenceError, "exactly one"):
+                stage.inspect_archive(path)
+
+    def test_nested_index_wrong_subject_fails_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "api.oci.tar"
+            fixture(path, nested=True, bad_subject=True)
+            with self.assertRaisesRegex(stage.EvidenceError, "does not bind"):
+                stage.inspect_archive(path)
 
     def test_absent_attestation_fails_closed(self):
         with tempfile.TemporaryDirectory() as folder:
