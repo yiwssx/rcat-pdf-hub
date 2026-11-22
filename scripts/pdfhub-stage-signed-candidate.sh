@@ -101,7 +101,7 @@ for component in api web gotenberg; do
   echo "PDFHUB_STAGE_BUILD_COMPONENT=$component"
   docker --context "$STAGE_CONTEXT" buildx build \
     --builder "$STAGE_BUILDER" --platform linux/amd64 \
-    --provenance=mode=max \
+    --provenance=mode=max,version=v1 \
     --label "org.opencontainers.image.revision=$APP_SHA" \
     --label 'org.opencontainers.image.source=https://github.com/yiwssx/rcat-pdf-hub' \
     --output "type=oci,dest=$archive" "$context_path"
